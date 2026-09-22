@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import fnmatch
 import hashlib
 import json
 import os
@@ -23,15 +24,38 @@ DEFAULTS = PLUGIN_ROOT / "defaults"
 SETTINGS = {
     "format_on": ("commit", ("commit", "edit", "off")),
     "check_on": ("commit", ("commit", "stop", "off")),
-    "format_scope": ("changed", ("changed", "file")),
+    "format_scope": ("changed", ("changed", "function", "file")),
 }
 PLUGIN_ID = "broom@claude-code-broom"
 
 
-def setting(name: str) -> str:
-    """A userConfig value. Claude Code exports those to hooks as CLAUDE_PLUGIN_OPTION_<NAME> but not to commands
-    run through Bash, so `broom` there reads them where Claude Code stores them, in the user settings file."""
+REPO_FILE = ".broom.json"
+
+
+def repo_config(start: Optional[Path]) -> dict:
+    """The repo's .broom.json (at the git root), or {}. It holds only choices and path patterns, never commands,
+    so honoring it in a repo you don't trust is safe."""
+    if start is None:
+        return {}
+    root = git_root(start if start.is_dir() else start.parent)
+    if root is None:
+        return {}
+    if root not in _repo_configs:
+        _repo_configs[root] = read_jsonc(root / REPO_FILE)
+    return _repo_configs[root]
+
+
+_repo_configs: Dict[Path, dict] = {}
+
+
+def setting(name: str, start: Optional[Path] = None) -> str:
+    """A setting: the repo's .broom.json first (like IDE project settings over IDE defaults), then the plugin's
+    userConfig. Claude Code exports userConfig to hooks as CLAUDE_PLUGIN_OPTION_<NAME> but not to commands run
+    through Bash, so `broom` there reads it where Claude Code stores it, in the user settings file."""
     default, allowed = SETTINGS[name]
+    repo_value = str(repo_config(start).get(name, "")).strip().lower()
+    if repo_value in allowed:
+        return repo_value
     value = os.environ.get(f"CLAUDE_PLUGIN_OPTION_{name.upper()}")
     if value is None:
         config = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude") / "settings.json"
@@ -173,6 +197,22 @@ def resolve_bin(name: str, start: Path, stop: Optional[Path], local_only: bool =
 def boundary(path: Path) -> Path:
     """Where upward config searches stop: the git root, else the file's directory."""
     return git_root(path.parent) or path.parent
+
+
+def excluded(path: Path) -> bool:
+    """Whether the repo's .broom.json `exclude` globs (relative to the git root) cover this file."""
+    root = git_root(path.parent)
+    patterns = repo_config(path).get("exclude") if root else None
+    if not isinstance(patterns, list):
+        return False
+    try:
+        rel = path.resolve().relative_to(root).as_posix()
+    except ValueError:
+        return False
+    for pat in map(str, patterns):
+        if fnmatch.fnmatch(rel, pat) or (pat.startswith("**/") and fnmatch.fnmatch(rel, pat[3:])):
+            return True
+    return False
 
 
 def read_jsonc(path: Path) -> dict:

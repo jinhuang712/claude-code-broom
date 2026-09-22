@@ -29,6 +29,7 @@ HAS_GO = all(shutil.which(t) for t in ("go", "gofmt", "golangci-lint"))
 HAS_TS = all(shutil.which(t) for t in ("oxlint", "tsc"))
 HAS_PY = shutil.which("ruff") is not None
 HAS_GOPLS = HAS_GO and shutil.which("gopls") is not None
+HAS_PYRIGHT = HAS_PY and shutil.which("pyright-langserver") is not None
 
 GO_MAIN = """package main
 
@@ -100,10 +101,10 @@ class BroomTest(unittest.TestCase):
                                            '"noEmit":true},"include":["src"]}\n',
                           "src/lib.ts": TS_LIB, "src/main.ts": TS_MAIN, **(extra or {})})
 
-    def hook(self, event: str, payload: dict, **options: str) -> dict:
+    def hook(self, event: str, payload: dict, cwd: Path = None, **options: str) -> dict:
         env = {**self.env, **{f"CLAUDE_PLUGIN_OPTION_{k.upper()}": v for k, v in options.items()}}
         r = subprocess.run([str(BROOM), "hook", event], input=json.dumps(payload), capture_output=True, text=True,
-                           env=env)
+                           env=env, cwd=cwd)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(r.stderr.strip(), "", "hook raised")
         return json.loads(r.stdout) if r.stdout.strip() else {}
@@ -518,6 +519,79 @@ class BroomTest(unittest.TestCase):
         (r / "m.py").write_text(old + "b = {  'y':2 }\n")
         self.cli(r, "fmt", "--scope", "changed", env={**self.env, "CLAUDE_CONFIG_DIR": str(cfg)})
         self.assertEqual((r / "m.py").read_text(), old + 'b = {"y": 2}\n', "--scope overrides the setting")
+
+    # function scope
+
+    PY_TWO_FUNCS = "def f():\n    a = {  'x':1 }\n    return a\n\n\ndef g():\n    b = {  'y':2 }\n    return b\n"
+
+    def py_touched(self) -> Path:
+        r = self.repo({"ruff.toml": "", "m.py": self.PY_TWO_FUNCS})
+        (r / "m.py").write_text(self.PY_TWO_FUNCS.replace("    return a\n", "    return a  # touched\n"))
+        return r
+
+    @unittest.skipUnless(HAS_PYRIGHT, "ruff/pyright missing")
+    def test_function_scope_formats_the_whole_changed_function_only(self) -> None:
+        r = self.py_touched()
+        self.cli(r, "fmt", "--scope", "function")
+        text = (r / "m.py").read_text()
+        self.assertIn('a = {"x": 1}', text, "the changed function is formatted")
+        self.assertIn("b = {  'y':2 }", text, "the untouched function is not")
+        r = self.py_touched()
+        self.cli(r, "fmt", "--scope", "changed")
+        self.assertIn("a = {  'x':1 }", (r / "m.py").read_text(), "changed scope leaves the rest of f alone")
+
+    @unittest.skipUnless(HAS_GOPLS, "gopls missing")
+    def test_function_scope_with_gopls(self) -> None:
+        src = "package m\n\nfunc F() int {\n\tx := 1\n\treturn  x\n}\n\nfunc G() int {\n\ty := 2\n\treturn  y\n}\n"
+        r = self.repo({"go.mod": "module example.com/m\n\ngo 1.26\n", "m.go": src})
+        (r / "m.go").write_text(src.replace("x := 1", "x := 3"))
+        self.cli(r, "fmt", "--scope", "function")
+        text = (r / "m.go").read_text()
+        self.assertIn("\treturn x\n", text)
+        self.assertIn("\treturn  y\n", text)
+
+    @unittest.skipUnless(HAS_PY, "ruff missing")
+    def test_function_scope_falls_back_to_changed_lines_without_a_server(self) -> None:
+        r = self.py_touched()
+        out = self.cli(r, "fmt", "--scope", "function", env=self.fake_path(keep=("ruff",))).stdout
+        self.assertIn("no language server answered", out)
+        self.assertIn("a = {  'x':1 }", (r / "m.py").read_text())
+
+    # per-repo .broom.json
+
+    @unittest.skipUnless(HAS_PY, "ruff missing")
+    def test_repo_file_overrides_the_user_settings(self) -> None:
+        old = "a = {  'x':1 }\n"
+        r = self.repo({"ruff.toml": "", "m.py": old, ".broom.json": '{"format_scope": "file"}'})
+        (r / "m.py").write_text(old + "b = {  'y':2 }\n")
+        cfg = self.config_dir({"pluginConfigs": {"broom@claude-code-broom": {"options": {"format_scope": "changed"}}}})
+        self.cli(r, "fmt", env={**self.env, "CLAUDE_CONFIG_DIR": str(cfg)})
+        self.assertEqual((r / "m.py").read_text(), 'a = {"x": 1}\nb = {"y": 2}\n')
+
+    @unittest.skipUnless(HAS_GO, "go tools missing")
+    def test_repo_file_can_switch_on_the_edit_hook(self) -> None:
+        r = self.repo({"go.mod": "module example.com/m\n\ngo 1.26\n", ".broom.json": '{"format_on": "edit"}'})
+        f = r / "z.go"
+        f.write_text("package m\nfunc  Z( ) {  }\n")
+        payload = {"session_id": "s1", "cwd": str(r), "tool_name": "Write", "tool_input": {"file_path": str(f)}}
+        self.hook("edit", payload, cwd=r)
+        self.assertEqual(f.read_text(), "package m\n\nfunc Z() {}\n", "the early exit steps aside for .broom.json")
+
+    @unittest.skipUnless(HAS_TS, "oxlint/tsc missing")
+    def test_excluded_paths_stay_out_of_commits_and_sweeps(self) -> None:
+        r = self.ts_repo({".broom.json": '{"exclude": ["src/gen/**"]}'})
+        (r / "src/gen").mkdir()
+        (r / "src/gen/x.ts").write_text(TS_BAD)
+        self.sh(r, "git", "add", "-A")
+        self.assertEqual(self.denied(self.commit(r, "git commit -m gen")), "")
+        self.assertNotIn("gen/x.ts", self.cli(r, "sweep", "--all").stdout)
+
+    def test_doctor_reports_a_broken_repo_file(self) -> None:
+        r = self.repo({".broom.json": '{"check_on": "sometimes", "colour": 1}', "a.py": "x = 1\n"})
+        item = next(i for i in self.doctor(r, self.fake_path())["items"] if i["tool"] == ".broom.json")
+        self.assertEqual(item["status"], "broken")
+        self.assertIn("'sometimes' is not one of", item["detail"])
+        self.assertIn("colour", item["detail"])
 
 
 if __name__ == "__main__":

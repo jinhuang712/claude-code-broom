@@ -29,6 +29,7 @@ Summarize the gaps in plain words, then ask with AskUserQuestion, in one call, o
    - Strictest → every edit and each turn: `format_on=edit check_on=stop`
 4. **How much of a file should broom reformat?**
    - Only the changed lines (recommended), like an IDE's "only VCS changed text": `format_scope=changed`
+   - The functions holding the changed lines, found by the language server: `format_scope=function`
    - The whole file, best once the repo is fully formatted: `format_scope=file`
 
 Ask only what applies. Never install or change anything the user didn't pick.
@@ -36,12 +37,17 @@ Ask only what applies. Never install or change anything the user didn't pick.
 ## 3. Act
 
 - Run the picked `fix` and `configure` commands from the repo root, one at a time, and stop on a failure.
-- Apply the trigger and scope choices:
+- Apply the trigger and scope choices for all repos:
 
   ```bash
   claude plugin install broom@claude-code-broom --config format_on=<value> --config check_on=<value> \
     --config format_scope=<value>
   ```
+
+  If the user wants them for this repo only, write them to `.broom.json` at the repo root instead, for example
+  `{"format_on": "commit", "check_on": "stop", "format_scope": "function"}`. It overrides the user settings in
+  this repo. Paths broom should never touch (generated code, vendored code) go in `"exclude"` as globs relative
+  to the repo root, for example `["vendor/**", "**/*.pb.go"]`.
 
 - Whole-repo reformat, if picked: `broom sweep --all --fix`.
 - A `conflict` means another plugin serves the same files. Offer its `claude plugin disable …` command; the

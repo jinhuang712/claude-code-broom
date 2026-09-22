@@ -14,7 +14,8 @@ from typing import Dict, List, Optional, Tuple
 
 from . import __version__
 from .common import (
-    BIOME_CFG, DATA_ROOT, DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG, RUFF_CFG,
+    BIOME_CFG, DATA_ROOT, DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG, REPO_FILE, RUFF_CFG,
+    SETTINGS,
     find_up, js_formatter, js_linters, load_json, read_jsonc, resolve_bin, ruff_configured, run, save_json,
     short_hash,
 )
@@ -22,7 +23,7 @@ from .common import (
 MARKERS = {"go.mod": "go", "package.json": "js", "tsconfig.json": "js", "Cargo.toml": "rust",
            "pyproject.toml": "py", "setup.py": "py", "requirements.txt": "py"}
 SKIP_DIRS = {"node_modules", "vendor", "target", "dist", "build", "out", "venv", "__pycache__", "coverage"}
-LANG_NAMES = {"go": "Go", "js": "TS/JS", "rust": "Rust", "py": "Python"}
+LANG_NAMES = {"go": "Go", "js": "TS/JS", "rust": "Rust", "py": "Python", "broom": "broom"}
 # Plugins that start a language server for the same files as broom's .lsp.json. Claude Code starts only the
 # first server registered for an extension, so either one silently never runs.
 LSP_PLUGINS = {"gopls-lsp": "go", "gopls": "go", "typescript-lsp": "js", "vtsls": "js", "ts7-lsp": "js",
@@ -231,6 +232,7 @@ def diagnose(repo: Path, projects: Optional[Dict[str, List[Path]]] = None) -> di
                                   f"also starts a {LANG_NAMES[lang]} language server; only the first one "
                                   "registered for an extension runs", f"claude plugin disable {key}"))
 
+    items += check_repo_file(repo)
     unique: Dict[Tuple[str, ...], Item] = {}
     for i in items:  # one package's missing tool installed at the root is the same fix for every package
         unique.setdefault((i.lang, i.role, i.tool, i.status, i.project, i.fix), i)
@@ -243,6 +245,31 @@ def diagnose(repo: Path, projects: Optional[Dict[str, List[Path]]] = None) -> di
         "fix": fixes, "configure": configure,
         "healthy": all(i.status == "ok" for i in items),
     }
+
+
+def check_repo_file(repo: Path) -> List[Item]:
+    """The repo's .broom.json: values broom would otherwise ignore without a word."""
+    path = repo / REPO_FILE
+    if not path.exists():
+        return []
+    try:
+        data = json.loads(re.sub(r"^\s*//.*$", "", path.read_text(), flags=re.M))
+    except (OSError, ValueError):
+        return [Item("broom", "config", REPO_FILE, "broken", ".", "not valid JSON, so broom ignores it")]
+    if not isinstance(data, dict):
+        return [Item("broom", "config", REPO_FILE, "broken", ".", "must be a JSON object")]
+    problems = [f"{k}: {data[k]!r} is not one of {', '.join(SETTINGS[k][1])}" for k in SETTINGS
+                if k in data and str(data[k]).lower() not in SETTINGS[k][1]]
+    unknown = [k for k in data if k not in SETTINGS and k != "exclude"]
+    if unknown:
+        problems.append("unknown key(s): " + ", ".join(unknown))
+    if "exclude" in data and not isinstance(data["exclude"], list):
+        problems.append("exclude must be a list of globs")
+    if problems:
+        return [Item("broom", "config", REPO_FILE, "broken", ".", "; ".join(problems))]
+    shown = ", ".join(f"{k}={data[k]}" for k in SETTINGS if k in data)
+    excl = f"{len(data.get('exclude', []))} exclude pattern(s)" if data.get("exclude") else ""
+    return [Item("broom", "config", REPO_FILE, "ok", ".", ", ".join(x for x in (shown, excl) if x) or "empty")]
 
 
 def plan_commands(items: List[Item]) -> Tuple[List[str], List[str]]:

@@ -9,9 +9,20 @@ def _option(name: str, default: str) -> str:
     return os.environ.get("CLAUDE_PLUGIN_OPTION_" + name.upper(), "").strip().lower() or default
 
 
+def _repo_file() -> bool:
+    """A .broom.json between here and the git root can switch these hooks on, so it rules out the early exit."""
+    d = os.getcwd()
+    while True:
+        if os.path.exists(os.path.join(d, ".broom.json")):
+            return True
+        if os.path.exists(os.path.join(d, ".git")) or os.path.dirname(d) == d:
+            return False
+        d = os.path.dirname(d)
+
+
 # The edit and stop hooks fire on every edit and every turn but are off by default: leave before loading
 # anything, so an idle hook costs one interpreter start.
-if sys.argv[1:2] == ["hook"]:
+if sys.argv[1:2] == ["hook"] and not _repo_file():
     event = sys.argv[2:3]
     if event == ["edit"] and _option("format_on", "commit") != "edit" and _option("check_on", "commit") != "stop":
         sys.exit(0)

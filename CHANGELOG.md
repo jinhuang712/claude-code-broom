@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0
+
+- `format_scope=function`: widens the changed lines to the functions around them, asking the language servers in
+  broom's `.lsp.json` (`documentSymbol`). Falls back to changed lines, with a note, when no server answers.
+- Per-repo `.broom.json`: `format_on`, `check_on` and `format_scope` override the user settings in that repo;
+  `exclude` globs keep generated or vendored paths out of everything. `broom doctor` validates the file.
+- Runs on Python 3.9+ (tested on macOS's system Python). MIT `LICENSE`.
+
 ## 0.3.0
 
 - `broom doctor`: languages, missing or broken tools (a rustup proxy without its component, TypeScript older than

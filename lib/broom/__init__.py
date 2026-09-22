@@ -1,3 +1,3 @@
-"""broom: format and lint what changed, with each project's own tools."""
+"""broom: autonomous code hygiene for Claude Code."""
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"

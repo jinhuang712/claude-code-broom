@@ -22,11 +22,11 @@ from typing import List, Optional
 
 from .checks import run_checks
 from .common import (
-    DATA_ROOT, ChangedLines, append_line, emit, git, git_changed_files, git_root, lang_of, load_json, prune_sessions,
+    DATA_ROOT, append_line, emit, excluded, git, git_changed_files, git_root, lang_of, load_json, prune_sessions,
     save_json, session_dir, setting,
 )
 from .doctor import describe, diagnose_cached, gaps, needs_setup
-from .fmt import format_file, format_files
+from .fmt import format_files
 from .gate import (
     baseline_add, baseline_add_entries, baseline_keys, issue_entry, issue_key, new_notes, note_text, render, select,
     setup_hint, verdict,
@@ -71,7 +71,6 @@ def hook_commit(data: dict) -> None:
     ops = parse(command, cwd)
     if not any(op.kind == "commit" for op in ops) or not claim(data.get("tool_use_id")):
         return
-    format_on, check_on = setting("format_on"), setting("check_on")
     sd = session_dir(data.get("session_id") or "cli")
     state_path = DATA_ROOT / "commits.json"
     state = load_json(state_path, {})
@@ -85,11 +84,17 @@ def hook_commit(data: dict) -> None:
             continue
         adds = [a for a in ops[:idx] if a.kind == "add"]
         plan = plan_commit(spec, adds)
-        if plan is None or not plan.files:
+        if plan is None:
             continue
+        plan.files = {f for f in plan.files if not excluded(f)}
+        if not plan.files:
+            continue
+        format_on, check_on = setting("format_on", plan.repo), setting("check_on", plan.repo)
         if format_on != "off":
+            fallbacks: List[str] = []
             changed = format_files(sorted(f for f in plan.files if f not in plan.partial),
-                                   scope=setting("format_scope"))
+                                   scope=setting("format_scope", plan.repo), notes=fallbacks)
+            context += [f"broom: {n}" for n in fallbacks]
             restage = [str(p) for p, _ in changed if p in plan.restage]
             if restage:
                 git(["add", "--", *restage], plan.repo)
@@ -151,7 +156,7 @@ def serena_path(rel: str, data: dict) -> Optional[Path]:
 def hook_edit(data: dict) -> None:
     tool = data.get("tool_name") or ""
     args = data.get("tool_input") or {}
-    record = setting("check_on") == "stop"
+    cwd = Path(data.get("cwd") or os.getcwd()).resolve()
     sd = session_dir(data.get("session_id") or "cli")
     path: Optional[Path] = None
     if tool in ("Edit", "Write", "MultiEdit"):
@@ -160,19 +165,20 @@ def hook_edit(data: dict) -> None:
         path = serena_path(args["relative_path"], data)
     elif SERENA_MANY_FILES.match(tool):
         # Which files a rename touched isn't in the call: the stop gate takes the repo's changed files instead.
-        root = git_root(Path(data.get("cwd") or os.getcwd()).resolve())
-        if root and record:
+        root = git_root(cwd)
+        if root and setting("check_on", cwd) == "stop":
             append_line(sd / "scan.txt", str(root))
         return
     if path is None or not path.is_file():
         return
     path = path.resolve()
-    if record and lang_of(path):
+    if excluded(path):
+        return
+    if setting("check_on", path) == "stop" and lang_of(path):
         append_line(sd / "edits.txt", str(path))
-    if setting("format_on") == "edit":
+    if setting("format_on", path) == "edit":
         # Claude Code shows Claude the diff of a file changed on disk since its last read, so no message here.
-        lines = ChangedLines().get(path) if setting("format_scope") == "changed" else None
-        format_file(path, final=False, lines=lines)
+        format_files([path], final=False, scope=setting("format_scope", path))
 
 
 # ---------------------------------------------------------------- stop
@@ -194,7 +200,7 @@ def clear_turn(sd: Path) -> None:
 
 
 def hook_stop(data: dict) -> None:
-    if setting("check_on") != "stop" or data.get("permission_mode") == "plan":
+    if setting("check_on", Path(data.get("cwd") or os.getcwd())) != "stop" or data.get("permission_mode") == "plan":
         return
     if any(isinstance(t, dict) and t.get("type") in EDITING_TASKS for t in data.get("background_tasks") or []):
         return  # a background agent may still be editing
@@ -206,7 +212,7 @@ def hook_stop(data: dict) -> None:
     files = [Path(p) for p in recorded]
     for root in dict.fromkeys(scans):
         files += git_changed_files(Path(root))
-    files = [f for f in dict.fromkeys(files) if lang_of(f) and f.is_file()]
+    files = [f for f in dict.fromkeys(files) if lang_of(f) and f.is_file() and not excluded(f)]
     if not files:
         clear_turn(sd)
         return

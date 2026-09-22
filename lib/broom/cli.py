@@ -14,7 +14,7 @@ from . import __version__
 from .checks import run_checks
 from .common import (
     BIOME_CFG, DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG, ChangedLines, git,
-    git_changed_files, git_root, lang_of, pkg_has_key, read_hook_input, ruff_configured, run, setting,
+    excluded, git_changed_files, git_root, lang_of, pkg_has_key, read_hook_input, ruff_configured, run, setting,
 )
 from .fmt import format_files
 from .gate import baseline_keys, baseline_remove, baseline_under, display, issue_key, render, select
@@ -45,7 +45,7 @@ def scope_files(args: argparse.Namespace) -> Tuple[List[Path], ChangedLines, Opt
         changed = ChangedLines(cached=True)
     else:
         files = git_changed_files(root)
-    files = [f for f in dict.fromkeys(files) if f.is_file()]
+    files = [f for f in dict.fromkeys(files) if f.is_file() and not excluded(f)]
     if args.paths:
         wanted = [Path(a).resolve() for a in args.paths]
         explicit = [p for p in wanted if p.is_file() and p not in files]
@@ -60,9 +60,12 @@ def cmd_sweep(args: argparse.Namespace) -> int:
         return 0
     # Formatting a whole repo makes a huge diff: that takes an explicit --fix, which then means every line.
     if not args.check and (args.fix or not args.all):
-        scope = "file" if args.all else (args.scope or setting("format_scope"))
-        for p, tool in format_files(files, scope=scope, changed=changed):
+        scope = "file" if args.all else (args.scope or setting("format_scope", Path.cwd()))
+        fallbacks: List[str] = []
+        for p, tool in format_files(files, scope=scope, changed=changed, notes=fallbacks):
             print(f"formatted {display(p)} ({tool})")
+        for n in fallbacks:
+            print(f"note: {n}")
     code = [f for f in files if lang_of(f)]
     issues, notes = run_checks(code, whole=args.all)
     every = select(issues, set(code), set(), changed, whole=args.all)
@@ -85,9 +88,13 @@ def cmd_fmt(args: argparse.Namespace) -> int:
     if args.paths:
         wanted = [Path(a).resolve() for a in args.paths]
         files = [f for f in files if any(f == w or w in f.parents for w in wanted)] + [w for w in wanted if w.is_file()]
-    changed = format_files(list(dict.fromkeys(files)), scope=args.scope or setting("format_scope"))
+    fallbacks: List[str] = []
+    files = [f for f in dict.fromkeys(files) if not excluded(f)]
+    changed = format_files(files, scope=args.scope or setting("format_scope", Path.cwd()), notes=fallbacks)
     for p, tool in changed:
         print(f"formatted {display(p)} ({tool})")
+    for n in fallbacks:
+        print(f"note: {n}")
     if not changed:
         print("broom: nothing to format")
     return 0
@@ -219,14 +226,14 @@ def main(argv: List[str]) -> int:
     mode.add_argument("--check", action="store_true", help="report only, don't format")
     mode.add_argument("--fix", action="store_true", help="with --all, also format every file")
     s.add_argument("--include-known", action="store_true", help="also show issues accepted earlier")
-    s.add_argument("--scope", choices=["changed", "file"], help="format only changed lines, or whole files "
-                   "(default: the format_scope setting)")
+    s.add_argument("--scope", choices=["changed", "function", "file"], help="format changed lines, the functions "
+                   "holding them, or whole files (default: the format_scope setting)")
     s.add_argument("paths", nargs="*", help="narrow the scope to these files or directories")
     s.set_defaults(fn=cmd_sweep)
 
     f = sub.add_parser("fmt", help="format changed files (default: uncommitted changes)")
-    f.add_argument("--scope", choices=["changed", "file"], help="format only changed lines, or whole files "
-                   "(default: the format_scope setting)")
+    f.add_argument("--scope", choices=["changed", "function", "file"], help="format changed lines, the functions "
+                   "holding them, or whole files (default: the format_scope setting)")
     f.add_argument("paths", nargs="*")
     f.set_defaults(fn=cmd_fmt)
 

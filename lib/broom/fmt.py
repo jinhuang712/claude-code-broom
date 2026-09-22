@@ -9,7 +9,8 @@ would delete an import Claude adds one edit before the code that uses it.
 
 Scope `changed` keeps only the formatter's edits that touch changed lines, like an IDE's "only VCS changed
 text": the file is formatted whole, then every hunk of the formatter's diff that doesn't overlap a changed line
-is put back. That works with every formatter, including the ones without range support.
+is put back. That works with every formatter, including the ones without range support. Scope `function`
+first widens the changed lines to the functions around them, as the language server reports them.
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from __future__ import annotations
 import difflib
 import shutil
 from pathlib import Path
-from typing import Iterable, List, Optional, Set, Tuple
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from .common import (
     GOLANGCI_CFG, JS_EXTS, PY_EXTS, WEB_EXTS, ChangedLines, boundary, find_up, js_formatter, resolve_bin,
@@ -108,14 +109,40 @@ def format_file(path: Path, final: bool = True, lines: Optional[Set[int]] = None
         return None
 
 
+def lines_to_keep(paths: List[Path], final: bool, scope: str,
+                  changed: ChangedLines) -> Tuple[Dict[Path, Optional[Set[int]]], List[str]]:
+    """Per file, the lines whose formatting to keep (None: all of them), and notes on any fallback."""
+    if scope == "file":
+        return {p: None for p in paths}, []
+    lines = {p: changed.get(p) for p in paths}
+    if scope != "function":
+        return lines, []
+    from .lsp import expand_to_functions, function_ranges
+
+    todo = [p for p in paths if lines[p] and formatter_cmd(p, final)]
+    ranges = function_ranges(todo)
+    notes = []
+    for p in todo:
+        found = ranges.get(p)
+        if found is None:
+            notes.append(f"no language server answered for {p.name}, so only its changed lines were formatted")
+        else:
+            lines[p] = expand_to_functions(lines[p] or set(), found)
+    return lines, notes
+
+
 def format_files(paths: Iterable[Path], final: bool = True, scope: str = "file",
-                 changed: Optional[ChangedLines] = None) -> List[Tuple[Path, str]]:
+                 changed: Optional[ChangedLines] = None, notes: Optional[List[str]] = None) -> List[Tuple[Path, str]]:
     """(path, tool) for every file a formatter changed. Scope `changed` limits each file to its changed lines,
-    measured by `changed` (against HEAD by default); a new file counts whole."""
-    changed = changed or ChangedLines()
+    measured by `changed` (against HEAD by default), and `function` to the functions holding them; a new file
+    counts whole. Fallback notes are appended to `notes`."""
+    paths = list(paths)
+    lines, fallbacks = lines_to_keep(paths, final, scope, changed or ChangedLines())
+    if notes is not None:
+        notes += fallbacks
     out = []
     for p in paths:
-        tool = format_file(p, final, changed.get(p) if scope == "changed" else None)
+        tool = format_file(p, final, lines[p])
         if tool:
             out.append((p, tool))
     return out

@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 from .checks import Issue
-from .common import DATA_ROOT, ChangedLines, load_json, save_json, short_hash
+from .common import DATA_ROOT, ChangedLines, excluded, load_json, save_json, short_hash
 
 BASELINE = DATA_ROOT / "baseline.json"
 BASELINE_DAYS = 30
@@ -92,7 +92,8 @@ def baseline_remove(keys: List[str]) -> None:
 
 def select(issues: List[Issue], files: Set[Path], known: Set[str], changed: Optional[ChangedLines] = None,
            whole: bool = False) -> List[Issue]:
-    """The findings that count: see the module docstring. `whole` counts every line of every file."""
+    """The findings that count: see the module docstring. `whole` counts every line of every file. Files the
+    repo's .broom.json excludes never count."""
     changed = changed or ChangedLines()
     seen: Set[Tuple[Path, int, int, str]] = set()
     out = []
@@ -104,7 +105,7 @@ def select(issues: List[Issue], files: Set[Path], known: Set[str], changed: Opti
             if lines is not None and i.line not in lines:
                 continue
         sig = (i.file, i.line, i.col, i.msg)
-        if sig in seen or issue_key(i) in known:
+        if sig in seen or issue_key(i) in known or excluded(i.file):
             continue
         seen.add(sig)
         out.append(i)
