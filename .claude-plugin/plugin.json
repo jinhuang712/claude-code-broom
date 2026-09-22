@@ -1,0 +1,28 @@
+{
+  "name": "broom",
+  "displayName": "broom",
+  "description": "Sweeps what Claude commits: formats it with each project's own formatter, lints the changed lines, type-checks, and blocks the commit until it's clean. Adds gopls, TypeScript 7, rust-analyzer and pyright language servers.",
+  "version": "0.2.0",
+  "author": {
+    "name": "Jin Huang",
+    "url": "https://github.com/jinhuang712"
+  },
+  "license": "MIT",
+  "keywords": ["format", "lint", "type-check", "pre-commit", "lsp", "golangci-lint", "oxlint", "oxfmt", "biome", "eslint", "ruff", "clippy"],
+  "userConfig": {
+    "format_on": {
+      "type": "string",
+      "title": "Format",
+      "description": "When broom runs formatters: on git commit, after every edit as well as on commit, or never",
+      "options": ["commit", "edit", "off"],
+      "default": "commit"
+    },
+    "check_on": {
+      "type": "string",
+      "title": "Lint and type-check",
+      "description": "When broom blocks on lint and type errors: on git commit, when Claude stops as well as on commit, or never",
+      "options": ["commit", "stop", "off"],
+      "default": "commit"
+    }
+  }
+}

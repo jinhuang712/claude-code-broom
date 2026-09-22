@@ -1,0 +1,49 @@
+# Used only for Go modules without their own .golangci.yml, and only on the lines Claude changed.
+# Bug-finders first; style linters that need a team's agreement (wsl, godot, funlen, ...) stay off.
+# Linter picks trimmed from samber/cc-skills-golang's golang-lint config.
+version: "2"
+
+run:
+  timeout: 3m
+  tests: true
+
+linters:
+  default: standard # errcheck, govet, ineffassign, staticcheck, unused
+  enable:
+    - bodyclose # unclosed HTTP response bodies
+    - durationcheck # time.Duration * time.Duration
+    - errorlint # errors.Is/As and %w instead of == and type switches
+    - exhaustive # switches that miss enum values
+    - fatcontext # contexts nested in loops
+    - forcetypeassert # x.(T) without the ok check
+    - gocritic
+    - gosec
+    - intrange # for i := range n (Go 1.22+)
+    - misspell
+    - modernize # older patterns with a newer standard-library form
+    - nilerr # returning nil when err != nil
+    - noctx # HTTP requests without a context
+    - nolintlint # //nolint without a linter name or reason
+    - predeclared # shadowing len, cap, error, ...
+    - reassign # reassigning package variables of other packages
+    - rowserrcheck # sql.Rows.Err() not checked
+    - sqlclosecheck # sql.Rows / sql.Stmt not closed
+    - unconvert
+    - unparam
+    - usestdlibvars # http.MethodGet over "GET"
+    - wastedassign
+  settings:
+    exhaustive:
+      default-signifies-exhaustive: true
+    gosec:
+      excludes:
+        - G104 # unchecked errors: errcheck already reports them
+    errcheck:
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

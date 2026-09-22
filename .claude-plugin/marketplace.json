@@ -1,0 +1,19 @@
+{
+  "name": "claude-code-broom",
+  "owner": {
+    "name": "Jin Huang"
+  },
+  "metadata": {
+    "description": "broom: format, lint and type-check what Claude commits, plus language servers for Go, TS/JS, Rust and Python",
+    "version": "0.2.0"
+  },
+  "plugins": [
+    {
+      "name": "broom",
+      "source": "./",
+      "description": "Formats, lints and type-checks what Claude commits; blocks the commit until it's clean",
+      "category": "development",
+      "tags": ["format", "lint", "pre-commit", "lsp", "quality"]
+    }
+  ]
+}

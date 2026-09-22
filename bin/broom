@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+"""broom: format and lint what changed. On the Bash PATH while the plugin is enabled; `broom --help`."""
+
+import os
+import sys
+
+
+def _option(name: str, default: str) -> str:
+    return os.environ.get("CLAUDE_PLUGIN_OPTION_" + name.upper(), "").strip().lower() or default
+
+
+# The edit and stop hooks fire on every edit and every turn but are off by default: leave before loading
+# anything, so an idle hook costs one interpreter start.
+if sys.argv[1:2] == ["hook"]:
+    event = sys.argv[2:3]
+    if event == ["edit"] and _option("format_on", "commit") != "edit" and _option("check_on", "commit") != "stop":
+        sys.exit(0)
+    if event == ["stop"] and _option("check_on", "commit") != "stop":
+        sys.exit(0)
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "lib"))
+
+from broom.cli import main  # noqa: E402
+
+sys.exit(main(sys.argv[1:]))
