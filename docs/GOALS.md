@@ -2,7 +2,7 @@
 
 ## Goals
 
-- Claude's commits come out formatted, lint-clean and type-correct by the project's own rules, without anyone
+- Claude's work comes out formatted, lint-clean and type-correct by the project's own rules, without anyone
   asking.
 - A repo with no tooling gets working tooling in one short conversation (`/broom:setup`).
 - Claude sees its mistakes as it edits, through language servers.
@@ -10,8 +10,8 @@
 
 ## Non-goals
 
-- **Replacing pre-commit, lefthook or CI.** broom checks the commits Claude makes. Your own commits and your CI
-  stay yours.
+- **Replacing pre-commit, lefthook or CI.** broom looks after Claude's work. Your own commits and your CI stay
+  yours.
 - **Being a linter or a formatter.** broom runs existing ones.
 - **Imposing a style.** Defaults exist only where a project has none.
 - **Running tests.** Too slow for a commit check; CI runs them.

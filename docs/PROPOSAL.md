@@ -16,8 +16,8 @@ CI or a human reviewer does. The pieces to fix that exist, but they don't add up
 One plugin that does three things:
 
 1. **Set up.** Detect what a repo needs, and install and configure it with the user's consent.
-2. **Sweep.** When Claude commits, format the files going in, lint the changed lines, type-check, and block the
-   commit until it's clean.
+2. **Sweep.** At the right moments, format, lint and type-check Claude's changes, and hold them back until they're
+   clean.
 3. **See.** Declare language servers so Claude gets diagnostics as it edits.
 
 ## Alternatives considered (September 2026)

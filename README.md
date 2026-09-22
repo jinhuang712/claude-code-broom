@@ -1,7 +1,7 @@
 # broom 🧹
 
 **Autonomous code hygiene for Claude Code.** broom sets up the formatters, linters, type checkers and language
-servers a repo needs, then sweeps every commit Claude makes: formatted, lint-clean and type-correct, by the
+servers a repo needs, then sweeps Claude's work when it should: formatted, lint-clean and type-correct, by the
 project's own rules.
 
 [中文](docs/README.zh-CN.md)
@@ -10,8 +10,8 @@ project's own rules.
 
 - **Sets up.** When you open a session in a repo, broom notices what's missing and Claude offers to install and
   configure it. Nothing is installed without your yes.
-- **Sweeps.** When Claude runs `git commit`, broom formats the files going in, lints the lines that changed,
-  type-checks the project, and blocks the commit until it's clean.
+- **Sweeps.** When it should, broom formats, lints and type-checks Claude's changes, and holds them back until
+  they're clean.
 - **Sees.** Language servers for Go, TS/JS, Rust and Python give Claude diagnostics as it edits.
 
 It uses your project's own tools and configs, only looks at what changed, and never blocks twice on the same
@@ -67,7 +67,7 @@ same files, only one language server starts. `broom doctor` tells you if that ha
 
 ## Use
 
-Mostly, you don't: broom runs when Claude commits. When you want a look first, ask for a sweep in your own words:
+Mostly, you don't: broom sweeps on its own. When you want a look first, ask for a sweep in your own words:
 
 ```text
 /broom:sweep

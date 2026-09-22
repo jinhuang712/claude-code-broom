@@ -12,7 +12,7 @@ into a reformatted file or a wall of someone else's old warnings. Type errors ar
 anywhere, because a changed signature breaks callers in files nobody touched.
 
 **Never in the way.**
-Checks run when Claude commits, not on every edit. Hooks that have nothing to do exit in milliseconds. A missing
+Checks run at natural checkpoints, not on every edit. Hooks that have nothing to do exit in milliseconds. A missing
 tool never blocks a commit, and the same result never blocks twice.
 
 **Ask, don't assume.**

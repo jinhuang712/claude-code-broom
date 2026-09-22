@@ -1,7 +1,7 @@
 {
   "name": "broom",
   "displayName": "broom",
-  "description": "Autonomous code hygiene: sets up the formatters, linters, type checkers and language servers a repo needs, then formats, lints and type-checks what Claude commits and blocks the commit until it's clean. Language servers for Go, TS/JS, Rust and Python.",
+  "description": "Autonomous code hygiene: sets up the formatters, linters, type checkers and language servers a repo needs, and sweeps Claude's work when it should.",
   "version": "0.4.0",
   "author": {
     "name": "Jin Huang",

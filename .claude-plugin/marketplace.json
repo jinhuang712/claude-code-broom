@@ -4,14 +4,14 @@
     "name": "Jin Huang"
   },
   "metadata": {
-    "description": "broom: format, lint and type-check what Claude commits, plus language servers for Go, TS/JS, Rust and Python",
+    "description": "broom: autonomous code hygiene for Claude Code",
     "version": "0.4.0"
   },
   "plugins": [
     {
       "name": "broom",
       "source": "./",
-      "description": "Sets up formatters, linters and language servers, then sweeps what Claude commits until it's clean",
+      "description": "Sets up formatters, linters and language servers, and sweeps when it should",
       "category": "development",
       "tags": ["format", "lint", "pre-commit", "lsp", "quality"]
     }
