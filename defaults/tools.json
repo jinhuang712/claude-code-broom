@@ -1,0 +1,26 @@
+{
+  "_comment": "How broom finds each tool, checks that it actually runs, and installs it. `install` is tried in order: the first entry whose manager is on PATH wins. `dev` is the npm package to add as a devDependency when the project has a package.json.",
+  "go": {"probe": ["go", "version"], "install": [["brew", "brew install go"]]},
+  "gofmt": {"install": [["brew", "brew install go"]]},
+  "golangci-lint": {
+    "probe": ["golangci-lint", "version"],
+    "install": [["brew", "brew install golangci-lint"], ["go", "go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest"]]
+  },
+  "gopls": {"probe": ["gopls", "version"], "install": [["go", "go install golang.org/x/tools/gopls@latest"]]},
+  "cargo": {"probe": ["cargo", "--version"], "install": [["brew", "brew install rustup && rustup-init -y"]]},
+  "rustfmt": {"probe": ["rustfmt", "--version"], "install": [["rustup", "rustup component add rustfmt"]]},
+  "cargo-clippy": {"probe": ["cargo", "clippy", "--version"], "install": [["rustup", "rustup component add clippy"]]},
+  "rust-analyzer": {
+    "probe": ["rust-analyzer", "--version"],
+    "install": [["rustup", "rustup component add rust-analyzer"], ["brew", "brew install rust-analyzer"]]
+  },
+  "ruff": {
+    "probe": ["ruff", "--version"],
+    "install": [["brew", "brew install ruff"], ["uv", "uv tool install ruff"], ["pipx", "pipx install ruff"]]
+  },
+  "pyright-langserver": {"install": [["npm", "npm i -g pyright"], ["uv", "uv tool install pyright"]]},
+  "tsc": {"probe": ["tsc", "--version"], "dev": "typescript", "install": [["npm", "npm i -g typescript@latest"]]},
+  "oxlint": {"probe": ["oxlint", "--version"], "dev": "oxlint", "install": [["npm", "npm i -g oxlint"]]},
+  "tsgolint": {"dev": "oxlint-tsgolint", "install": [["npm", "npm i -g oxlint-tsgolint"]]},
+  "oxfmt": {"probe": ["oxfmt", "--version"], "dev": "oxfmt", "install": [["npm", "npm i -g oxfmt"]]}
+}

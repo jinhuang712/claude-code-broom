@@ -1,6 +1,22 @@
 {
-  "description": "broom: sweep each git commit; optionally format per edit and check at stop (see /config)",
+  "description": "broom: offer setup when a repo has gaps; sweep each git commit; optionally format per edit and check at stop (see /config)",
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/broom",
+            "args": [
+              "hook",
+              "session"
+            ],
+            "timeout": 30
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
@@ -9,7 +25,10 @@
             "type": "command",
             "if": "Bash(git commit *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/broom",
-            "args": ["hook", "commit"],
+            "args": [
+              "hook",
+              "commit"
+            ],
             "timeout": 300,
             "statusMessage": "broom: sweeping the commit"
           },
@@ -17,7 +36,10 @@
             "type": "command",
             "if": "Bash(git -C *)",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/broom",
-            "args": ["hook", "commit"],
+            "args": [
+              "hook",
+              "commit"
+            ],
             "timeout": 300
           }
         ]
@@ -30,7 +52,10 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/broom",
-            "args": ["hook", "edit"],
+            "args": [
+              "hook",
+              "edit"
+            ],
             "timeout": 30
           }
         ]
@@ -42,7 +67,10 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/broom",
-            "args": ["hook", "stop"],
+            "args": [
+              "hook",
+              "stop"
+            ],
             "timeout": 300
           }
         ]

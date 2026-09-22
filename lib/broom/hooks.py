@@ -5,6 +5,8 @@
 - edit (PostToolUse on Edit, Write and Serena's edit tools): format per edit when format_on=edit, and record
   the file for the stop gate when check_on=stop.
 - stop (Stop): lint and type-check the files edited this turn when check_on=stop.
+- session (SessionStart): when the repo is missing tools or configs broom needs, ask Claude to offer the user
+  /broom:setup. Hooks can't ask the user anything themselves; Claude does, with the user's consent.
 
 A result Claude has already seen once passes the second time unchanged, so broom never traps Claude in a loop
 over a false positive or an issue that predates it.
@@ -20,12 +22,14 @@ from typing import List, Optional
 
 from .checks import run_checks
 from .common import (
-    DATA_ROOT, append_line, emit, git, git_changed_files, git_root, lang_of, load_json, prune_sessions,
+    DATA_ROOT, ChangedLines, append_line, emit, git, git_changed_files, git_root, lang_of, load_json, prune_sessions,
     save_json, session_dir, setting,
 )
+from .doctor import describe, diagnose_cached, gaps, needs_setup
 from .fmt import format_file, format_files
 from .gate import (
-    baseline_add, baseline_add_keys, baseline_load, issue_key, new_notes, note_text, render, select, verdict,
+    baseline_add, baseline_add_entries, baseline_keys, issue_entry, issue_key, new_notes, note_text, render, select,
+    setup_hint, verdict,
 )
 from .gitcmd import parse, parse_commit, plan_commit
 
@@ -84,7 +88,8 @@ def hook_commit(data: dict) -> None:
         if plan is None or not plan.files:
             continue
         if format_on != "off":
-            changed = format_files(sorted(f for f in plan.files if f not in plan.partial))
+            changed = format_files(sorted(f for f in plan.files if f not in plan.partial),
+                                   scope=setting("format_scope"))
             restage = [str(p) for p, _ in changed if p in plan.restage]
             if restage:
                 git(["add", "--", *restage], plan.repo)
@@ -97,7 +102,7 @@ def hook_commit(data: dict) -> None:
             continue
         files = sorted(f for f in plan.files if lang_of(f))
         issues, notes = run_checks(files, sd / "slow.json")
-        blocking = select(issues, set(files), baseline_load())
+        blocking = select(issues, set(files), baseline_keys())
         key = str(plan.repo)
         prior = state.get(key, {})
         if not blocking:
@@ -105,6 +110,8 @@ def hook_commit(data: dict) -> None:
             fresh = new_notes(sd / "notes.json", notes)
             if fresh:
                 context.append("broom skipped: " + "; ".join(note_text(n) for n in fresh))
+                if setup_hint(fresh):
+                    context.append(setup_hint(fresh))
         elif prior.get("verdict") == verdict(blocking) or int(prior.get("denials", 0)) >= MAX_BLOCKS:
             # Claude saw this result and committed again unchanged: the issues are known, the commit goes ahead.
             baseline_add(blocking)
@@ -164,7 +171,8 @@ def hook_edit(data: dict) -> None:
         append_line(sd / "edits.txt", str(path))
     if setting("format_on") == "edit":
         # Claude Code shows Claude the diff of a file changed on disk since its last read, so no message here.
-        format_file(path, final=False)
+        lines = ChangedLines().get(path) if setting("format_scope") == "changed" else None
+        format_file(path, final=False, lines=lines)
 
 
 # ---------------------------------------------------------------- stop
@@ -206,18 +214,20 @@ def hook_stop(data: dict) -> None:
     gate = load_json(sd / "gate.json", {})
     if gate.get("verdict") and gate.get("edits_at") == edit_count:
         # Claude stopped again without editing: what is left is known, and the turn ends.
-        baseline_add_keys(gate.get("pending", []))
+        pending = gate.get("pending") or {}
+        baseline_add_entries(pending if isinstance(pending, dict) else {k: {"t": time.time()} for k in pending})
         clear_turn(sd)
         emit({"systemMessage": f"broom: {gate.get('count', 0)} issue(s) left unfixed"})
         return
 
     issues, notes = run_checks(files, sd / "slow.json")
-    blocking = select(issues, set(files), baseline_load())
+    blocking = select(issues, set(files), baseline_keys())
     if not blocking:
         clear_turn(sd)
         fresh = new_notes(sd / "notes.json", notes)
         if fresh:
-            emit({"systemMessage": "broom: " + "; ".join(note_text(n) for n in fresh)})
+            hint = " (run /broom:setup)" if setup_hint(fresh) else ""
+            emit({"systemMessage": "broom: " + "; ".join(note_text(n) for n in fresh) + hint})
         return
     blocks = int(gate.get("blocks", 0)) + 1
     if blocks > MAX_BLOCKS:
@@ -225,7 +235,30 @@ def hook_stop(data: dict) -> None:
         emit({"systemMessage": f"broom: gave up after {MAX_BLOCKS} rounds, {len(blocking)} issue(s) left"})
         return
     save_json(sd / "gate.json", {"verdict": verdict(blocking), "edits_at": edit_count, "blocks": blocks,
-                                 "count": len(blocking), "pending": [issue_key(i) for i in blocking]})
+                                 "count": len(blocking), "pending": {issue_key(i): issue_entry(i) for i in blocking}})
     head = (f"[broom] {len(blocking)} issue(s) in this turn's changes. Fix them before finishing. If one is "
             "pre-existing or a false positive, say so and stop again: broom doesn't block twice without a new edit.")
     emit({"decision": "block", "reason": render(head, blocking, new_notes(sd / "notes.json", notes), set(files))})
+
+
+# ---------------------------------------------------------------- session
+
+
+def hook_session(data: dict) -> None:
+    repo = git_root(Path(data.get("cwd") or os.getcwd()).resolve())
+    if repo is None:
+        return
+    sd = session_dir(data.get("session_id") or "cli")
+    if str(repo) in read_lines(sd / "nudged.txt"):
+        return  # once per session: a compaction or /clear doesn't repeat it
+    result = diagnose_cached(repo)
+    if not needs_setup(repo, result):
+        return
+    append_line(sd / "nudged.txt", str(repo))
+    found = gaps(result)
+    summary = "; ".join(describe(i) for i in found[:6]) + (f"; and {len(found) - 6} more" if len(found) > 6 else "")
+    emit({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": (
+        f"broom (the code-hygiene plugin) found gaps in this repo: {summary}. At a natural point, and before your "
+        "first commit here at the latest, offer the user /broom:setup. Don't install anything they haven't agreed "
+        "to; if they decline, run `broom setup --dismiss` so broom stops asking until something changes."
+    )}})

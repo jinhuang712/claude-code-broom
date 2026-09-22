@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.3.0
+
+- `broom doctor`: languages, missing or broken tools (a rustup proxy without its component, TypeScript older than
+  7 for the language server), missing configs, dependencies not installed, and plugins whose language servers
+  compete with broom's, with the commands that fix each. One root config covers a monorepo.
+- A SessionStart hook runs the doctor (cached, ~0.1 s) and, when the repo has gaps, asks Claude to offer
+  `/broom:setup`. Once per session; not again after `broom setup --done` / `--dismiss` until the gaps change.
+- `/broom:setup` replaces `/broom:init`: it asks what to install (JS/TS tools as devDependencies, with `-w`/`-W`
+  at pnpm/yarn workspace roots), whether to turn formatting on, when broom runs, and the format scope.
+- `format_scope` option: `changed` (default) keeps only the formatter's edits on changed lines, for every
+  formatter; `file` formats whole files.
+- `/broom:sweep` takes plain language; `broom sweep` gained `--staged`, `--base REV`, `--all` (report only unless
+  `--fix`), `--scope` and `--include-known`, and summarizes big results.
+- `broom known` lists and clears accepted issues; sweeps say how many are hidden.
+- Missing tools never block a commit; the report suggests `/broom:setup`.
+- Solution-style tsconfigs (`"files": []` plus references) are type-checked per referenced config.
+- Bash-run `broom` reads the plugin options from the settings file, since only hooks get them as variables.
+
 ## 0.2.0
 
 - Renamed from `lint@claude-code-lint` to `broom@claude-code-broom`.

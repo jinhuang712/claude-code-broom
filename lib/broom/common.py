@@ -20,13 +20,27 @@ PLUGIN_ROOT = Path(__file__).resolve().parents[2]
 DATA_ROOT = Path(os.environ.get("CLAUDE_PLUGIN_DATA") or Path.home() / ".claude" / "plugins" / "data" / "broom-claude-code-broom")
 DEFAULTS = PLUGIN_ROOT / "defaults"
 
-SETTINGS = {"format_on": ("commit", ("commit", "edit", "off")), "check_on": ("commit", ("commit", "stop", "off"))}
+SETTINGS = {
+    "format_on": ("commit", ("commit", "edit", "off")),
+    "check_on": ("commit", ("commit", "stop", "off")),
+    "format_scope": ("changed", ("changed", "file")),
+}
+PLUGIN_ID = "broom@claude-code-broom"
 
 
 def setting(name: str) -> str:
-    """A userConfig value, which Claude Code exports to hooks as CLAUDE_PLUGIN_OPTION_<NAME>."""
+    """A userConfig value. Claude Code exports those to hooks as CLAUDE_PLUGIN_OPTION_<NAME> but not to commands
+    run through Bash, so `broom` there reads them where Claude Code stores them, in the user settings file."""
     default, allowed = SETTINGS[name]
-    value = (os.environ.get(f"CLAUDE_PLUGIN_OPTION_{name.upper()}") or "").strip().lower()
+    value = os.environ.get(f"CLAUDE_PLUGIN_OPTION_{name.upper()}")
+    if value is None:
+        config = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude") / "settings.json"
+        try:
+            options = json.loads(config.read_text()).get("pluginConfigs", {}).get(PLUGIN_ID, {}).get("options", {})
+            value = str(options.get(name, ""))
+        except (OSError, ValueError, AttributeError):
+            value = ""
+    value = value.strip().lower()
     return value if value in allowed else default
 
 GO_EXTS = {".go"}
@@ -301,11 +315,14 @@ def short_hash(text: str) -> str:
 
 
 class ChangedLines:
-    """Line numbers of each file that differ from HEAD; None means every line counts."""
+    """Line numbers of each file that differ from `base` (the index against HEAD when `cached`); None means
+    every line counts."""
 
     HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 
-    def __init__(self) -> None:
+    def __init__(self, base: str = "HEAD", cached: bool = False) -> None:
+        self.base = base
+        self.cached = cached
         self._cache: Dict[Path, Optional[Set[int]]] = {}
 
     def get(self, f: Path) -> Optional[Set[int]]:
@@ -315,11 +332,12 @@ class ChangedLines:
 
     def _compute(self, f: Path) -> Optional[Set[int]]:
         root = git_root(f.parent)
-        if root is None or git(["rev-parse", "--verify", "-q", "HEAD"], root) is None:
+        if root is None or git(["rev-parse", "--verify", "-q", self.base], root) is None:
             return None
         if git(["ls-files", "--error-unmatch", str(f)], root) is None:
             return None  # untracked: all of it is new
-        out = git(["diff", "-U0", "--no-color", "--no-ext-diff", "HEAD", "--", str(f)], root) or ""
+        mode = ["--cached"] if self.cached else []
+        out = git(["diff", "-U0", "--no-color", "--no-ext-diff", *mode, self.base, "--", str(f)], root) or ""
         lines: Set[int] = set()
         for row in out.splitlines():
             m = self.HUNK.match(row)

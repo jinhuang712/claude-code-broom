@@ -1,8 +1,8 @@
 {
   "name": "broom",
   "displayName": "broom",
-  "description": "Sweeps what Claude commits: formats it with each project's own formatter, lints the changed lines, type-checks, and blocks the commit until it's clean. Adds gopls, TypeScript 7, rust-analyzer and pyright language servers.",
-  "version": "0.2.0",
+  "description": "Autonomous code hygiene: sets up the formatters, linters, type checkers and language servers a repo needs, then formats, lints and type-checks what Claude commits and blocks the commit until it's clean. Language servers for Go, TS/JS, Rust and Python.",
+  "version": "0.3.0",
   "author": {
     "name": "Jin Huang",
     "url": "https://github.com/jinhuang712"
@@ -16,6 +16,13 @@
       "description": "When broom runs formatters: on git commit, after every edit as well as on commit, or never",
       "options": ["commit", "edit", "off"],
       "default": "commit"
+    },
+    "format_scope": {
+      "type": "string",
+      "title": "Format scope",
+      "description": "How much of a file broom reformats: only the lines that changed (like an IDE's 'only VCS changed text'), or the whole file",
+      "options": ["changed", "file"],
+      "default": "changed"
     },
     "check_on": {
       "type": "string",

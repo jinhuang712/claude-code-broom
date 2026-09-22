@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
@@ -42,6 +43,11 @@ def resolve_in(root: Path, name: str, *fallbacks: Optional[Path]) -> Path:
     return (root / p).resolve()
 
 
+def targets(files: List[Path], whole: bool) -> List[str]:
+    """What to hand a linter: the files, or its whole project (it runs from the project directory)."""
+    return ["."] if whole else [str(f) for f in files]
+
+
 def failure(out: str, err: str) -> str:
     """The first lines explaining why a tool failed; some tools print config errors on stdout."""
     rows = [r.strip(" |x\t") for r in (err.strip() or out.strip()).splitlines()]
@@ -56,13 +62,13 @@ GOLANGCI_ROW = re.compile(
 VET_TYPE_ERROR = re.compile(r"^vet: (?P<file>[^:]+\.go):(?P<line>\d+):(?P<col>\d+): (?P<msg>.+)$")
 
 
-def check_go(module: Path, files: List[Path], stop: Path) -> Findings:
+def check_go(module: Path, files: List[Path], stop: Path, whole: bool = False) -> Findings:
     issues: List[Issue] = []
     notes: List[str] = []
     exe = shutil.which("golangci-lint")
     if exe:
         cfg = find_up(module, GOLANGCI_CFG, stop) or DEFAULTS / "golangci.yml"
-        pkgs = sorted({"./" + os.path.relpath(f.parent, module) for f in files})
+        pkgs = ["./..."] if whole else sorted({"./" + os.path.relpath(f.parent, module) for f in files})
         rc, out, err = run([
             exe, "run", "-c", str(cfg), "--path-mode=abs", "--output.text.path=stdout",
             "--output.text.print-issued-lines=false", "--output.text.colors=false", "--show-stats=false",
@@ -85,7 +91,7 @@ def check_go(module: Path, files: List[Path], stop: Path) -> Findings:
 
     # Packages nobody touched still have to compile against the ones that changed.
     go = shutil.which("go")
-    if go:
+    if go and not whole:  # the whole module was just linted, typecheck included
         edited_dirs = {f.parent for f in files}
         rc, out, err = run([go, "vet", "./..."], module, timeout=150)
         if rc is None:
@@ -103,7 +109,7 @@ def check_go(module: Path, files: List[Path], stop: Path) -> Findings:
 # ---------------------------------------------------------------- JS / TS
 
 
-def check_oxlint(cfg_dir: Path, files: List[Path], stop: Path, defaults: bool) -> Findings:
+def check_oxlint(cfg_dir: Path, files: List[Path], stop: Path, defaults: bool, whole: bool = False) -> Findings:
     exe = resolve_bin("oxlint", cfg_dir, stop)
     if not exe:
         return [], ["missing:oxlint (npm i -g oxlint oxlint-tsgolint)"]
@@ -115,7 +121,7 @@ def check_oxlint(cfg_dir: Path, files: List[Path], stop: Path, defaults: bool) -
         type_aware = pkg_scripts_mention(cfg_dir, "--type-aware") or pkg_scripts_mention(stop, "--type-aware")
     if type_aware and resolve_bin("tsgolint", cfg_dir, stop):
         cmd.append("--type-aware")
-    rc, out, err = run(cmd + [str(f) for f in files], cfg_dir, timeout=90)
+    rc, out, err = run(cmd + targets(files, whole), cfg_dir, timeout=90)
     if rc is None:
         return [], [f"timeout:oxlint in {cfg_dir}"]
     try:
@@ -130,13 +136,13 @@ def check_oxlint(cfg_dir: Path, files: List[Path], stop: Path, defaults: bool) -
     return issues, []
 
 
-def check_eslint(cfg_dir: Path, files: List[Path], stop: Path) -> Findings:
+def check_eslint(cfg_dir: Path, files: List[Path], stop: Path, whole: bool = False) -> Findings:
     exe = resolve_bin("eslint", cfg_dir, stop, local_only=True)
     if not exe:
         return [], [f"missing:eslint in {cfg_dir} (install the project's dependencies)"]
-    rc, out, err = run([exe, "-f", "json", "--no-warn-ignored", *map(str, files)], cfg_dir, timeout=120)
+    rc, out, err = run([exe, "-f", "json", "--no-warn-ignored", *targets(files, whole)], cfg_dir, timeout=120)
     if rc == 2 and "no-warn-ignored" in err:  # eslintrc-era ESLint
-        rc, out, err = run([exe, "-f", "json", *map(str, files)], cfg_dir, timeout=120)
+        rc, out, err = run([exe, "-f", "json", *targets(files, whole)], cfg_dir, timeout=120)
     if rc is None:
         return [], [f"timeout:eslint in {cfg_dir}"]
     try:
@@ -151,11 +157,11 @@ def check_eslint(cfg_dir: Path, files: List[Path], stop: Path) -> Findings:
     return issues, []
 
 
-def check_biome(cfg_dir: Path, files: List[Path], stop: Path) -> Findings:
+def check_biome(cfg_dir: Path, files: List[Path], stop: Path, whole: bool = False) -> Findings:
     exe = resolve_bin("biome", cfg_dir, stop)
     if not exe:
         return [], [f"missing:biome in {cfg_dir} (install the project's dependencies)"]
-    rc, out, err = run([exe, "lint", "--reporter=json", *map(str, files)], cfg_dir, timeout=90)
+    rc, out, err = run([exe, "lint", "--reporter=json", *targets(files, whole)], cfg_dir, timeout=90)
     if rc is None:
         return [], [f"timeout:biome in {cfg_dir}"]
     start = out.find("{")
@@ -244,12 +250,12 @@ def check_rust(crate: Path, stop: Path) -> Findings:
 RUFF_ROW = re.compile(r"^(?P<file>.+?):(?P<line>\d+):(?P<col>\d+): (?P<rule>[\w-]+):? (?P<msg>.*)$")
 
 
-def check_python(root: Path, files: List[Path]) -> Findings:
+def check_python(root: Path, files: List[Path], whole: bool = False) -> Findings:
     ruff = shutil.which("ruff")
     if not ruff:
         return [], ["missing:ruff (brew install ruff)"]
     rc, out, err = run([ruff, "check", "--output-format", "concise", "--no-fix", "--force-exclude",
-                        *map(str, files)], root, timeout=60)
+                        *targets(files, whole)], root, timeout=60)
     if rc is None:
         return [], [f"timeout:ruff in {root}"]
     issues = []
@@ -264,8 +270,9 @@ def check_python(root: Path, files: List[Path]) -> Findings:
 # ---------------------------------------------------------------- planning
 
 
-def plan(files: List[Path]) -> List[Tuple[str, Callable[[], Findings]]]:
-    """(key, check) per project and tool; the key lets a check that timed out be skipped later."""
+def plan(files: List[Path], whole: bool = False) -> List[Tuple[str, Callable[[], Findings]]]:
+    """(key, check) per project and tool; the key lets a check that timed out be skipped later. With `whole`,
+    each tool checks its whole project instead of the given files."""
     go: Dict[Tuple[Path, Path], List[Path]] = {}
     js: Dict[Tuple[str, Path, Path], List[Path]] = {}
     tsc: Set[Tuple[Path, Path]] = set()
@@ -295,28 +302,28 @@ def plan(files: List[Path]) -> List[Tuple[str, Callable[[], Findings]]]:
 
     checks: List[Tuple[str, Callable[[], Findings]]] = []
     for (mod, stop), fs in go.items():
-        checks.append((f"go:{mod}", lambda mod=mod, fs=fs, stop=stop: check_go(mod, fs, stop)))
+        checks.append((f"go:{mod}", partial(check_go, mod, fs, stop, whole)))
     for (tool, d, stop), fs in js.items():
         if tool in ("oxlint", "oxlint-default"):
-            fn = lambda d=d, fs=fs, stop=stop, dflt=tool == "oxlint-default": check_oxlint(d, fs, stop, dflt)
+            fn = partial(check_oxlint, d, fs, stop, tool == "oxlint-default", whole)
         elif tool == "eslint":
-            fn = lambda d=d, fs=fs, stop=stop: check_eslint(d, fs, stop)
+            fn = partial(check_eslint, d, fs, stop, whole)
         else:
-            fn = lambda d=d, fs=fs, stop=stop: check_biome(d, fs, stop)
+            fn = partial(check_biome, d, fs, stop, whole)
         checks.append((f"{tool}:{d}", fn))
     for cfg, stop in tsc:
-        checks.append((f"tsc:{cfg}", lambda cfg=cfg, stop=stop: check_tsc(cfg, stop)))
+        checks.append((f"tsc:{cfg}", partial(check_tsc, cfg, stop)))
     for crate, stop in rust:
-        checks.append((f"clippy:{crate}", lambda crate=crate, stop=stop: check_rust(crate, stop)))
+        checks.append((f"clippy:{crate}", partial(check_rust, crate, stop)))
     for (root, _stop), fs in py.items():
-        checks.append((f"ruff:{root}", lambda root=root, fs=fs: check_python(root, fs)))
+        checks.append((f"ruff:{root}", partial(check_python, root, fs, whole)))
     return checks
 
 
-def run_checks(files: List[Path], slow_path: Optional[Path] = None) -> Findings:
+def run_checks(files: List[Path], slow_path: Optional[Path] = None, whole: bool = False) -> Findings:
     """Run every check in parallel; a check that times out is recorded in `slow_path` and skipped after."""
     slow = set(load_json(slow_path, [])) if slow_path else set()
-    todo = [(k, fn) for k, fn in plan(files) if k not in slow]
+    todo = [(k, fn) for k, fn in plan(files, whole) if k not in slow]
     issues: List[Issue] = []
     notes: List[str] = []
     with ThreadPoolExecutor(max_workers=4) as pool:

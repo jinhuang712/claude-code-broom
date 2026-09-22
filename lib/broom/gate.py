@@ -1,21 +1,23 @@
 """What counts as a finding, the known-issue list, and the report Claude reads.
 
-Lint findings count only on changed lines (git diff against HEAD; an untracked file counts whole), so a legacy
-repo's old issues never land on Claude. Compile and type errors count anywhere: a changed signature breaks
-callers in files nobody opened. A result Claude has seen and chosen not to fix is recorded as known and not
-raised again.
+Lint findings count only on changed lines (git diff against a base revision; a new file counts whole), so a
+legacy repo's old issues never land on Claude. Compile and type errors count anywhere: a changed signature
+breaks callers in files nobody opened. A result Claude has seen and chosen not to fix is recorded as known and
+not raised again; `broom known` lists and clears those.
 """
 
 from __future__ import annotations
 
 import time
+from collections import Counter
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from .checks import Issue
 from .common import DATA_ROOT, ChangedLines, load_json, save_json, short_hash
 
 BASELINE = DATA_ROOT / "baseline.json"
+BASELINE_DAYS = 30
 MAX_SHOWN = 40
 
 _lines: Dict[Path, List[str]] = {}
@@ -36,33 +38,66 @@ def issue_key(i: Issue) -> str:
     return short_hash(f"{i.file}|{i.tool}|{i.rule}|{i.msg}|{line_text(i.file, i.line)}")
 
 
+def issue_entry(i: Issue) -> Dict[str, object]:
+    return {"t": time.time(), "file": str(i.file), "line": i.line, "tool": i.tool, "rule": i.rule, "msg": i.msg}
+
+
 def verdict(issues: List[Issue]) -> str:
     return short_hash("".join(sorted(issue_key(i) for i in issues)))
 
 
-def baseline_load() -> Set[str]:
-    return set(load_json(BASELINE, {}))
+# ---------------------------------------------------------------- known issues
+
+
+def baseline_load() -> Dict[str, dict]:
+    raw = load_json(BASELINE, {})
+    # 0.2 stored a bare timestamp per key.
+    return {k: (v if isinstance(v, dict) else {"t": v}) for k, v in raw.items()}
+
+
+def baseline_keys() -> Set[str]:
+    return set(baseline_load())
 
 
 def baseline_add(issues: List[Issue]) -> None:
-    baseline_add_keys([issue_key(i) for i in issues])
+    baseline_add_entries({issue_key(i): issue_entry(i) for i in issues})
 
 
-def baseline_add_keys(keys: List[str]) -> None:
-    data = load_json(BASELINE, {})
-    now = time.time()
-    data.update({k: now for k in keys})
-    cutoff = now - 30 * 86400
-    save_json(BASELINE, {k: t for k, t in data.items() if t >= cutoff})
+def baseline_add_entries(entries: Dict[str, dict]) -> None:
+    data = baseline_load()
+    data.update(entries)
+    cutoff = time.time() - BASELINE_DAYS * 86400
+    save_json(BASELINE, {k: v for k, v in data.items() if v.get("t", 0) >= cutoff})
 
 
-def select(issues: List[Issue], files: Set[Path], known: Set[str]) -> List[Issue]:
-    """The findings that count for `files`: see the module docstring."""
-    changed = ChangedLines()
+def baseline_under(roots: List[Path]) -> Dict[str, dict]:
+    """Known issues in files under any of `roots`."""
+    out = {}
+    for k, v in baseline_load().items():
+        f = Path(str(v.get("file", "")))
+        if any(f == r or r in f.parents for r in roots):
+            out[k] = v
+    return out
+
+
+def baseline_remove(keys: List[str]) -> None:
+    data = baseline_load()
+    for k in keys:
+        data.pop(k, None)
+    save_json(BASELINE, data)
+
+
+# ---------------------------------------------------------------- selection and report
+
+
+def select(issues: List[Issue], files: Set[Path], known: Set[str], changed: Optional[ChangedLines] = None,
+           whole: bool = False) -> List[Issue]:
+    """The findings that count: see the module docstring. `whole` counts every line of every file."""
+    changed = changed or ChangedLines()
     seen: Set[Tuple[Path, int, int, str]] = set()
     out = []
     for i in issues:
-        if not i.hard:
+        if not (i.hard or whole):
             if i.file not in files:
                 continue
             lines = changed.get(i.file)
@@ -93,25 +128,38 @@ def note_text(n: str) -> str:
     return n.split(":", 1)[1] if n.startswith(("timeout:", "missing:")) else n
 
 
+def setup_hint(notes: List[str]) -> str:
+    missing = [n for n in notes if n.startswith("missing:")]
+    return "Some checks couldn't run because tools are missing: offer the user /broom:setup." if missing else ""
+
+
 def render(head: str, issues: List[Issue], notes: List[str], files: Set[Path]) -> str:
     out = [head]
+    if len(issues) > MAX_SHOWN:
+        top = Counter(f"{i.tool} {i.rule}" for i in issues).most_common(10)
+        out.append("\nMost frequent: " + ", ".join(f"{rule} ×{n}" for rule, n in top))
     groups: Dict[Tuple[str, Path], List[Issue]] = {}
     for i in issues:
         groups.setdefault((i.tool, i.root), []).append(i)
     shown = 0
     for (tool, root), items in groups.items():
+        if shown >= MAX_SHOWN:
+            break
         out.append(f"\n{tool} ({display(root)}):")
         for i in sorted(items, key=lambda x: (str(x.file), x.line, x.col)):
             if shown >= MAX_SHOWN:
                 break
             where = f"{rel(i.file, root)}:{i.line}:{i.col}" if i.line else rel(i.file, root)
-            tag = "" if i.file in files else "  [not in the changed files]"
+            tag = "" if i.file in files or not files else "  [not in the changed files]"
             out.append(f"  {where}  {i.rule}  {i.msg}{tag}")
             shown += 1
     if len(issues) > shown:
         out.append(f"\n... and {len(issues) - shown} more")
     if notes:
         out.append("\nSkipped: " + "; ".join(note_text(n) for n in notes))
+        hint = setup_hint(notes)
+        if hint:
+            out.append(hint)
     return "\n".join(out)
 
 

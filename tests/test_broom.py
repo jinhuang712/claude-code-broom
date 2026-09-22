@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 import uuid
 from pathlib import Path
@@ -20,12 +21,14 @@ ROOT = Path(__file__).resolve().parent.parent
 BROOM = ROOT / "bin" / "broom"
 sys.path.insert(0, str(ROOT / "lib"))
 
+from broom.fmt import keep_hunks  # noqa: E402
 from broom.gitcmd import GitOp, parse, parse_commit  # noqa: E402
 
 GIT_ENV = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
 HAS_GO = all(shutil.which(t) for t in ("go", "gofmt", "golangci-lint"))
 HAS_TS = all(shutil.which(t) for t in ("oxlint", "tsc"))
 HAS_PY = shutil.which("ruff") is not None
+HAS_GOPLS = HAS_GO and shutil.which("gopls") is not None
 
 GO_MAIN = """package main
 
@@ -109,6 +112,38 @@ class BroomTest(unittest.TestCase):
         return self.hook("commit", {"session_id": "s1", "cwd": str(repo), "hook_event_name": "PreToolUse",
                                     "tool_name": "Bash", "tool_input": {"command": command},
                                     "tool_use_id": tool_use_id or uuid.uuid4().hex}, **options)
+
+    def cli(self, cwd: Path, *args: str, env: dict = None) -> subprocess.CompletedProcess:
+        return subprocess.run([str(BROOM), *args], cwd=cwd, env=env or self.env, capture_output=True, text=True)
+
+    def fake_path(self, keep: tuple = (), fakes: dict = None) -> dict:
+        """An env whose PATH holds only git, python3, the `keep` tools and `fakes` scripts, so tools look missing
+        or broken. CLAUDE_CONFIG_DIR points at an empty config so real plugin settings don't leak in."""
+        d = self.tmp / f"bin{uuid.uuid4().hex[:6]}"
+        d.mkdir()
+        (d / "python3").symlink_to(sys.executable)
+        for name in ("git", *keep):
+            if shutil.which(name):
+                (d / name).symlink_to(shutil.which(name))
+        for name, body in (fakes or {}).items():
+            (d / name).write_text("#!/bin/sh\n" + body + "\n")
+            (d / name).chmod(0o755)
+        return {**self.env, "PATH": str(d), "CLAUDE_CONFIG_DIR": str(self.config_dir())}
+
+    def config_dir(self, settings: dict = None) -> Path:
+        d = self.tmp / "claude-config"
+        d.mkdir(exist_ok=True)
+        (d / "settings.json").write_text(json.dumps(settings or {}))
+        return d
+
+    def session(self, repo: Path, session_id: str, env: dict) -> dict:
+        r = subprocess.run([str(BROOM), "hook", "session"], capture_output=True, text=True, env=env,
+                           input=json.dumps({"session_id": session_id, "cwd": str(repo), "source": "startup"}))
+        self.assertEqual(r.stderr.strip(), "", "hook raised")
+        return json.loads(r.stdout) if r.stdout.strip() else {}
+
+    def doctor(self, repo: Path, env: dict) -> dict:
+        return json.loads(self.cli(repo, "doctor", "--json", env=env).stdout)
 
     def denied(self, out: dict) -> str:
         spec = out.get("hookSpecificOutput", {})
@@ -295,6 +330,194 @@ class BroomTest(unittest.TestCase):
         p = subprocess.run([str(BROOM), "sweep", "--check"], cwd=r, env=self.env, capture_output=True, text=True)
         self.assertEqual(p.returncode, 1, p.stdout + p.stderr)
         self.assertIn("F401", p.stdout)
+
+    # doctor
+
+    def test_doctor_reports_missing_tools_with_install_commands(self) -> None:
+        r = self.go_repo()
+        result = self.doctor(r, self.fake_path(keep=("go", "gofmt")))
+        status = {i["tool"]: i for i in result["items"]}
+        self.assertEqual(status["golangci-lint"]["status"], "missing")
+        self.assertIn("golangci-lint", status["golangci-lint"]["fix"])
+        self.assertEqual(status["gopls"]["fix"], "go install golang.org/x/tools/gopls@latest")
+        self.assertFalse(result["healthy"])
+
+    def test_doctor_flags_a_rustup_proxy_without_its_component(self) -> None:
+        r = self.repo({"Cargo.toml": '[package]\nname = "x"\nversion = "0.1.0"\nedition = "2021"\n',
+                       "src/main.rs": "fn main() {}\n"})
+        fake = "echo \"error: Unknown binary 'rust-analyzer' in official toolchain\" >&2; exit 1"
+        ra = next(i for i in self.doctor(r, self.fake_path(fakes={"rust-analyzer": fake}))["items"]
+                  if i["tool"] == "rust-analyzer")
+        self.assertEqual(ra["status"], "broken")
+        self.assertIn("Unknown binary", ra["detail"])
+        self.assertEqual(ra["fix"], "rustup component add rust-analyzer")
+
+    def test_doctor_flags_old_typescript_and_a_competing_lsp_plugin(self) -> None:
+        r = self.ts_repo()
+        env = self.fake_path(fakes={"tsc": "echo 'Version 5.9.3'"})
+        self.config_dir({"enabledPlugins": {"typescript-lsp@claude-plugins-official": True, "other@x": True}})
+        items = self.doctor(r, env)["items"]
+        lsp = next(i for i in items if i["role"] == "lsp")
+        self.assertEqual(lsp["status"], "broken")
+        self.assertIn("TypeScript 7", lsp["detail"])
+        conflict = [i for i in items if i["status"] == "conflict"]
+        self.assertEqual([c["fix"] for c in conflict], ["claude plugin disable typescript-lsp@claude-plugins-official"])
+
+    def test_doctor_installs_js_tools_as_devdependencies_with_the_projects_package_manager(self) -> None:
+        r = self.ts_repo({"pnpm-lock.yaml": "lockfileVersion: '9.0'\n"})
+        result = self.doctor(r, self.fake_path())
+        self.assertIn("pnpm add -D oxlint oxlint-tsgolint typescript", result["fix"])
+        self.assertEqual(result["configure"], ["broom init .", "pnpm add -D oxfmt"])
+
+    def test_doctor_collapses_a_monorepo_to_its_root(self) -> None:
+        pkg = '{"name":"p","private":true}\n'
+        r = self.repo({"package.json": pkg, "pnpm-lock.yaml": "", "pnpm-workspace.yaml": "packages: ['packages/*']\n",
+                       "packages/a/package.json": pkg, "packages/b/package.json": pkg})
+        result = self.doctor(r, self.fake_path())
+        self.assertEqual(result["configure"], ["broom init .", "pnpm add -D -w oxfmt"])
+        self.assertIn("pnpm add -D -w oxlint", result["fix"])
+        self.assertFalse([c for c in result["fix"] + result["configure"] if c.startswith("cd ")], "no per-package installs")
+        self.assertEqual(len([i for i in result["items"] if i["status"] == "off"]), 2, "one config, one install")
+
+    def test_init_at_a_monorepo_root_covers_the_packages(self) -> None:
+        r = self.repo({"apps/a/package.json": "{}\n", "apps/b/package.json": "{}\n"})
+        out = self.cli(r, "init").stdout
+        self.assertTrue((r / ".oxfmtrc.json").exists(), out)
+        self.assertTrue((r / ".oxlintrc.json").exists(), out)
+        formats = [i for i in self.doctor(r, {**self.env, "CLAUDE_CONFIG_DIR": str(self.config_dir())})["items"]
+                   if i["role"] == "format"]
+        self.assertTrue(formats and all(i["status"] != "off" for i in formats), formats)
+
+    # setup offered by the session hook
+
+    def test_session_offers_setup_once_per_session_until_dismissed(self) -> None:
+        r = self.go_repo()
+        env = self.fake_path(keep=("go", "gofmt"))
+        note = self.session(r, "a", env)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("/broom:setup", note)
+        self.assertIn("golangci-lint missing", note)
+        self.assertEqual(self.session(r, "a", env), {}, "once per session")
+        self.assertIn("hookSpecificOutput", self.session(r, "b", env), "a new session hears it again")
+        self.assertEqual(self.cli(r, "setup", "--dismiss", env=env).returncode, 0)
+        self.assertEqual(self.session(r, "c", env), {}, "dismissed")
+
+    def test_session_asks_again_when_the_gaps_change(self) -> None:
+        r = self.repo({"pyproject.toml": "[project]\nname = 'x'\n", "a.py": "x = 1\n"})
+        env = self.fake_path(keep=("ruff", "pyright-langserver"))
+        self.assertIn("formatting is off", str(self.session(r, "a", env)))
+        self.cli(r, "setup", "--done", env=env)
+        self.assertEqual(self.session(r, "b", env), {})
+        (r / "go.mod").write_text("module example.com/m\n\ngo 1.26\n")
+        self.assertIn("golangci-lint missing", str(self.session(r, "c", env)))
+
+    @unittest.skipUnless(HAS_GOPLS, "go tools missing")
+    def test_session_is_quiet_and_fast_when_healthy(self) -> None:
+        r = self.go_repo()
+        env = {**self.env, "CLAUDE_CONFIG_DIR": str(self.config_dir())}
+        self.assertEqual(self.session(r, "a", env), {})
+        start = time.time()
+        self.assertEqual(self.session(r, "b", env), {})
+        self.assertLess(time.time() - start, 1.0, "the cached doctor keeps SessionStart fast")
+        self.assertEqual(self.session(self.repo({"README.md": "hi\n"}), "c", env), {}, "no languages, nothing to say")
+
+    @unittest.skipUnless(HAS_TS, "oxlint/tsc missing")
+    def test_missing_tools_never_block_a_commit(self) -> None:
+        r = self.ts_repo()
+        (r / "src/main.ts").write_text(TS_BAD)
+        self.sh(r, "git", "add", "src/main.ts")
+        env = self.fake_path()
+        payload = {"session_id": "s1", "cwd": str(r), "tool_name": "Bash", "tool_use_id": "t1",
+                   "tool_input": {"command": "git commit -m x"}}
+        p = subprocess.run([str(BROOM), "hook", "commit"], input=json.dumps(payload), capture_output=True, text=True,
+                           env=env)
+        out = json.loads(p.stdout)["hookSpecificOutput"]
+        self.assertNotIn("permissionDecision", out)
+        self.assertIn("/broom:setup", out["additionalContext"])
+
+    def test_init_adds_only_what_is_missing_and_is_idempotent(self) -> None:
+        g = self.go_repo()
+        (g / ".golangci.yml").write_text('version: "2"\n')
+        self.assertIn("already has", self.cli(g, "init").stdout)
+        self.assertEqual((g / ".golangci.yml").read_text(), 'version: "2"\n')
+        t = self.ts_repo()
+        first = self.cli(t, "init").stdout
+        self.assertIn(".oxlintrc.json", first)
+        self.assertIn(".oxfmtrc.json", first)
+        self.assertIn("already has", self.cli(t, "init").stdout)
+
+    # sweep scopes
+
+    @unittest.skipUnless(HAS_PY, "ruff missing")
+    def test_sweep_base_counts_only_lines_from_those_commits(self) -> None:
+        r = self.repo({"a.py": "import os\n"})
+        (r / "a.py").write_text("import os\nimport sys\n")
+        self.sh(r, "git", "commit", "-qam", "add sys")
+        out = self.cli(r, "sweep", "--check", "--base", "HEAD~1").stdout
+        self.assertIn("`sys` imported but unused", out)
+        self.assertNotIn("`os`", out)
+
+    @unittest.skipUnless(HAS_PY, "ruff missing")
+    def test_sweep_all_reports_old_issues_and_formats_only_with_fix(self) -> None:
+        ugly = "import os\nx = {  'a':1 }\n"
+        r = self.repo({"ruff.toml": "", "a.py": ugly})
+        out = self.cli(r, "sweep", "--all").stdout
+        self.assertIn("`os` imported but unused", out)
+        self.assertEqual((r / "a.py").read_text(), ugly, "--all alone reports only")
+        self.cli(r, "sweep", "--all", "--fix")
+        self.assertEqual((r / "a.py").read_text(), 'import os\n\nx = {"a": 1}\n')
+
+    @unittest.skipUnless(HAS_PY, "ruff missing")
+    def test_sweep_summarizes_big_results(self) -> None:
+        r = self.repo({"a.py": "".join(f"import mod{n}\n" for n in range(60))})
+        out = self.cli(r, "sweep", "--all").stdout
+        self.assertIn("Most frequent: ruff F401 ×60", out)
+        self.assertIn("... and 20 more", out)
+
+    @unittest.skipUnless(HAS_TS, "oxlint/tsc missing")
+    def test_known_issues_are_listed_hidden_and_clearable(self) -> None:
+        r = self.ts_repo()
+        (r / "src/main.ts").write_text(TS_BAD)
+        self.sh(r, "git", "add", "src/main.ts")
+        self.assertTrue(self.denied(self.commit(r, "git commit -m x")))
+        self.assertEqual(self.denied(self.commit(r, "git commit -m x")), "")
+        listed = self.cli(r, "known").stdout
+        self.assertIn("no-floating-promises", listed)
+        self.assertIn("main.ts:5", listed)
+        self.assertIn("known issue(s) hidden", self.cli(r, "sweep", "--check").stdout)
+        self.assertIn("cleared 2", self.cli(r, "known", "--clear").stdout)
+        self.assertTrue(self.denied(self.commit(r, "git commit -m x")), "cleared issues block again")
+
+    # format scope
+
+    def test_keep_hunks_undoes_edits_away_from_changed_lines(self) -> None:
+        self.assertEqual(keep_hunks("a\nb\nc\n", "A\nb\nC\n", {3}), "a\nb\nC\n")
+        self.assertEqual(keep_hunks("a\nc\n", "a\nb\nc\n", {2}), "a\nb\nc\n", "insertion next to a changed line")
+        self.assertEqual(keep_hunks("a\nc\n", "a\nb\nc\n", {9}), "a\nc\n")
+        self.assertEqual(keep_hunks("a\nb\n", "a\n", {2}), "a\n", "deletion of a changed line")
+
+    @unittest.skipUnless(HAS_PY, "ruff missing")
+    def test_changed_scope_formats_only_the_changed_lines(self) -> None:
+        old = "a = {  'x':1 }\n"
+        for scope, expected in (("changed", old + 'b = {"y": 2}\n'), ("file", 'a = {"x": 1}\nb = {"y": 2}\n')):
+            r = self.repo({"ruff.toml": "", "m.py": old})
+            (r / "m.py").write_text(old + "b = {  'y':2 }\n")
+            self.sh(r, "git", "add", "m.py")
+            self.commit(r, "git commit -m b", format_scope=scope)
+            self.assertEqual((r / "m.py").read_text(), expected, scope)
+            self.assertEqual(self.sh(r, "git", "show", ":m.py"), expected, f"{scope}: re-staged")
+
+    @unittest.skipUnless(HAS_PY, "ruff missing")
+    def test_cli_reads_options_from_the_settings_file(self) -> None:
+        """Bash-run broom doesn't get CLAUDE_PLUGIN_OPTION_*; it reads pluginConfigs instead."""
+        old = "a = {  'x':1 }\n"
+        r = self.repo({"ruff.toml": "", "m.py": old})
+        (r / "m.py").write_text(old + "b = {  'y':2 }\n")
+        cfg = self.config_dir({"pluginConfigs": {"broom@claude-code-broom": {"options": {"format_scope": "file"}}}})
+        self.cli(r, "fmt", env={**self.env, "CLAUDE_CONFIG_DIR": str(cfg)})
+        self.assertEqual((r / "m.py").read_text(), 'a = {"x": 1}\nb = {"y": 2}\n')
+        (r / "m.py").write_text(old + "b = {  'y':2 }\n")
+        self.cli(r, "fmt", "--scope", "changed", env={**self.env, "CLAUDE_CONFIG_DIR": str(cfg)})
+        self.assertEqual((r / "m.py").read_text(), old + 'b = {"y": 2}\n', "--scope overrides the setting")
 
 
 if __name__ == "__main__":
