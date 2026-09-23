@@ -224,6 +224,10 @@ def check_tsc(config: Path, stop: Path) -> Findings:
 
 # ---------------------------------------------------------------- CSS
 
+# Build output and minified files, as in oxlint's defaults. On the command line: stylelint reads `ignoreFiles`
+# relative to the config's own directory, which for broom's defaults is the plugin, not the project.
+STYLELINT_DEFAULT_IGNORES = ("**/dist/**", "**/build/**", "**/out/**", "**/coverage/**", "**/*.min.css")
+
 
 def check_stylelint(cfg_dir: Path, files: List[Path], stop: Path, defaults: bool) -> Findings:
     """stylelint on the files themselves, even for a whole-project sweep: a glob would also hand broom's defaults
@@ -237,6 +241,8 @@ def check_stylelint(cfg_dir: Path, files: List[Path], stop: Path, defaults: bool
     cmd = [exe, "-f", "json", "--allow-empty-input"]
     if defaults:
         cmd += ["-c", str(DEFAULTS / "stylelintrc.yml")]
+        for pattern in STYLELINT_DEFAULT_IGNORES:
+            cmd += ["--ignore-pattern", pattern]
         # stylelint loads the SCSS config from the project, the way it loads a project's own plugins.
         if any(f.suffix.lower() == ".scss" for f in files) and not in_node_modules(SCSS_DEFAULTS, cfg_dir, stop):
             files = [f for f in files if f.suffix.lower() != ".scss"]

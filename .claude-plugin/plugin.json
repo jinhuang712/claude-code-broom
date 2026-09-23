@@ -2,7 +2,7 @@
   "name": "broom",
   "displayName": "broom",
   "description": "Autonomous code hygiene: sets up the formatters, linters, type checkers and language servers a repo needs, and sweeps Claude's work when it should.",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "author": {
     "name": "Jin Huang",
     "url": "https://github.com/jinhuang712"

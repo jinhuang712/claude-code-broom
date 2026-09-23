@@ -1,7 +1,8 @@
 # Used only for CSS and SCSS without a stylelint config of the project's own, and only on the lines Claude changed.
 # Errors, not style: .css gets stylelint-config-recommended's rules (18.0.0, copied here so plain CSS needs nothing
 # but stylelint), .scss gets stylelint-config-recommended-scss from the project. Both accept Tailwind's directives
-# (v3 and v4) and CSS modules (Vite, webpack).
+# (v3 and v4) and CSS modules (Vite, webpack). Build output and *.min.css are skipped on the command line
+# (STYLELINT_DEFAULT_IGNORES in lib/broom/checks.py): an ignoreFiles here would be read relative to this directory.
 rules: {} # stylelint requires the key; the rules are per file type, below
 
 overrides:

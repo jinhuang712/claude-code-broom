@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1
+
+- broom's stylelint defaults skip build output (`dist`, `build`, `out`, `coverage`) and `*.min.css`, as its oxlint
+  defaults do. A committed built or vendored CSS file no longer blocks a commit once.
+
 ## 0.5.0
 
 - CSS and SCSS are linted: with the project's stylelint, biome or ESLint with `@eslint/css` (the last two plain

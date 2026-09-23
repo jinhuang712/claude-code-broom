@@ -65,8 +65,8 @@ a formatter is configured.
 
 broom's CSS defaults report errors, not style: stylelint-config-recommended's rules for `.css` and
 `stylelint-config-recommended-scss` for `.scss`, both accepting Tailwind's directives and functions (v3 and v4) and
-CSS modules (`composes`, `:global`, `:export`). The SCSS config has to be installed in the project; without it SCSS
-isn't linted, with a note. The language server accepts the same Tailwind at-rules and `composes`. Less, Sass's
+CSS modules (`composes`, `:global`, `:export`), and skipping build output and `*.min.css`. The SCSS config has to be
+installed in the project; without it SCSS isn't linted, with a note. The language server accepts the same Tailwind at-rules and `composes`. Less, Sass's
 indented syntax, `<style>` blocks in `.vue` or `.svelte` files and CSS-in-JS aren't covered.
 
 ## Doctor checks

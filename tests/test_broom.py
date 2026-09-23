@@ -654,6 +654,15 @@ class BroomTest(unittest.TestCase):
         self.assertIn('src/app.css:14:3  property-no-unknown  Unknown property "colr"', reason)
         self.assertIn("blocked: 1 issue(s)", reason, "nothing from Tailwind or CSS modules")
 
+    @unittest.skipUnless(HAS_STYLELINT, "stylelint missing")
+    def test_css_defaults_skip_build_output_and_minified_files(self) -> None:
+        r = self.css_repo()
+        for name in ("dist/app.css", "packages/ui/build/ui.css", "public/vendor.min.css"):
+            (r / name).parent.mkdir(parents=True, exist_ok=True)
+            (r / name).write_text(".a{colr:red}.b{}\n")
+        self.sh(r, "git", "add", "-f", "-A")
+        self.assertEqual(self.denied(self.commit(r, "git commit -m built")), "")
+
     @unittest.skipUnless(SCSS_MODULES, "stylelint-config-recommended-scss missing")
     def test_scss_defaults_know_sass(self) -> None:
         r = self.css_repo()

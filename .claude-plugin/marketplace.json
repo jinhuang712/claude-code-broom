@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "broom: autonomous code hygiene for Claude Code",
-    "version": "0.5.0"
+    "version": "0.5.1"
   },
   "plugins": [
     {
