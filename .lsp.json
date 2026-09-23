@@ -32,5 +32,17 @@
       ".py": "python",
       ".pyi": "python"
     }
+  },
+  "css": {
+    "command": "vscode-css-language-server",
+    "args": ["--stdio"],
+    "extensionToLanguage": {
+      ".css": "css",
+      ".scss": "scss"
+    },
+    "settings": {
+      "css": {"lint": {"unknownAtRules": "ignore", "validProperties": ["composes", "compose-with"]}},
+      "scss": {"lint": {"unknownAtRules": "ignore", "validProperties": ["composes", "compose-with"]}}
+    }
   }
 }

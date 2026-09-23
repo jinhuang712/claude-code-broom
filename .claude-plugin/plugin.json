@@ -2,7 +2,7 @@
   "name": "broom",
   "displayName": "broom",
   "description": "Autonomous code hygiene: sets up the formatters, linters, type checkers and language servers a repo needs, and sweeps Claude's work when it should.",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "author": {
     "name": "Jin Huang",
     "url": "https://github.com/jinhuang712"
@@ -20,7 +20,8 @@
     "biome",
     "eslint",
     "ruff",
-    "clippy"
+    "clippy",
+    "stylelint"
   ],
   "userConfig": {
     "format_on": {
@@ -37,7 +38,7 @@
     "format_scope": {
       "type": "string",
       "title": "Format scope",
-      "description": "How much of a file broom reformats: only the lines that changed (like an IDE's 'only VCS changed text'), the functions holding them (found by the language server), or the whole file",
+      "description": "How much of a file broom reformats: only the lines that changed (like an IDE's 'only VCS changed text'), the functions holding them (in CSS, the rules; found by the language server), or the whole file",
       "options": [
         "changed",
         "function",

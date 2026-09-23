@@ -13,8 +13,8 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from .common import (
-    DEFAULTS, GOLANGCI_CFG, PY_ROOT_MARKERS, boundary, find_up, js_linters, lang_of, load_json,
-    pkg_scripts_mention, read_jsonc, resolve_bin, run, save_json,
+    DEFAULTS, GOLANGCI_CFG, PY_ROOT_MARKERS, SCSS_DEFAULTS, boundary, css_linters, find_up, in_node_modules,
+    js_linters, lang_of, load_json, pkg_scripts_mention, read_jsonc, resolve_bin, run, save_json,
 )
 
 
@@ -222,6 +222,53 @@ def check_tsc(config: Path, stop: Path) -> Findings:
     return issues, []
 
 
+# ---------------------------------------------------------------- CSS
+
+
+def check_stylelint(cfg_dir: Path, files: List[Path], stop: Path, defaults: bool) -> Findings:
+    """stylelint on the files themselves, even for a whole-project sweep: a glob would also hand broom's defaults
+    the files of packages that have a config of their own."""
+    exe = resolve_bin("stylelint", cfg_dir, stop)
+    if not exe:
+        if defaults:
+            return [], ["missing:stylelint (npm i -D stylelint in the project)"]
+        return [], [f"missing:stylelint in {cfg_dir} (install the project's dependencies)"]
+    notes: List[str] = []
+    cmd = [exe, "-f", "json", "--allow-empty-input"]
+    if defaults:
+        cmd += ["-c", str(DEFAULTS / "stylelintrc.yml")]
+        # stylelint loads the SCSS config from the project, the way it loads a project's own plugins.
+        if any(f.suffix.lower() == ".scss" for f in files) and not in_node_modules(SCSS_DEFAULTS, cfg_dir, stop):
+            files = [f for f in files if f.suffix.lower() != ".scss"]
+            notes.append(f"missing:{SCSS_DEFAULTS} (npm i -D {SCSS_DEFAULTS} in the project, for SCSS)")
+    if not files:
+        return [], notes
+    rc, out, err = run(cmd + [str(f) for f in files], cfg_dir, timeout=90)
+    if rc is None:
+        return [], notes + [f"timeout:stylelint in {cfg_dir}"]
+    # stylelint 16+ reports on stderr, older ones on stdout.
+    results = None
+    for stream in (out, err):
+        start = stream.find("[")
+        try:
+            results = json.JSONDecoder().raw_decode(stream[start:])[0] if start >= 0 else None
+        except ValueError:
+            continue
+        if isinstance(results, list):
+            break
+    if not isinstance(results, list):
+        return [], notes + [f"stylelint failed in {cfg_dir}: {failure(out, err)}"]
+    issues = []
+    for r in results:
+        for w in r.get("warnings", []):
+            rule = w.get("rule", "")
+            msg = re.sub(rf"\s*\({re.escape(rule)}\)$", "", w.get("text", "")) if rule else w.get("text", "")
+            issues.append(Issue("stylelint", cfg_dir, Path(r.get("source", "")).resolve(), int(w.get("line") or 0),
+                                int(w.get("column") or 0), rule, msg))
+        notes += [f"stylelint config in {cfg_dir}: {w.get('text', '')}" for w in r.get("invalidOptionWarnings", [])]
+    return issues, list(dict.fromkeys(notes))
+
+
 # ---------------------------------------------------------------- Rust / Python
 
 CLIPPY_ROW = re.compile(
@@ -274,7 +321,7 @@ def plan(files: List[Path], whole: bool = False) -> List[Tuple[str, Callable[[],
     """(key, check) per project and tool; the key lets a check that timed out be skipped later. With `whole`,
     each tool checks its whole project instead of the given files."""
     go: Dict[Tuple[Path, Path], List[Path]] = {}
-    js: Dict[Tuple[str, Path, Path], List[Path]] = {}
+    web: Dict[Tuple[str, Path, Path], List[Path]] = {}  # JS/TS and CSS linters; biome and eslint take both
     tsc: Set[Tuple[Path, Path]] = set()
     rust: Set[Tuple[Path, Path]] = set()
     py: Dict[Tuple[Path, Path], List[Path]] = {}
@@ -287,7 +334,7 @@ def plan(files: List[Path], whole: bool = False) -> List[Tuple[str, Callable[[],
                 go.setdefault((mod.parent, stop), []).append(f)
         elif lang == "js":
             for tool, d in js_linters(f, stop):
-                js.setdefault((tool, d, stop), []).append(f)
+                web.setdefault((tool, d, stop), []).append(f)
             if f.suffix.lower() in (".ts", ".tsx", ".mts", ".cts"):
                 tsconfig = find_up(f.parent, ["tsconfig.json"], stop)
                 if tsconfig:
@@ -299,13 +346,18 @@ def plan(files: List[Path], whole: bool = False) -> List[Tuple[str, Callable[[],
         elif lang == "py":
             marker = find_up(f.parent, PY_ROOT_MARKERS, stop)
             py.setdefault((marker.parent if marker else stop, stop), []).append(f)
+        elif lang == "css":
+            for tool, d in css_linters(f, stop):
+                web.setdefault((tool, d, stop), []).append(f)
 
     checks: List[Tuple[str, Callable[[], Findings]]] = []
     for (mod, stop), fs in go.items():
         checks.append((f"go:{mod}", partial(check_go, mod, fs, stop, whole)))
-    for (tool, d, stop), fs in js.items():
+    for (tool, d, stop), fs in web.items():
         if tool in ("oxlint", "oxlint-default"):
             fn = partial(check_oxlint, d, fs, stop, tool == "oxlint-default", whole)
+        elif tool in ("stylelint", "stylelint-default"):
+            fn = partial(check_stylelint, d, fs, stop, tool == "stylelint-default")
         elif tool == "eslint":
             fn = partial(check_eslint, d, fs, stop, whole)
         else:

@@ -1,0 +1,68 @@
+# Used only for CSS and SCSS without a stylelint config of the project's own, and only on the lines Claude changed.
+# Errors, not style: .css gets stylelint-config-recommended's rules (18.0.0, copied here so plain CSS needs nothing
+# but stylelint), .scss gets stylelint-config-recommended-scss from the project. Both accept Tailwind's directives
+# (v3 and v4) and CSS modules (Vite, webpack).
+rules: {} # stylelint requires the key; the rules are per file type, below
+
+overrides:
+  - files: ["**/*.css"]
+    rules:
+      annotation-no-unknown: true
+      at-rule-descriptor-no-unknown: true
+      at-rule-descriptor-value-no-unknown: true
+      at-rule-no-deprecated: true
+      at-rule-no-unknown:
+        - true
+        # Tailwind's directives, and CSS modules' @value.
+        - ignoreAtRules: &directives [tailwind, apply, config, plugin, source, theme, utility, variant,
+            custom-variant, reference, screen, responsive, variants, value]
+      at-rule-prelude-no-invalid: [true, { ignoreAtRules: [media, apply] }] # csstree knows the old @apply draft
+      block-no-empty: true
+      comment-no-empty: true
+      custom-property-no-missing-var-function: true
+      declaration-block-no-duplicate-custom-properties: true
+      declaration-block-no-duplicate-properties: [true, { ignore: [consecutive-duplicates-with-different-syntaxes] }]
+      declaration-block-no-shorthand-property-overrides: true
+      declaration-property-value-keyword-no-deprecated: true
+      declaration-property-value-no-unknown:
+        - true
+        # Tailwind's theme(), screen(), --alpha() and --spacing() in any property.
+        - ignoreProperties: { "/.+/": ['/^theme\(/', '/^screen\(/', '/--alpha\(/', '/--spacing\(/'] }
+      font-family-no-duplicate-names: true
+      font-family-no-missing-generic-family-keyword: true
+      function-calc-no-unspaced-operator: true
+      keyframe-block-no-duplicate-selectors: true
+      keyframe-declaration-no-important: true
+      media-feature-name-no-unknown: true
+      media-feature-name-value-no-unknown: true
+      media-query-no-invalid: true
+      media-type-no-deprecated: true
+      named-grid-areas-no-invalid: true
+      nesting-selector-no-missing-scoping-root: true
+      no-descending-specificity: true
+      no-duplicate-at-import-rules: true
+      no-duplicate-selectors: true
+      no-empty-source: true
+      no-invalid-double-slash-comments: true
+      no-invalid-position-at-import-rule: true
+      no-invalid-position-declaration: true
+      no-irregular-whitespace: true
+      property-no-deprecated: true
+      property-no-unknown: &modules-properties
+        - true
+        # CSS modules: composes, and the :export / :import blocks that pass values to JS.
+        - ignoreProperties: [composes, compose-with]
+          ignoreSelectors: [":export", "/^:import/"]
+      selector-anb-no-unmatchable: true
+      selector-pseudo-class-no-unknown: &modules-pseudo-classes [true, { ignorePseudoClasses: [global, local, export, import] }]
+      selector-pseudo-element-no-unknown: true
+      selector-type-no-unknown: [true, { ignore: [custom-elements] }]
+      string-no-newline: [true, { ignore: [at-rule-preludes, declaration-values] }]
+      syntax-string-no-invalid: true
+
+  - files: ["**/*.scss"]
+    extends: [stylelint-config-recommended-scss]
+    rules:
+      scss/at-rule-no-unknown: [true, { ignoreAtRules: *directives }]
+      property-no-unknown: *modules-properties
+      selector-pseudo-class-no-unknown: *modules-pseudo-classes

@@ -22,5 +22,13 @@
   "tsc": {"probe": ["tsc", "--version"], "dev": "typescript", "install": [["npm", "npm i -g typescript@latest"]]},
   "oxlint": {"probe": ["oxlint", "--version"], "dev": "oxlint", "install": [["npm", "npm i -g oxlint"]]},
   "tsgolint": {"dev": "oxlint-tsgolint", "install": [["npm", "npm i -g oxlint-tsgolint"]]},
-  "oxfmt": {"probe": ["oxfmt", "--version"], "dev": "oxfmt", "install": [["npm", "npm i -g oxfmt"]]}
+  "oxfmt": {"probe": ["oxfmt", "--version"], "dev": "oxfmt", "install": [["npm", "npm i -g oxfmt"]]},
+  "stylelint": {
+    "probe": ["stylelint", "--version"], "dev": "stylelint",
+    "install": [["npm", "npm i -g stylelint"], ["brew", "brew install stylelint"]]
+  },
+  "stylelint-config-recommended-scss": {"dev": "stylelint-config-recommended-scss"},
+  "vscode-css-language-server": {
+    "install": [["npm", "npm i -g vscode-langservers-extracted"], ["brew", "brew install vscode-langservers-extracted"]]
+  }
 }

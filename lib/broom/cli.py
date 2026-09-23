@@ -156,17 +156,18 @@ def cmd_init(args: argparse.Namespace) -> int:
     langs = scan(root)  # configs are found by walking up: at a monorepo root they cover every package below
     if "go" in langs and not has(GOLANGCI_CFG):
         write(".golangci.yml", (DEFAULTS / "golangci.yml").read_text() + GOLANGCI_FORMATTERS)
-    if "js" in langs:
-        if not has(OXLINT_CFG) and not has(ESLINT_CFG) and not has(BIOME_CFG):
-            write(".oxlintrc.json", (DEFAULTS / "oxlintrc.json").read_text())
-        if not has(BIOME_CFG) and not has(OXFMT_CFG) and not has(PRETTIER_CFG) and not pkg_has_key(root, "prettier"):
-            oxfmt = shutil.which("oxfmt")
-            if oxfmt and not args.dry_run:
-                run([oxfmt, "--init"], root, timeout=30)
-            if not (root / ".oxfmtrc.json").exists():
-                write(".oxfmtrc.json", "{}\n")
-            elif not args.dry_run:
-                actions.append("added .oxfmtrc.json (oxfmt --init)")
+    if "js" in langs and not has(OXLINT_CFG) and not has(ESLINT_CFG) and not has(BIOME_CFG):
+        write(".oxlintrc.json", (DEFAULTS / "oxlintrc.json").read_text())
+    # oxfmt formats CSS and SCSS too. CSS needs no lint config: broom's stylelint defaults apply without one.
+    if ("js" in langs or "css" in langs) and not has(BIOME_CFG) and not has(OXFMT_CFG) and not has(PRETTIER_CFG) \
+            and not pkg_has_key(root, "prettier"):
+        oxfmt = shutil.which("oxfmt")
+        if oxfmt and not args.dry_run:
+            run([oxfmt, "--init"], root, timeout=30)
+        if not (root / ".oxfmtrc.json").exists():
+            write(".oxfmtrc.json", "{}\n")
+        elif not args.dry_run:
+            actions.append("added .oxfmtrc.json (oxfmt --init)")
     if "py" in langs and not ruff_configured(root / "_.py", root):
         if (root / "pyproject.toml").exists():
             actions.append("pyproject.toml has no ruff settings; add this under [tool.ruff.lint]:\n"

@@ -29,7 +29,8 @@ Summarize the gaps in plain words, then ask with AskUserQuestion, in one call, o
    - Strictest → every edit and each turn: `format_on=edit check_on=stop`
 4. **How much of a file should broom reformat?**
    - Only the changed lines (recommended), like an IDE's "only VCS changed text": `format_scope=changed`
-   - The functions holding the changed lines, found by the language server: `format_scope=function`
+   - The functions holding the changed lines (in CSS, the rules), found by the language server:
+     `format_scope=function`
    - The whole file, best once the repo is fully formatted: `format_scope=file`
 
 Ask only what applies. Never install or change anything the user didn't pick.

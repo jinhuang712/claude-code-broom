@@ -1,4 +1,5 @@
-"""A minimal LSP client: just enough to ask a language server where the functions in a file are.
+"""A minimal LSP client: just enough to ask a language server where the functions in a file are (in CSS, the
+rules).
 
 The servers are the ones in broom's own .lsp.json, the same Claude Code starts for diagnostics. A server that is
 missing, fails or is too slow yields None, and callers fall back to changed lines: broom never guesses function
@@ -18,8 +19,13 @@ from typing import IO, Any, Dict, List, Optional, Set, Tuple
 from .common import PLUGIN_ROOT, boundary, find_up
 
 FUNCTION_KINDS = {6, 9, 12}  # LSP SymbolKind: Method, Constructor, Function
+# CSS has no functions: the unit is the rule, as the CSS server reports it (Class), plus Sass mixins (Method)
+# and @functions (Function).
+CSS_LANGUAGES = {"css", "scss"}
+RULE_KINDS = {5, 6, 12}
 PROJECT_MARKERS = {"go": ["go.mod"], "rust": ["Cargo.toml"], "py": ["pyproject.toml", "setup.py", "setup.cfg"],
-                   "typescript": ["tsconfig.json", "package.json"], "javascript": ["tsconfig.json", "package.json"]}
+                   "typescript": ["tsconfig.json", "package.json"], "javascript": ["tsconfig.json", "package.json"],
+                   "css": ["package.json"], "scss": ["package.json"]}
 Ranges = List[Tuple[int, int]]
 
 
@@ -144,6 +150,23 @@ def outermost_functions(symbols: list) -> Ranges:
     return out
 
 
+def css_rules(symbols: list) -> Ranges:
+    """Line ranges of every rule, nested ones included: a nested rule is to its parent what a method is to its
+    class."""
+    out: Ranges = []
+
+    def walk(items: list) -> None:
+        for s in items or []:
+            if s.get("kind") in RULE_KINDS and "range" in s:
+                out.append(_lines(s["range"]))
+            walk(s.get("children", []))
+
+    if symbols and "location" in symbols[0]:
+        return [_lines(s["location"]["range"]) for s in symbols if s.get("kind") in RULE_KINDS]
+    walk(symbols)
+    return out
+
+
 def function_ranges(files: List[Path], timeout: float = 20) -> Dict[Path, Optional[Ranges]]:
     """Outermost function ranges per file; None where no language server answered."""
     table = servers()
@@ -168,7 +191,8 @@ def function_ranges(files: List[Path], timeout: float = 20) -> Dict[Path, Option
                 client.notify("textDocument/didOpen", {"textDocument": {
                     "uri": uri, "languageId": language, "version": 1, "text": f.read_text(errors="replace")}})
                 symbols = client.request("textDocument/documentSymbol", {"textDocument": {"uri": uri}}, timeout)
-                out[f] = outermost_functions(symbols if isinstance(symbols, list) else [])
+                symbols = symbols if isinstance(symbols, list) else []
+                out[f] = css_rules(symbols) if language in CSS_LANGUAGES else outermost_functions(symbols)
         except (OSError, TimeoutError, RuntimeError, ValueError, KeyError):
             pass
         finally:
@@ -178,9 +202,12 @@ def function_ranges(files: List[Path], timeout: float = 20) -> Dict[Path, Option
 
 
 def expand_to_functions(changed: Set[int], ranges: Ranges) -> Set[int]:
-    """The changed lines plus every line of each function that holds one of them."""
+    """The changed lines plus every line of the innermost range around each of them: the function, or in CSS
+    the rule. Function ranges never nest, so for code that is simply the function holding the line."""
     out = set(changed)
-    for first, last in ranges:
-        if any(first <= n <= last for n in changed):
+    for n in changed:
+        around = [(first, last) for first, last in ranges if first <= n <= last]
+        if around:
+            first, last = min(around, key=lambda r: r[1] - r[0])
             out.update(range(first, last + 1))
     return out

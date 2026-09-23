@@ -6,7 +6,7 @@
 |---|---|
 | `hooks/hooks.json` | SessionStart (offer setup), PreToolUse on `git commit` (the sweep), PostToolUse on edits and Stop (both opt-in) |
 | `bin/broom` | The one entry point, for hooks and for people; on the Bash PATH while the plugin is enabled |
-| `.lsp.json` | Language servers Claude Code starts: gopls, `tsc --lsp`, rust-analyzer, pyright |
+| `.lsp.json` | Language servers Claude Code starts: gopls, `tsc --lsp`, rust-analyzer, pyright, vscode-css-language-server |
 | `skills/` | `/broom:setup` and `/broom:sweep`, which call `broom` |
 | `lib/broom/` | `gitcmd` reads commits, `fmt` formats, `checks` runs linters, `gate` decides what counts, `doctor` diagnoses, `lsp` asks servers for function ranges |
 | `defaults/` | Lint configs used only where a project has none, and the tool registry for installs |
@@ -38,13 +38,16 @@ message and the line's text, so it stays known when lines above it move. Known i
   changed line. Line-for-line hunks are decided per line; re-wrapped hunks go in or out whole. This works with
   every formatter, including those with no range support.
 - `function`: first widen the changed lines to the outermost function or method around them, from the language
-  server's `documentSymbol`. No answer means `changed`, with a note.
+  server's `documentSymbol`. No answer means `changed`, with a note. CSS has no functions, so there it is the
+  innermost rule (or Sass mixin or `@function`) around each line: a nested rule, not the rule it sits in.
 
 ## Setup
 
 `broom doctor` scans for marker files (`go.mod`, `package.json`, `Cargo.toml`, `pyproject.toml`, …) three levels
 deep, lists the tools each language needs, and runs each one to prove it works, which catches a rustup proxy
-without its component. It flags missing configs, collapsed to one fix at the repo root since configs are found by
+without its component. CSS has no marker file, so it goes by the `.css` and `.scss` files git tracks, at any depth,
+each counted with its nearest `package.json` (else the repo root). Untracked files are left out: listing them walks
+the working tree, about 160 ms on a 6,000-file repo against 25 ms for tracked files. It flags missing configs, collapsed to one fix at the repo root since configs are found by
 walking up, and plugins whose language servers claim the same files as broom's.
 
 The SessionStart hook runs a cached doctor. The cache key includes the modification time of every PATH
@@ -65,9 +68,19 @@ accepts a changed file as long as `old_string` still matches. Serena re-reads a 
 changed. Claude Code's language servers, though, only hear about edits made through Edit and Write, so a file a
 formatter rewrote can show stale diagnostics until Claude edits it again.
 
+## The CSS language server's settings
+
+vscode-css-language-server validates a file only once it has settings for that file's language. When `.lsp.json`
+gives a server `settings`, Claude Code (checked in 2.1.280, not documented) offers `workspace/configuration` and
+answers each section from them, so broom's entry has a `css` and an `scss` section; a missing one silences that
+language. Without `settings` the server uses its defaults, which flag every Tailwind directive as an unknown
+at-rule. broom's sections turn that check off and accept CSS modules' `composes`.
+
 ## Limits
 
 - Only commits Claude makes are checked. Commits you make in a terminal are not.
 - `function` scope costs a language server start per language, about 0.05 to 1 second.
 - A cold `cargo clippy` can time out; that check is then skipped for the rest of the session.
 - The scan looks three levels deep and at up to 20 projects per language.
+- CSS means `.css` and `.scss`: no Less, no indented Sass, no `<style>` blocks in `.vue` or `.svelte` files.
+- vscode-langservers-extracted, which ships the CSS server, last released in May 2024 (4.10.0).

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.0
+
+- CSS and SCSS are linted: with the project's stylelint, biome or ESLint with `@eslint/css` (the last two plain
+  CSS only), else with stylelint and broom's defaults. The defaults report errors, not style:
+  stylelint-config-recommended's rules for CSS, `stylelint-config-recommended-scss` for SCSS, both accepting
+  Tailwind (v3 and v4) and CSS modules. Without that SCSS config in the project, SCSS is skipped with a note.
+- A language server for `.css` and `.scss` (vscode-css-language-server), set up to accept Tailwind's at-rules and
+  `composes`.
+- `format_scope=function` widens CSS to the innermost rule around each changed line.
+- `broom doctor` finds CSS and SCSS at any depth and reports their linter, formatter and language server;
+  `broom init` turns on oxfmt for CSS outside JS projects. Formatting itself is unchanged: CSS and SCSS were
+  already formatted by the project's biome, oxfmt or prettier.
+
 ## 0.4.0
 
 - `format_scope=function`: widens the changed lines to the functions around them, asking the language servers in

@@ -9,7 +9,7 @@
 
 - **配置**：在仓库里开会话时发现缺什么，让 Claude 提议帮你安装和配置。没有你的同意，什么都不装。
 - **清扫**：该清扫的时候，broom 对 Claude 的改动做格式化、lint 和类型检查，问题解决前不放行。
-- **看见**：为 Go、TS/JS、Rust、Python 提供语言服务器，Claude 边改边看到诊断。
+- **看见**：为 Go、TS/JS、Rust、Python、CSS/SCSS 提供语言服务器，Claude 边改边看到诊断。
 
 它用你项目自己的工具和配置，只看改动的部分，同样的结果不会拦第二次。
 
@@ -54,6 +54,7 @@ tsc (~/code/app):
 | TS/JS | 在项目里 `npm i -D oxlint oxlint-tsgolint oxfmt` · `npm i -g typescript`（7 以上，语言服务器需要） |
 | Rust | `rustup component add clippy rustfmt rust-analyzer` |
 | Python | `brew install ruff` · `npm i -g pyright` |
+| CSS/SCSS | 在项目里 `npm i -D stylelint`，有 SCSS 再加 `stylelint-config-recommended-scss` · `npm i -g vscode-langservers-extracted` |
 
 不要同时启用 `gopls-lsp`、`typescript-lsp`、`rust-analyzer-lsp` 或 `pyright-lsp`：两个插件服务同一类文件时，
 只有一个语言服务器会启动。出现这种情况 `broom doctor` 会告诉你。
@@ -76,7 +77,7 @@ tsc (~/code/app):
 |---|---|---|
 | `format_on` | `commit` | `edit`（每次编辑后也格式化）、`off` |
 | `check_on` | `commit` | `stop`（每轮对话结束时也检查）、`off` |
-| `format_scope` | `changed` | `function`（整个改动过的函数）、`file` |
+| `format_scope` | `changed` | `function`（整个改动过的函数；CSS 里是整条规则）、`file` |
 
 仓库根目录的 `.broom.json` 可以为单个仓库覆盖这些设置，还能排除路径：
 

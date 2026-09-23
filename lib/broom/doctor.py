@@ -15,15 +15,16 @@ from typing import Dict, List, Optional, Tuple
 from . import __version__
 from .common import (
     BIOME_CFG, DATA_ROOT, DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG, REPO_FILE, RUFF_CFG,
-    SETTINGS,
-    find_up, js_formatter, js_linters, load_json, read_jsonc, resolve_bin, ruff_configured, run, save_json,
-    short_hash,
+    SCSS_DEFAULTS, SETTINGS, STYLELINT_CFG,
+    css_linters, find_up, git, in_node_modules, js_formatter, js_linters, load_json, read_jsonc, resolve_bin,
+    ruff_configured, run, save_json, short_hash,
 )
 
 MARKERS = {"go.mod": "go", "package.json": "js", "tsconfig.json": "js", "Cargo.toml": "rust",
            "pyproject.toml": "py", "setup.py": "py", "requirements.txt": "py"}
 SKIP_DIRS = {"node_modules", "vendor", "target", "dist", "build", "out", "venv", "__pycache__", "coverage"}
-LANG_NAMES = {"go": "Go", "js": "TS/JS", "rust": "Rust", "py": "Python", "broom": "broom"}
+LANG_NAMES = {"go": "Go", "js": "TS/JS", "rust": "Rust", "py": "Python", "css": "CSS", "scss": "SCSS",
+              "broom": "broom"}
 # Plugins that start a language server for the same files as broom's .lsp.json. Claude Code starts only the
 # first server registered for an extension, so either one silently never runs.
 LSP_PLUGINS = {"gopls-lsp": "go", "gopls": "go", "typescript-lsp": "js", "vtsls": "js", "ts7-lsp": "js",
@@ -33,7 +34,7 @@ LOCKFILES = (("pnpm-lock.yaml", "pnpm"), ("bun.lock", "bun"), ("bun.lockb", "bun
              ("package-lock.json", "npm"))
 ADD_DEV = {"pnpm": "pnpm add -D", "bun": "bun add -d", "yarn": "yarn add -D", "npm": "npm i -D"}
 CONFIG_NAMES = (*GOLANGCI_CFG, *BIOME_CFG, *OXFMT_CFG, *PRETTIER_CFG, *OXLINT_CFG, *ESLINT_CFG, *RUFF_CFG,
-                *MARKERS, *(lock for lock, _ in LOCKFILES))
+                *STYLELINT_CFG, *MARKERS, *(lock for lock, _ in LOCKFILES))
 MAX_PROJECTS = 20
 
 
@@ -55,7 +56,7 @@ def tools_db() -> dict:
 
 
 def scan(root: Path, max_depth: int = 3) -> Dict[str, List[Path]]:
-    """Project directories per language, from marker files up to `max_depth` below the root."""
+    """Project directories per language, from marker files up to `max_depth` below the root, and CSS's."""
     found: Dict[str, List[Path]] = {}
     base = len(root.parts)
     for d, dirs, files in os.walk(root):
@@ -65,7 +66,30 @@ def scan(root: Path, max_depth: int = 3) -> Dict[str, List[Path]]:
             projects = found.setdefault(lang, [])
             if name in files and Path(d) not in projects and len(projects) < MAX_PROJECTS:
                 projects.append(Path(d))
+    found.update(css_projects(root))
     return {lang: dirs for lang, dirs in found.items() if dirs}
+
+
+def css_projects(root: Path) -> Dict[str, List[Path]]:
+    """`css` and `scss`: the packages (nearest package.json, else the root) holding CSS or SCSS files. CSS has no
+    project file to find, so this goes by the files git tracks, at any depth; generated and vendored ones don't
+    count. Untracked files would need a walk of the working tree: 160 ms instead of 25 on a 6,000-file repo, too
+    slow for SessionStart."""
+    out = git(["ls-files", "--cached", "--", "*.css", "*.scss"], root) or ""
+    homes: Dict[Path, Path] = {}
+    found: Dict[str, List[Path]] = {"css": [], "scss": []}
+    for name in out.splitlines():
+        rel = Path(name)
+        if name.endswith(".min.css") or any(p in SKIP_DIRS or p.startswith(".") for p in rel.parts[:-1]):
+            continue
+        d = (root / rel).parent
+        if d not in homes:
+            pkg = find_up(d, ["package.json"], root)
+            homes[d] = pkg.parent if pkg else root
+        for lang in ("css", "scss") if rel.suffix == ".scss" else ("css",):
+            if homes[d] not in found[lang] and len(found[lang]) < MAX_PROJECTS:
+                found[lang].append(homes[d])
+    return found
 
 
 def package_manager(project: Path, stop: Path) -> str:
@@ -202,6 +226,45 @@ def diagnose(repo: Path, projects: Optional[Dict[str, List[Path]]] = None) -> di
             items.append(Item("py", "format", "ruff format", "off", rel(home),
                               f"no ruff config ({len(unformatted)} project(s)), so broom doesn't format Python",
                               f"broom init {rel(home)}"))
+
+    for p in projects.get("css", []):
+        for tool, d in css_linters(p / "_.css", repo):
+            name = "stylelint" if tool.startswith("stylelint") else tool
+            if tool == "stylelint-default":
+                detail = "broom's defaults (no project config)"
+                if resolve_bin("stylelint", d, repo):
+                    items.append(Item("css", "lint", name, "ok", rel(d), detail))
+                else:
+                    items.append(dev_fix(Item("css", "lint", name, "missing", rel(d), detail), d, "stylelint"))
+            elif resolve_bin(name, d, repo, local_only=name == "eslint"):
+                items.append(Item("css", "lint", name, "ok", rel(d), f"project {name} config"))
+            else:
+                items.append(Item("css", "deps", name, "missing", rel(d),
+                                  "configured, but the project's dependencies aren't installed",
+                                  in_project(d, f"{package_manager(d, repo)} install")))
+    for p in projects.get("scss", []):
+        for tool, d in css_linters(p / "_.scss", repo):
+            if tool != "stylelint-default" or in_node_modules(SCSS_DEFAULTS, d, repo):
+                continue
+            item = Item("scss", "lint", SCSS_DEFAULTS, "missing", rel(d), "broom's SCSS defaults")
+            if (repo / "package.json").exists() or (d / "package.json").exists():
+                items.append(dev_fix(item, d, SCSS_DEFAULTS))
+            else:  # stylelint loads it from the project, so a global install wouldn't do
+                item.detail += ": stylelint loads it from node_modules, so this needs a package.json"
+                items.append(item)
+    # CSS in a JS project is formatted (or not) along with it; this is CSS elsewhere, as in a Go service's static/.
+    unformatted = [p for p in projects.get("css", [])
+                   if p not in projects.get("js", []) and js_formatter(p / "_.css", repo) is None]
+    if unformatted:
+        home = config_home(unformatted)
+        items.append(Item("css", "format", "oxfmt", "off", rel(home),
+                          f"no formatter config ({len(unformatted)} project(s)), so broom doesn't format CSS",
+                          f"broom init {rel(home)}"))
+        if not resolve_bin("oxfmt", home, repo):
+            items.append(dev_fix(Item("css", "format", "oxfmt", "off", rel(home), "needed once formatting is on"),
+                                 home, "oxfmt"))
+    if "css" in projects:
+        machine.append(("css", "lsp", "vscode-css-language-server", "vscode-css-language-server"))
 
     def check_machine(entry: Tuple[str, str, str, str]) -> Item:
         lang, role, tool, name = entry
@@ -360,7 +423,7 @@ def render_text(result: dict) -> str:
     for i in result["items"]:
         where = f"  [{i['project']}]" if i["project"] not in ("", ".") else ""
         detail = f"  {i['detail']}" if i["detail"] else ""
-        out.append(f"  {MARKS[i['status']]} {LANG_NAMES[i['lang']]:<6} {i['role']:<6} {i['tool']:<20}"
+        out.append(f"  {MARKS[i['status']]} {LANG_NAMES[i['lang']]:<6} {i['role']:<6} {i['tool']:<20} "
                    f"{i['status'] if i['status'] != 'ok' else ''}{detail}{where}".rstrip())
     if result["fix"]:
         out.append("\nTo fix:\n" + "\n".join(f"  {c}" for c in result["fix"]))
