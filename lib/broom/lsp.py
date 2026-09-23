@@ -19,13 +19,13 @@ from typing import IO, Any, Dict, List, Optional, Set, Tuple
 from .common import PLUGIN_ROOT, boundary, find_up
 
 FUNCTION_KINDS = {6, 9, 12}  # LSP SymbolKind: Method, Constructor, Function
-# CSS has no functions: the unit is the rule, as the CSS server reports it (Class), plus Sass mixins (Method)
-# and @functions (Function).
-CSS_LANGUAGES = {"css", "scss"}
+# CSS has no functions: the unit is the rule, as the CSS server reports it (Class), plus Sass and Less mixins
+# (Method) and Sass @functions (Function).
+CSS_LANGUAGES = {"css", "scss", "less"}
 RULE_KINDS = {5, 6, 12}
 PROJECT_MARKERS = {"go": ["go.mod"], "rust": ["Cargo.toml"], "py": ["pyproject.toml", "setup.py", "setup.cfg"],
                    "typescript": ["tsconfig.json", "package.json"], "javascript": ["tsconfig.json", "package.json"],
-                   "css": ["package.json"], "scss": ["package.json"]}
+                   "css": ["package.json"], "scss": ["package.json"], "less": ["package.json"]}
 Ranges = List[Tuple[int, int]]
 
 

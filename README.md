@@ -12,7 +12,8 @@ project's own rules.
   configure it. Nothing is installed without your yes.
 - **Sweeps.** When it should, broom formats, lints and type-checks Claude's changes, and holds them back until
   they're clean.
-- **Sees.** Language servers for Go, TS/JS, Rust, Python and CSS/SCSS give Claude diagnostics as it edits.
+- **Sees.** Language servers for Go, TS/JS, Rust, Python and CSS (with SCSS and Less) give Claude diagnostics as it
+  edits.
 
 It uses your project's own tools and configs, only looks at what changed, and never blocks twice on the same
 result.
@@ -58,7 +59,7 @@ If you'd rather install the tools yourself, these are the ones broom uses:
 | TS/JS | `npm i -D oxlint oxlint-tsgolint oxfmt` in the project · `npm i -g typescript` (7+, for the language server) |
 | Rust | `rustup component add clippy rustfmt rust-analyzer` |
 | Python | `brew install ruff` · `npm i -g pyright` |
-| CSS/SCSS | `npm i -D stylelint` in the project, plus `stylelint-config-recommended-scss` for SCSS · `npm i -g vscode-langservers-extracted` |
+| CSS, SCSS, Less | `npm i -D stylelint` in the project, plus `stylelint-config-recommended-scss` for SCSS or `stylelint-config-recommended-less` for Less · `npm i -g vscode-langservers-extracted` |
 
 Don't also enable `gopls-lsp`, `typescript-lsp`, `rust-analyzer-lsp` or `pyright-lsp`: when two plugins serve the
 same files, only one language server starts. `broom doctor` tells you if that happens.

@@ -38,11 +38,13 @@
     "args": ["--stdio"],
     "extensionToLanguage": {
       ".css": "css",
-      ".scss": "scss"
+      ".scss": "scss",
+      ".less": "less"
     },
     "settings": {
       "css": {"lint": {"unknownAtRules": "ignore", "validProperties": ["composes", "compose-with"]}},
-      "scss": {"lint": {"unknownAtRules": "ignore", "validProperties": ["composes", "compose-with"]}}
+      "scss": {"lint": {"unknownAtRules": "ignore", "validProperties": ["composes", "compose-with"]}},
+      "less": {"lint": {"unknownAtRules": "ignore", "validProperties": ["composes", "compose-with"]}}
     }
   }
 }

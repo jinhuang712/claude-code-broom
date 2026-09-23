@@ -58,16 +58,17 @@ root, keep paths out of formatting and checks entirely. `broom doctor` flags unk
 | TS/JS | the project's biome, oxfmt or prettier | the project's oxlint, eslint or biome; else oxlint with broom's defaults (type-aware) | `tsc --noEmit`, per referenced config for solution-style tsconfigs | `tsc --lsp` (TypeScript 7) |
 | Rust | rustfmt | cargo clippy | clippy errors | rust-analyzer |
 | Python | ruff format | ruff check | — | pyright |
-| CSS, SCSS | the project's biome, oxfmt or prettier | the project's stylelint, biome or ESLint with `@eslint/css` (the last two plain CSS only); else stylelint with broom's defaults | — | vscode-css-language-server |
+| CSS, SCSS, Less | the project's biome, oxfmt or prettier | the project's stylelint, biome or ESLint with `@eslint/css` (the last two plain CSS only); else stylelint with broom's defaults | — | vscode-css-language-server |
 
 Tools come from the project's `node_modules/.bin` first, then PATH. JS/TS, CSS and Python are formatted only where
 a formatter is configured.
 
-broom's CSS defaults report errors, not style: stylelint-config-recommended's rules for `.css` and
-`stylelint-config-recommended-scss` for `.scss`, both accepting Tailwind's directives and functions (v3 and v4) and
-CSS modules (`composes`, `:global`, `:export`), and skipping build output and `*.min.css`. The SCSS config has to be
-installed in the project; without it SCSS isn't linted, with a note. The language server accepts the same Tailwind at-rules and `composes`. Less, Sass's
-indented syntax, `<style>` blocks in `.vue` or `.svelte` files and CSS-in-JS aren't covered.
+broom's CSS defaults report errors, not style: stylelint-config-recommended's rules for `.css`,
+`stylelint-config-recommended-scss` for `.scss` and `stylelint-config-recommended-less` for `.less`. All three
+accept Tailwind's directives and functions (v3 and v4) and CSS modules (`composes`, `:global`, `:export`), and skip
+build output and `*.min.css`. The SCSS and Less configs have to be installed in the project; without them those
+files aren't linted, with a note. The language server accepts the same Tailwind at-rules and `composes`. Sass's
+indented syntax, Stylus, `<style>` blocks in `.vue` or `.svelte` files and CSS-in-JS aren't covered.
 
 ## Doctor checks
 
@@ -75,8 +76,8 @@ indented syntax, `<style>` blocks in `.vue` or `.svelte` files and CSS-in-JS are
 - TypeScript is version 7 or later for the language server.
 - The project's configured tools resolve, or its dependencies need installing.
 - Formatter configs exist; in a monorepo, one fix at the root.
-- CSS and SCSS files git tracks, at any depth and outside `node_modules`, build output and `*.min.css`, get their
-  linter, formatter and language server checked like any language.
+- CSS, SCSS and Less files git tracks, at any depth and outside `node_modules`, build output and `*.min.css`, get
+  their linter, formatter and language server checked like any language.
 - No other plugin starts a language server for the same files.
 - `.broom.json` is valid.
 

@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from .common import (
-    DEFAULTS, GOLANGCI_CFG, PY_ROOT_MARKERS, SCSS_DEFAULTS, boundary, css_linters, find_up, in_node_modules,
+    DEFAULTS, DIALECT_DEFAULTS, GOLANGCI_CFG, PY_ROOT_MARKERS, boundary, css_linters, find_up, in_node_modules,
     js_linters, lang_of, load_json, pkg_scripts_mention, read_jsonc, resolve_bin, run, save_json,
 )
 
@@ -243,10 +243,11 @@ def check_stylelint(cfg_dir: Path, files: List[Path], stop: Path, defaults: bool
         cmd += ["-c", str(DEFAULTS / "stylelintrc.yml")]
         for pattern in STYLELINT_DEFAULT_IGNORES:
             cmd += ["--ignore-pattern", pattern]
-        # stylelint loads the SCSS config from the project, the way it loads a project's own plugins.
-        if any(f.suffix.lower() == ".scss" for f in files) and not in_node_modules(SCSS_DEFAULTS, cfg_dir, stop):
-            files = [f for f in files if f.suffix.lower() != ".scss"]
-            notes.append(f"missing:{SCSS_DEFAULTS} (npm i -D {SCSS_DEFAULTS} in the project, for SCSS)")
+        # stylelint loads the SCSS and Less configs from the project, the way it loads a project's own plugins.
+        for ext, (dialect, pkg) in DIALECT_DEFAULTS.items():
+            if any(f.suffix.lower() == ext for f in files) and not in_node_modules(pkg, cfg_dir, stop):
+                files = [f for f in files if f.suffix.lower() != ext]
+                notes.append(f"missing:{pkg} (npm i -D {pkg} in the project, for {dialect})")
     if not files:
         return [], notes
     rc, out, err = run(cmd + [str(f) for f in files], cfg_dir, timeout=90)

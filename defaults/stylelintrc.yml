@@ -1,8 +1,9 @@
-# Used only for CSS and SCSS without a stylelint config of the project's own, and only on the lines Claude changed.
-# Errors, not style: .css gets stylelint-config-recommended's rules (18.0.0, copied here so plain CSS needs nothing
-# but stylelint), .scss gets stylelint-config-recommended-scss from the project. Both accept Tailwind's directives
-# (v3 and v4) and CSS modules (Vite, webpack). Build output and *.min.css are skipped on the command line
-# (STYLELINT_DEFAULT_IGNORES in lib/broom/checks.py): an ignoreFiles here would be read relative to this directory.
+# Used only for CSS, SCSS and Less without a stylelint config of the project's own, and only on the lines Claude
+# changed. Errors, not style: .css gets stylelint-config-recommended's rules (18.0.0, copied here so plain CSS needs
+# nothing but stylelint); .scss and .less get stylelint-config-recommended-scss and -less from the project. All
+# accept Tailwind's directives (v3 and v4) and CSS modules (Vite, webpack). Build output and *.min.css are skipped on
+# the command line (STYLELINT_DEFAULT_IGNORES in lib/broom/checks.py): an ignoreFiles here would be read relative to
+# this directory.
 rules: {} # stylelint requires the key; the rules are per file type, below
 
 overrides:
@@ -67,3 +68,16 @@ overrides:
       scss/at-rule-no-unknown: [true, { ignoreAtRules: *directives }]
       property-no-unknown: *modules-properties
       selector-pseudo-class-no-unknown: *modules-pseudo-classes
+
+  - files: ["**/*.less"]
+    extends: [stylelint-config-recommended-less]
+    rules:
+      at-rule-no-unknown: [true, { ignoreAtRules: *directives }] # includes Less's own @plugin
+      property-no-unknown: *modules-properties
+      selector-pseudo-class-no-unknown: *modules-pseudo-classes
+      # less/color-no-invalid-hex checks only variables, so the core rule (the SCSS config's too) covers
+      # declarations. In stylelint-less 4.2.1 it also misreads every detached ruleset call (`@r();`) as a
+      # variable; kept anyway, since hex typos in theme variables are the likelier mistake.
+      color-no-invalid-hex: true
+      # Redefining a variable is legal Less (the last one wins), not an error; it misfires on `@r();` as well.
+      less/no-duplicate-variables: null

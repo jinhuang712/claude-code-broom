@@ -20,8 +20,8 @@ Summarize the gaps in plain words, then ask with AskUserQuestion, in one call, o
 
 1. **Install the missing tools?** Show the `fix` commands. JS/TS and CSS tools go in as devDependencies of the
    project (that's what `fix` already does); mention a global install as the alternative, except for
-   `stylelint-config-recommended-scss`, which stylelint only finds in the project. Options: install all
-   (recommended), let me pick, skip.
+   `stylelint-config-recommended-scss` and `-less`, which stylelint only finds in the project. Options: install
+   all (recommended), let me pick, skip.
 2. **Turn on formatting where it's off?** Show the `configure` commands: `broom init <dir>` adds default configs
    and never overwrites. Options: yes (recommended); yes, and reformat the whole repo now (a large diff); no.
 3. **When should broom run?** Ask how they work:

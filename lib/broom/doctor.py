@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Tuple
 from . import __version__
 from .common import (
     BIOME_CFG, DATA_ROOT, DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG, REPO_FILE, RUFF_CFG,
-    SCSS_DEFAULTS, SETTINGS, STYLELINT_CFG,
+    DIALECT_DEFAULTS, SETTINGS, STYLELINT_CFG,
     css_linters, find_up, git, in_node_modules, js_formatter, js_linters, load_json, read_jsonc, resolve_bin,
     ruff_configured, run, save_json, short_hash,
 )
@@ -24,7 +24,7 @@ MARKERS = {"go.mod": "go", "package.json": "js", "tsconfig.json": "js", "Cargo.t
            "pyproject.toml": "py", "setup.py": "py", "requirements.txt": "py"}
 SKIP_DIRS = {"node_modules", "vendor", "target", "dist", "build", "out", "venv", "__pycache__", "coverage"}
 LANG_NAMES = {"go": "Go", "js": "TS/JS", "rust": "Rust", "py": "Python", "css": "CSS", "scss": "SCSS",
-              "broom": "broom"}
+              "less": "Less", "broom": "broom"}
 # Plugins that start a language server for the same files as broom's .lsp.json. Claude Code starts only the
 # first server registered for an extension, so either one silently never runs.
 LSP_PLUGINS = {"gopls-lsp": "go", "gopls": "go", "typescript-lsp": "js", "vtsls": "js", "ts7-lsp": "js",
@@ -71,13 +71,13 @@ def scan(root: Path, max_depth: int = 3) -> Dict[str, List[Path]]:
 
 
 def css_projects(root: Path) -> Dict[str, List[Path]]:
-    """`css` and `scss`: the packages (nearest package.json, else the root) holding CSS or SCSS files. CSS has no
-    project file to find, so this goes by the files git tracks, at any depth; generated and vendored ones don't
-    count. Untracked files would need a walk of the working tree: 160 ms instead of 25 on a 6,000-file repo, too
-    slow for SessionStart."""
-    out = git(["ls-files", "--cached", "--", "*.css", "*.scss"], root) or ""
+    """`css`, plus `scss` and `less` for those dialects: the packages (nearest package.json, else the root) holding
+    such files. CSS has no project file to find, so this goes by the files git tracks, at any depth; generated and
+    vendored ones don't count. Untracked files would need a walk of the working tree: 160 ms instead of 25 on a
+    6,000-file repo, too slow for SessionStart."""
+    out = git(["ls-files", "--cached", "--", "*.css", "*.scss", "*.less"], root) or ""
     homes: Dict[Path, Path] = {}
-    found: Dict[str, List[Path]] = {"css": [], "scss": []}
+    found: Dict[str, List[Path]] = {"css": [], "scss": [], "less": []}
     for name in out.splitlines():
         rel = Path(name)
         if name.endswith(".min.css") or any(p in SKIP_DIRS or p.startswith(".") for p in rel.parts[:-1]):
@@ -86,7 +86,7 @@ def css_projects(root: Path) -> Dict[str, List[Path]]:
         if d not in homes:
             pkg = find_up(d, ["package.json"], root)
             homes[d] = pkg.parent if pkg else root
-        for lang in ("css", "scss") if rel.suffix == ".scss" else ("css",):
+        for lang in ("css", rel.suffix[1:]) if rel.suffix in DIALECT_DEFAULTS else ("css",):
             if homes[d] not in found[lang] and len(found[lang]) < MAX_PROJECTS:
                 found[lang].append(homes[d])
     return found
@@ -242,16 +242,18 @@ def diagnose(repo: Path, projects: Optional[Dict[str, List[Path]]] = None) -> di
                 items.append(Item("css", "deps", name, "missing", rel(d),
                                   "configured, but the project's dependencies aren't installed",
                                   in_project(d, f"{package_manager(d, repo)} install")))
-    for p in projects.get("scss", []):
-        for tool, d in css_linters(p / "_.scss", repo):
-            if tool != "stylelint-default" or in_node_modules(SCSS_DEFAULTS, d, repo):
-                continue
-            item = Item("scss", "lint", SCSS_DEFAULTS, "missing", rel(d), "broom's SCSS defaults")
-            if (repo / "package.json").exists() or (d / "package.json").exists():
-                items.append(dev_fix(item, d, SCSS_DEFAULTS))
-            else:  # stylelint loads it from the project, so a global install wouldn't do
-                item.detail += ": stylelint loads it from node_modules, so this needs a package.json"
-                items.append(item)
+    for ext, (dialect, pkg) in DIALECT_DEFAULTS.items():
+        lang = ext[1:]
+        for p in projects.get(lang, []):
+            for tool, d in css_linters(p / f"_{ext}", repo):
+                if tool != "stylelint-default" or in_node_modules(pkg, d, repo):
+                    continue
+                item = Item(lang, "lint", pkg, "missing", rel(d), f"broom's {dialect} defaults")
+                if (repo / "package.json").exists() or (d / "package.json").exists():
+                    items.append(dev_fix(item, d, pkg))
+                else:  # stylelint loads it from the project, so a global install wouldn't do
+                    item.detail += ": stylelint loads it from node_modules, so this needs a package.json"
+                    items.append(item)
     # CSS in a JS project is formatted (or not) along with it; this is CSS elsewhere, as in a Go service's static/.
     unformatted = [p for p in projects.get("css", [])
                    if p not in projects.get("js", []) and js_formatter(p / "_.css", repo) is None]

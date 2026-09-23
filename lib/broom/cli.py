@@ -158,7 +158,7 @@ def cmd_init(args: argparse.Namespace) -> int:
         write(".golangci.yml", (DEFAULTS / "golangci.yml").read_text() + GOLANGCI_FORMATTERS)
     if "js" in langs and not has(OXLINT_CFG) and not has(ESLINT_CFG) and not has(BIOME_CFG):
         write(".oxlintrc.json", (DEFAULTS / "oxlintrc.json").read_text())
-    # oxfmt formats CSS and SCSS too. CSS needs no lint config: broom's stylelint defaults apply without one.
+    # oxfmt formats CSS, SCSS and Less too. CSS needs no lint config: broom's stylelint defaults apply without one.
     if ("js" in langs or "css" in langs) and not has(BIOME_CFG) and not has(OXFMT_CFG) and not has(PRETTIER_CFG) \
             and not pkg_has_key(root, "prettier"):
         oxfmt = shutil.which("oxfmt")

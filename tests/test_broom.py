@@ -34,15 +34,16 @@ HAS_STYLELINT = shutil.which("stylelint") is not None
 HAS_CSS_LSP = shutil.which("vscode-css-language-server") is not None and shutil.which("oxfmt") is not None
 
 
-def stylelint_modules():
-    """The node_modules the stylelint on PATH lives in, when it also holds the SCSS config broom's defaults extend:
-    a test repo links it in, since stylelint loads that config from the project."""
+def stylelint_modules(config: str):
+    """The node_modules the stylelint on PATH lives in, when it also holds `config`, a dialect config broom's
+    defaults extend: a test repo links it in, since stylelint loads that config from the project."""
     exe = shutil.which("stylelint")
     mods = Path(exe).resolve().parents[2] if exe else None  # node_modules/stylelint/bin/stylelint.mjs
-    return mods if mods and (mods / "stylelint-config-recommended-scss").is_dir() else None
+    return mods if mods and (mods / config).is_dir() else None
 
 
-SCSS_MODULES = stylelint_modules()
+SCSS_MODULES = stylelint_modules("stylelint-config-recommended-scss")
+LESS_MODULES = stylelint_modules("stylelint-config-recommended-less")
 
 GO_MAIN = """package main
 
@@ -96,6 +97,23 @@ $w: 10px;
 @each $n in 1, 2 {
   .m-#{$n} {
     margin: #{$n * 4}px;
+  }
+}
+"""
+LESS_ANTD = """@import (reference) "./theme.less";
+@primary: #1890ff;
+@prefix: ~"app";
+.mixin(@color; @padding: 2px) {
+  color: @color;
+  padding: @padding;
+}
+.@{prefix}-card {
+  .mixin(#fff; 4px);
+  color: fade(@primary, 50%);
+  width: ~"calc(100% - 16px)";
+  &:extend(.base all);
+  :global(.ant-card-head) {
+    border: 0;
   }
 }
 """
@@ -673,15 +691,27 @@ class BroomTest(unittest.TestCase):
         self.assertIn('theme.scss:19:3  property-no-unknown  Unknown property "colr"', reason)
         self.assertIn("blocked: 1 issue(s)", reason, "nothing from Sass itself")
 
+    @unittest.skipUnless(LESS_MODULES, "stylelint-config-recommended-less missing")
+    def test_less_defaults_know_less_and_css_modules(self) -> None:
+        r = self.css_repo()
+        (r / "node_modules").symlink_to(LESS_MODULES)
+        (r / "Card.module.less").write_text(LESS_ANTD + CSS_TYPO)
+        self.sh(r, "git", "add", "-A")
+        reason = self.denied(self.commit(r, "git commit -m less"))
+        self.assertIn('Card.module.less:18:3  property-no-unknown  Unknown property "colr"', reason)
+        self.assertIn("blocked: 1 issue(s)", reason, "nothing from Less itself")
+
     @unittest.skipUnless(HAS_STYLELINT, "stylelint missing")
-    def test_scss_without_its_defaults_is_skipped_with_a_note(self) -> None:
+    def test_dialects_without_their_defaults_are_skipped_with_a_note(self) -> None:
         r = self.css_repo()
         (r / "theme.scss").write_text(SCSS_SASS + CSS_TYPO)
+        (r / "theme.less").write_text(LESS_ANTD + CSS_TYPO)
         self.sh(r, "git", "add", "-A")
-        out = self.commit(r, "git commit -m scss")
+        out = self.commit(r, "git commit -m styles")
         self.assertEqual(self.denied(out), "")
         context = out["hookSpecificOutput"]["additionalContext"]
         self.assertIn("stylelint-config-recommended-scss", context)
+        self.assertIn("stylelint-config-recommended-less", context)
         self.assertIn("/broom:setup", context)
 
     @unittest.skipUnless(HAS_STYLELINT, "stylelint missing")
@@ -704,6 +734,7 @@ class BroomTest(unittest.TestCase):
         self.assertEqual(tools("a.scss"), [("stylelint-default", ".")], "biome doesn't read SCSS")
         self.assertEqual(tools("web/a.css"), [("eslint", "web")])
         self.assertEqual(tools("web/a.scss"), [("stylelint-default", "web")], "nor does @eslint/css")
+        self.assertEqual(tools("a.less"), [("stylelint-default", ".")], "nor Less")
         self.assertEqual(tools("lib/a.scss"), [("stylelint", "lib")])
 
     def test_css_function_scope_widens_to_the_innermost_rule(self) -> None:
@@ -733,15 +764,18 @@ class BroomTest(unittest.TestCase):
     def test_doctor_finds_css_at_any_depth_inside_and_outside_js_projects(self) -> None:
         r = self.repo({"go.mod": "module example.com/m\n\ngo 1.26\n", "static/app.css": ".a {}\n",
                        "static/app.min.css": ".a{}\n", "web/package.json": '{"name":"w","private":true}\n',
-                       "web/src/components/card/card.module.scss": "$a: 1px;\n", "web/dist/out.css": ".a {}\n"})
+                       "web/src/components/card/card.module.scss": "$a: 1px;\n", "web/dist/out.css": ".a {}\n",
+                       "web/src/theme.less": "@a: 1px;\n"})
         result = self.doctor(r, self.fake_path(keep=("go", "gofmt")))
         self.assertEqual(result["languages"]["css"], [".", "web"])
         self.assertEqual(result["languages"]["scss"], ["web"])
+        self.assertEqual(result["languages"]["less"], ["web"])
         self.assertIn("npm i -g stylelint", result["fix"])
         self.assertIn("npm i -g vscode-langservers-extracted", result["fix"])
         web = next(c for c in result["fix"] if c.startswith("cd web && npm i -D")).split()
         self.assertIn("stylelint", web)
         self.assertIn("stylelint-config-recommended-scss", web)
+        self.assertIn("stylelint-config-recommended-less", web)
         self.assertIn("broom init .", result["configure"], "the Go service's CSS has no formatter")
         out = self.cli(r, "init").stdout
         self.assertIn(".oxfmtrc.json", out)

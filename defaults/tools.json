@@ -28,6 +28,7 @@
     "install": [["npm", "npm i -g stylelint"], ["brew", "brew install stylelint"]]
   },
   "stylelint-config-recommended-scss": {"dev": "stylelint-config-recommended-scss"},
+  "stylelint-config-recommended-less": {"dev": "stylelint-config-recommended-less"},
   "vscode-css-language-server": {
     "install": [["npm", "npm i -g vscode-langservers-extracted"], ["brew", "brew install vscode-langservers-extracted"]]
   }

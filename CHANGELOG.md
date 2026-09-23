@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0
+
+- Less (`.less`) joins CSS and SCSS: linted with the project's stylelint, else with broom's defaults, which extend
+  `stylelint-config-recommended-less` (install it in the project) and accept CSS modules. Two changes to that
+  config: stylelint's core hex check also covers declarations, and the duplicate-variable rule is off, since
+  redefining a variable is legal Less. One known false positive: a detached ruleset call (`@r();`).
+- The CSS language server serves `.less` too, with the same Tailwind and `composes` settings.
+- `broom doctor` finds Less files and offers the Less config as a devDependency.
+
 ## 0.5.1
 
 - broom's stylelint defaults skip build output (`dist`, `build`, `out`, `coverage`) and `*.min.css`, as its oxlint

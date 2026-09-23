@@ -72,7 +72,7 @@ JS_EXTS = {".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"}
 RS_EXTS = {".rs"}
 PY_EXTS = {".py", ".pyi"}
 # Linted and served by a language server; formatted, like WEB_EXTS, by the project's JS-side formatter.
-CSS_EXTS = {".css", ".scss"}
+CSS_EXTS = {".css", ".scss", ".less"}
 # Other file types a project's JS-side formatter (oxfmt, biome, prettier) handles.
 WEB_EXTS = {
     ".json", ".jsonc", ".css", ".scss", ".less", ".md", ".mdx", ".yaml", ".yml",
@@ -98,7 +98,9 @@ STYLELINT_CFG = (
     "stylelint.config.js", "stylelint.config.cjs", "stylelint.config.mjs", "stylelint.config.ts",
     "stylelint.config.cts", "stylelint.config.mts",
 )
-SCSS_DEFAULTS = "stylelint-config-recommended-scss"  # defaults/stylelintrc.yml extends it for .scss
+# The configs defaults/stylelintrc.yml extends per dialect: stylelint loads them from the project.
+DIALECT_DEFAULTS = {".scss": ("SCSS", "stylelint-config-recommended-scss"),
+                    ".less": ("Less", "stylelint-config-recommended-less")}
 GOLANGCI_CFG = (".golangci.yml", ".golangci.yaml", ".golangci.toml", ".golangci.json")
 RUFF_CFG = ("ruff.toml", ".ruff.toml")
 PY_ROOT_MARKERS = ("pyproject.toml", "ruff.toml", ".ruff.toml", "setup.cfg", "setup.py")
@@ -316,7 +318,7 @@ def js_linters(path: Path, stop: Path) -> List[Tuple[str, Path]]:
 def css_linters(path: Path, stop: Path) -> List[Tuple[str, Path]]:
     """Like js_linters: the project's stylelint, biome or ESLint with @eslint/css at the nearest level that has
     any, else `stylelint-default` run from the package (or the repo root: CSS has no project file of its own).
-    biome and @eslint/css don't read SCSS, so for an .scss file only stylelint counts."""
+    biome and @eslint/css don't read SCSS or Less, so for those only stylelint counts."""
     plain = path.suffix.lower() == ".css"
     d = path.parent
     while True:
