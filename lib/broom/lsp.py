@@ -10,13 +10,14 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import threading
 from pathlib import Path
 from typing import IO, Any, Dict, List, Optional, Set, Tuple
 
-from .common import PLUGIN_ROOT, boundary, find_up
+from .common import PLUGIN_ROOT, boundary, find_up, git_root, in_node_modules, run
 
 FUNCTION_KINDS = {6, 9, 12}  # LSP SymbolKind: Method, Constructor, Function
 # CSS has no functions: the unit is the rule, as the CSS server reports it (Class), plus Sass and Less mixins
@@ -29,6 +30,68 @@ PROJECT_MARKERS = {"go": ["go.mod"], "rust": ["Cargo.toml"], "py": ["pyproject.t
 Ranges = List[Tuple[int, int]]
 
 
+def major_version(version: str) -> Optional[int]:
+    m = re.match(r"\s*(?:Version\s+)?(\d+)\.", version)
+    return int(m.group(1)) if m else None
+
+
+def _global_tsc() -> Tuple[Optional[str], str]:
+    """The tsc on PATH and its version, read from the package it belongs to, else from `tsc --version`."""
+    exe = shutil.which("tsc")
+    if not exe:
+        return None, ""
+    pkg = Path(exe).resolve().parents[1] / "package.json"  # .../node_modules/typescript/bin/tsc
+    try:
+        return exe, str(json.loads(pkg.read_text()).get("version", ""))
+    except (OSError, ValueError):
+        rc, out, _ = run([exe, "--version"], Path.cwd(), timeout=10)
+        return exe, out.strip().replace("Version ", "") if rc == 0 else ""
+
+
+def project_typescript(root: Path) -> Tuple[str, Optional[Path]]:
+    """The project's own TypeScript: its version ("" without one) and its tsc."""
+    stop = git_root(root) or root
+    pkg = in_node_modules("typescript/package.json", root, stop)
+    if not pkg:
+        return "", None
+    try:
+        version = str(json.loads(pkg.read_text()).get("version", ""))
+    except (OSError, ValueError):
+        version = ""
+    return version, in_node_modules(".bin/tsc", root, stop)
+
+
+NO_PUSH = "which gives Claude no diagnostics: TypeScript 7 only sends them on request, and Claude Code never asks"
+
+
+def typescript_server(root: Path) -> Tuple[Optional[List[str]], str]:
+    """The TypeScript language server for a project, and why. typescript-language-server wherever it's installed:
+    it loads the project's tsserver (TypeScript 6 and older), else its bundled TypeScript 6, and it pushes
+    diagnostics. TypeScript 7's `tsc --lsp` answers them only when asked, and Claude Code (2.1.280) never asks, so
+    it's the fallback: navigation without diagnostics."""
+    tls = shutil.which("typescript-language-server")
+    version, tsc = project_typescript(root)
+    major = major_version(version)
+    if tls:
+        if major is not None and major < 7:
+            return [tls, "--stdio"], f"the project's TypeScript {version}, through typescript-language-server"
+        if major is not None:
+            return [tls, "--stdio"], (f"typescript-language-server's bundled TypeScript: the project's TypeScript "
+                                      f"{version} has no tsserver")
+        return [tls, "--stdio"], "typescript-language-server's bundled TypeScript"
+    if major is not None and major >= 7 and tsc:
+        return [str(tsc), "--lsp", "--stdio"], f"the project's TypeScript {version} (`tsc --lsp`), {NO_PUSH}"
+    exe, global_version = _global_tsc()
+    if exe and (major_version(global_version) or 0) >= 7:
+        return [exe, "--lsp", "--stdio"], f"the global TypeScript {global_version} (`tsc --lsp`), {NO_PUSH}"
+    return None, f"no typescript-language-server and no TypeScript 7 (global tsc: {global_version or 'none'})"
+
+
+def expand_root(arg: str) -> str:
+    """Claude Code expands ${CLAUDE_PLUGIN_ROOT} in .lsp.json; broom's own client has to do the same."""
+    return arg.replace("${CLAUDE_PLUGIN_ROOT}", str(PLUGIN_ROOT))
+
+
 def servers() -> Dict[str, Tuple[List[str], str]]:
     """File extension -> (server command line, languageId), from .lsp.json."""
     out: Dict[str, Tuple[List[str], str]] = {}
@@ -37,7 +100,7 @@ def servers() -> Dict[str, Tuple[List[str], str]]:
     except (OSError, ValueError):
         return out
     for spec in config.values():
-        cmd = [spec["command"], *spec.get("args", [])]
+        cmd = [expand_root(a) for a in [spec["command"], *spec.get("args", [])]]
         for ext, language in spec.get("extensionToLanguage", {}).items():
             out[ext] = (cmd, language)
     return out

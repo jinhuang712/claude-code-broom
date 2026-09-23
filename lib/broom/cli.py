@@ -1,9 +1,11 @@
-"""`broom` command line: sweep, fmt, doctor, init, setup and known for people and skills; `hook` for Claude Code."""
+"""`broom` command line: sweep, fmt, doctor, init, setup and known for people and skills; `hook` and `lsp` for
+Claude Code."""
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
 import time
@@ -213,6 +215,20 @@ def cmd_hook(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_lsp(args: argparse.Namespace) -> int:
+    """Become the language server this project needs. Claude Code starts it from the project directory, with
+    stdin and stdout as the protocol channel, so the chosen server replaces this process."""
+    from .lsp import typescript_server
+
+    cmd, why = typescript_server(Path.cwd().resolve())
+    if cmd is None:
+        print(f"broom: no TypeScript language server here: {why}. Run broom doctor.", file=sys.stderr)
+        return 1
+    print(f"broom: TypeScript language server: {why}", file=sys.stderr)
+    os.execvp(cmd[0], cmd)
+    return 1  # not reached
+
+
 def main(argv: List[str]) -> int:
     p = argparse.ArgumentParser(prog="broom", description="Format, lint and type-check with each project's own tools.")
     p.add_argument("--version", action="version", version=f"broom {__version__}")
@@ -261,6 +277,10 @@ def main(argv: List[str]) -> int:
     h = sub.add_parser("hook")  # for Claude Code; left out of --help
     h.add_argument("event", choices=["commit", "edit", "stop", "session"])
     h.set_defaults(fn=cmd_hook)
+
+    ls = sub.add_parser("lsp")  # for .lsp.json; left out of --help
+    ls.add_argument("language", choices=["typescript"])
+    ls.set_defaults(fn=cmd_lsp)
 
     args = p.parse_args(argv)
     if args.cmd == "sweep" and args.fix and not args.all:

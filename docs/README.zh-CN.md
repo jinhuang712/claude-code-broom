@@ -51,7 +51,7 @@ tsc (~/code/app):
 | 语言 | 安装 |
 |---|---|
 | Go | `brew install golangci-lint` · `go install golang.org/x/tools/gopls@latest` |
-| TS/JS | 在项目里 `npm i -D oxlint oxlint-tsgolint oxfmt` · `npm i -g typescript`（7 以上，语言服务器需要） |
+| TS/JS | 在项目里 `npm i -D oxlint oxlint-tsgolint oxfmt` · `npm i -g typescript-language-server`（语言服务器） |
 | Rust | `rustup component add clippy rustfmt rust-analyzer` |
 | Python | `brew install ruff` · `npm i -g pyright` |
 | CSS、SCSS、Less | 在项目里 `npm i -D stylelint`，有 SCSS 再加 `stylelint-config-recommended-scss`，有 Less 再加 `stylelint-config-recommended-less` · `npm i -g vscode-langservers-extracted` |

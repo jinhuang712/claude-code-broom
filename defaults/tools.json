@@ -20,6 +20,9 @@
   },
   "pyright-langserver": {"install": [["npm", "npm i -g pyright"], ["uv", "uv tool install pyright"]]},
   "tsc": {"probe": ["tsc", "--version"], "dev": "typescript", "install": [["npm", "npm i -g typescript@latest"]]},
+  "typescript-language-server": {
+    "install": [["npm", "npm i -g typescript-language-server"], ["brew", "brew install typescript-language-server"]]
+  },
   "oxlint": {"probe": ["oxlint", "--version"], "dev": "oxlint", "install": [["npm", "npm i -g oxlint"]]},
   "tsgolint": {"dev": "oxlint-tsgolint", "install": [["npm", "npm i -g oxlint-tsgolint"]]},
   "oxfmt": {"probe": ["oxfmt", "--version"], "dev": "oxfmt", "install": [["npm", "npm i -g oxfmt"]]},

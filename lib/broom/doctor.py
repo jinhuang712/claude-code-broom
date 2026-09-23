@@ -212,7 +212,7 @@ def diagnose(repo: Path, projects: Optional[Dict[str, List[Path]]] = None) -> di
             items.append(dev_fix(Item("js", "format", "oxfmt", "off", rel(home), "needed once formatting is on"), home,
                                  "oxfmt"))
     if "js" in projects:
-        machine.append(("js", "lsp", "tsc", "tsc"))
+        items.append(typescript_lsp(repo, db))
 
     if "rust" in projects:
         machine += [("rust", "types", "cargo", "cargo"), ("rust", "format", "rustfmt", "rustfmt"),
@@ -277,12 +277,6 @@ def diagnose(repo: Path, projects: Optional[Dict[str, List[Path]]] = None) -> di
         works, first = probe(exe, spec, repo)
         if not works:
             return Item(lang, role, tool, "broken", detail=first, fix=install_command(spec))
-        if tool == "tsc" and role == "lsp":
-            m = re.search(r"(\d+)\.\d+", first)
-            if m and int(m.group(1)) < 7:
-                return Item(lang, role, tool, "broken", detail=f"{first}: the language server needs TypeScript 7 "
-                            "(`tsc --lsp`); editors that use typescript-language-server with the global install "
-                            "then need a project-local TypeScript", fix=install_command(spec))
         return Item(lang, role, tool, "ok", detail=first)
 
     with ThreadPoolExecutor(max_workers=6) as pool:
@@ -310,6 +304,19 @@ def diagnose(repo: Path, projects: Optional[Dict[str, List[Path]]] = None) -> di
         "fix": fixes, "configure": configure,
         "healthy": all(i.status == "ok" for i in items),
     }
+
+
+def typescript_lsp(repo: Path, db: dict) -> Item:
+    """The TypeScript server broom's launcher starts for this repo. Claude Code starts one per session, from the
+    repo root, so that is where it's decided."""
+    from .lsp import typescript_server
+
+    cmd, why = typescript_server(repo)
+    tool = "typescript-language-server"
+    if cmd and Path(cmd[0]).name == tool:
+        return Item("js", "lsp", tool, "ok", detail=why)
+    detail = f"without it the language server is {why}" if cmd else why
+    return Item("js", "lsp", tool, "missing", detail=detail, fix=install_command(db.get(tool, {})))
 
 
 def check_repo_file(repo: Path) -> List[Item]:

@@ -55,7 +55,7 @@ root, keep paths out of formatting and checks entirely. `broom doctor` flags unk
 | | Format | Lint | Type / compile check | Language server |
 |---|---|---|---|---|
 | Go | gofmt; at commit the project's golangci formatters (gofumpt, goimports) | golangci-lint | golangci typecheck, `go vet ./...` | gopls |
-| TS/JS | the project's biome, oxfmt or prettier | the project's oxlint, eslint or biome; else oxlint with broom's defaults (type-aware) | `tsc --noEmit`, per referenced config for solution-style tsconfigs | `tsc --lsp` (TypeScript 7) |
+| TS/JS | the project's biome, oxfmt or prettier | the project's oxlint, eslint or biome; else oxlint with broom's defaults (type-aware) | `tsc --noEmit`, per referenced config for solution-style tsconfigs | typescript-language-server, with the project's TypeScript (6 and older) or its bundled one |
 | Rust | rustfmt | cargo clippy | clippy errors | rust-analyzer |
 | Python | ruff format | ruff check | — | pyright |
 | CSS, SCSS, Less | the project's biome, oxfmt or prettier | the project's stylelint, biome or ESLint with `@eslint/css` (the last two plain CSS only); else stylelint with broom's defaults | — | vscode-css-language-server |
@@ -73,7 +73,8 @@ indented syntax, Stylus, `<style>` blocks in `.vue` or `.svelte` files and CSS-i
 ## Doctor checks
 
 - Each needed tool is on PATH and runs (a rustup proxy without its component fails here).
-- TypeScript is version 7 or later for the language server.
+- The TypeScript language server gives Claude diagnostics: typescript-language-server is installed. Without it
+  broom falls back to TypeScript 7's `tsc --lsp`, which gives navigation but no diagnostics.
 - The project's configured tools resolve, or its dependencies need installing.
 - Formatter configs exist; in a monorepo, one fix at the root.
 - CSS, SCSS and Less files git tracks, at any depth and outside `node_modules`, build output and `*.min.css`, get

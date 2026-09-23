@@ -6,7 +6,7 @@
 |---|---|
 | `hooks/hooks.json` | SessionStart (offer setup), PreToolUse on `git commit` (the sweep), PostToolUse on edits and Stop (both opt-in) |
 | `bin/broom` | The one entry point, for hooks and for people; on the Bash PATH while the plugin is enabled |
-| `.lsp.json` | Language servers Claude Code starts: gopls, `tsc --lsp`, rust-analyzer, pyright, vscode-css-language-server |
+| `.lsp.json` | Language servers Claude Code starts: gopls, `broom lsp typescript` (picks the TypeScript server), rust-analyzer, pyright, vscode-css-language-server |
 | `skills/` | `/broom:setup` and `/broom:sweep`, which call `broom` |
 | `lib/broom/` | `gitcmd` reads commits, `fmt` formats, `checks` runs linters, `gate` decides what counts, `doctor` diagnoses, `lsp` asks servers for function ranges |
 | `defaults/` | Lint configs used only where a project has none, and the tool registry for installs |
@@ -74,6 +74,21 @@ After a formatter rewrites a file, Claude Code shows Claude the diff of any file
 accepts a changed file as long as `old_string` still matches. Serena re-reads a file whose modification time
 changed. Claude Code's language servers, though, only hear about edits made through Edit and Write, so a file a
 formatter rewrote can show stale diagnostics until Claude edits it again.
+
+## The TypeScript language server
+
+`.lsp.json` starts `${CLAUDE_PLUGIN_ROOT}/bin/broom lsp typescript`, which picks a server and replaces itself with
+it (`exec`), so the server owns stdin and stdout. Claude Code expands `${CLAUDE_PLUGIN_ROOT}` in an LSP command
+and starts it from the session's directory; the plugin's `bin/` is on the Bash tool's PATH but not on the
+server's, so a bare `broom` would not be found (both checked in 2.1.280).
+
+Claude Code only takes diagnostics a server pushes (`publishDiagnostics`); it never requests them
+(`textDocument/diagnostic`). TypeScript 7's `tsc --lsp` sends them only on request, so under Claude Code it gives
+navigation and no diagnostics. typescript-language-server pushes them, loads the project's `tsserver` (TypeScript 6
+and older), and since 6.0 falls back to its bundled TypeScript 6, also in TypeScript 7 projects, which ship no
+`tsserver`. So the launcher takes typescript-language-server wherever it's installed and falls back to `tsc --lsp`
+(the project's TypeScript 7, then the global one). The choice follows the session's directory: one server per
+session, so a monorepo gets the TypeScript at its root.
 
 ## The CSS language server's settings
 

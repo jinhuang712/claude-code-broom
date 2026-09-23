@@ -56,7 +56,7 @@ If you'd rather install the tools yourself, these are the ones broom uses:
 | Language | Install |
 |---|---|
 | Go | `brew install golangci-lint` · `go install golang.org/x/tools/gopls@latest` |
-| TS/JS | `npm i -D oxlint oxlint-tsgolint oxfmt` in the project · `npm i -g typescript` (7+, for the language server) |
+| TS/JS | `npm i -D oxlint oxlint-tsgolint oxfmt` in the project · `npm i -g typescript-language-server` (the language server) |
 | Rust | `rustup component add clippy rustfmt rust-analyzer` |
 | Python | `brew install ruff` · `npm i -g pyright` |
 | CSS, SCSS, Less | `npm i -D stylelint` in the project, plus `stylelint-config-recommended-scss` for SCSS or `stylelint-config-recommended-less` for Less · `npm i -g vscode-langservers-extracted` |

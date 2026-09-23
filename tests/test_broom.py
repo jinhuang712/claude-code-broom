@@ -452,16 +452,74 @@ class BroomTest(unittest.TestCase):
         self.assertIn("Unknown binary", ra["detail"])
         self.assertEqual(ra["fix"], "rustup component add rust-analyzer")
 
-    def test_doctor_flags_old_typescript_and_a_competing_lsp_plugin(self) -> None:
+    def test_doctor_flags_a_missing_typescript_server_and_a_competing_lsp_plugin(self) -> None:
         r = self.ts_repo()
         env = self.fake_path(fakes={"tsc": "echo 'Version 5.9.3'"})
         self.config_dir({"enabledPlugins": {"typescript-lsp@claude-plugins-official": True, "other@x": True}})
         items = self.doctor(r, env)["items"]
         lsp = next(i for i in items if i["role"] == "lsp")
-        self.assertEqual(lsp["status"], "broken")
-        self.assertIn("TypeScript 7", lsp["detail"])
+        self.assertEqual((lsp["tool"], lsp["status"]), ("typescript-language-server", "missing"))
+        self.assertIn("no typescript-language-server and no TypeScript 7 (global tsc: 5.9.3)", lsp["detail"])
+        self.assertEqual(lsp["fix"], "npm i -g typescript-language-server")
         conflict = [i for i in items if i["status"] == "conflict"]
         self.assertEqual([c["fix"] for c in conflict], ["claude plugin disable typescript-lsp@claude-plugins-official"])
+
+    def ts_install(self, version: str, files: dict = None) -> Path:
+        """A repo whose node_modules holds TypeScript `version`."""
+        r = self.repo({"package.json": "{}\n", ".gitignore": "node_modules\n", **(files or {})})
+        (r / "node_modules/typescript").mkdir(parents=True)
+        (r / "node_modules/typescript/package.json").write_text(json.dumps({"version": version}))
+        (r / "node_modules/.bin").mkdir()
+        (r / "node_modules/.bin/tsc").write_text("#!/bin/sh\n")
+        (r / "node_modules/.bin/tsc").chmod(0o755)
+        return r
+
+    def test_the_typescript_server_is_one_that_pushes_diagnostics(self) -> None:
+        from unittest import mock
+        from broom.lsp import typescript_server
+
+        tls = {"typescript-language-server": "exit 0"}
+        ts7, ts5 = {"tsc": "echo 'Version 7.0.2'"}, {"tsc": "echo 'Version 5.9.3'"}
+        cases = [  # (project TypeScript, fake tools on PATH, expected server, expected reason)
+            ("5.9.3", {**tls, **ts7}, "typescript-language-server", "the project's TypeScript 5.9.3"),
+            ("7.0.1", {**tls, **ts7}, "typescript-language-server", "bundled TypeScript: the project's TypeScript 7"),
+            (None, {**tls, **ts7}, "typescript-language-server", "bundled TypeScript"),
+            # Without it, TypeScript 7's `tsc --lsp`: navigation, but Claude Code never asks it for diagnostics.
+            ("7.0.1", ts5, "node_modules/.bin/tsc", "gives Claude no diagnostics"),
+            ("5.9.3", ts7, "tsc", "the global TypeScript 7.0.2"),
+            (None, ts5, None, "no typescript-language-server and no TypeScript 7"),
+        ]
+        for version, fakes, server, why in cases:
+            r = self.ts_install(version) if version else self.repo({"package.json": "{}\n"})
+            with mock.patch.dict(os.environ, {"PATH": self.fake_path(fakes=fakes)["PATH"]}):
+                cmd, reason = typescript_server(r)
+            label = f"project {version}, PATH {sorted(fakes)}"
+            self.assertIn(why, reason, label)
+            if server is None:
+                self.assertIsNone(cmd, label)
+            else:
+                self.assertTrue(cmd[0].endswith(server), f"{label}: {cmd}")
+                self.assertEqual(cmd[1:], ["--stdio"] if "language-server" in server else ["--lsp", "--stdio"], label)
+
+    def test_the_launcher_becomes_the_chosen_server(self) -> None:
+        r = self.ts_install("5.9.3")
+        env = self.fake_path(fakes={"typescript-language-server": 'echo "tls $*"', "tsc": "echo 'Version 7.0.2'"})
+        p = self.cli(r, "lsp", "typescript", env=env)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(p.stdout.strip(), "tls --stdio", "the server has the process: stdin and stdout are its")
+        self.assertIn("the project's TypeScript 5.9.3, through typescript-language-server", p.stderr)
+        lsp = json.loads((ROOT / ".lsp.json").read_text())["typescript"]
+        self.assertEqual([lsp["command"], *lsp["args"]], ["${CLAUDE_PLUGIN_ROOT}/bin/broom", "lsp", "typescript"],
+                         "Claude Code expands CLAUDE_PLUGIN_ROOT; the plugin's bin/ isn't on the server's PATH")
+
+    def test_doctor_asks_for_typescript_language_server_when_only_typescript_7_would_serve(self) -> None:
+        r = self.ts_install("5.9.3", {"tsconfig.json": "{}\n", "src/a.ts": "export {}\n"})
+        items = self.doctor(r, self.fake_path(fakes={"tsc": "echo 'Version 7.0.2'"}))["items"]
+        lsp = next(i for i in items if i["role"] == "lsp")
+        self.assertEqual((lsp["tool"], lsp["status"]), ("typescript-language-server", "missing"))
+        self.assertIn("without it the language server is the global TypeScript 7.0.2", lsp["detail"])
+        self.assertIn("no diagnostics", lsp["detail"])
+        self.assertEqual(lsp["fix"], "npm i -g typescript-language-server")
 
     def test_doctor_installs_js_tools_as_devdependencies_with_the_projects_package_manager(self) -> None:
         r = self.ts_repo({"pnpm-lock.yaml": "lockfileVersion: '9.0'\n"})

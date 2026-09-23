@@ -6,8 +6,8 @@
     }
   },
   "typescript": {
-    "command": "tsc",
-    "args": ["--lsp", "--stdio"],
+    "command": "${CLAUDE_PLUGIN_ROOT}/bin/broom",
+    "args": ["lsp", "typescript"],
     "extensionToLanguage": {
       ".ts": "typescript",
       ".tsx": "typescriptreact",

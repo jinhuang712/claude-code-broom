@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.7.0
+
+- TypeScript language server: `broom lsp typescript` starts typescript-language-server wherever it's installed.
+  It uses the project's TypeScript (6 and older), or its bundled TypeScript 6 for TypeScript 7 projects and repos
+  without one. Before, broom ran TypeScript 7's `tsc --lsp`, which sends diagnostics only on request; Claude Code
+  never makes that request, so Claude saw no type errors from broom's server. It is now the fallback when
+  typescript-language-server is missing.
+- This covers what the official `typescript-lsp` plugin does, so it can go; `broom doctor` still flags it, since
+  only one server per extension runs.
+- `broom doctor` reports the TypeScript server the launcher will start and asks for typescript-language-server
+  where it's missing. It no longer calls a TypeScript older than 7 broken.
+
 ## 0.6.1
 
 - Commits written as `T=~/repo; git -C $T commit` or `git -c key=val commit` are checked. Claude Code's `if`
