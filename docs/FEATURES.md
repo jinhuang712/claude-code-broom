@@ -5,9 +5,9 @@
 | Hook | Fires on | Does | Cost when idle |
 |---|---|---|---|
 | SessionStart | new, resumed and cleared sessions | Runs a cached doctor; if the repo has gaps, asks Claude to offer `/broom:setup` (once per session) | ~0.1 s |
-| PreToolUse | Bash calls with `git commit` | Formats the commit's files, lints and type-checks them, blocks the commit while issues remain | none; Claude Code filters |
-| PostToolUse | Edit, Write, MultiEdit, Serena's edit tools | Formats per edit (`format_on=edit`); records files for the stop check (`check_on=stop`) | ~15 ms |
-| Stop | each turn end | Checks the files Claude edited this turn (`check_on=stop`) | ~15 ms |
+| PreToolUse | every Bash call; acts on `git commit` | Formats the commit's files, lints and type-checks them, blocks the commit while issues remain | ~13 ms (a shell start); ~60 ms when the command mentions git and commit without committing |
+| PostToolUse | Edit, Write, MultiEdit, Serena's edit tools | Formats per edit (`format_on=edit`); records files for the stop check (`check_on=stop`) | one Python start: 30–45 ms measured on macOS |
+| Stop | each turn end | Checks the files Claude edited this turn (`check_on=stop`) | one Python start: 30–45 ms measured on macOS |
 
 ## Skills
 

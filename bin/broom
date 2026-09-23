@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """broom: format and lint what changed. On the Bash PATH while the plugin is enabled; `broom --help`."""
 
+import io
+import json
 import os
 import sys
 
@@ -28,6 +30,18 @@ if sys.argv[1:2] == ["hook"] and not _repo_file():
         sys.exit(0)
     if event == ["stop"] and _option("check_on", "commit") != "stop":
         sys.exit(0)
+
+# The commit hook sees every Bash call: Claude Code's `if` patterns can't match commands like
+# `T=~/repo; git -C $T commit`, so broom filters for itself, and anything without both words leaves here.
+if sys.argv[1:3] == ["hook", "commit"]:
+    _raw = sys.stdin.read()
+    try:
+        _command = str((json.loads(_raw).get("tool_input") or {}).get("command", ""))
+    except (ValueError, AttributeError):
+        _command = ""
+    if "git" not in _command or "commit" not in _command:
+        sys.exit(0)
+    sys.stdin = io.StringIO(_raw)
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "lib"))
 

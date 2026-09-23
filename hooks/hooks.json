@@ -1,5 +1,5 @@
 {
-  "description": "broom: offer setup when a repo has gaps; sweep each git commit; optionally format per edit and check at stop (see /config)",
+  "description": "broom: offer setup when a repo has gaps; sweep each git commit (every Bash call is looked at, most leave at once); optionally format per edit and check at stop (see /config)",
   "hooks": {
     "SessionStart": [
       {
@@ -23,23 +23,7 @@
         "hooks": [
           {
             "type": "command",
-            "if": "Bash(git commit *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/broom",
-            "args": [
-              "hook",
-              "commit"
-            ],
-            "timeout": 300,
-            "statusMessage": "broom: sweeping the commit"
-          },
-          {
-            "type": "command",
-            "if": "Bash(git -C *)",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/broom",
-            "args": [
-              "hook",
-              "commit"
-            ],
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/commit.sh",
             "timeout": 300
           }
         ]

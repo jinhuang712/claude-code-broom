@@ -11,13 +11,18 @@
 | `lib/broom/` | `gitcmd` reads commits, `fmt` formats, `checks` runs linters, `gate` decides what counts, `doctor` diagnoses, `lsp` asks servers for function ranges |
 | `defaults/` | Lint configs used only where a project has none, and the tool registry for installs |
 
-Python 3.9+ standard library only. State lives in `~/.claude/plugins/data/broom-claude-code-broom/`.
+Python 3.9+ standard library only. State lives in `~/.claude/plugins/data/broom-claude-code-broom/`, including a
+golangci-lint results cache per module path: the shared cache matches packages by content and replays the file paths
+it stored, which hands a worktree another directory's issues. Caches unused for 30 days are removed.
 
 ## A commit
 
-1. The PreToolUse hook fires only for Bash calls matching `git commit *` or `git -C *`; Claude Code evaluates that
-   condition itself. broom parses the command: `cd`, `git -C`, `-a`, `--no-verify`, `git add` in the same
-   command, and flags inside a heredoc message that must not count.
+1. The PreToolUse hook sees every Bash call. Claude Code's `if` patterns (`Bash(git commit *)`) never matched
+   commands such as `T=~/repo; git -C $T commit` or `git -c key=val commit`, which then committed unchecked.
+   `hooks/commit.sh` leaves unless the input mentions both `git` and `commit`, costing a shell start; `bin/broom`
+   then reads the command and leaves unless it could commit. broom parses the command: `cd`, `git -C`, variables
+   it sets (`T=…`, `export T=…`), `-a`, `--no-verify`, `git add` in the same command, and flags inside a heredoc
+   message that must not count.
 2. It works out the files the commit takes. The hook runs before the command, so for `git add . && git commit`
    it predicts what that add will stage.
 3. It formats them and re-stages what was staged in full. A partly staged file is left alone, so its unstaged

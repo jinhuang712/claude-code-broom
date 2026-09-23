@@ -13,8 +13,9 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from .common import (
-    DEFAULTS, DIALECT_DEFAULTS, GOLANGCI_CFG, PY_ROOT_MARKERS, boundary, css_linters, find_up, in_node_modules,
-    js_linters, lang_of, load_json, pkg_scripts_mention, read_jsonc, resolve_bin, run, save_json,
+    DATA_ROOT, DEFAULTS, DIALECT_DEFAULTS, GOLANGCI_CFG, PY_ROOT_MARKERS, boundary, css_linters, find_up,
+    in_node_modules, js_linters, lang_of, load_json, pkg_scripts_mention, prune_dirs, read_jsonc, resolve_bin, run,
+    save_json, short_hash,
 )
 
 
@@ -60,6 +61,18 @@ GOLANGCI_ROW = re.compile(
     r"^(?P<file>[^\s:][^:]*\.go):(?P<line>\d+)(?::(?P<col>\d+))?: (?P<msg>.+?)(?: \((?P<rule>[\w-]+)\))?$"
 )
 VET_TYPE_ERROR = re.compile(r"^vet: (?P<file>[^:]+\.go):(?P<line>\d+):(?P<col>\d+): (?P<msg>.+)$")
+GOLANGCI_CACHES = DATA_ROOT / "golangci"
+
+
+def golangci_cache(module: Path) -> Path:
+    """A golangci-lint results cache for this module's path alone. The shared one matches packages by content and
+    replays the paths it stored, so a worktree, or a copy since deleted, hands broom another directory's files
+    and every issue is dropped as not in the commit. Caches unused for 30 days go."""
+    d = GOLANGCI_CACHES / short_hash(str(module))
+    d.mkdir(parents=True, exist_ok=True)
+    os.utime(d)
+    prune_dirs(GOLANGCI_CACHES, 30)
+    return d
 
 
 def check_go(module: Path, files: List[Path], stop: Path, whole: bool = False) -> Findings:
@@ -73,7 +86,7 @@ def check_go(module: Path, files: List[Path], stop: Path, whole: bool = False) -
             exe, "run", "-c", str(cfg), "--path-mode=abs", "--output.text.path=stdout",
             "--output.text.print-issued-lines=false", "--output.text.colors=false", "--show-stats=false",
             "--max-issues-per-linter=0", "--max-same-issues=0", "--allow-parallel-runners", *pkgs,
-        ], module, timeout=150)
+        ], module, timeout=150, env={"GOLANGCI_LINT_CACHE": str(golangci_cache(module))})
         if rc is None:
             notes.append(f"timeout:golangci-lint in {module}")
         else:

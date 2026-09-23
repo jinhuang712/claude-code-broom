@@ -140,10 +140,12 @@ def emit(obj: dict) -> None:
 # ---------------------------------------------------------------- processes
 
 
-def run(cmd: List[str], cwd: Path, timeout: float = 90) -> Tuple[Optional[int], str, str]:
-    """Run a command; the return code is None when it timed out."""
+def run(cmd: List[str], cwd: Path, timeout: float = 90,
+        env: Optional[Dict[str, str]] = None) -> Tuple[Optional[int], str, str]:
+    """Run a command; the return code is None when it timed out. `env` adds to the environment."""
     try:
-        p = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True, timeout=timeout)
+        p = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True, timeout=timeout,
+                           env={**os.environ, **env} if env else None)
         return p.returncode, p.stdout or "", p.stderr or ""
     except subprocess.TimeoutExpired:
         return None, "", ""
@@ -393,8 +395,8 @@ def save_json(path: Path, data) -> None:
     tmp.replace(path)
 
 
-def prune_sessions(max_age_days: float = 7) -> None:
-    root = DATA_ROOT / "sessions"
+def prune_dirs(root: Path, max_age_days: float) -> None:
+    """Remove the directories in `root` not modified for `max_age_days`."""
     cutoff = time.time() - max_age_days * 86400
     for d in root.glob("*") if root.is_dir() else []:
         try:
@@ -402,6 +404,10 @@ def prune_sessions(max_age_days: float = 7) -> None:
                 shutil.rmtree(d, ignore_errors=True)
         except OSError:
             pass
+
+
+def prune_sessions(max_age_days: float = 7) -> None:
+    prune_dirs(DATA_ROOT / "sessions", max_age_days)
 
 
 def short_hash(text: str) -> str:

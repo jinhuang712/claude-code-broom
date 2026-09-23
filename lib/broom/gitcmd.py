@@ -11,7 +11,7 @@ import re
 import shlex
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, Set
+from typing import Dict, List, Optional, Set
 
 from .common import git, git_root
 
@@ -22,6 +22,8 @@ COMMIT_LONG_VALUE = {
 COMMIT_SHORT_VALUE = set("mFCct")  # short options that take a value, attached or as the next argument
 GIT_GLOBAL_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}
 WRAPPERS = {"command", "time", "nice", "nohup"}
+ASSIGNMENT = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)=(.*)$", re.S)
+VAR_REF = re.compile(r"\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))")
 
 
 @dataclass
@@ -76,8 +78,23 @@ def parse(command: str, cwd: Path) -> List[GitOp]:
         return [GitOp("commit", cwd, re.findall(r"(?<!\S)-{1,2}[A-Za-z][\w-]*", m["rest"]))] if m else []
     ops: List[GitOp] = []
     here = cwd
+    # Variables the command sets for itself (`T=~/repo; git -C $T commit`); anything else comes from the
+    # environment the hook runs in, which is the one the Bash tool started from.
+    names: Dict[str, str] = {}
+
+    def expand(tok: str) -> str:
+        return VAR_REF.sub(lambda m: names.get(m[1] or m[2], os.environ.get(m[1] or m[2], m[0])), tok)
+
     for toks in commands:
-        while toks and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", toks[0]):
+        if toks[0] == "export":
+            toks = toks[1:]
+        if toks and all(ASSIGNMENT.match(t) for t in toks):  # a statement of its own: it sets the variables
+            for t in toks:
+                name, value = ASSIGNMENT.match(t).groups()  # type: ignore[union-attr]
+                names[name] = expand(value)
+            continue
+        toks = [expand(t) for t in toks]
+        while toks and ASSIGNMENT.match(toks[0]):  # set for one command only, after its arguments are expanded
             toks = toks[1:]
         while toks and toks[0] in WRAPPERS:
             toks = toks[1:]

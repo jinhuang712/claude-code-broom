@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.1
+
+- Commits written as `T=~/repo; git -C $T commit` or `git -c key=val commit` are checked. Claude Code's `if`
+  patterns never matched them, so they committed unchecked. The commit hook now sees every Bash call: a shell
+  prefilter (`hooks/commit.sh`, ~13 ms) lets through only input that mentions `git` and `commit`, and the command
+  parser follows the variables a command sets.
+- Go: golangci-lint gets a results cache per module path. The shared cache replayed another directory's file
+  paths, from a worktree of the same repo or a deleted copy, and broom then dropped every issue as not in the commit.
+- A test that needs `oxfmt` is skipped where it isn't installed.
+
 ## 0.6.0
 
 - Less (`.less`) joins CSS and SCSS: linted with the project's stylelint, else with broom's defaults, which extend
