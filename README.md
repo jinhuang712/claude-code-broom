@@ -30,7 +30,8 @@ tsc (~/code/app):
 
 ## Install
 
-**Requirements:** Claude Code 2.1.271 or later, Python 3.9+ as `python3` (macOS's system Python works), and git.
+**Requirements:** Claude Code 2.1.271 or later (the language servers are tested on 2.1.280), Python 3.9+ as
+`python3` (macOS's system Python works), and git.
 
 1. Add the marketplace and install the plugin, inside Claude Code:
 
@@ -61,8 +62,9 @@ If you'd rather install the tools yourself, these are the ones broom uses:
 | Python | `brew install ruff` · `npm i -g pyright` |
 | CSS, SCSS, Less | `npm i -D stylelint` in the project, plus `stylelint-config-recommended-scss` for SCSS or `stylelint-config-recommended-less` for Less · `npm i -g vscode-langservers-extracted` |
 
-Don't also enable `gopls-lsp`, `typescript-lsp`, `rust-analyzer-lsp` or `pyright-lsp`: when two plugins serve the
-same files, only one language server starts. `broom doctor` tells you if that happens.
+Don't also enable `gopls-lsp`, `typescript-lsp`, `rust-analyzer-lsp` or `pyright-lsp`: broom's servers already do
+what they do (for TypeScript, the same typescript-language-server, with the project's TypeScript), and when two
+plugins serve the same files, only one language server starts. `broom doctor` tells you if that happens.
 
 **Update:** `claude plugin marketplace update claude-code-broom && claude plugin update broom@claude-code-broom`
 **Remove:** `claude plugin uninstall broom@claude-code-broom`

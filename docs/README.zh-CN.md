@@ -25,7 +25,8 @@ tsc (~/code/app):
 
 ## 安装
 
-**需要：** Claude Code 2.1.271 或更高版本、Python 3.9+（命令名 `python3`，macOS 自带的即可）、git。
+**需要：** Claude Code 2.1.271 或更高版本（语言服务器在 2.1.280 上测试过）、Python 3.9+（命令名 `python3`，macOS
+自带的即可）、git。
 
 1. 在 Claude Code 里添加 marketplace 并安装插件：
 
@@ -56,8 +57,9 @@ tsc (~/code/app):
 | Python | `brew install ruff` · `npm i -g pyright` |
 | CSS、SCSS、Less | 在项目里 `npm i -D stylelint`，有 SCSS 再加 `stylelint-config-recommended-scss`，有 Less 再加 `stylelint-config-recommended-less` · `npm i -g vscode-langservers-extracted` |
 
-不要同时启用 `gopls-lsp`、`typescript-lsp`、`rust-analyzer-lsp` 或 `pyright-lsp`：两个插件服务同一类文件时，
-只有一个语言服务器会启动。出现这种情况 `broom doctor` 会告诉你。
+不要同时启用 `gopls-lsp`、`typescript-lsp`、`rust-analyzer-lsp` 或 `pyright-lsp`：broom 的语言服务器已经做了它们做的事
+（TypeScript 用的也是 typescript-language-server，并使用项目自己的 TypeScript）；而且两个插件服务同一类文件时，只有一个
+语言服务器会启动。出现这种情况 `broom doctor` 会告诉你。
 
 **更新：** `claude plugin marketplace update claude-code-broom && claude plugin update broom@claude-code-broom`
 **卸载：** `claude plugin uninstall broom@claude-code-broom`
