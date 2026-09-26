@@ -569,6 +569,35 @@ class BroomTest(unittest.TestCase):
         (r / "go.mod").write_text("module example.com/m\n\ngo 1.26\n")
         self.assertIn("golangci-lint missing", str(self.session(r, "c", env)))
 
+    def test_setup_answers_hold_in_every_repo(self) -> None:
+        env = self.fake_path(keep=("go", "gofmt"))
+        a, b = self.go_repo(), self.go_repo()
+        self.assertIn("golangci-lint missing", str(self.session(a, "s", env)))
+        self.cli(a, "setup", "--dismiss", env=env)
+        self.assertEqual(self.session(b, "s2", env), {}, "the same kinds of gap, answered in another repo")
+        items = self.doctor(b, env)["items"]
+        self.assertTrue(all(i["answered"] for i in items if i["status"] != "ok"), items)
+        py = self.repo({"go.mod": "module example.com/m\n\ngo 1.26\n", "pyproject.toml": "[project]\nname = 'x'\n"})
+        note = str(self.session(py, "s3", env))
+        self.assertIn("ruff missing", note, "a new kind of gap is raised")
+        self.assertNotIn("golangci-lint", note, "only the new kinds")
+        self.assertIn("forgot", self.cli(a, "setup", "--reset", env=env).stdout)
+        self.assertIn("golangci-lint missing", str(self.session(b, "s4", env)), "reset asks again")
+
+    def test_doctor_reports_settings_and_global_installs(self) -> None:
+        r = self.ts_repo()
+        env = self.fake_path(fakes={"npm": "exit 0"})
+        env["CLAUDE_CONFIG_DIR"] = str(self.config_dir({"pluginConfigs": {"broom@claude-code-broom": {
+            "options": {"check_on": "stop"}}}}))
+        (r / ".broom.json").write_text('{"format_scope": "file"}\n')
+        out = self.doctor(r, env)
+        self.assertEqual(out["settings"], {"format_on": {"value": "commit", "source": "default"},
+                                           "check_on": {"value": "stop", "source": "user"},
+                                           "format_scope": {"value": "file", "source": "repo"}})
+        self.assertTrue(any(c.startswith("npm i -D") for c in out["fix"]), out["fix"])
+        self.assertIn("npm i -g oxlint", out["fix_global"])
+        self.assertFalse(any("npm i -D" in c for c in out["fix_global"] + out["configure_global"]), out)
+
     @unittest.skipUnless(HAS_GOPLS, "go tools missing")
     def test_session_is_quiet_and_fast_when_healthy(self) -> None:
         r = self.go_repo()

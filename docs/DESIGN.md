@@ -59,8 +59,11 @@ walking up, and plugins whose language servers claim the same files as broom's.
 
 The SessionStart hook runs a cached doctor. The cache key includes the modification time of every PATH
 directory, so installing a tool invalidates it. When there are gaps it asks Claude, once per session, to offer
-`/broom:setup`. `broom setup --done` or `--dismiss` stores a hash of the gaps, and broom stays quiet until they
-change.
+`/broom:setup`. `broom setup --done` or `--dismiss` stores a hash of the repo's gaps, plus each gap's kind
+(language, role, tool, status; no path) in a user-wide list. A repo is raised only when it has a gap of a kind
+not in that list, so one setup covers every repo: machine-wide tools and user settings are shared anyway, and
+`doctor --json` offers `fix_global`, the same fixes with JS tools installed globally instead of as
+devDependencies. `broom setup --reset` clears the list.
 
 ## Settings
 

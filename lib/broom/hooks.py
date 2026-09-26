@@ -25,7 +25,7 @@ from .common import (
     DATA_ROOT, append_line, emit, excluded, git, git_changed_files, git_root, lang_of, load_json, prune_sessions,
     save_json, session_dir, setting,
 )
-from .doctor import describe, diagnose_cached, gaps, needs_setup
+from .doctor import describe, diagnose_cached, new_gaps
 from .fmt import format_files
 from .gate import (
     baseline_add, baseline_add_entries, baseline_keys, issue_entry, issue_key, new_notes, note_text, render, select,
@@ -257,14 +257,14 @@ def hook_session(data: dict) -> None:
     sd = session_dir(data.get("session_id") or "cli")
     if str(repo) in read_lines(sd / "nudged.txt"):
         return  # once per session: a compaction or /clear doesn't repeat it
-    result = diagnose_cached(repo)
-    if not needs_setup(repo, result):
+    found = new_gaps(repo, diagnose_cached(repo))  # gaps the user already answered, in any repo, stay quiet
+    if not found:
         return
     append_line(sd / "nudged.txt", str(repo))
-    found = gaps(result)
     summary = "; ".join(describe(i) for i in found[:6]) + (f"; and {len(found) - 6} more" if len(found) > 6 else "")
     emit({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": (
         f"broom (the code-hygiene plugin) found gaps in this repo: {summary}. At a natural point, and before your "
         "first commit here at the latest, offer the user /broom:setup. Don't install anything they haven't agreed "
-        "to; if they decline, run `broom setup --dismiss` so broom stops asking until something changes."
+        "to; if they decline, run `broom setup --dismiss` so broom stops asking, here and in other repos, until a new "
+        "kind of gap turns up."
     )}})

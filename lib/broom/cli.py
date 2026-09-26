@@ -15,8 +15,9 @@ from typing import List, Optional, Tuple
 from . import __version__
 from .checks import run_checks
 from .common import (
-    BIOME_CFG, DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG, ChangedLines, git,
+    BIOME_CFG, DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG, SETTINGS, ChangedLines, git,
     excluded, git_changed_files, git_root, lang_of, pkg_has_key, read_hook_input, ruff_configured, run, setting,
+    setting_source,
 )
 from .fmt import format_files
 from .gate import baseline_keys, baseline_remove, baseline_under, display, issue_key, render, select
@@ -113,21 +114,30 @@ def repo_or_exit() -> Path:
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
-    from .doctor import diagnose, render_text
+    from .doctor import answered_kinds, diagnose, gap_kind, render_text
 
-    result = diagnose(repo_or_exit())
+    repo = repo_or_exit()
+    result = diagnose(repo)
+    if args.json:
+        known = answered_kinds()
+        for i in result["items"]:  # answered in some repo already: setup doesn't raise it again
+            i["answered"] = i["status"] != "ok" and gap_kind(i) in known
+        result["settings"] = {name: dict(zip(("value", "source"), setting_source(name, repo))) for name in SETTINGS}
     print(json.dumps(result, indent=1) if args.json else render_text(result))
     return 0 if result["healthy"] else 1
 
 
 def cmd_setup(args: argparse.Namespace) -> int:
-    from .doctor import gaps, record_setup
+    from .doctor import gaps, record_setup, reset_setup
 
+    if args.reset:
+        print(f"broom: forgot {reset_setup()} setup answer(s); setup will ask about every gap again")
+        return 0
     status = "dismissed" if args.dismiss else "done"
     result = record_setup(repo_or_exit(), status)
     left = len(gaps(result))
-    print(f"broom: setup {status}" + (f"; {left} gap(s) left as they are, broom won't ask again until that changes"
-                                       if left else ""))
+    print(f"broom: setup {status}" + (f"; {left} gap(s) left as they are, and broom won't ask about these kinds of "
+                                       "gap again in any repo (`broom setup --reset` to undo)" if left else ""))
     return 0
 
 
@@ -258,10 +268,11 @@ def main(argv: List[str]) -> int:
     d.add_argument("--json", action="store_true")
     d.set_defaults(fn=cmd_doctor)
 
-    st = sub.add_parser("setup", help="record that setup is done, or declined, for this repo")
+    st = sub.add_parser("setup", help="record that setup is done, or declined; the answer holds in every repo")
     st_mode = st.add_mutually_exclusive_group(required=True)
     st_mode.add_argument("--done", action="store_true")
     st_mode.add_argument("--dismiss", action="store_true")
+    st_mode.add_argument("--reset", action="store_true", help="forget every answer, so setup asks again everywhere")
     st.set_defaults(fn=cmd_setup)
 
     i = sub.add_parser("init", help="add default lint/format configs where a project has none")

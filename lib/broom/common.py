@@ -49,13 +49,18 @@ _repo_configs: Dict[Path, dict] = {}
 
 
 def setting(name: str, start: Optional[Path] = None) -> str:
-    """A setting: the repo's .broom.json first (like IDE project settings over IDE defaults), then the plugin's
-    userConfig. Claude Code exports userConfig to hooks as CLAUDE_PLUGIN_OPTION_<NAME> but not to commands run
-    through Bash, so `broom` there reads it where Claude Code stores it, in the user settings file."""
+    return setting_source(name, start)[0]
+
+
+def setting_source(name: str, start: Optional[Path] = None) -> Tuple[str, str]:
+    """A setting and where it came from (`repo`, `user` or `default`): the repo's .broom.json first (like IDE
+    project settings over IDE defaults), then the plugin's userConfig. Claude Code exports userConfig to hooks as
+    CLAUDE_PLUGIN_OPTION_<NAME> but not to commands run through Bash, so `broom` there reads it where Claude Code
+    stores it, in the user settings file."""
     default, allowed = SETTINGS[name]
     repo_value = str(repo_config(start).get(name, "")).strip().lower()
     if repo_value in allowed:
-        return repo_value
+        return repo_value, "repo"
     value = os.environ.get(f"CLAUDE_PLUGIN_OPTION_{name.upper()}")
     if value is None:
         config = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude") / "settings.json"
@@ -65,7 +70,7 @@ def setting(name: str, start: Optional[Path] = None) -> str:
         except (OSError, ValueError, AttributeError):
             value = ""
     value = value.strip().lower()
-    return value if value in allowed else default
+    return (value, "user") if value in allowed else (default, "default")
 
 GO_EXTS = {".go"}
 JS_EXTS = {".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"}

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.0
+
+- Set up once for every repo. Setup answers are remembered by kind of gap, not per repo: a gap you left alone in
+  one repo isn't raised in the next. `broom setup --reset` forgets them.
+- `/broom:setup` recommends installing JS/TS tools machine-wide (`fix_global` in `broom doctor --json`), with
+  devDependencies as the alternative, and skips the when-to-run and scope questions once they're user settings.
+- `broom doctor --json` reports each setting's value and source (`repo`, `user`, `default`) and marks gaps
+  already answered.
+
 ## 0.7.0
 
 - TypeScript language server: `broom lsp typescript` starts typescript-language-server wherever it's installed.

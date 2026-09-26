@@ -48,7 +48,9 @@ tsc (~/code/app):
    ```
 
 2. Start a session in a repo. If anything is missing, Claude offers `/broom:setup`; accept, or run it yourself.
-   It asks up to four questions, installs what you pick, and checks the result.
+   It asks up to four questions, installs what you pick, and checks the result. You set up once: tools install
+   machine-wide, settings are user settings, and a gap you leave alone isn't raised again in any repo. A new
+   repo only asks about kinds of gap you haven't answered yet (usually just its missing formatter config).
 
 3. Optional: adjust the settings in `/config`.
 

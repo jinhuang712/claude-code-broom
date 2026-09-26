@@ -49,6 +49,7 @@ class Item:
     fix: str = ""  # shell command that fixes it
     dev: str = ""  # devDependency the fix adds, so fixes for one project can share one install command
     pm: str = ""  # the project's add-a-devDependency command
+    global_fix: str = ""  # for a devDependency fix: the machine-wide install, which serves every repo
 
 
 def tools_db() -> dict:
@@ -149,12 +150,13 @@ def diagnose(repo: Path, projects: Optional[Dict[str, List[Path]]] = None) -> di
         from node_modules/.bin up to the root, so one install serves every package), else in the project, else
         globally."""
         target = repo if (repo / "package.json").exists() else project
+        global_fix = install_command(db.get(item.tool, {}))
         if (target / "package.json").exists():
             item.project = rel(target)
             item.dev, item.pm = pkg, add_dev_command(target, repo)
-            item.fix = f"{item.pm} {pkg}"
+            item.fix, item.global_fix = f"{item.pm} {pkg}", global_fix
         else:
-            item.fix = install_command(db.get(item.tool, {}))
+            item.fix = global_fix
         return item
 
     def config_home(dirs: List[Path]) -> Path:
@@ -297,11 +299,14 @@ def diagnose(repo: Path, projects: Optional[Dict[str, List[Path]]] = None) -> di
         unique.setdefault((i.lang, i.role, i.tool, i.status, i.project, i.fix), i)
     items = list(unique.values())
     fixes, configure = plan_commands(items)
+    fixes_global, configure_global = plan_commands(items, machine_wide=True)
     return {
         "version": __version__, "repo": str(repo),
         "languages": {lang: [rel(p) for p in dirs] for lang, dirs in projects.items()},
         "items": [asdict(i) for i in items],
         "fix": fixes, "configure": configure,
+        # the same, with JS tools installed machine-wide instead of as devDependencies: once for every repo
+        "fix_global": fixes_global, "configure_global": configure_global,
         "healthy": all(i.status == "ok" for i in items),
     }
 
@@ -344,9 +349,10 @@ def check_repo_file(repo: Path) -> List[Item]:
     return [Item("broom", "config", REPO_FILE, "ok", ".", ", ".join(x for x in (shown, excl) if x) or "empty")]
 
 
-def plan_commands(items: List[Item]) -> Tuple[List[str], List[str]]:
+def plan_commands(items: List[Item], machine_wide: bool = False) -> Tuple[List[str], List[str]]:
     """Shell commands in order: `fix` for missing/broken tools and conflicts, `configure` for configs that are
-    off. devDependencies for one project share a command; brew formulae share one `brew install`."""
+    off. devDependencies for one project share a command; brew formulae share one `brew install`. With
+    `machine_wide`, JS tools get their global install instead of a devDependency."""
     buckets: Dict[str, List[str]] = {"fix": [], "configure": []}
     dev: Dict[Tuple[str, str, str], List[str]] = {}
     brew: Dict[str, List[str]] = {"fix": [], "configure": []}
@@ -354,7 +360,10 @@ def plan_commands(items: List[Item]) -> Tuple[List[str], List[str]]:
         if i.status == "ok":
             continue
         bucket = "configure" if i.status == "off" else "fix"
-        if i.dev:
+        if machine_wide and i.global_fix:
+            if i.global_fix not in buckets[bucket]:
+                buckets[bucket].append(i.global_fix)
+        elif i.dev:
             pkgs = dev.setdefault((bucket, i.project, i.pm), [])
             if i.dev not in pkgs:
                 pkgs.append(i.dev)
@@ -446,19 +455,46 @@ def render_text(result: dict) -> str:
 # ---------------------------------------------------------------- setup state
 
 SETUP_STATE = DATA_ROOT / "setup.json"
+ANSWERED = "answered"  # key in setup.json; every other key is a repo path
+
+
+def gap_kind(i: dict) -> str:
+    """A gap without its repo or project: what the user's answer to it applies to, in every repo."""
+    return ":".join((i["lang"], i["role"], i["tool"], i["status"]))
 
 
 def record_setup(repo: Path, status: str) -> dict:
-    """Remember that the user set up (`done`) or declined (`dismissed`) with the gaps this repo has now. broom
-    doesn't raise the setup again until the gaps change."""
+    """Remember that the user set up (`done`) or declined (`dismissed`) with the gaps this repo has now. The
+    gaps left are remembered by kind for every repo: broom raises setup again only for a kind of gap the user
+    hasn't answered yet, anywhere."""
     result = diagnose_cached(repo)
     state = load_json(SETUP_STATE, {})
     state[str(repo)] = {"status": status, "gaps": gaps_hash(result)}
+    state[ANSWERED] = sorted(set(state.get(ANSWERED) or []) | {gap_kind(i) for i in gaps(result)})
     save_json(SETUP_STATE, state)
     return result
 
 
+def reset_setup() -> int:
+    """Forget every setup answer, in every repo. Returns how many kinds of gap were remembered."""
+    count = len(load_json(SETUP_STATE, {}).get(ANSWERED) or [])
+    save_json(SETUP_STATE, {})
+    return count
+
+
+def answered_kinds() -> set:
+    return set(load_json(SETUP_STATE, {}).get(ANSWERED) or [])
+
+
+def new_gaps(repo: Path, result: dict) -> List[dict]:
+    """The gaps setup should raise: none once this repo's gaps were answered as they are, else those of a kind
+    not answered in any repo."""
+    found = gaps(result)
+    if not found or load_json(SETUP_STATE, {}).get(str(repo), {}).get("gaps") == gaps_hash(result):
+        return []
+    known = answered_kinds()
+    return [i for i in found if gap_kind(i) not in known]
+
+
 def needs_setup(repo: Path, result: dict) -> bool:
-    if not gaps(result):
-        return False
-    return load_json(SETUP_STATE, {}).get(str(repo), {}).get("gaps") != gaps_hash(result)
+    return bool(new_gaps(repo, result))

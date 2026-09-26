@@ -27,7 +27,7 @@
 | `broom doctor [--json]` | Languages, tools, configs and conflicts, with the commands that fix them |
 | `broom init [dir]` | Add default configs where missing. Never overwrites. `--dry-run` |
 | `broom known [--clear] [paths]` | List or clear accepted issues |
-| `broom setup --done / --dismiss` | Record the setup decision for this repo |
+| `broom setup --done / --dismiss / --reset` | Record the setup decision; gaps left alone are remembered by kind for every repo. `--reset` forgets them all |
 
 ## Settings (`/config`)
 
@@ -84,3 +84,4 @@ indented syntax, Stylus, `<style>` blocks in `.vue` or `.svelte` files and CSS-i
 
 Fixes come out as ready commands: JS/TS and CSS tools as devDependencies with the project's package manager
 (`-w`/`-W` at pnpm/yarn workspace roots), the rest through brew, go install, rustup, uv or npm.
+`--json` also gives `fix_global`, with the JS/TS and CSS tools installed machine-wide, once for every repo.
