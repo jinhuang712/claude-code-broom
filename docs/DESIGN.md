@@ -6,7 +6,7 @@
 |---|---|
 | `hooks/hooks.json` | SessionStart (offer setup), PreToolUse on `git commit` (the sweep), PostToolUse on edits and Stop (both opt-in) |
 | `bin/broom` | The one entry point, for hooks and for people; on the Bash PATH while the plugin is enabled |
-| `.lsp.json` | Language servers Claude Code starts: gopls, `broom lsp typescript` (picks the TypeScript server), rust-analyzer, pyright, vscode-css-language-server |
+| `.lsp.json` | Language servers Claude Code starts: gopls, `broom lsp typescript` (picks the TypeScript server), rust-analyzer, pyright, sourcekit-lsp, vscode-css-language-server |
 | `skills/` | `/broom:setup` and `/broom:sweep`, which call `broom` |
 | `lib/broom/` | `gitcmd` reads commits, `fmt` formats, `checks` runs linters, `gate` decides what counts, `doctor` diagnoses, `lsp` asks servers for function ranges |
 | `defaults/` | Lint configs used only where a project has none, and the tool registry for installs |
@@ -45,17 +45,21 @@ message and the line's text, so it stays known when lines above it move. Known i
 - `function`: first widen the changed lines to the outermost function or method around them, from the language
   server's `documentSymbol`. No answer means `changed`, with a note. CSS has no functions, so there it is the
   innermost rule (or Sass or Less mixin, or Sass `@function`) around each line: a nested rule, not the rule it
-  sits in.
+  sits in. In Swift, properties count too: a computed property is code (SwiftUI's `body` above all), and
+  sourcekit-lsp's range for a stored one covers its initializer. It doesn't report subscripts, so there it is the
+  changed lines.
 
 ## Setup
 
 `broom doctor` scans for marker files (`go.mod`, `package.json`, `Cargo.toml`, `pyproject.toml`, …) three levels
 deep, lists the tools each language needs, and runs each one to prove it works, which catches a rustup proxy
-without its component. CSS has no marker file, so it goes by the `.css`, `.scss` and `.less` files git tracks, at
-any depth, each counted with its nearest `package.json` (else the repo root). Untracked files are left out: listing
-them walks the working tree, about 160 ms on a 6,000-file repo against 25 ms for tracked files. It flags missing
-configs, collapsed to one fix at the repo root since configs are found by
-walking up, and plugins whose language servers claim the same files as broom's.
+without its component, or macOS's `swift` shim without Xcode or the Command Line Tools. CSS has no marker file, so
+it goes by the `.css`, `.scss` and `.less` files git tracks, at any depth, each counted with its nearest
+`package.json` (else the repo root). Swift goes by its files too, since an Xcode app has no `Package.swift`: each is
+counted with its nearest `Package.swift`, else the repo root. One `git ls-files` lists both. Untracked files are
+left out: listing them walks the working tree, about 160 ms on a 6,000-file repo against 25 ms for tracked files.
+It flags missing configs, collapsed to one fix at the repo root since configs are found by walking up, and plugins
+whose language servers claim the same files as broom's.
 
 The SessionStart hook runs a cached doctor. The cache key includes the modification time of every PATH
 directory, so installing a tool invalidates it. When there are gaps it asks Claude, once per session, to offer
@@ -105,7 +109,12 @@ at-rule. broom's sections turn that check off and accept CSS modules' `composes`
 
 - Only commits Claude makes are checked. Commits you make in a terminal are not.
 - `function` scope costs a language server start per language, about 0.05 to 1 second.
-- A cold `cargo clippy` can time out; that check is then skipped for the rest of the session.
+- A cold `cargo clippy` or `swift build` can time out; that check is then skipped for the rest of the session.
+- Swift is compile-checked only in SwiftPM packages: an Xcode project needs `xcodebuild`, a scheme and minutes.
+  Compiler warnings aren't counted, since SwiftPM prints them only for the files it recompiles.
+- sourcekit-lsp reads an Xcode project without a `Package.swift` one file at a time: a call into another file shows
+  as "Cannot find … in scope" (errors within the file are real). A build server that bridges Xcode's build
+  settings, such as xcode-build-server, fixes that; broom doesn't set one up.
 - The scan looks three levels deep and at up to 20 projects per language.
 - CSS means `.css`, `.scss` and `.less`: no indented Sass, no Stylus, no `<style>` blocks in `.vue` or `.svelte`
   files.

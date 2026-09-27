@@ -15,9 +15,9 @@ from typing import List, Optional, Tuple
 from . import __version__
 from .checks import run_checks
 from .common import (
-    BIOME_CFG, DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG, SETTINGS, ChangedLines, git,
-    excluded, git_changed_files, git_root, lang_of, pkg_has_key, read_hook_input, ruff_configured, run, setting,
-    setting_source,
+    BIOME_CFG, DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG, SETTINGS, SWIFT_FORMAT_CFG,
+    SWIFTFORMAT_CFG, ChangedLines, git, excluded, git_changed_files, git_root, lang_of, pkg_has_key,
+    read_hook_input, ruff_configured, run, setting, setting_source,
 )
 from .fmt import format_files
 from .gate import baseline_keys, baseline_remove, baseline_under, display, issue_key, render, select
@@ -150,6 +150,16 @@ formatters:
 RUFF_DEFAULT = """[lint]
 select = ["E4", "E7", "E9", "F", "B", "UP"]
 """
+# swift-format, since the toolchain ships it (Swift 6 and later): nothing to install. Its own defaults are 2 spaces
+# and 100 columns; Xcode indents with 4, as most Swift code does, so a reformatted line keeps the file's indent, and
+# 120 columns (SwiftLint's line_length) re-wraps fewer lines of code written without a limit. JSON allows no
+# comments, so this note lives here.
+SWIFT_FORMAT_DEFAULT = """{
+  "version": 1,
+  "indentation": { "spaces": 4 },
+  "lineLength": 120
+}
+"""
 
 
 def cmd_init(args: argparse.Namespace) -> int:
@@ -186,6 +196,9 @@ def cmd_init(args: argparse.Namespace) -> int:
                            + RUFF_DEFAULT.split("\n", 1)[1])
         else:
             write("ruff.toml", RUFF_DEFAULT)
+    # Swift needs no lint config either: broom's SwiftLint defaults apply without one.
+    if "swift" in langs and not has((SWIFT_FORMAT_CFG, SWIFTFORMAT_CFG)):
+        write(SWIFT_FORMAT_CFG, SWIFT_FORMAT_DEFAULT)
     print("\n".join(actions) if actions else f"broom: {display(root)} already has its configs")
     return 0
 

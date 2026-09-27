@@ -34,5 +34,23 @@
   "stylelint-config-recommended-less": {"dev": "stylelint-config-recommended-less"},
   "vscode-css-language-server": {
     "install": [["npm", "npm i -g vscode-langservers-extracted"], ["brew", "brew install vscode-langservers-extracted"]]
+  },
+  "_comment_swift": "On macOS swift and sourcekit-lsp are /usr/bin shims that fail until Xcode or its Command Line Tools are installed, which the probes catch. xcode-select --install opens an installer and returns at once. sourcekit-lsp has no --version: --help proves it runs, and isn't shown. On Linux, swiftly installs the toolchain.",
+  "swift": {
+    "probe": ["swift", "--version"],
+    "install": [["swiftly", "swiftly install latest"], ["xcode-select", "xcode-select --install"]]
+  },
+  "sourcekit-lsp": {
+    "probe": ["sourcekit-lsp", "--help"], "probe_is_version": false,
+    "install": [["swiftly", "swiftly install latest"], ["xcode-select", "xcode-select --install"]]
+  },
+  "swiftlint": {
+    "probe": ["swiftlint", "version"],
+    "install": [["brew", "brew install swiftlint"], ["mint", "mint install realm/SwiftLint"]]
+  },
+  "swift-format": {"install": [["brew", "brew install swift-format"]]},
+  "swiftformat": {
+    "probe": ["swiftformat", "--version"],
+    "install": [["brew", "brew install swiftformat"], ["mint", "mint install nicklockwood/SwiftFormat"]]
   }
 }

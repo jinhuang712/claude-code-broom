@@ -1,8 +1,8 @@
 """Formatting with each project's own formatter.
 
 Go always gets gofmt (canonical everywhere) and Rust rustfmt. JS/TS and web files are formatted only when the
-project configures biome, oxfmt or prettier, and Python only when it configures ruff, so a repo that doesn't
-format never gets reformatted files.
+project configures biome, oxfmt or prettier, Python only when it configures ruff, and Swift only when it
+configures swift-format or SwiftFormat, so a repo that doesn't format never gets reformatted files.
 
 The final pass (at commit) also applies the project's golangci formatters, goimports included. Per edit it
 would delete an import Claude adds one edit before the code that uses it.
@@ -21,8 +21,8 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from .common import (
-    GOLANGCI_CFG, JS_EXTS, PY_EXTS, WEB_EXTS, ChangedLines, boundary, find_up, js_formatter, resolve_bin,
-    ruff_configured, run, rust_edition,
+    GOLANGCI_CFG, JS_EXTS, PY_EXTS, SWIFT_EXTS, WEB_EXTS, ChangedLines, boundary, find_up, js_formatter,
+    resolve_bin, ruff_configured, run, rust_edition, swift_format_cmd, swift_formatter,
 )
 
 
@@ -67,6 +67,16 @@ def formatter_cmd(path: Path, final: bool) -> Optional[Tuple[str, List[str], Pat
     if ext in PY_EXTS and ruff_configured(path, stop):
         ruff = shutil.which("ruff")
         return ("ruff format", [ruff, "format", "--quiet", str(path)], path.parent) if ruff else None
+    if ext in SWIFT_EXTS:
+        found = swift_formatter(path, stop)
+        if not found:
+            return None
+        tool, cfg_dir = found  # both find the config by walking up from the file
+        if tool == "swiftformat":
+            exe = shutil.which("swiftformat")
+            return (tool, [exe, str(path), "--quiet"], cfg_dir) if exe else None
+        cmd = swift_format_cmd()
+        return (tool, [*cmd, "format", "--in-place", str(path)], cfg_dir) if cmd else None
     return None
 
 

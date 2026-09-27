@@ -15,26 +15,28 @@ from typing import Dict, List, Optional, Tuple
 from . import __version__
 from .common import (
     BIOME_CFG, DATA_ROOT, DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG, REPO_FILE, RUFF_CFG,
-    DIALECT_DEFAULTS, SETTINGS, STYLELINT_CFG,
+    DIALECT_DEFAULTS, SETTINGS, STYLELINT_CFG, SWIFT_FORMAT_CFG, SWIFTFORMAT_CFG, SWIFTLINT_CFG,
     css_linters, find_up, git, in_node_modules, js_formatter, js_linters, load_json, read_jsonc, resolve_bin,
-    ruff_configured, run, save_json, short_hash,
+    ruff_configured, run, save_json, short_hash, swift_format_cmd, swift_formatter, swift_linter,
 )
 
 MARKERS = {"go.mod": "go", "package.json": "js", "tsconfig.json": "js", "Cargo.toml": "rust",
            "pyproject.toml": "py", "setup.py": "py", "requirements.txt": "py"}
-SKIP_DIRS = {"node_modules", "vendor", "target", "dist", "build", "out", "venv", "__pycache__", "coverage"}
+SKIP_DIRS = {"node_modules", "vendor", "target", "dist", "build", "out", "venv", "__pycache__", "coverage", "Pods",
+             "Carthage", "DerivedData"}
 LANG_NAMES = {"go": "Go", "js": "TS/JS", "rust": "Rust", "py": "Python", "css": "CSS", "scss": "SCSS",
-              "less": "Less", "broom": "broom"}
+              "less": "Less", "swift": "Swift", "broom": "broom"}
 # Plugins that start a language server for the same files as broom's .lsp.json. Claude Code starts only the
 # first server registered for an extension, so either one silently never runs.
 LSP_PLUGINS = {"gopls-lsp": "go", "gopls": "go", "typescript-lsp": "js", "vtsls": "js", "ts7-lsp": "js",
                "typescript-language-server": "js", "rust-analyzer-lsp": "rust", "rust-analyzer": "rust",
-               "pyright-lsp": "py", "pyright": "py"}
+               "pyright-lsp": "py", "pyright": "py", "swift-lsp": "swift", "sourcekit-lsp": "swift"}
 LOCKFILES = (("pnpm-lock.yaml", "pnpm"), ("bun.lock", "bun"), ("bun.lockb", "bun"), ("yarn.lock", "yarn"),
              ("package-lock.json", "npm"))
 ADD_DEV = {"pnpm": "pnpm add -D", "bun": "bun add -d", "yarn": "yarn add -D", "npm": "npm i -D"}
 CONFIG_NAMES = (*GOLANGCI_CFG, *BIOME_CFG, *OXFMT_CFG, *PRETTIER_CFG, *OXLINT_CFG, *ESLINT_CFG, *RUFF_CFG,
-                *STYLELINT_CFG, *MARKERS, *(lock for lock, _ in LOCKFILES))
+                *STYLELINT_CFG, SWIFTLINT_CFG, SWIFT_FORMAT_CFG, SWIFTFORMAT_CFG, "Package.swift", *MARKERS,
+                *(lock for lock, _ in LOCKFILES))
 MAX_PROJECTS = 20
 
 
@@ -57,7 +59,7 @@ def tools_db() -> dict:
 
 
 def scan(root: Path, max_depth: int = 3) -> Dict[str, List[Path]]:
-    """Project directories per language, from marker files up to `max_depth` below the root, and CSS's."""
+    """Project directories per language, from marker files up to `max_depth` below the root, and CSS's and Swift's."""
     found: Dict[str, List[Path]] = {}
     base = len(root.parts)
     for d, dirs, files in os.walk(root):
@@ -67,29 +69,35 @@ def scan(root: Path, max_depth: int = 3) -> Dict[str, List[Path]]:
             projects = found.setdefault(lang, [])
             if name in files and Path(d) not in projects and len(projects) < MAX_PROJECTS:
                 projects.append(Path(d))
-    found.update(css_projects(root))
+    found.update(tracked_projects(root))
     return {lang: dirs for lang, dirs in found.items() if dirs}
 
 
-def css_projects(root: Path) -> Dict[str, List[Path]]:
-    """`css`, plus `scss` and `less` for those dialects: the packages (nearest package.json, else the root) holding
-    such files. CSS has no project file to find, so this goes by the files git tracks, at any depth; generated and
-    vendored ones don't count. Untracked files would need a walk of the working tree: 160 ms instead of 25 on a
-    6,000-file repo, too slow for SessionStart."""
-    out = git(["ls-files", "--cached", "--", "*.css", "*.scss", "*.less"], root) or ""
-    homes: Dict[Path, Path] = {}
-    found: Dict[str, List[Path]] = {"css": [], "scss": [], "less": []}
+def tracked_projects(root: Path) -> Dict[str, List[Path]]:
+    """`css`, plus `scss` and `less` for those dialects, and `swift`: the projects holding such files, a CSS file's
+    being its nearest package.json and a Swift file's its nearest Package.swift, else the root. Neither language
+    has a project file to find everywhere (an Xcode app has no Package.swift), so this goes by the files git tracks,
+    at any depth; generated and vendored ones don't count. Untracked files would need a walk of the working tree:
+    160 ms instead of 25 on a 6,000-file repo, too slow for SessionStart."""
+    out = git(["ls-files", "--cached", "--", "*.css", "*.scss", "*.less", "*.swift"], root) or ""
+    homes: Dict[Tuple[Path, str], Path] = {}
+    found: Dict[str, List[Path]] = {"css": [], "scss": [], "less": [], "swift": []}
     for name in out.splitlines():
         rel = Path(name)
         if name.endswith(".min.css") or any(p in SKIP_DIRS or p.startswith(".") for p in rel.parts[:-1]):
             continue
         d = (root / rel).parent
-        if d not in homes:
-            pkg = find_up(d, ["package.json"], root)
-            homes[d] = pkg.parent if pkg else root
-        for lang in ("css", rel.suffix[1:]) if rel.suffix in DIALECT_DEFAULTS else ("css",):
-            if homes[d] not in found[lang] and len(found[lang]) < MAX_PROJECTS:
-                found[lang].append(homes[d])
+        marker = "Package.swift" if rel.suffix == ".swift" else "package.json"
+        if (d, marker) not in homes:
+            project = find_up(d, [marker], root)
+            homes[d, marker] = project.parent if project else root
+        if rel.suffix == ".swift":
+            langs: Tuple[str, ...] = ("swift",)
+        else:
+            langs = ("css", rel.suffix[1:]) if rel.suffix in DIALECT_DEFAULTS else ("css",)
+        for lang in langs:
+            if homes[d, marker] not in found[lang] and len(found[lang]) < MAX_PROJECTS:
+                found[lang].append(homes[d, marker])
     return found
 
 
@@ -270,6 +278,36 @@ def diagnose(repo: Path, projects: Optional[Dict[str, List[Path]]] = None) -> di
     if "css" in projects:
         machine.append(("css", "lsp", "vscode-css-language-server", "vscode-css-language-server"))
 
+    swift = projects.get("swift", [])
+    if swift:
+        machine += [("swift", "lint", "swiftlint", "swiftlint"), ("swift", "lsp", "sourcekit-lsp", "sourcekit-lsp")]
+        if any((p / "Package.swift").exists() for p in swift):  # Xcode projects aren't built
+            machine.append(("swift", "types", "swift", "swift"))
+        swift_format = swift_format_version(repo)
+        for p in swift:
+            tool, d = swift_linter(p / "_.swift", repo)
+            detail = f"project {SWIFTLINT_CFG}" if tool == "swiftlint" else "broom's defaults (no project config)"
+            items.append(Item("swift", "config", "swiftlint config", "ok", rel(d), detail))
+            fmt = swift_formatter(p / "_.swift", repo)
+            if fmt is None:
+                continue  # reported once for all such projects, below
+            tool, d = fmt
+            cfg = SWIFTFORMAT_CFG if tool == "swiftformat" else SWIFT_FORMAT_CFG
+            if (shutil.which(tool) if tool == "swiftformat" else swift_format):
+                items.append(Item("swift", "format", tool, "ok", rel(d), f"project {cfg}"))
+            else:
+                items.append(Item("swift", "format", tool, "missing", detail=f"the project's {cfg} needs it",
+                                  fix=install_command(db.get(tool, {}))))
+        unformatted = [p for p in swift if swift_formatter(p / "_.swift", repo) is None]
+        if unformatted:
+            home = config_home(unformatted)
+            items.append(Item("swift", "format", "swift-format", "off", rel(home),
+                              f"no formatter config ({len(unformatted)} project(s)), so broom doesn't format Swift",
+                              f"broom init {rel(home)}"))
+            if not swift_format:  # the toolchain has it from Swift 6
+                items.append(Item("swift", "format", "swift-format", "off", detail="needed once formatting is on",
+                                  fix=install_command(db.get("swift-format", {}))))
+
     def check_machine(entry: Tuple[str, str, str, str]) -> Item:
         lang, role, tool, name = entry
         spec = db.get(tool, {})
@@ -279,7 +317,7 @@ def diagnose(repo: Path, projects: Optional[Dict[str, List[Path]]] = None) -> di
         works, first = probe(exe, spec, repo)
         if not works:
             return Item(lang, role, tool, "broken", detail=first, fix=install_command(spec))
-        return Item(lang, role, tool, "ok", detail=first)
+        return Item(lang, role, tool, "ok", detail=first if spec.get("probe_is_version", True) else "")
 
     with ThreadPoolExecutor(max_workers=6) as pool:
         items += list(pool.map(check_machine, machine))
@@ -322,6 +360,15 @@ def typescript_lsp(repo: Path, db: dict) -> Item:
         return Item("js", "lsp", tool, "ok", detail=why)
     detail = f"without it the language server is {why}" if cmd else why
     return Item("js", "lsp", tool, "missing", detail=detail, fix=install_command(db.get(tool, {})))
+
+
+def swift_format_version(cwd: Path) -> str:
+    """swift-format's version; "" when neither a standalone install nor the toolchain's (Swift 6 and later) runs."""
+    cmd = swift_format_cmd()
+    if not cmd:
+        return ""
+    rc, out, _ = run([*cmd, "--version"], cwd, timeout=20)
+    return out.strip() if rc == 0 else ""
 
 
 def check_repo_file(repo: Path) -> List[Item]:

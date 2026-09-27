@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.9.0
+
+- Swift. Linted with SwiftLint: the project's `.swiftlint.yml` where it has one (run from the outermost, so nested
+  configs apply and `excluded` holds), else broom's defaults, which are bug-finders only: SwiftLint's "lint" and
+  "performance" rules plus `force_cast` and `force_try`, no naming or length rules, CocoaPods, Carthage and `.build`
+  skipped.
+- SwiftPM packages are compile-checked with `swift build --build-tests`; errors count anywhere, so a changed
+  signature blocks on its callers. Warnings don't count: SwiftPM prints them only for the files it recompiles. With
+  the Command Line Tools and no Xcode, which have no XCTest or swift-testing, the tests are left out with a note
+  instead of blocking on `no such module 'XCTest'`. Xcode projects aren't built.
+- Swift is formatted where the project configures swift-format (`.swift-format`) or SwiftFormat (`.swiftformat`).
+  `broom init` adds a `.swift-format` with Xcode's 4-space indent and 120 columns; swift-format comes with Swift 6
+  and later, so there's nothing to install.
+- A language server for `.swift`: sourcekit-lsp, which pushes diagnostics (checked in Claude Code 2.1.283). In an
+  Xcode project without a `Package.swift` it reads one file at a time, so calls into other files show as errors.
+  `format_scope=function` counts computed properties, SwiftUI's `body` among them, as functions.
+- `broom doctor` finds Swift by the files git tracks, in packages and Xcode apps alike, checks that the toolchain
+  runs (on macOS `swift` and `sourcekit-lsp` are shims until Xcode or the Command Line Tools are installed) and
+  flags the official `swift-lsp` plugin, which serves the same files.
+
 ## 0.8.0
 
 - Set up once for every repo. Setup answers are remembered by kind of gap, not per repo: a gap you left alone in

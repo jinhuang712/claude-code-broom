@@ -12,8 +12,8 @@ project's own rules.
   configure it. Nothing is installed without your yes.
 - **Sweeps.** When it should, broom formats, lints and type-checks Claude's changes, and holds them back until
   they're clean.
-- **Sees.** Language servers for Go, TS/JS, Rust, Python and CSS (with SCSS and Less) give Claude diagnostics as it
-  edits.
+- **Sees.** Language servers for Go, TS/JS, Rust, Python, Swift and CSS (with SCSS and Less) give Claude diagnostics
+  as it edits.
 
 It uses your project's own tools and configs, only looks at what changed, and never blocks twice on the same
 result.
@@ -30,8 +30,8 @@ tsc (~/code/app):
 
 ## Install
 
-**Requirements:** Claude Code 2.1.271 or later (the language servers are tested on 2.1.280), Python 3.9+ as
-`python3` (macOS's system Python works), and git.
+**Requirements:** Claude Code 2.1.271 or later (the language servers are tested on 2.1.280, Swift's on 2.1.283),
+Python 3.9+ as `python3` (macOS's system Python works), and git.
 
 1. Add the marketplace and install the plugin, inside Claude Code:
 
@@ -63,10 +63,11 @@ If you'd rather install the tools yourself, these are the ones broom uses:
 | Rust | `rustup component add clippy rustfmt rust-analyzer` |
 | Python | `brew install ruff` · `npm i -g pyright` |
 | CSS, SCSS, Less | `npm i -D stylelint` in the project, plus `stylelint-config-recommended-scss` for SCSS or `stylelint-config-recommended-less` for Less · `npm i -g vscode-langservers-extracted` |
+| Swift | Xcode 16+ or a Swift 6+ toolchain, which bring swift-format and sourcekit-lsp · `brew install swiftlint` |
 
-Don't also enable `gopls-lsp`, `typescript-lsp`, `rust-analyzer-lsp` or `pyright-lsp`: broom's servers already do
-what they do (for TypeScript, the same typescript-language-server, with the project's TypeScript), and when two
-plugins serve the same files, only one language server starts. `broom doctor` tells you if that happens.
+Don't also enable `gopls-lsp`, `typescript-lsp`, `rust-analyzer-lsp`, `pyright-lsp` or `swift-lsp`: broom's servers
+already do what they do (for TypeScript, the same typescript-language-server, with the project's TypeScript), and
+when two plugins serve the same files, only one language server starts. `broom doctor` tells you if that happens.
 
 **Update:** `claude plugin marketplace update claude-code-broom && claude plugin update broom@claude-code-broom`
 **Remove:** `claude plugin uninstall broom@claude-code-broom`
@@ -86,7 +87,7 @@ Mostly, you don't: broom sweeps on its own. When you want a look first, ask for 
 |---|---|---|
 | `format_on` | `commit` | `edit` (also after every edit), `off` |
 | `check_on` | `commit` | `stop` (also at every turn end), `off` |
-| `format_scope` | `changed` | `function` (whole changed functions; in CSS, rules), `file` |
+| `format_scope` | `changed` | `function` (whole changed functions; in CSS, rules; in Swift, computed properties too), `file` |
 
 A `.broom.json` at the repo root overrides these for one repo and can exclude paths:
 

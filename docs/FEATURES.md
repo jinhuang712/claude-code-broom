@@ -59,9 +59,20 @@ root, keep paths out of formatting and checks entirely. `broom doctor` flags unk
 | Rust | rustfmt | cargo clippy | clippy errors | rust-analyzer |
 | Python | ruff format | ruff check | — | pyright |
 | CSS, SCSS, Less | the project's biome, oxfmt or prettier | the project's stylelint, biome or ESLint with `@eslint/css` (the last two plain CSS only); else stylelint with broom's defaults | — | vscode-css-language-server |
+| Swift | the project's swift-format or SwiftFormat | SwiftLint with the project's `.swiftlint.yml`; else with broom's defaults | `swift build --build-tests`, SwiftPM packages only | sourcekit-lsp |
 
-Tools come from the project's `node_modules/.bin` first, then PATH. JS/TS, CSS and Python are formatted only where
-a formatter is configured.
+Tools come from the project's `node_modules/.bin` first, then PATH. JS/TS, CSS, Python and Swift are formatted only
+where a formatter is configured.
+
+broom's Swift lint defaults are bug-finders, not style: the rules SwiftLint files under "lint" and "performance",
+plus `force_cast` and `force_try`, with naming, length and layout rules off, and CocoaPods, Carthage and `.build`
+code skipped. The compile check counts errors only: SwiftPM prints warnings just for the files it recompiles, so
+they would come and go (sourcekit-lsp shows Claude the warnings as it edits). With macOS's Command Line Tools and no
+Xcode there's no XCTest or swift-testing, so the check builds the sources and leaves the tests out, with a note.
+Xcode projects without a `Package.swift` get formatting, linting and the language server, but no compile check, and
+the language server reads them one file at a time, so calls into other files show as "Cannot find … in scope".
+`broom init` turns Swift formatting on with swift-format, which the toolchain ships, and a `.swift-format` of
+4-space indents (Xcode's) and 120 columns, where swift-format's own defaults are 2 and 100.
 
 broom's CSS defaults report errors, not style: stylelint-config-recommended's rules for `.css`,
 `stylelint-config-recommended-scss` for `.scss` and `stylelint-config-recommended-less` for `.less`. All three
@@ -78,10 +89,14 @@ indented syntax, Stylus, `<style>` blocks in `.vue` or `.svelte` files and CSS-i
 - The project's configured tools resolve, or its dependencies need installing.
 - Formatter configs exist; in a monorepo, one fix at the root.
 - CSS, SCSS and Less files git tracks, at any depth and outside `node_modules`, build output and `*.min.css`, get
-  their linter, formatter and language server checked like any language.
+  their linter, formatter and language server checked like any language. So do Swift files, outside Pods, Carthage
+  and `.build`, in SwiftPM packages and Xcode projects alike.
+- The Swift toolchain runs: on macOS, `swift` and `sourcekit-lsp` are shims that fail until Xcode or the Command
+  Line Tools are installed.
 - No other plugin starts a language server for the same files.
 - `.broom.json` is valid.
 
 Fixes come out as ready commands: JS/TS and CSS tools as devDependencies with the project's package manager
-(`-w`/`-W` at pnpm/yarn workspace roots), the rest through brew, go install, rustup, uv or npm.
+(`-w`/`-W` at pnpm/yarn workspace roots), the rest through brew, go install, rustup, uv, npm, swiftly or
+`xcode-select --install`.
 `--json` also gives `fix_global`, with the JS/TS and CSS tools installed machine-wide, once for every repo.

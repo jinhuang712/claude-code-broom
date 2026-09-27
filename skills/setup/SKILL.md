@@ -50,7 +50,8 @@ go to step 4.
 ## 3. Act
 
 - Run the picked commands (`fix` / `configure`, or their `_global` versions) from the repo root, one at a time,
-  and stop on a failure.
+  and stop on a failure. `xcode-select --install` opens macOS's installer and returns at once: ask the user to
+  finish it before going on.
 - Apply the trigger and scope choices for all repos:
 
   ```bash

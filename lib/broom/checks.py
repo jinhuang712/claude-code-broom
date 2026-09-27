@@ -6,6 +6,7 @@ import json
 import os
 import re
 import shutil
+import time
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from dataclasses import dataclass
@@ -15,7 +16,7 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 from .common import (
     DATA_ROOT, DEFAULTS, DIALECT_DEFAULTS, GOLANGCI_CFG, PY_ROOT_MARKERS, boundary, css_linters, find_up,
     in_node_modules, js_linters, lang_of, load_json, pkg_scripts_mention, prune_dirs, read_jsonc, resolve_bin, run,
-    save_json, short_hash,
+    save_json, short_hash, swift_linter,
 )
 
 
@@ -334,6 +335,92 @@ def check_python(root: Path, files: List[Path], whole: bool = False) -> Findings
     return issues, []
 
 
+# ---------------------------------------------------------------- Swift
+
+# Dependencies and build output: CocoaPods and Carthage checkouts are sometimes committed. On the command line, for
+# the same reason as stylelint's: SwiftLint reads `excluded` relative to the config, which for broom's is the plugin.
+SWIFT_VENDORED = {"Pods", "Carthage", ".build", "DerivedData"}
+
+
+def swift_vendored(f: Path, root: Path) -> bool:
+    try:
+        parts = f.relative_to(root).parts
+    except ValueError:
+        parts = f.parts
+    return bool(SWIFT_VENDORED & set(parts[:-1]))
+
+
+def check_swiftlint(cfg_dir: Path, files: List[Path], defaults: bool, whole: bool = False) -> Findings:
+    exe = shutil.which("swiftlint")
+    if not exe:
+        return [], ["missing:swiftlint (brew install swiftlint)"]
+    cmd = [exe, "lint", "--reporter", "json", "--quiet"]
+    if defaults:  # the files themselves, even for a whole-project sweep: a directory would take in vendored code
+        cmd += ["--config", str(DEFAULTS / "swiftlint.yml")]
+        paths = [str(f) for f in files if not swift_vendored(f, cfg_dir)]
+        if not paths:
+            return [], []
+    else:  # the project's `excluded` holds even for files named on the command line
+        cmd.append("--force-exclude")
+        paths = targets(files, whole)
+    rc, out, err = run(cmd + paths, cfg_dir, timeout=90)
+    if rc is None:
+        return [], [f"timeout:swiftlint in {cfg_dir}"]
+    if rc == 1 and "No lintable files found" in err:  # the project's config excludes all of them
+        return [], []
+    try:
+        results = json.loads(out)
+    except ValueError:
+        return [], [f"swiftlint failed in {cfg_dir}: {failure(out, err)}"]
+    issues = []
+    for r in results if isinstance(results, list) else []:
+        issues.append(Issue("swiftlint", cfg_dir, Path(r.get("file") or "").resolve(), int(r.get("line") or 0),
+                            int(r.get("character") or 0), r.get("rule_id", ""), r.get("reason", "")))
+    return issues, []
+
+
+# SwiftPM prints absolute paths. Swift 6.1 and later append the diagnostic group: `[#DeprecatedDeclaration]`.
+SWIFT_ERROR = re.compile(
+    r"^(?P<file>/.+?\.swift):(?P<line>\d+):(?P<col>\d+): error: (?P<msg>.+?)(?: \[#(?P<group>[\w-]+)\])?$"
+)
+# macOS's Command Line Tools have neither test framework, where Xcode has both (checked in 26.6).
+NO_TEST_FRAMEWORK = re.compile(r"^no such module '(XCTest|Testing)'$")
+
+
+def swift_errors(package: Path, out: str) -> List[Issue]:
+    issues = []
+    for row in out.splitlines():
+        m = SWIFT_ERROR.match(row)
+        if m:
+            issues.append(Issue("swift build", package, Path(m["file"]).resolve(), int(m["line"]), int(m["col"]),
+                                m["group"] or "error", m["msg"], hard=True))
+    return issues
+
+
+def check_swift_build(package: Path) -> Findings:
+    """`swift build --build-tests`, in the package's own .build, which the project's builds share. Errors only:
+    SwiftPM prints warnings just for the files it recompiles, so they'd come and go between runs. The language
+    server shows Claude the warnings as it edits."""
+    swift = shutil.which("swift")
+    if not swift:
+        return [], ["missing:swift (install Xcode or the Swift toolchain)"]
+    deadline = time.monotonic() + 150
+    rc, out, err = run([swift, "build", "--build-tests"], package, timeout=150)
+    notes: List[str] = []
+    issues = swift_errors(package, out + err) if rc is not None else []
+    if any(NO_TEST_FRAMEWORK.match(i.msg) for i in issues):  # the tests can't be built here, the sources can
+        notes.append(f"swift build in {package} left the tests out: this toolchain has no XCTest or swift-testing "
+                     "(the Command Line Tools without Xcode?)")
+        rc, out, err = run([swift, "build"], package, timeout=max(deadline - time.monotonic(), 10))
+        issues = swift_errors(package, out + err) if rc is not None else []
+    if rc is None:
+        return [], [*notes, f"timeout:swift build in {package} (cold build? it is skipped for the rest of this "
+                            "session)"]
+    if rc != 0 and not issues:  # dependency resolution, the manifest's toolchain, a link step: not a line of code
+        notes.append(f"swift build failed in {package}: {failure(out, err)}")
+    return issues, notes
+
+
 # ---------------------------------------------------------------- planning
 
 
@@ -345,6 +432,8 @@ def plan(files: List[Path], whole: bool = False) -> List[Tuple[str, Callable[[],
     tsc: Set[Tuple[Path, Path]] = set()
     rust: Set[Tuple[Path, Path]] = set()
     py: Dict[Tuple[Path, Path], List[Path]] = {}
+    swiftlint: Dict[Tuple[str, Path], List[Path]] = {}
+    swift: Set[Path] = set()
     for f in files:
         stop = boundary(f)
         lang = lang_of(f)
@@ -369,6 +458,11 @@ def plan(files: List[Path], whole: bool = False) -> List[Tuple[str, Callable[[],
         elif lang == "css":
             for tool, d in css_linters(f, stop):
                 web.setdefault((tool, d, stop), []).append(f)
+        elif lang == "swift":
+            swiftlint.setdefault(swift_linter(f, stop), []).append(f)
+            package = find_up(f.parent, ["Package.swift"], stop)
+            if package:  # an Xcode project has no command-line build broom can run
+                swift.add(package.parent)
 
     checks: List[Tuple[str, Callable[[], Findings]]] = []
     for (mod, stop), fs in go.items():
@@ -389,6 +483,10 @@ def plan(files: List[Path], whole: bool = False) -> List[Tuple[str, Callable[[],
         checks.append((f"clippy:{crate}", partial(check_rust, crate, stop)))
     for (root, _stop), fs in py.items():
         checks.append((f"ruff:{root}", partial(check_python, root, fs, whole)))
+    for (tool, d), fs in swiftlint.items():
+        checks.append((f"{tool}:{d}", partial(check_swiftlint, d, fs, tool == "swiftlint-default", whole)))
+    for package in swift:
+        checks.append((f"swift-build:{package}", partial(check_swift_build, package)))
     return checks
 
 

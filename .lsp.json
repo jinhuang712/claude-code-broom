@@ -33,6 +33,12 @@
       ".pyi": "python"
     }
   },
+  "sourcekit-lsp": {
+    "command": "sourcekit-lsp",
+    "extensionToLanguage": {
+      ".swift": "swift"
+    }
+  },
   "css": {
     "command": "vscode-css-language-server",
     "args": ["--stdio"],

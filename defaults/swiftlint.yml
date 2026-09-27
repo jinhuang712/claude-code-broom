@@ -1,0 +1,51 @@
+# Used only for Swift without a .swiftlint.yml of the project's own, and only on the lines Claude changed.
+# Bug-finders, not style: rules SwiftLint files under "lint" and "performance" (SwiftLint 0.65.1), plus the two
+# crash risks force_cast and force_try. Naming, length and layout rules (identifier_name, line_length,
+# function_body_length, trailing_whitespace, ...) need a team's agreement, so they stay off. So do rules about
+# SwiftLint's own comments that would fire on a project's disables for rules left out here
+# (superfluous_disable_command), rules for one framework (quick_*, IBOutlets, SwiftUI state), TODO comments, and the
+# analyzer rules, which need a compiler log. Vendored code (Pods, Carthage, .build) is skipped on the command line
+# (SWIFT_VENDORED in lib/broom/checks.py): an `excluded` here would be read relative to this directory.
+only_rules:
+  # lint
+  - blanket_disable_command # swiftlint:disable without a matching enable
+  - class_delegate_protocol # a delegate protocol that isn't class-bound can't be held weakly
+  - compiler_protocol_init # ExpressibleBy...Literal initializers called directly
+  - deployment_target # availability checks below the deployment target
+  - discarded_notification_center_observer # an observer token dropped, so it can never be removed
+  - discouraged_direct_init # UIDevice(), Bundle(), NSError()
+  - duplicate_conditions # the same condition twice in an if or switch
+  - duplicate_enum_cases
+  - duplicated_key_in_dictionary_literal
+  - dynamic_inline # dynamic with @inline(__always): the dynamic dispatch is lost
+  - empty_xctest_method
+  - identical_operands # x == x
+  - invalid_swiftlint_command
+  - invisible_character # zero-width characters in string literals
+  - notification_center_detachment # removeObserver(self) outside deinit
+  - ns_number_init_as_function_reference
+  - nsobject_prefer_isequal # == on an NSObject subclass instead of isEqual
+  - optional_data_string_conversion # String(decoding:as:) silently repairs invalid UTF-8
+  - overridden_super_call # viewWillAppear and friends without super
+  - private_unit_test # a private XCTest method never runs
+  - prohibited_super_call # loadView and friends calling super
+  - self_in_property_initialization # self in a stored property's initializer isn't the instance
+  - unhandled_throwing_task # errors thrown in a Task are dropped unless someone awaits its value
+  - unused_closure_parameter
+  - unused_control_flow_label
+  - unused_setter_value # a setter that ignores newValue
+  - valid_ibinspectable
+  # performance
+  - contains_over_filter_count
+  - contains_over_filter_is_empty
+  - contains_over_first_not_nil
+  - contains_over_range_nil_comparison
+  - first_where
+  - flatmap_over_map_reduce
+  - last_where
+  - reduce_boolean
+  - reduce_into
+  - sorted_first_last
+  # idiomatic, but crashes at run time
+  - force_cast
+  - force_try

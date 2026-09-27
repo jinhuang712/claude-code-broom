@@ -20,13 +20,17 @@ from typing import IO, Any, Dict, List, Optional, Set, Tuple
 from .common import PLUGIN_ROOT, boundary, find_up, git_root, in_node_modules, run
 
 FUNCTION_KINDS = {6, 9, 12}  # LSP SymbolKind: Method, Constructor, Function
+# In Swift, properties too (Property, Variable): a computed property is code, SwiftUI's `body` most of all, and a
+# stored one spans its own initializer. sourcekit-lsp reports deinit as a Constructor and subscripts not at all.
+SWIFT_KINDS = FUNCTION_KINDS | {7, 13}
 # CSS has no functions: the unit is the rule, as the CSS server reports it (Class), plus Sass and Less mixins
 # (Method) and Sass @functions (Function).
 CSS_LANGUAGES = {"css", "scss", "less"}
 RULE_KINDS = {5, 6, 12}
 PROJECT_MARKERS = {"go": ["go.mod"], "rust": ["Cargo.toml"], "py": ["pyproject.toml", "setup.py", "setup.cfg"],
                    "typescript": ["tsconfig.json", "package.json"], "javascript": ["tsconfig.json", "package.json"],
-                   "css": ["package.json"], "scss": ["package.json"], "less": ["package.json"]}
+                   "css": ["package.json"], "scss": ["package.json"], "less": ["package.json"],
+                   "swift": ["Package.swift"]}
 Ranges = List[Tuple[int, int]]
 
 
@@ -194,20 +198,20 @@ def _lines(rng: dict) -> Tuple[int, int]:
     return start["line"] + 1, last + 1
 
 
-def outermost_functions(symbols: list) -> Ranges:
+def outermost_functions(symbols: list, kinds: Set[int] = FUNCTION_KINDS) -> Ranges:
     """Line ranges of the outermost functions and methods: a method, not its class; a function, not the closures
     inside it."""
     out: Ranges = []
 
     def walk(items: list) -> None:
         for s in items or []:
-            if s.get("kind") in FUNCTION_KINDS and "range" in s:
+            if s.get("kind") in kinds and "range" in s:
                 out.append(_lines(s["range"]))
             else:
                 walk(s.get("children", []))
 
     if symbols and "location" in symbols[0]:  # flat SymbolInformation: drop functions nested in functions
-        flat = [_lines(s["location"]["range"]) for s in symbols if s.get("kind") in FUNCTION_KINDS]
+        flat = [_lines(s["location"]["range"]) for s in symbols if s.get("kind") in kinds]
         return [r for r in flat if not any(o != r and o[0] <= r[0] and r[1] <= o[1] for o in flat)]
     walk(symbols)
     return out
@@ -255,7 +259,10 @@ def function_ranges(files: List[Path], timeout: float = 20) -> Dict[Path, Option
                     "uri": uri, "languageId": language, "version": 1, "text": f.read_text(errors="replace")}})
                 symbols = client.request("textDocument/documentSymbol", {"textDocument": {"uri": uri}}, timeout)
                 symbols = symbols if isinstance(symbols, list) else []
-                out[f] = css_rules(symbols) if language in CSS_LANGUAGES else outermost_functions(symbols)
+                if language in CSS_LANGUAGES:
+                    out[f] = css_rules(symbols)
+                else:
+                    out[f] = outermost_functions(symbols, SWIFT_KINDS if language == "swift" else FUNCTION_KINDS)
         except (OSError, TimeoutError, RuntimeError, ValueError, KeyError):
             pass
         finally:

@@ -76,6 +76,7 @@ GO_EXTS = {".go"}
 JS_EXTS = {".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"}
 RS_EXTS = {".rs"}
 PY_EXTS = {".py", ".pyi"}
+SWIFT_EXTS = {".swift"}
 # Linted and served by a language server; formatted, like WEB_EXTS, by the project's JS-side formatter.
 CSS_EXTS = {".css", ".scss", ".less"}
 # Other file types a project's JS-side formatter (oxfmt, biome, prettier) handles.
@@ -109,6 +110,9 @@ DIALECT_DEFAULTS = {".scss": ("SCSS", "stylelint-config-recommended-scss"),
 GOLANGCI_CFG = (".golangci.yml", ".golangci.yaml", ".golangci.toml", ".golangci.json")
 RUFF_CFG = ("ruff.toml", ".ruff.toml")
 PY_ROOT_MARKERS = ("pyproject.toml", "ruff.toml", ".ruff.toml", "setup.cfg", "setup.py")
+SWIFTLINT_CFG = ".swiftlint.yml"  # SwiftLint reads no other name, .swiftlint.yaml included
+SWIFT_FORMAT_CFG = ".swift-format"  # swift-format, Apple's, in the toolchain since Swift 6
+SWIFTFORMAT_CFG = ".swiftformat"  # SwiftFormat, Nick Lockwood's
 
 
 def lang_of(path: Path) -> Optional[str]:
@@ -123,6 +127,8 @@ def lang_of(path: Path) -> Optional[str]:
         return "py"
     if ext in CSS_EXTS:
         return "css"
+    if ext in SWIFT_EXTS:
+        return "swift"
     return None
 
 
@@ -343,6 +349,46 @@ def css_linters(path: Path, stop: Path) -> List[Tuple[str, Path]]:
         d = d.parent
     pkg = find_up(path.parent, ["package.json"], stop)
     return [("stylelint-default", pkg.parent if pkg else stop)]
+
+
+def swift_formatter(path: Path, stop: Path) -> Optional[Tuple[str, Path]]:
+    """(tool, config dir) of the nearest Swift formatter config, or None. Swift has two formatters and neither is
+    everyone's, so, as for JS, there is none without a config."""
+    d = path.parent
+    while True:
+        if (d / SWIFTFORMAT_CFG).is_file():
+            return "swiftformat", d
+        if (d / SWIFT_FORMAT_CFG).is_file():
+            return "swift-format", d
+        if d == stop or d.parent == d:
+            return None
+        d = d.parent
+
+
+def swift_format_cmd() -> Optional[List[str]]:
+    """swift-format: a standalone install (brew) first, else the toolchain's `swift format` (Swift 6 and later)."""
+    exe = shutil.which("swift-format")
+    if exe:
+        return [exe]
+    swift = shutil.which("swift")
+    return [swift, "format"] if swift else None
+
+
+def swift_linter(path: Path, stop: Path) -> Tuple[str, Path]:
+    """("swiftlint", dir) when the project has a .swiftlint.yml, else ("swiftlint-default", package or repo root).
+    The outermost config up to `stop`: SwiftLint run there, as a project runs it, also applies the nested ones."""
+    outer = None
+    d = path.parent
+    while True:
+        if (d / SWIFTLINT_CFG).is_file():
+            outer = d
+        if d == stop or d.parent == d:
+            break
+        d = d.parent
+    if outer:
+        return "swiftlint", outer
+    pkg = find_up(path.parent, ["Package.swift"], stop)
+    return "swiftlint-default", pkg.parent if pkg else stop
 
 
 def ruff_configured(path: Path, stop: Path) -> bool:
