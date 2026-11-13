@@ -58,6 +58,16 @@
         "off"
       ],
       "default": "stop"
+    },
+    "smells": {
+      "type": "string",
+      "title": "Code smells",
+      "description": "Long functions and files, many parameters, deep nesting, high complexity, nested ternaries: a hint past the soft limit, a block past the hard one, counting only what a change made worse",
+      "options": [
+        "on",
+        "off"
+      ],
+      "default": "on"
     }
   },
   "homepage": "https://github.com/jinhuang712/claude-code-broom",

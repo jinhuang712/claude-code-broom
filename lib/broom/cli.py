@@ -24,6 +24,7 @@ from .gate import (
     accept_blocked, baseline_keys, baseline_remove, baseline_under, display, issue_key, render, select,
 )
 from .gitcmd import staged
+from .smells import find_smells
 
 
 # ---------------------------------------------------------------- sweep and fmt
@@ -58,8 +59,19 @@ def scope_files(args: argparse.Namespace) -> Tuple[List[Path], ChangedLines, Opt
     return files, changed, root
 
 
+def sweep_smells(root: Path, code: List[Path], args: argparse.Namespace) -> int:
+    """Print the code smells in scope: all of them with --all, else those the changes made worse."""
+    if setting("smells", root) == "off":
+        return 0
+    found, notes = find_smells(root, code, None if args.all else (args.base or "HEAD"))
+    if found or notes:
+        what = "in the repo" if args.all else "the changes made worse"
+        print(render(f"\n[broom] {len(found)} code smell(s) {what}.", [s.issue() for s in found], notes, set()))
+    return len(found)
+
+
 def cmd_sweep(args: argparse.Namespace) -> int:
-    files, changed, _ = scope_files(args)
+    files, changed, root = scope_files(args)
     if not files:
         print("broom: nothing to sweep in that scope")
         return 0
@@ -84,7 +96,8 @@ def cmd_sweep(args: argparse.Namespace) -> int:
         print(f"broom: clean ({len(code)} file(s))")
     if hidden:
         print(f"\n{hidden} known issue(s) hidden: `broom known` lists them, `--include-known` shows them here")
-    return 1 if found else 0
+    smells = sweep_smells(root, code, args) if root else 0
+    return 1 if found or smells else 0
 
 
 def cmd_fmt(args: argparse.Namespace) -> int:

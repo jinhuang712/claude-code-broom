@@ -1,0 +1,110 @@
+"""Code smells end to end: what a change made worse hints or blocks, legacy code stays quiet."""
+
+from __future__ import annotations
+
+import shutil
+import unittest
+from pathlib import Path
+
+from support import HAS_PY, BroomCase
+
+from broom.smells import find_smells, made_worse
+
+
+class SmellTest(BroomCase):
+    def test_only_crossing_a_limit_or_growing_past_the_hard_one_counts(self) -> None:
+        limit = (50, 100)
+        self.assertTrue(made_worse(60, None, limit), "new past the soft limit")
+        self.assertFalse(made_worse(70, 60, limit), "grew, but stayed between the limits: noise")
+        self.assertTrue(made_worse(101, 90, limit), "crossed the hard limit")
+        self.assertTrue(made_worse(155, 150, limit), "grew while past the hard limit")
+        self.assertFalse(made_worse(150, 150, limit), "as it was")
+
+    @staticmethod
+    def py_function(name: str, lines: int) -> str:
+        body = "".join(f"    x += {i}\n" for i in range(lines - 2))
+        return f"def {name}(x):\n{body}    return x\n"
+
+    def stop_turn(self, repo: Path, path: Path, session: str) -> dict:
+        self.hook("edit", {"session_id": session, "cwd": str(repo), "tool_name": "Edit",
+                           "tool_input": {"file_path": str(path)}})
+        return self.hook("stop", {"session_id": session, "cwd": str(repo), "permission_mode": "default"})
+
+    @unittest.skipUnless(HAS_PY, "ruff missing")
+    def test_a_new_long_function_blocks_and_a_shorter_one_hints(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        (r / "a.py").write_text(self.py_function("long_one", 120))
+        self.sh(r, "git", "add", "a.py")
+        reason = self.denied(self.commit(r, "git commit -m x"))
+        self.assertIn("long_one is 120 lines long (hard limit 100; new)", reason)
+        self.assertIn("broom known --accept", reason, "a severe smell doesn't pass on a retry")
+        (r / "a.py").write_text(self.py_function("long_one", 60))
+        self.sh(r, "git", "add", "a.py")
+        out = self.commit(r, "git commit -m x")
+        self.assertEqual(self.denied(out), "")
+        self.assertIn("long_one is 60 lines long (over 50; new)", out["hookSpecificOutput"]["additionalContext"])
+
+    @unittest.skipUnless(HAS_PY, "ruff missing")
+    def test_smells_count_only_what_the_change_made_worse(self) -> None:
+        r = self.repo({"a.py": self.py_function("legacy", 150)})
+        (r / "a.py").write_text(self.py_function("legacy", 150).replace("x += 3\n", "x += 333\n"))
+        self.sh(r, "git", "add", "a.py")
+        self.assertEqual(self.commit(r, "git commit -m same-size"), {}, "an untouched-size legacy function is quiet")
+        (r / "a.py").write_text(self.py_function("legacy", 155))
+        self.sh(r, "git", "add", "a.py")
+        self.assertIn("legacy is 155 lines long (hard limit 100; was 150)", self.denied(self.commit(r, "git commit -m x")))
+
+    @unittest.skipUnless(HAS_PY, "ruff missing")
+    def test_repo_limits_move_the_bar_and_off_turns_smells_off(self) -> None:
+        r = self.repo({"a.py": "x = 1\n", ".broom.json": '{"limits": {"file_lines": [10, 20]}}'})
+        (r / "a.py").write_text("".join(f"x{i} = {i}\n" for i in range(25)))
+        self.sh(r, "git", "add", "a.py")
+        self.assertIn("the file is 25 lines long (hard limit 20; new)", self.denied(self.commit(r, "git commit -m x")))
+        (r / ".broom.json").write_text('{"smells": "off", "limits": {"file_lines": [10, 20]}}')
+        self.assertEqual(self.denied(self.commit(r, "git commit -m x")), "")
+        item = next(i for i in self.doctor(r, self.fake_path())["items"] if i["tool"] == ".broom.json")
+        self.assertEqual(item["status"], "ok", "smells and limits are known keys")
+
+    @unittest.skipUnless(HAS_PY, "ruff missing")
+    def test_turn_end_hints_once_and_severe_smells_still_stop_the_commit(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        (r / "a.py").write_text(self.py_function("medium", 60))
+        out = self.stop_turn(r, r / "a.py", "s3")
+        self.assertEqual(out.get("decision"), "block")
+        self.assertIn("medium is 60 lines long (over 50; new)", out["reason"])
+        self.assertIn("left unfixed", self.hook("stop", {"session_id": "s3", "cwd": str(r)}).get("systemMessage", ""))
+        (r / "a.py").write_text(self.py_function("huge", 120))
+        self.assertIn("huge is 120 lines long", self.stop_turn(r, r / "a.py", "s4")["reason"])
+        self.hook("stop", {"session_id": "s4", "cwd": str(r)})
+        self.sh(r, "git", "add", "a.py")
+        self.assertIn("huge is 120", self.denied(self.commit(r, "git commit -m x")), "stopping twice doesn't excuse it")
+
+    @unittest.skipUnless(HAS_PY, "ruff missing")
+    def test_sweep_reports_smells(self) -> None:
+        r = self.repo({"a.py": self.py_function("old_and_long", 120)})
+        out = self.cli(r, "sweep", "--all", "--check")
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("1 code smell(s) in the repo", out.stdout)
+        self.assertIn("old_and_long is 120 lines long", out.stdout)
+        self.assertEqual(self.cli(r, "sweep", "--check").returncode, 0, "nothing changed, nothing made worse")
+
+    def test_smells_in_ts_go_and_swift(self) -> None:
+        names = "abcdefghi"
+        samples = {
+            "a.ts": ("oxlint", "export function many(" + ", ".join(f"{n}: number" for n in names) + ") {\n"
+                     "  return a;\n}\n"),
+            "go/a.go": ("golangci-lint", "package a\n\nfunc Many(" + ", ".join(names) + " int) int {\n\treturn a\n}\n"),
+            "a.swift": ("swiftlint", "func many(" + ", ".join(f"_ {n}: Int" for n in names) + ") -> Int {\n"
+                        "    return a\n}\n"),
+        }
+        r = self.repo({"README.md": "x\n"})
+        for rel, (tool, text) in samples.items():
+            with self.subTest(rel):
+                if not shutil.which(tool):
+                    self.skipTest(f"{tool} missing")
+                (r / rel).parent.mkdir(parents=True, exist_ok=True)
+                (r / rel).write_text(text)
+                found, notes = find_smells(r, [r / rel], "HEAD")
+                self.assertEqual(notes, [])
+                self.assertIn("takes 9 parameters (hard limit 8; new)", " ".join(s.text() for s in found))
+

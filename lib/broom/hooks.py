@@ -21,9 +21,9 @@ import re
 import shlex
 import time
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
-from .checks import run_checks
+from .checks import Issue, run_checks
 from .common import (
     DATA_ROOT, append_line, emit, excluded, git, git_changed_files, git_root, lang_of, load_json, prune_sessions,
     save_json, session_dir, setting,
@@ -35,6 +35,7 @@ from .gate import (
     select, setup_hint, verdict,
 )
 from .gitcmd import parse, parse_commit, plan_commit
+from .smells import Smell, gate_smells, hint_text
 
 MAX_BLOCKS = 3
 EDITING_TASKS = {"subagent", "workflow", "teammate"}
@@ -68,14 +69,34 @@ def claim(tool_use_id: Optional[str]) -> bool:
         return False
 
 
+def checked(files: List[Path], sd: Path) -> Tuple[List[Issue], List[Smell], List[str]]:
+    """What blocks (lint and type issues not yet known, smells past the hard limit), the smell hints, and notes."""
+    issues, notes = run_checks(files, sd / "slow.json")
+    known = baseline_keys()
+    blocking = select(issues, set(files), known)
+    hints: List[Smell] = []
+    for repo, group in by_repo(files).items():
+        smell_blocks, smell_hints, smell_notes = gate_smells(repo, group, known)
+        blocking += smell_blocks
+        hints += smell_hints
+        notes += smell_notes
+    return blocking, hints, notes
+
+
+def sticky(i: Issue) -> bool:
+    """Type and compile errors, and smells past their hard limit: they pass fixed or accepted, never on a retry."""
+    return i.hard or i.severe
+
+
 def block_head(count: int, hard: int, repo: Path, cwd: Path) -> str:
     head = f"[broom] Commit blocked: {count} issue(s) in the files being committed"
     if not hard:
         return (f"{head}. Fix them and commit again. If one is pre-existing or a false positive, say so and run the "
                 "same commit again: broom lets an unchanged result through.")
     accept = 'broom known --accept "<why>"' + ("" if repo == cwd else f" {shlex.quote(str(repo))}")
-    return (f"{head}, {hard} of them type or compile errors, which don't pass on a retry. Fix them and commit again. "
-            f"If they predate this change or are false positives, run `{accept}`, then commit again.")
+    return (f"{head}, {hard} of them type errors or code smells past the hard limit, which don't pass on a retry. "
+            f"Fix them and commit again. If they predate this change or are false positives, run `{accept}`, then "
+            "commit again.")
 
 
 def hook_commit(data: dict) -> None:
@@ -119,11 +140,12 @@ def hook_commit(data: dict) -> None:
         if check_on == "off":
             continue
         files = sorted(f for f in plan.files if lang_of(f))
-        issues, notes = run_checks(files, sd / "slow.json")
-        blocking = select(issues, set(files), baseline_keys())
+        blocking, hints, notes = checked(files, sd)
+        if hints:
+            context.append(hint_text(hints))
         key = str(plan.repo)
         prior = state.get(key, {})
-        hard = sum(1 for i in blocking if i.hard)
+        hard = sum(1 for i in blocking if sticky(i))
         seen = prior.get("verdict") == verdict(blocking) or int(prior.get("denials", 0)) >= MAX_BLOCKS
         if not blocking:
             state.pop(key, None)
@@ -138,7 +160,7 @@ def hook_commit(data: dict) -> None:
             state.pop(key, None)
             context.append(f"broom let the commit through with {len(blocking)} known issue(s)")
         else:
-            # Type and compile errors never pass on a retry alone: fixed, or accepted with a reason on record.
+            # Type errors and severe smells never pass on a retry alone: fixed, or accepted with a reason on record.
             state[key] = {"verdict": verdict(blocking), "denials": int(prior.get("denials", 0)) + 1,
                           "pending": {issue_key(i): issue_entry(i) for i in blocking}}
             head = block_head(len(blocking), hard, plan.repo, cwd)
@@ -206,6 +228,15 @@ def read_lines(path: Path) -> List[str]:
         return []
 
 
+def by_repo(files: List[Path]) -> Dict[Path, List[Path]]:
+    groups: Dict[Path, List[Path]] = {}
+    for f in files:
+        root = git_root(f.parent)
+        if root:
+            groups.setdefault(root, []).append(f)
+    return groups
+
+
 def clear_turn(sd: Path) -> None:
     for name in ("edits.txt", "scan.txt", "gate.json"):
         try:
@@ -241,8 +272,8 @@ def hook_stop(data: dict) -> None:
         emit({"systemMessage": f"broom: {gate.get('count', 0)} issue(s) left unfixed"})
         return
 
-    issues, notes = run_checks(files, sd / "slow.json")
-    blocking = select(issues, set(files), baseline_keys())
+    blocking, hints, notes = checked(files, sd)
+    blocking += [s.issue() for s in hints]  # at a turn's end a hint stops Claude once: it cleans up now
     if not blocking:
         clear_turn(sd)
         fresh = new_notes(sd / "notes.json", notes)
@@ -255,8 +286,11 @@ def hook_stop(data: dict) -> None:
         clear_turn(sd)
         emit({"systemMessage": f"broom: gave up after {MAX_BLOCKS} rounds, {len(blocking)} issue(s) left"})
         return
+    # Stopping again records what is left as known; type errors and severe smells stay out, so a commit still
+    # stops on them.
+    pending = {issue_key(i): issue_entry(i) for i in blocking if not sticky(i)}
     save_json(sd / "gate.json", {"verdict": verdict(blocking), "edits_at": edit_count, "blocks": blocks,
-                                 "count": len(blocking), "pending": {issue_key(i): issue_entry(i) for i in blocking}})
+                                 "count": len(blocking), "pending": pending})
     head = (f"[broom] {len(blocking)} issue(s) in this turn's changes. Fix them before finishing. If one is "
             "pre-existing or a false positive, say so and stop again: broom doesn't block twice without a new edit.")
     emit({"decision": "block", "reason": render(head, blocking, new_notes(sd / "notes.json", notes), set(files))})

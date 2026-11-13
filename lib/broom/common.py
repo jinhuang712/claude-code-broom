@@ -25,6 +25,17 @@ SETTINGS = {
     "format_on": ("commit", ("commit", "edit", "off")),
     "check_on": ("stop", ("commit", "stop", "off")),
     "format_scope": ("changed", ("changed", "function", "file")),
+    "smells": ("on", ("on", "off")),
+}
+# Code smell limits, (soft, hard): past soft is a hint, past hard a block. SwiftLint's own warning and error
+# defaults, except nesting; .broom.json `limits` moves them per repo.
+SMELL_LIMITS = {
+    "function_lines": (50, 100),
+    "file_lines": (400, 1000),
+    "params": (5, 8),
+    "nesting": (4, 6),
+    "complexity": (10, 20),
+    "nested_ternary": (0, 0),
 }
 PLUGIN_ID = "broom@claude-code-broom"
 

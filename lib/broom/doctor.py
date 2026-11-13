@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Tuple
 from . import __version__
 from .common import (
     BIOME_CFG, DATA_ROOT, DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG, REPO_FILE, RUFF_CFG,
-    DIALECT_DEFAULTS, SETTINGS, STYLELINT_CFG, SWIFT_FORMAT_CFG, SWIFTFORMAT_CFG, SWIFTLINT_CFG,
+    DIALECT_DEFAULTS, SETTINGS, SMELL_LIMITS, STYLELINT_CFG, SWIFT_FORMAT_CFG, SWIFTFORMAT_CFG, SWIFTLINT_CFG,
     css_linters, find_up, git, in_node_modules, js_formatter, js_linters, load_json, read_jsonc, resolve_bin,
     ruff_configured, run, save_json, short_hash, swift_format_cmd, swift_formatter, swift_linter,
 )
@@ -371,6 +371,20 @@ def swift_format_version(cwd: Path) -> str:
     return out.strip() if rc == 0 else ""
 
 
+def limit_problems(limits: object) -> List[str]:
+    """.broom.json `limits`: {"function_lines": [soft, hard], ...} with known names and soft <= hard."""
+    if limits is None:
+        return []
+    if not isinstance(limits, dict):
+        return ["limits must be an object of [soft, hard] pairs"]
+    out = [f"limits: unknown name {k}" for k in limits if k not in SMELL_LIMITS]
+    for k, pair in limits.items():
+        ok = isinstance(pair, list) and len(pair) == 2 and all(isinstance(n, int) for n in pair)
+        if k in SMELL_LIMITS and not (ok and pair[0] <= pair[1]):
+            out.append(f"limits: {k} must be [soft, hard] with soft <= hard")
+    return out
+
+
 def check_repo_file(repo: Path) -> List[Item]:
     """The repo's .broom.json: values broom would otherwise ignore without a word."""
     path = repo / REPO_FILE
@@ -384,11 +398,12 @@ def check_repo_file(repo: Path) -> List[Item]:
         return [Item("broom", "config", REPO_FILE, "broken", ".", "must be a JSON object")]
     problems = [f"{k}: {data[k]!r} is not one of {', '.join(SETTINGS[k][1])}" for k in SETTINGS
                 if k in data and str(data[k]).lower() not in SETTINGS[k][1]]
-    unknown = [k for k in data if k not in SETTINGS and k != "exclude"]
+    unknown = [k for k in data if k not in SETTINGS and k not in ("exclude", "limits")]
     if unknown:
         problems.append("unknown key(s): " + ", ".join(unknown))
     if "exclude" in data and not isinstance(data["exclude"], list):
         problems.append("exclude must be a list of globs")
+    problems += limit_problems(data.get("limits"))
     if problems:
         return [Item("broom", "config", REPO_FILE, "broken", ".", "; ".join(problems))]
     shown = ", ".join(f"{k}={data[k]}" for k in SETTINGS if k in data)
