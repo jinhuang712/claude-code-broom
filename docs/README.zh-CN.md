@@ -82,6 +82,10 @@ tsc (~/code/app):
 /broom:sweep 整个仓库
 ```
 
+想清理已有的问题，就让它清理：`/broom:clean`（或 `/broom:clean src/layout`）把坏味道按严重程度排好，从最坏的开始，
+小步、有测试地清理。仓库里有超过硬上限的坏味道时，broom 会在会话开始时告诉 Claude，Claude 在合适的时机向你提出清理；
+你说"先不用"，它就不再提，直到情况变得更糟。
+
 | 设置 | 默认 | 可选 |
 |---|---|---|
 | `format_on` | `commit` | `edit`（每次编辑后也格式化）、`off` |

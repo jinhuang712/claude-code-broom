@@ -4,7 +4,7 @@
 
 | Hook | Fires on | Does | Cost when idle |
 |---|---|---|---|
-| SessionStart | new, resumed and cleared sessions | Runs a cached doctor; if the repo has gaps, asks Claude to offer `/broom:setup` (once per session) | ~0.1 s |
+| SessionStart | new, resumed and cleared sessions | Runs a cached doctor; if the repo has gaps, asks Claude to offer `/broom:setup`. If it has smells past the hard limit, asks Claude to raise them and offer `/broom:clean` at a natural point. Once per session | ~0.1 s; a smell scan once per commit, under a second on the author's repos |
 | PreToolUse | every Bash call; acts on `git commit` | Formats the commit's files, lints and type-checks them, blocks the commit while issues remain | ~13 ms (a shell start); ~60 ms when the command mentions git and commit without committing |
 | PostToolUse | Edit, Write, MultiEdit, Serena's edit tools | Formats per edit (`format_on=edit`); records files for the stop check (`check_on=stop`) | one Python start: 30–45 ms measured on macOS |
 | Stop | each turn end | Checks the files Claude edited this turn (`check_on=stop`) | one Python start: 30–45 ms measured on macOS |
@@ -15,6 +15,8 @@
   the answers, verifies, and records the decision. Settings aren't asked: they start at defaults.
 - **`/broom:sweep`**: sweeps a scope you describe in your own words ("what I staged", "the last 3 commits",
   "this branch", "src/api", "the whole repo") and reports what's left.
+- **`/broom:clean`**: ranks the code smells of the repo or an area with `broom smells`, agrees a scope and batches
+  with you, cleans up worst first keeping behavior and tests green, re-checks and commits each batch.
 
 ## Commands
 
@@ -26,6 +28,7 @@
 | `broom fmt [paths]` | Format only. `--scope` |
 | `broom doctor [--json]` | Languages, tools, configs and conflicts, with the commands that fix them |
 | `broom init [dir]` | Add default configs where missing. Never overwrites. `--dry-run` |
+| `broom smells [paths] [--top N] [--json] [--dismiss]` | The code smells of the repo or some paths: the hotspot files and the worst smells, worst first. `--dismiss` quiets the session note until the count past the hard limit grows |
 | `broom known [--accept WHY] [--clear] [paths]` | List or clear accepted issues. `--accept WHY` accepts the last blocked commit's issues with the reason: how an unfixed type or compile error gets through |
 | `broom setup --done / --dismiss / --reset` | Record the setup decision; gaps left alone are remembered by kind for every repo. `--reset` forgets them all |
 

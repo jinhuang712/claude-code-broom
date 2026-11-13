@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.16.0
+
+- `broom smells [paths] [--top N] [--json]`: the code smells of the repo or some paths, ranked: the hotspot files
+  and the worst smells, furthest past their limit first.
+- `/broom:clean`: a cleanup worst first, in small batches the user agrees to, behavior kept and each batch
+  re-checked and committed.
+- At session start, when the repo has smells past the hard limit, broom asks Claude to raise them and offer
+  `/broom:clean` at a natural point, not to clean up unasked. The scan runs once per commit. `broom smells
+  --dismiss` quiets it until the count grows.
+- A whole-repo scan no longer calls its smells "new". `broom doctor` shows `.broom.json`'s `limits` and
+  `smells_off`.
+
 ## 0.15.0
 
 - Dead code, with jscpd's `--dead-code`: a file, export, symbol or import that nothing uses, in TS/JS and Python,

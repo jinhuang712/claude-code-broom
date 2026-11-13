@@ -90,6 +90,11 @@ Mostly, you don't: broom sweeps on its own. When you want a look first, ask for 
 /broom:sweep the whole repo
 ```
 
+To pay down what's already there, ask for a cleanup: `/broom:clean` (or `/broom:clean src/layout`) ranks the code
+smells worst first and cleans up in small, tested batches. When a repo has smells past the hard limit, broom tells
+Claude at the start of a session, and Claude offers the cleanup when it fits; say "not now" and it stays quiet
+until things get worse.
+
 | Setting | Default | Choices |
 |---|---|---|
 | `format_on` | `commit` | `edit` (also after every edit), `off` |
@@ -103,7 +108,7 @@ A `.broom.json` at the repo root overrides these for one repo, can exclude paths
 { "format_scope": "function", "exclude": ["vendor/**", "**/*.pb.go"], "limits": { "function_lines": [60, 120] } }
 ```
 
-The `broom` command is on the PATH too: `broom sweep`, `broom doctor`, `broom known`. See [Features](docs/FEATURES.md).
+The `broom` command is on the PATH too: `broom sweep`, `broom smells`, `broom doctor`, `broom known`. See [Features](docs/FEATURES.md).
 
 ## Docs
 

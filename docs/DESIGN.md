@@ -86,6 +86,17 @@ out, so the commit still stops on them.
   sourcekit-lsp's range for a stored one covers its initializer. It doesn't report subscripts, so there it is the
   changed lines.
 
+## Cleaning up what's there
+
+Hooks gate what a change makes worse; the smells already in a repo need someone to go after them. `broom smells`
+ranks them for that, and `/broom:clean` tells Claude how to work through them: worst first, in batches the user
+agrees to, behavior kept, each batch re-checked and committed alone.
+
+To make that happen without the user remembering to ask, the session hook scans the repo once per commit (cached
+by HEAD; under a second on the user's repos) and, when smells past the hard limit exist, tells Claude to raise them
+at a natural point. It doesn't start a cleanup: the user decides. "Not now" (`broom smells --dismiss`) records the
+count, and the note returns only when it grows, the same ratchet the gates use.
+
 ## Setup
 
 `broom doctor` scans for marker files (`go.mod`, `package.json`, `Cargo.toml`, `pyproject.toml`, …) three levels
