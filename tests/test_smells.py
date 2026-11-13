@@ -76,6 +76,33 @@ class SmellTest(BroomCase):
         r = self.repo({"a.py": "a = 1\n", "b.py": "b = 2\n"})
         wanted = ["a.py", "gone.py", "new dir/with space.py", "b.py"]
         self.assertEqual(base_texts(r, "HEAD", wanted), {"a.py": "a = 1\n", "b.py": "b = 2\n"})
+
+    @unittest.skipUnless(shutil.which("jscpd"), "jscpd missing")
+    def test_a_new_copy_is_flagged_and_old_or_test_copies_are_not(self) -> None:
+        body = self.py_function("one", 40).split("\n", 1)[1]
+        setup = body.replace("+=", "-=")
+        r = self.repo({"a.py": "def one(x):\n" + body, "tests/test_a.py": "def test_a(x):\n" + setup})
+        (r / "b.py").write_text("def two(x):\n" + body)
+        (r / "tests/test_b.py").write_text("def test_b(x):\n" + setup)
+        found, notes = find_smells(r, [r / "b.py", r / "tests/test_b.py"], "HEAD")
+        self.assertEqual(notes, [])
+        copies = [s for s in found if s.metric == "duplicate_lines"]
+        self.assertEqual([(s.level, s.file.name) for s in copies], [("block", "b.py")], "test-to-test copies are fine")
+        self.assertIn("lines repeat a.py:", copies[0].text())
+        self.sh(r, "git", "add", "-A")
+        self.sh(r, "git", "commit", "-qm", "copies")
+        (r / "c.py").write_text("c = 1\n")
+        found, _ = find_smells(r, [r / "c.py", r / "b.py"], "HEAD")
+        self.assertEqual([s for s in found if s.metric == "duplicate_lines"], [], "a copy already there is old")
+
+    def test_doctor_offers_jscpd_where_smells_measure_code(self) -> None:
+        r = self.repo({"pyproject.toml": "[project]\nname = 'a'\n", "a.py": "x = 1\n"})
+        item = next(i for i in self.doctor(r, self.fake_path(keep=("ruff",)))["items"] if i["tool"] == "jscpd")
+        self.assertEqual(item["status"], "missing")
+        self.assertIn("npm i -g jscpd", item["fix"])
+        (r / ".broom.json").write_text('{"smells": "off"}')
+        self.assertNotIn("jscpd", [i["tool"] for i in self.doctor(r, self.fake_path(keep=("ruff",)))["items"]])
+
     def test_only_crossing_a_limit_or_growing_past_the_hard_one_counts(self) -> None:
         limit = (50, 100)
         self.assertTrue(made_worse(60, None, limit), "new past the soft limit")

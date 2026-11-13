@@ -18,7 +18,7 @@ from .common import (
     DIALECT_DEFAULTS, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, STYLELINT_CFG, SWIFT_FORMAT_CFG, SWIFTFORMAT_CFG,
     SWIFTLINT_CFG,
     css_linters, find_up, git, in_node_modules, js_formatter, js_linters, load_json, read_jsonc, resolve_bin,
-    ruff_configured, run, save_json, short_hash, swift_format_cmd, swift_formatter, swift_linter,
+    ruff_configured, run, save_json, setting, short_hash, swift_format_cmd, swift_formatter, swift_linter,
 )
 
 MARKERS = {"go.mod": "go", "package.json": "js", "tsconfig.json": "js", "Cargo.toml": "rust",
@@ -278,36 +278,14 @@ def diagnose(repo: Path, projects: Optional[Dict[str, List[Path]]] = None) -> di
                                  home, "oxfmt"))
     if "css" in projects:
         machine.append(("css", "lsp", "vscode-css-language-server", "vscode-css-language-server"))
+    coded = [lang for lang in ("go", "js", "py", "swift") if lang in projects]
+    if coded and setting("smells", repo) != "off":  # duplicate code, in every language smells measure
+        machine.append((coded[0], "smells", "jscpd", "jscpd"))
 
-    swift = projects.get("swift", [])
-    if swift:
-        machine += [("swift", "lint", "swiftlint", "swiftlint"), ("swift", "lsp", "sourcekit-lsp", "sourcekit-lsp")]
-        if any((p / "Package.swift").exists() for p in swift):  # Xcode projects aren't built
-            machine.append(("swift", "types", "swift", "swift"))
-        swift_format = swift_format_version(repo)
-        for p in swift:
-            tool, d = swift_linter(p / "_.swift", repo)
-            detail = f"project {SWIFTLINT_CFG}" if tool == "swiftlint" else "broom's defaults (no project config)"
-            items.append(Item("swift", "config", "swiftlint config", "ok", rel(d), detail))
-            fmt = swift_formatter(p / "_.swift", repo)
-            if fmt is None:
-                continue  # reported once for all such projects, below
-            tool, d = fmt
-            cfg = SWIFTFORMAT_CFG if tool == "swiftformat" else SWIFT_FORMAT_CFG
-            if (shutil.which(tool) if tool == "swiftformat" else swift_format):
-                items.append(Item("swift", "format", tool, "ok", rel(d), f"project {cfg}"))
-            else:
-                items.append(Item("swift", "format", tool, "missing", detail=f"the project's {cfg} needs it",
-                                  fix=install_command(db.get(tool, {}))))
-        unformatted = [p for p in swift if swift_formatter(p / "_.swift", repo) is None]
-        if unformatted:
-            home = config_home(unformatted)
-            items.append(Item("swift", "format", "swift-format", "off", rel(home),
-                              f"no formatter config ({len(unformatted)} project(s)), so broom doesn't format Swift",
-                              f"broom init {rel(home)}"))
-            if not swift_format:  # the toolchain has it from Swift 6
-                items.append(Item("swift", "format", "swift-format", "off", detail="needed once formatting is on",
-                                  fix=install_command(db.get("swift-format", {}))))
+    if projects.get("swift"):
+        swift_found, swift_tools = swift_items(repo, projects["swift"], db)
+        items += swift_found
+        machine += swift_tools
 
     def check_machine(entry: Tuple[str, str, str, str]) -> Item:
         lang, role, tool, name = entry
@@ -348,6 +326,42 @@ def diagnose(repo: Path, projects: Optional[Dict[str, List[Path]]] = None) -> di
         "fix_global": fixes_global, "configure_global": configure_global,
         "healthy": all(i.status == "ok" for i in items),
     }
+
+
+def swift_items(repo: Path, swift: List[Path], db: dict) -> Tuple[List[Item], List[Tuple[str, str, str, str]]]:
+    """Swift's linter config and formatter, and the tools to probe on PATH."""
+    def rel(p: Path) -> str:
+        return "." if p == repo else str(p.relative_to(repo))
+
+    items: List[Item] = []
+    machine = [("swift", "lint", "swiftlint", "swiftlint"), ("swift", "lsp", "sourcekit-lsp", "sourcekit-lsp")]
+    if any((p / "Package.swift").exists() for p in swift):  # Xcode projects aren't built
+        machine.append(("swift", "types", "swift", "swift"))
+    swift_format = swift_format_version(repo)
+    for p in swift:
+        tool, d = swift_linter(p / "_.swift", repo)
+        detail = f"project {SWIFTLINT_CFG}" if tool == "swiftlint" else "broom's defaults (no project config)"
+        items.append(Item("swift", "config", "swiftlint config", "ok", rel(d), detail))
+        fmt = swift_formatter(p / "_.swift", repo)
+        if fmt is None:
+            continue  # reported once for all such projects, below
+        tool, d = fmt
+        cfg = SWIFTFORMAT_CFG if tool == "swiftformat" else SWIFT_FORMAT_CFG
+        if (shutil.which(tool) if tool == "swiftformat" else swift_format):
+            items.append(Item("swift", "format", tool, "ok", rel(d), f"project {cfg}"))
+        else:
+            items.append(Item("swift", "format", tool, "missing", detail=f"the project's {cfg} needs it",
+                              fix=install_command(db.get(tool, {}))))
+    unformatted = [p for p in swift if swift_formatter(p / "_.swift", repo) is None]
+    if unformatted:
+        home = unformatted[0] if len(unformatted) == 1 else repo  # one config at the root covers a monorepo
+        items.append(Item("swift", "format", "swift-format", "off", rel(home),
+                          f"no formatter config ({len(unformatted)} project(s)), so broom doesn't format Swift",
+                          f"broom init {rel(home)}"))
+        if not swift_format:  # the toolchain has it from Swift 6
+            items.append(Item("swift", "format", "swift-format", "off", detail="needed once formatting is on",
+                              fix=install_command(db.get("swift-format", {}))))
+    return items, machine
 
 
 def typescript_lsp(repo: Path, db: dict) -> Item:

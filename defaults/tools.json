@@ -52,5 +52,10 @@
   "swiftformat": {
     "probe": ["swiftformat", "--version"],
     "install": [["brew", "brew install swiftformat"], ["mint", "mint install nicklockwood/SwiftFormat"]]
+  },
+  "_comment_smells": "Duplicate code for the code smells, in every language they measure: jscpd 5 or later.",
+  "jscpd": {
+    "probe": ["jscpd", "--version"],
+    "install": [["npm", "npm i -g jscpd"], ["cargo", "cargo install jscpd"]]
   }
 }

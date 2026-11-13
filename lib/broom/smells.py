@@ -22,6 +22,7 @@ from typing import Dict, List, Optional, Tuple
 
 from .checks import Issue
 from .common import SMELL_LIMITS, SMELL_PRESENCE, repo_config, setting
+from .clones import Clone, find_clones
 from .gate import issue_key
 from .measure import SMELL_EXTS, Limits, Raw, measure
 
@@ -45,6 +46,7 @@ DESCRIBE = {
     "complexity": "{key} has complexity {value}",
     "nested_ternary": "a ternary nests inside another",
     "type_lines": "{key} is {value} lines long",
+    "duplicate_lines": "{value} lines repeat {key}",
 }
 LABELS = {
     "suppression": "lint suppression(s) without a reason or rule",
@@ -226,19 +228,47 @@ def base_texts(repo: Path, base: str, rels: List[str]) -> Dict[str, str]:
     return texts
 
 
+def generated(path: Path) -> bool:
+    try:
+        with path.open(errors="replace") as f:
+            return bool(GENERATED.search("".join(f.readline() for _ in range(5))))
+    except OSError:
+        return False
+
+
+def clone_smells(repo: Path, clones: List[Clone], scope: set, base: Optional[str], lim: Limits) -> List[Smell]:
+    """New duplicate blocks with a side in `scope`, the files measured (every clone when `base` is None). Clones
+    between two test files are left out: tests repeat their setup on purpose."""
+    out = []
+    for c in clones:
+        sides = [(c.rel, c.line, c.other, c.other_line), (c.other, c.other_line, c.rel, c.line)]
+        mine = next((s for s in sides if s[0] in scope), None)
+        if (base is not None and not c.new) or mine is None or not maintained(mine[2]) or generated(repo / mine[2]):
+            continue
+        at = level(c.lines, lim["duplicate_lines"])
+        if at and not (TEST_FILE.search(c.rel) and TEST_FILE.search(c.other)):
+            limit = lim["duplicate_lines"][1] if at == "block" else lim["duplicate_lines"][0]
+            out.append(Smell(repo, repo / mine[0], mine[1], "duplicate_lines", f"{mine[2]}:{mine[3]}", c.lines,
+                             None, "jscpd", at, limit))
+    return out
+
+
 def find_smells(repo: Path, files: List[Path], base: Optional[str]) -> Tuple[List[Smell], List[str]]:
     """Smells in `files` that are new or worse than at `base`; every smell when `base` is None."""
     now_text = current_texts(repo, files)
     if not now_text:
         return [], []
     lim, notes = limits(repo), []
+    off = tuple(repo_config(repo).get("smells_off") or ())
     old_text = base_texts(repo, base, list(now_text)) if base else None
-    with tempfile.TemporaryDirectory(prefix="broom-smells-") as tmp, ThreadPoolExecutor(2) as pool:
+    with tempfile.TemporaryDirectory(prefix="broom-smells-") as tmp, ThreadPoolExecutor(3) as pool:
         now = pool.submit(measure, Path(tmp) / "now", now_text, lim, repo, notes)
         before = pool.submit(measure, Path(tmp) / "before", old_text, lim, repo, []) if old_text else None
-        off = tuple(repo_config(repo).get("smells_off") or ())
+        clones = None if "duplicate_lines" in off else pool.submit(
+            find_clones, repo, base, lim["duplicate_lines"][0] + 1, sorted(SKIP_DIRS), notes)
         found = compare(now.result(), before.result() if before else ([] if base else None), lim, repo, off)
-    return found, list(dict.fromkeys(notes))
+        found += clone_smells(repo, clones.result() if clones else [], set(now_text), base, lim)
+    return sorted(found, key=lambda s: (s.level != "block", str(s.file), s.line)), list(dict.fromkeys(notes))
 
 
 def gate_smells(repo: Path, files: List[Path], known: set, base: str = "HEAD"

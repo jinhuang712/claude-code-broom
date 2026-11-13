@@ -37,6 +37,7 @@ SMELL_LIMITS = {
     "complexity": (10, 20),
     "nested_ternary": (0, 0),
     "type_lines": (250, 1_000_000),  # a hint only: whether to split a type is a design call
+    "duplicate_lines": (10, 30),  # a block of code repeated elsewhere
 }
 # Smells that count by occurrence, not by size: a change that adds one gets this level.
 SMELL_PRESENCE = {
