@@ -28,6 +28,7 @@ it stored, which hands a worktree another directory's issues. Caches unused for 
 3. It formats them and re-stages what was staged in full. A partly staged file is left alone, so its unstaged
    hunks can't slip in.
 4. It lints and type-checks, then filters (next section). Issues deny the commit with a report.
+   It also measures code smells (see Code smells below).
 5. Committing the same lint result again passes and records the issues as known. Type and compile errors don't
    pass on a retry: they pass fixed, or after `broom known --accept "<why>"`, which records the blocked result as
    known with the reason. A retry alone let a subagent commit 167 tsc errors without a word.
@@ -37,6 +38,21 @@ it stored, which hands a worktree another directory's issues. Caches unused for 
 Lint findings count on lines that differ from the base (`git diff -U0`; an untracked file counts whole). Compile
 and type errors count anywhere, including files nobody touched. A known issue is keyed on file, tool, rule,
 message and the line's text, so it stays known when lines above it move. Known issues expire after 30 days.
+
+## Code smells
+
+Smells use broom's limits in every repo instead of the project's lint config: the bar is the user's, not each
+repo's. Each tool runs in a scratch copy of the files, once as they are and once at the base revision, under a
+config broom writes, so project configs can't move it. Findings match across versions by file, metric and the
+function's name, else the line's text.
+
+A smell counts when the change pushed it past a limit or grew it while past the hard one. Plain growth would be
+more literal but measured badly: across six of the user's repos, 20 to 265 source files sit over 400 lines, so a
+hint on every added line would have been the norm, and noise teaches Claude to override broom.
+
+Past the hard limit a smell is `severe`: like a type error it never passes on a retry alone, only fixed or
+accepted with a reason. Stopping a turn twice records the rest as known but leaves severe smells and type errors
+out, so the commit still stops on them.
 
 ## Format scopes
 

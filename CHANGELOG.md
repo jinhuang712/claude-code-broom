@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.12.0
+
+- Code smells: long functions and files, many parameters, deep nesting, high complexity and nested ternaries,
+  measured against broom's own limits in every repo (soft 50/400/5/4/10 for function lines, file lines,
+  parameters, nesting and complexity; hard 100/1000/8/6/20) with ruff and Python's `ast`, oxlint, golangci-lint
+  and SwiftLint. Only what a change made worse counts: pushed past a limit, or grown while past the hard one.
+- Past the soft limit a smell is a hint, in the commit's context and once at a turn's end. Past the hard limit it
+  blocks the commit, and like a type error passes only fixed or accepted with `broom known --accept "<why>"`.
+- `broom sweep` lists the smells the changes made worse, `--all` every smell in the repo. Turn them off with the
+  `smells` setting; `.broom.json` `limits` moves them per repo.
+- Stopping a turn twice no longer records type errors or severe smells as known, so the commit still stops on
+  them.
+
 ## 0.11.0
 
 - Settings start at defaults and are never asked. `/broom:setup` asks at most two questions, both before acting

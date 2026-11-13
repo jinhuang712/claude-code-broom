@@ -6,6 +6,11 @@ Less is more. broom does a few things, quietly, and stays out of the way.
 broom runs the formatter, linter and type checker a repo already uses, with its configs. Its own defaults only
 fill a gap where a project has none, and it never formats a language the project hasn't set a formatter up for.
 
+**One bar for smells.**
+Code smells are the exception to the project's tools: long functions, big files, deep nesting and the like are
+measured against broom's limits in every repo, because how much of them you'll put up with is yours, not each
+repo's. They still use each language's own tool to measure.
+
 **Only what changed.**
 Lint findings count on the lines that changed, and by default so does formatting. A one-line fix never turns
 into a reformatted file or a wall of someone else's old warnings. Type errors are the exception: they count

@@ -9,6 +9,8 @@
 
 - **配置**：在仓库里开会话时发现缺什么，让 Claude 提议帮你安装和配置。没有你的同意，什么都不装。
 - **清扫**：该清扫的时候，broom 对 Claude 的改动做格式化、lint 和类型检查，问题解决前不放行。
+- **闻味道**：改动让函数或文件变长、参数变多、嵌套变深、复杂度变高，或写出嵌套三元时，过软上限就提示，过硬上限
+  就拦。没被改坏的旧代码不会被提起。
 - **看见**：为 Go、TS/JS、Rust、Python、Swift、CSS（含 SCSS、Less）提供语言服务器，Claude 边改边看到诊断。
 
 它用你项目自己的工具和配置，只看改动的部分，同样的 lint 结果不会拦第二次。
@@ -84,11 +86,12 @@ tsc (~/code/app):
 | `format_on` | `commit` | `edit`（每次编辑后也格式化）、`off` |
 | `check_on` | `stop`（每轮对话结束时检查，提交时也检查） | `commit`（只在提交时检查）、`off` |
 | `format_scope` | `changed` | `function`（整个改动过的函数；CSS 里是整条规则；Swift 里也包括计算属性）、`file` |
+| `smells` | `on` | `off` |
 
-仓库根目录的 `.broom.json` 可以为单个仓库覆盖这些设置，还能排除路径：
+仓库根目录的 `.broom.json` 可以为单个仓库覆盖这些设置，还能排除路径、调整坏味道的上限：
 
 ```json
-{ "format_scope": "function", "exclude": ["vendor/**", "**/*.pb.go"] }
+{ "format_scope": "function", "exclude": ["vendor/**", "**/*.pb.go"], "limits": { "function_lines": [60, 120] } }
 ```
 
 `broom` 命令也在 PATH 上：`broom sweep`、`broom doctor`、`broom known`。详见 [Features](FEATURES.md)。

@@ -21,6 +21,7 @@
 
 - In a legacy repo, no old warning ever blocks Claude.
 - A false positive costs one round, never a loop.
+- A smell a change didn't push past a limit never comes up.
 - Setup asks at most two questions, both before acting on the user's machine or repo; settings start at
   defaults and are never asked.
 - An idle hook costs about 15 ms; a commit check, a second or two.

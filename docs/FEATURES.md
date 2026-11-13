@@ -36,6 +36,7 @@
 | `format_on` | `commit`, `edit` (also after every edit), `off` | `commit` |
 | `check_on` | `stop` (at every turn end, and at commit), `commit` (only at commit), `off` | `stop` |
 | `format_scope` | `changed`, `function`, `file` | `changed` |
+| `smells` | `on`, `off` | `on` |
 
 ## Per-repo `.broom.json`
 
@@ -80,6 +81,28 @@ accept Tailwind's directives and functions (v3 and v4) and CSS modules (`compose
 build output and `*.min.css`. The SCSS and Less configs have to be installed in the project; without them those
 files aren't linted, with a note. The language server accepts the same Tailwind at-rules and `composes`. Sass's
 indented syntax, Stylus, `<style>` blocks in `.vue` or `.svelte` files and CSS-in-JS aren't covered.
+
+## Code smells
+
+| Smell | Soft (hint) | Hard (block) | Python | TS/JS | Go | Swift |
+|---|---|---|---|---|---|---|
+| `function_lines` | 50 | 100 | `ast` | `max-lines-per-function` | `funlen` | `function_body_length` |
+| `file_lines` | 400 | 1000 | broom counts lines, in every language | | | |
+| `params` | 5 | 8 | `PLR0913` | `max-params` | `revive` `argument-limit` | `function_parameter_count` |
+| `nesting` | 4 | 6 | `PLR1702` | `max-depth` | `nestif` | — |
+| `complexity` | 10 | 20 | `C901` | `complexity` | `gocognit` | `cyclomatic_complexity` |
+| `nested_ternary` | — | any | — | `no-nested-ternary` | — | — |
+
+- Each tool runs alone in a scratch copy with a config broom writes, so the project's lint config doesn't change
+  the bar. Missing tools are skipped with a note.
+- Only what a change made worse counts: each file is measured as it is and at the base revision (HEAD for hooks).
+  A smell counts when the change pushed it past a limit, or grew it while past the hard one; growth between the
+  limits is left alone.
+- A hint goes into the commit's context, and stops a turn's end once. A block stops the commit and passes only
+  fixed or accepted with `broom known --accept "<why>"`, like a type error.
+- `broom sweep` lists the smells the changes made worse; `broom sweep --all` lists every smell in the repo.
+- Swift has no control-flow nesting rule; complexity covers it.
+- `.broom.json` `limits` moves a smell's bar per repo: `{"limits": {"function_lines": [60, 120]}}`.
 
 ## Doctor checks
 

@@ -12,6 +12,9 @@ project's own rules.
   configure it. Nothing is installed without your yes.
 - **Sweeps.** When it should, broom formats, lints and type-checks Claude's changes, and holds them back until
   they're clean.
+- **Smells.** Long functions and files, many parameters, deep nesting, high complexity and nested ternaries
+  that a change makes worse: a hint past the soft limit, a block past the hard one. Legacy code left as it was
+  never comes up.
 - **Sees.** Language servers for Go, TS/JS, Rust, Python, Swift and CSS (with SCSS and Less) give Claude diagnostics
   as it edits.
 
@@ -90,11 +93,12 @@ Mostly, you don't: broom sweeps on its own. When you want a look first, ask for 
 | `format_on` | `commit` | `edit` (also after every edit), `off` |
 | `check_on` | `stop` (at every turn end, and at commit) | `commit` (only at commit), `off` |
 | `format_scope` | `changed` | `function` (whole changed functions; in CSS, rules; in Swift, computed properties too), `file` |
+| `smells` | `on` | `off` |
 
-A `.broom.json` at the repo root overrides these for one repo and can exclude paths:
+A `.broom.json` at the repo root overrides these for one repo, can exclude paths and can move the smell limits:
 
 ```json
-{ "format_scope": "function", "exclude": ["vendor/**", "**/*.pb.go"] }
+{ "format_scope": "function", "exclude": ["vendor/**", "**/*.pb.go"], "limits": { "function_lines": [60, 120] } }
 ```
 
 The `broom` command is on the PATH too: `broom sweep`, `broom doctor`, `broom known`. See [Features](docs/FEATURES.md).
