@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.0
+
+- Type and compile errors don't pass on a retry alone. A blocked commit that holds them passes once they're fixed,
+  or after `broom known --accept "<why>"`, which records the blocked result as known with the reason. Lint findings
+  still pass the second time unchanged. Before, a subagent could commit 167 tsc errors by running the same commit
+  twice, without a word.
+- `broom known` lists the reason next to each accepted issue.
+
 ## 0.9.0
 
 - Swift. Linted with SwiftLint: the project's `.swiftlint.yml` where it has one (run from the outermost, so nested

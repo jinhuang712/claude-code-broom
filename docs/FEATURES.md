@@ -26,7 +26,7 @@
 | `broom fmt [paths]` | Format only. `--scope` |
 | `broom doctor [--json]` | Languages, tools, configs and conflicts, with the commands that fix them |
 | `broom init [dir]` | Add default configs where missing. Never overwrites. `--dry-run` |
-| `broom known [--clear] [paths]` | List or clear accepted issues |
+| `broom known [--accept WHY] [--clear] [paths]` | List or clear accepted issues. `--accept WHY` accepts the last blocked commit's issues with the reason: how an unfixed type or compile error gets through |
 | `broom setup --done / --dismiss / --reset` | Record the setup decision; gaps left alone are remembered by kind for every repo. `--reset` forgets them all |
 
 ## Settings (`/config`)

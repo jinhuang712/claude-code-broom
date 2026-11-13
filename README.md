@@ -15,12 +15,13 @@ project's own rules.
 - **Sees.** Language servers for Go, TS/JS, Rust, Python, Swift and CSS (with SCSS and Less) give Claude diagnostics
   as it edits.
 
-It uses your project's own tools and configs, only looks at what changed, and never blocks twice on the same
-result.
+It uses your project's own tools and configs, only looks at what changed, and never blocks twice on the same lint
+result. A type error passes fixed, or accepted with a reason on record.
 
 ```text
-[broom] Commit blocked: 2 issue(s) in the files being committed. Fix them and commit again. If one is
-pre-existing or a false positive, say so and run the same commit again: broom lets an unchanged result through.
+[broom] Commit blocked: 2 issue(s) in the files being committed, 1 of them type or compile errors, which don't
+pass on a retry. Fix them and commit again. If they predate this change or are false positives, run
+`broom known --accept "<why>"`, then commit again.
 
 oxlint (~/code/app):
   src/api/client.ts:42:5  typescript(no-floating-promises)  Promises must be awaited

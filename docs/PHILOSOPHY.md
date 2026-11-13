@@ -13,7 +13,8 @@ anywhere, because a changed signature breaks callers in files nobody touched.
 
 **Never in the way.**
 Checks run at natural checkpoints, not on every edit. Hooks that have nothing to do exit in milliseconds. A missing
-tool never blocks a commit, and the same result never blocks twice.
+tool never blocks a commit, and the same lint result never blocks twice. Type errors don't pass on a retry alone:
+Claude fixes them, or accepts them with a reason that stays on record.
 
 **Ask, don't assume.**
 broom installs nothing and changes no setting without a yes. Hooks can't ask anyone, so they tell Claude, and

@@ -11,11 +11,13 @@
 - **清扫**：该清扫的时候，broom 对 Claude 的改动做格式化、lint 和类型检查，问题解决前不放行。
 - **看见**：为 Go、TS/JS、Rust、Python、Swift、CSS（含 SCSS、Less）提供语言服务器，Claude 边改边看到诊断。
 
-它用你项目自己的工具和配置，只看改动的部分，同样的结果不会拦第二次。
+它用你项目自己的工具和配置，只看改动的部分，同样的 lint 结果不会拦第二次。
+类型错误要么修好，要么带着记录在案的理由接受。
 
 ```text
-[broom] Commit blocked: 2 issue(s) in the files being committed. Fix them and commit again. If one is
-pre-existing or a false positive, say so and run the same commit again: broom lets an unchanged result through.
+[broom] Commit blocked: 2 issue(s) in the files being committed, 1 of them type or compile errors, which don't
+pass on a retry. Fix them and commit again. If they predate this change or are false positives, run
+`broom known --accept "<why>"`, then commit again.
 
 oxlint (~/code/app):
   src/api/client.ts:42:5  typescript(no-floating-promises)  Promises must be awaited

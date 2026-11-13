@@ -28,7 +28,9 @@ it stored, which hands a worktree another directory's issues. Caches unused for 
 3. It formats them and re-stages what was staged in full. A partly staged file is left alone, so its unstaged
    hunks can't slip in.
 4. It lints and type-checks, then filters (next section). Issues deny the commit with a report.
-5. Committing the same result again passes and records the issues as known.
+5. Committing the same lint result again passes and records the issues as known. Type and compile errors don't
+   pass on a retry: they pass fixed, or after `broom known --accept "<why>"`, which records the blocked result as
+   known with the reason. A retry alone let a subagent commit 167 tsc errors without a word.
 
 ## What counts
 
