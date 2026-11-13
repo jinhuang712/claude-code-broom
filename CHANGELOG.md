@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.12.1
+
+- Smells skip dependencies, environments and build output (`node_modules`, `.venv`, `dist`, `release`, `target`,
+  ...), minified files, `.d.ts` and generated code. A repo with an unignored `node_modules` and app build put
+  58,000 files in a sweep's scope; the smell pass over them now takes under 3 seconds.
+- The base version of the files is read with one `git cat-file --batch` instead of a `git show` per file, and a
+  path with a space no longer breaks the read.
+- Less noise, measured on four of the author's repos: complexity in tests doesn't count (each assertion's `if`
+  adds to it), and neither do `describe`/`it` callbacks, which are containers.
+
 ## 0.12.0
 
 - Code smells: long functions and files, many parameters, deep nesting, high complexity and nested ternaries,

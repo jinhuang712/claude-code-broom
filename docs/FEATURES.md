@@ -101,6 +101,12 @@ indented syntax, Stylus, `<style>` blocks in `.vue` or `.svelte` files and CSS-i
 - A hint goes into the commit's context, and stops a turn's end once. A block stops the commit and passes only
   fixed or accepted with `broom known --accept "<why>"`, like a type error.
 - `broom sweep` lists the smells the changes made worse; `broom sweep --all` lists every smell in the repo.
+- Dependencies, environments and build output (`node_modules`, `vendor`, `Pods`, `Carthage`, `.venv`, `venv`,
+  `site-packages`, `__pycache__`, `.build`, `DerivedData`, `dist`, `build`, `out`, `release`, `target`, `.bundle`,
+  `.next`, `coverage`, `test-results`), minified files, `.d.ts` and generated code (`DO NOT EDIT`, `@generated`)
+  are skipped.
+- In tests, complexity doesn't count: every assertion's `if` adds to it. Neither do the length or complexity of
+  `describe`/`it`/`test` callbacks, which are containers. Long test functions still count.
 - Swift has no control-flow nesting rule; complexity covers it.
 - `.broom.json` `limits` moves a smell's bar per repo: `{"limits": {"function_lines": [60, 120]}}`.
 
