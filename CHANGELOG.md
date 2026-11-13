@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.13.0
+
+- Smells that count by occurrence. A change that adds a lint suppression without a reason, a swallowed error or
+  empty block, or commented-out code is blocked; one that adds unused parameters, magic numbers, debug prints,
+  TODOs, type escapes, globals, boolean flag parameters or too broad test assertions gets a hint. Long types (over
+  250 lines) hint too.
+- An occurrence counts when the change raises the count in a file; a moved or edited line that keeps its
+  occurrence doesn't. Magic numbers in tests don't count.
+- `.broom.json` `smells_off` turns single smells off.
+- Go measures only what linters reading syntax alone can see: repeated literals, globals and debug prints need
+  types, and the scratch copy's imports don't resolve.
+- `Generated/` and `testdata/` are skipped like other generated and fixture code.
+
 ## 0.12.1
 
 - Smells skip dependencies, environments and build output (`node_modules`, `.venv`, `dist`, `release`, `target`,

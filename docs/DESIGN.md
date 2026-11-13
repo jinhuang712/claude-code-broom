@@ -50,6 +50,14 @@ A smell counts when the change pushed it past a limit or grew it while past the 
 more literal but measured badly: across six of the user's repos, 20 to 265 source files sit over 400 lines, so a
 hint on every added line would have been the norm, and noise teaches Claude to override broom.
 
+Smells that count by occurrence (suppressions, swallowed errors, magic numbers, TODOs and the like) can't use
+limits: one more magic number in a file of 225 is the signal. They count when the change raises the count in a
+file, matched by line text so moved code stays old. Counting edited lines too made count-neutral edits hint, which
+sampling the user's repos showed as noise.
+
+Go runs only linters that read syntax alone. The scratch copy holds the changed files, not their packages, so
+imports don't resolve; a single linter that needs types makes golangci-lint skip every linter in the run.
+
 Past the hard limit a smell is `severe`: like a type error it never passes on a retry alone, only fixed or
 accepted with a reason. Stopping a turn twice records the rest as known but leaves severe smells and type errors
 out, so the commit still stops on them.

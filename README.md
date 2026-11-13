@@ -12,9 +12,10 @@ project's own rules.
   configure it. Nothing is installed without your yes.
 - **Sweeps.** When it should, broom formats, lints and type-checks Claude's changes, and holds them back until
   they're clean.
-- **Smells.** Long functions and files, many parameters, deep nesting, high complexity and nested ternaries
-  that a change makes worse: a hint past the soft limit, a block past the hard one. Legacy code left as it was
-  never comes up.
+- **Smells.** Long functions, files and types, many parameters, deep nesting, high complexity and nested
+  ternaries that a change makes worse: a hint past the soft limit, a block past the hard one. Lint suppressions
+  without a reason, swallowed errors and commented-out code a change adds block; magic numbers, debug prints,
+  TODOs, type escapes and the like hint. Legacy code left as it was never comes up.
 - **Sees.** Language servers for Go, TS/JS, Rust, Python, Swift and CSS (with SCSS and Less) give Claude diagnostics
   as it edits.
 

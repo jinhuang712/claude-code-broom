@@ -92,6 +92,30 @@ indented syntax, Stylus, `<style>` blocks in `.vue` or `.svelte` files and CSS-i
 | `nesting` | 4 | 6 | `PLR1702` | `max-depth` | `nestif` | — |
 | `complexity` | 10 | 20 | `C901` | `complexity` | `gocognit` | `cyclomatic_complexity` |
 | `nested_ternary` | — | any | — | `no-nested-ternary` | — | — |
+| `type_lines` | 250 | — | `ast` | — | — | `type_body_length` |
+
+These count by occurrence: a change that adds one gets the smell's level.
+
+| Smell | Level | Python | TS/JS | Go | Swift |
+|---|---|---|---|---|---|
+| `suppression` | block | `PGH003` `PGH004` | `ban-ts-comment` | `nolintlint` | `blanket_disable_command` |
+| `swallowed_error` | block | `S110` | `no-empty` `no-useless-catch` | `revive` `empty-block` | `no_empty_block` |
+| `commented_code` | block | `ERA001` | — | — | — |
+| `unused_params` | hint | `ARG` | — | `revive` `unused-parameter` | `unused_parameter` |
+| `magic_numbers` | hint | `PLR2004` | `no-magic-numbers` | `mnd` | `no_magic_numbers` |
+| `debug_output` | hint | `T201` `T203` | `no-console` | — | — |
+| `todo` | hint | `FIX` | `no-warning-comments` | `godox` | `todo` |
+| `type_escape` | hint | `ANN401` | `no-explicit-any` `no-non-null-assertion` | — | `force_cast` `force_unwrapping` `force_try` |
+| `globals` | hint | `PLW0603` | — | — | — |
+| `bool_params` | hint | `FBT001` | — | `revive` `flag-parameter` | — |
+| `broad_test_asserts` | hint | `PT011` | — | — | — |
+
+- An occurrence counts when the change raises the count in a file. Lines match the base by text: a moved line
+  stays old, and an edited line that keeps its occurrence adds nothing. A line counts once per smell.
+- Unused variables and imports stay with the project's linter, which already reports them. In Go only linters
+  that read syntax alone run, since the scratch copy's imports don't resolve: no repeated literals, globals or
+  debug prints there.
+- `.broom.json` `smells_off` turns single smells off: `{"smells_off": ["magic_numbers", "debug_output"]}`.
 
 - Each tool runs alone in a scratch copy with a config broom writes, so the project's lint config doesn't change
   the bar. Missing tools are skipped with a note.
@@ -103,9 +127,10 @@ indented syntax, Stylus, `<style>` blocks in `.vue` or `.svelte` files and CSS-i
 - `broom sweep` lists the smells the changes made worse; `broom sweep --all` lists every smell in the repo.
 - Dependencies, environments and build output (`node_modules`, `vendor`, `Pods`, `Carthage`, `.venv`, `venv`,
   `site-packages`, `__pycache__`, `.build`, `DerivedData`, `dist`, `build`, `out`, `release`, `target`, `.bundle`,
-  `.next`, `coverage`, `test-results`), minified files, `.d.ts` and generated code (`DO NOT EDIT`, `@generated`)
+  `.next`, `coverage`, `test-results`, `testdata`, `Generated`, `generated`), minified files, `.d.ts` and generated code (`DO NOT EDIT`, `@generated`)
   are skipped.
-- In tests, complexity doesn't count: every assertion's `if` adds to it. Neither do the length or complexity of
+- In tests, complexity and magic numbers don't count: every assertion's `if` adds to complexity, and the numbers
+  are fixtures. Neither do the length or complexity of
   `describe`/`it`/`test` callbacks, which are containers. Long test functions still count.
 - Swift has no control-flow nesting rule; complexity covers it.
 - `.broom.json` `limits` moves a smell's bar per repo: `{"limits": {"function_lines": [60, 120]}}`.
