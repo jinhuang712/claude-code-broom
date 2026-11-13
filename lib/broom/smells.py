@@ -21,8 +21,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from .checks import Issue
-from .common import SMELL_LIMITS, SMELL_PRESENCE, repo_config, setting
-from .clones import Clone, find_clones
+from .common import DEAD_CODE, SMELL_LIMITS, SMELL_PRESENCE, ChangedLines, repo_config, setting
+from .clones import Clone, Unused, find_clones, find_unused
 from .gate import issue_key
 from .measure import SMELL_EXTS, Limits, Raw, measure
 
@@ -47,6 +47,7 @@ DESCRIBE = {
     "nested_ternary": "a ternary nests inside another",
     "type_lines": "{key} is {value} lines long",
     "duplicate_lines": "{value} lines repeat {key}",
+    DEAD_CODE: "{key} is never used",
 }
 LABELS = {
     "suppression": "lint suppression(s) without a reason or rule",
@@ -80,6 +81,8 @@ class Smell:
     added: List[int] = field(default_factory=list)  # an occurrence smell's lines this change added
 
     def text(self) -> str:
+        if self.metric == DEAD_CODE:
+            return DESCRIBE[DEAD_CODE].format(key=self.key, value=self.value)
         if self.metric in SMELL_PRESENCE:
             where = ", ".join(map(str, self.added[:LINES_SHOWN])) + (" ..." if len(self.added) > LINES_SHOWN else "")
             if self.was is None:
@@ -253,6 +256,19 @@ def clone_smells(repo: Path, clones: List[Clone], scope: set, base: Optional[str
     return out
 
 
+def unused_smells(repo: Path, unused: List[Unused], scope: set, base: Optional[str]) -> List[Smell]:
+    """Dead code in `scope` on lines the change added, a new file included (every finding when `base` is None):
+    something Claude wrote and never wired in. A hint only: what loads dynamically (a manifest's scripts, plugins)
+    looks unused too."""
+    changed = ChangedLines(base) if base else None
+    out = []
+    for u in unused:
+        lines = changed.get(repo / u.rel) if changed else None
+        if u.rel in scope and (lines is None or u.line in lines):
+            out.append(Smell(repo, repo / u.rel, u.line, DEAD_CODE, u.what, 1, None, "jscpd", "hint", 0))
+    return out
+
+
 def find_smells(repo: Path, files: List[Path], base: Optional[str]) -> Tuple[List[Smell], List[str]]:
     """Smells in `files` that are new or worse than at `base`; every smell when `base` is None."""
     now_text = current_texts(repo, files)
@@ -261,13 +277,15 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str]) -> Tuple[Lis
     lim, notes = limits(repo), []
     off = tuple(repo_config(repo).get("smells_off") or ())
     old_text = base_texts(repo, base, list(now_text)) if base else None
-    with tempfile.TemporaryDirectory(prefix="broom-smells-") as tmp, ThreadPoolExecutor(3) as pool:
+    with tempfile.TemporaryDirectory(prefix="broom-smells-") as tmp, ThreadPoolExecutor(4) as pool:
         now = pool.submit(measure, Path(tmp) / "now", now_text, lim, repo, notes)
         before = pool.submit(measure, Path(tmp) / "before", old_text, lim, repo, []) if old_text else None
         clones = None if "duplicate_lines" in off else pool.submit(
             find_clones, repo, base, lim["duplicate_lines"][0] + 1, sorted(SKIP_DIRS), notes)
+        unused = None if DEAD_CODE in off else pool.submit(find_unused, repo, sorted(SKIP_DIRS), notes)
         found = compare(now.result(), before.result() if before else ([] if base else None), lim, repo, off)
         found += clone_smells(repo, clones.result() if clones else [], set(now_text), base, lim)
+        found += unused_smells(repo, unused.result() if unused else [], set(now_text), base)
     return sorted(found, key=lambda s: (s.level != "block", str(s.file), s.line)), list(dict.fromkeys(notes))
 
 

@@ -15,8 +15,8 @@ from typing import Dict, List, Optional, Tuple
 from . import __version__
 from .common import (
     BIOME_CFG, DATA_ROOT, DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG, REPO_FILE, RUFF_CFG,
-    DIALECT_DEFAULTS, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, STYLELINT_CFG, SWIFT_FORMAT_CFG, SWIFTFORMAT_CFG,
-    SWIFTLINT_CFG,
+    DEAD_CODE, DIALECT_DEFAULTS, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, STYLELINT_CFG, SWIFT_FORMAT_CFG,
+    SWIFTFORMAT_CFG, SWIFTLINT_CFG,
     css_linters, find_up, git, in_node_modules, js_formatter, js_linters, load_json, read_jsonc, resolve_bin,
     ruff_configured, run, save_json, setting, short_hash, swift_format_cmd, swift_formatter, swift_linter,
 )
@@ -420,7 +420,7 @@ def check_repo_file(repo: Path) -> List[Item]:
         problems.append("exclude must be a list of globs")
     problems += limit_problems(data.get("limits"))
     off = data.get("smells_off", [])
-    names = set(SMELL_LIMITS) | set(SMELL_PRESENCE)
+    names = set(SMELL_LIMITS) | set(SMELL_PRESENCE) | {DEAD_CODE}
     if not isinstance(off, list) or not all(n in names for n in off):
         problems.append(f"smells_off must list smell names from: {', '.join(sorted(names))}")
     if problems:

@@ -39,6 +39,8 @@ SMELL_LIMITS = {
     "type_lines": (250, 1_000_000),  # a hint only: whether to split a type is a design call
     "duplicate_lines": (10, 30),  # a block of code repeated elsewhere
 }
+# Code nothing uses, found across the repo (JS/TS/Python): a hint only, as dynamic loading looks unused too.
+DEAD_CODE = "dead_code"
 # Smells that count by occurrence, not by size: a change that adds one gets this level.
 SMELL_PRESENCE = {
     "suppression": "block",  # a lint suppression without a reason or a rule
