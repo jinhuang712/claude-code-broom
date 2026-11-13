@@ -36,6 +36,21 @@ SMELL_LIMITS = {
     "nesting": (4, 6),
     "complexity": (10, 20),
     "nested_ternary": (0, 0),
+    "type_lines": (250, 1_000_000),  # a hint only: whether to split a type is a design call
+}
+# Smells that count by occurrence, not by size: a change that adds one gets this level.
+SMELL_PRESENCE = {
+    "suppression": "block",  # a lint suppression without a reason or a rule
+    "swallowed_error": "block",  # an empty block or catch, or a catch that only rethrows
+    "commented_code": "block",
+    "unused_params": "hint",
+    "magic_numbers": "hint",
+    "debug_output": "hint",
+    "todo": "hint",
+    "type_escape": "hint",  # any, force casts and unwraps, non-null assertions
+    "globals": "hint",
+    "bool_params": "hint",
+    "broad_test_asserts": "hint",
 }
 PLUGIN_ID = "broom@claude-code-broom"
 

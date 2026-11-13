@@ -9,10 +9,56 @@ from pathlib import Path
 from support import HAS_PY, BroomCase
 
 from broom.measure import Raw
-from broom.smells import base_texts, find_smells, made_worse, noise
+from broom.smells import base_texts, compare_occurrences, find_smells, made_worse, noise
+
+
+def todo(line: int, text: str = "# TODO: x") -> Raw:
+    return Raw("a.py", line, "todo", text, 1, "ruff")
 
 
 class SmellTest(BroomCase):
+    def test_an_occurrence_counts_only_when_the_file_gains_one(self) -> None:
+        before = [todo(3), todo(9, "# TODO: y")]
+        self.assertEqual(compare_occurrences([todo(30), todo(90, "# TODO: y")], before, self.tmp), [], "moved")
+        self.assertEqual(compare_occurrences([todo(3), todo(9, "# TODO: z")], before, self.tmp), [], "edited")
+        grown = compare_occurrences([todo(3), todo(9, "# TODO: y"), todo(12, "# TODO: new")], before, self.tmp)
+        self.assertEqual([(s.added, s.value, s.was) for s in grown], [([12], 3, 2)])
+        self.assertEqual(len(compare_occurrences([todo(5), todo(5)], [], self.tmp)[0].added), 1, "once per line")
+
+    @unittest.skipUnless(HAS_PY, "ruff missing")
+    def test_a_swallowed_error_blocks_and_a_print_hints(self) -> None:
+        r = self.repo({"a.py": "def f(x):\n    return x\n"})
+        (r / "a.py").write_text("def f(x):\n    try:\n        return int(x)\n    except Exception:\n        pass\n")
+        self.sh(r, "git", "add", "a.py")
+        reason = self.denied(self.commit(r, "git commit -m x"))
+        self.assertIn("1 more empty block(s) or swallowed error(s)", reason)
+        self.assertIn("broom known --accept", reason)
+        (r / "a.py").write_text('def f(x):\n    print("x is", x)\n    return x\n')
+        self.sh(r, "git", "add", "a.py")
+        out = self.commit(r, "git commit -m x")
+        self.assertIn("1 more debug print(s)", out["hookSpecificOutput"]["additionalContext"])
+        (r / ".broom.json").write_text('{"smells_off": ["debug_output"]}')
+        self.assertNotIn("debug print", str(self.commit(r, "git commit -m x")))
+        (r / ".broom.json").write_text('{"smells_off": ["debug"]}')
+        item = next(i for i in self.doctor(r, self.fake_path())["items"] if i["tool"] == ".broom.json")
+        self.assertIn("smells_off must list smell names", item["detail"])
+
+    def test_occurrence_smells_in_ts_go_and_swift(self) -> None:
+        samples = {
+            "a.ts": ("oxlint", "export function f(): void {\n  try {\n    g();\n  } catch (e) {}\n}\n",
+                     "swallowed_error"),
+            "go/a.go": ("golangci-lint", "package a\n\nfunc F() int {\n\treturn 1 //nolint\n}\n", "suppression"),
+            "a.swift": ("swiftlint", "func f() {\n    do {\n        try g()\n    } catch {}\n}\n", "swallowed_error"),
+        }
+        r = self.repo({"README.md": "x\n"})
+        for rel, (tool, text, metric) in samples.items():
+            with self.subTest(rel):
+                if not shutil.which(tool):
+                    self.skipTest(f"{tool} missing")
+                (r / rel).parent.mkdir(parents=True, exist_ok=True)
+                (r / rel).write_text(text)
+                found, _ = find_smells(r, [r / rel], "HEAD")
+                self.assertIn(("block", metric), [(s.level, s.metric) for s in found])
     def test_test_complexity_and_describe_blocks_are_noise(self) -> None:
         self.assertTrue(noise(Raw("pkg/a_test.go", 1, "complexity", "TestX", 30, "go")))
         self.assertTrue(noise(Raw("src/a.test.ts", 1, "function_lines", 'describe("x", () => {', 120, "js")))
