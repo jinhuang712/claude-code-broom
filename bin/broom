@@ -22,13 +22,13 @@ def _repo_file() -> bool:
         d = os.path.dirname(d)
 
 
-# The edit and stop hooks fire on every edit and every turn but are off by default: leave before loading
-# anything, so an idle hook costs one interpreter start.
+# The edit and stop hooks fire on every edit and every turn: when the options switch them off, leave before
+# loading anything, so an idle hook costs one interpreter start. The defaults mirror SETTINGS in broom.common.
 if sys.argv[1:2] == ["hook"] and not _repo_file():
     event = sys.argv[2:3]
-    if event == ["edit"] and _option("format_on", "commit") != "edit" and _option("check_on", "commit") != "stop":
+    if event == ["edit"] and _option("format_on", "commit") != "edit" and _option("check_on", "stop") != "stop":
         sys.exit(0)
-    if event == ["stop"] and _option("check_on", "commit") != "stop":
+    if event == ["stop"] and _option("check_on", "stop") != "stop":
         sys.exit(0)
 
 # The commit hook sees every Bash call: Claude Code's `if` patterns can't match commands like

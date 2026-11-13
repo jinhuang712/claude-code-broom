@@ -158,7 +158,9 @@ class BroomTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp()).resolve()
         env = {k: v for k, v in os.environ.items() if not k.startswith(("CLAUDE_PLUGIN_", "GIT_"))}
-        self.env = {**env, **GIT_ENV, "CLAUDE_PLUGIN_DATA": str(self.tmp / "data")}
+        # An empty Claude config, so the real user settings (broom's options, enabled plugins) never leak in.
+        self.env = {**env, **GIT_ENV, "CLAUDE_PLUGIN_DATA": str(self.tmp / "data"),
+                    "CLAUDE_CONFIG_DIR": str(self.config_dir())}
 
     def tearDown(self) -> None:
         shutil.rmtree(self.tmp, ignore_errors=True)
@@ -457,12 +459,13 @@ class BroomTest(unittest.TestCase):
         (r / "a.py").write_text("import os\n\ndef f(x):\n    return x\n")
         edit = {"session_id": "s2", "cwd": str(r), "tool_name": "Edit", "tool_input": {"file_path": str(r / "a.py")}}
         stop = {"session_id": "s2", "cwd": str(r), "permission_mode": "default"}
-        self.assertEqual(self.hook("stop", stop), {}, "stop gate is off by default")
-        self.hook("edit", edit, check_on="stop")
-        out = self.hook("stop", stop, check_on="stop")
-        self.assertEqual(out.get("decision"), "block")
+        self.hook("edit", edit, check_on="commit")
+        self.assertEqual(self.hook("stop", stop, check_on="commit"), {}, "check_on=commit leaves the turn end alone")
+        self.hook("edit", edit)
+        out = self.hook("stop", stop)
+        self.assertEqual(out.get("decision"), "block", "the turn-end check is on by default")
         self.assertIn("F401", out["reason"])
-        self.assertIn("left unfixed", self.hook("stop", stop, check_on="stop").get("systemMessage", ""))
+        self.assertIn("left unfixed", self.hook("stop", stop).get("systemMessage", ""))
 
     @unittest.skipUnless(HAS_PY, "ruff missing")
     def test_sweep_cli(self) -> None:

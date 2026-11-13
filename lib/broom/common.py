@@ -23,7 +23,7 @@ DEFAULTS = PLUGIN_ROOT / "defaults"
 
 SETTINGS = {
     "format_on": ("commit", ("commit", "edit", "off")),
-    "check_on": ("commit", ("commit", "stop", "off")),
+    "check_on": ("stop", ("commit", "stop", "off")),
     "format_scope": ("changed", ("changed", "function", "file")),
 }
 PLUGIN_ID = "broom@claude-code-broom"

@@ -1,10 +1,11 @@
 """Hook handlers. When each one does anything is set by the userConfig options `format_on` and `check_on`.
 
 - commit (PreToolUse on `git commit`): format the files the commit takes, then lint and type-check them; deny
-  the commit while issues remain. The default for both options.
+  the commit while issues remain. Runs unless an option is off.
 - edit (PostToolUse on Edit, Write and Serena's edit tools): format per edit when format_on=edit, and record
   the file for the stop gate when check_on=stop.
-- stop (Stop): lint and type-check the files edited this turn when check_on=stop.
+- stop (Stop): lint and type-check the files edited this turn when check_on=stop, the default: it catches what
+  Claude writes even when the user commits by hand, which the commit hook never sees.
 - session (SessionStart): when the repo is missing tools or configs broom needs, ask Claude to offer the user
   /broom:setup. Hooks can't ask the user anything themselves; Claude does, with the user's consent.
 

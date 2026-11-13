@@ -18,7 +18,8 @@ Claude fixes them, or accepts them with a reason that stays on record.
 
 **Ask, don't assume.**
 broom installs nothing and changes no setting without a yes. Hooks can't ask anyone, so they tell Claude, and
-Claude asks you.
+Claude asks you. It asks only before acting on your machine or repo, never to have you pick settings: those
+start at defaults that suit most people, and you change one when you disagree.
 
 **Say what happened.**
 Every skipped check, timeout and fallback is reported. broom doesn't guess: function boundaries come from a

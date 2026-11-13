@@ -11,8 +11,8 @@
 
 ## Skills
 
-- **`/broom:setup`**: runs the doctor, asks up to four questions (install tools, turn formatting on, when broom
-  runs, format scope), acts on the answers, verifies, and records the decision.
+- **`/broom:setup`**: runs the doctor, asks at most two questions (install tools, turn formatting on), acts on
+  the answers, verifies, and records the decision. Settings aren't asked: they start at defaults.
 - **`/broom:sweep`**: sweeps a scope you describe in your own words ("what I staged", "the last 3 commits",
   "this branch", "src/api", "the whole repo") and reports what's left.
 
@@ -34,7 +34,7 @@
 | Setting | Values | Default |
 |---|---|---|
 | `format_on` | `commit`, `edit` (also after every edit), `off` | `commit` |
-| `check_on` | `commit`, `stop` (also at every turn end), `off` | `commit` |
+| `check_on` | `stop` (at every turn end, and at commit), `commit` (only at commit), `off` | `stop` |
 | `format_scope` | `changed`, `function`, `file` | `changed` |
 
 ## Per-repo `.broom.json`
@@ -42,7 +42,7 @@
 ```json
 {
   "format_scope": "function",
-  "check_on": "stop",
+  "check_on": "commit",
   "exclude": ["vendor/**", "**/*.pb.go"]
 }
 ```

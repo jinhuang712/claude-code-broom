@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.11.0
+
+- Settings start at defaults and are never asked. `/broom:setup` asks at most two questions, both before acting
+  on your machine or repo: install the missing tools, add formatter configs. Change a setting in `/config` or
+  `.broom.json` when you disagree with its default.
+- `check_on` defaults to `stop`: broom checks the files Claude edited at every turn end, as well as at commit. The
+  commit hook only sees Claude's own commits, so with the old default a user who commits by hand got no checks.
+- Tests run against an empty Claude config, so the user's own settings no longer leak in.
+
 ## 0.10.0
 
 - Type and compile errors don't pass on a retry alone. A blocked commit that holds them passes once they're fixed,

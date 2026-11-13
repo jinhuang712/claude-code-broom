@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Set up broom for this repo. Finds missing formatters, linters, type checkers and language servers, asks the user, installs what they agree to, adds default configs and picks when broom runs. Use for /broom:setup, when broom's session note says the repo has gaps, or when the user asks to set up linting, formatting or language servers.
+description: Set up broom for this repo. Finds missing formatters, linters, type checkers and language servers, asks the user, installs what they agree to and adds default configs. Use for /broom:setup, when broom's session note says the repo has gaps, or when the user asks to set up linting, formatting or language servers.
 ---
 
 ## 1. Diagnose
@@ -16,10 +16,13 @@ the same with JS/TS tools installed machine-wide. If `healthy` is true, tell the
 `broom setup --done`, and stop.
 
 Setup answers hold in every repo. An item with `answered: true` is a kind of gap the user already left alone
-somewhere; don't raise it again unless the user asks for everything. `settings` shows each setting's `value` and
-its `source`: `user` or `repo` means the user already chose it.
+somewhere; don't raise it again unless the user asks for everything.
 
 ## 2. Ask
+
+Ask only before acting on the user's machine or repo: installing tools and adding config files. Never ask the
+user to pick settings. They start at defaults (format at commit, check at each turn end and at commit, format
+only the changed lines), and the user changes one in `/config` or `.broom.json` when they object.
 
 Summarize the gaps in plain words, then ask with AskUserQuestion, in one call, only the questions that apply:
 
@@ -33,16 +36,6 @@ Summarize the gaps in plain words, then ask with AskUserQuestion, in one call, o
    once-for-every-repo install): `broom init <dir>` adds default configs and never overwrites. Options: yes
    (recommended); yes, and reformat the whole repo now (a large diff); no. Configs live in the repo, so this is
    the one question a new repo can raise again, and only if the user said yes before.
-3. **When should broom run?** Skip when `settings` shows `check_on` and `format_on` with source `user` or
-   `repo`. Ask how they work:
-   - Claude commits for me → on commit (recommended): `format_on=commit check_on=commit`
-   - I commit myself → end of each turn: `format_on=commit check_on=stop`
-   - Strictest → every edit and each turn: `format_on=edit check_on=stop`
-4. **How much of a file should broom reformat?** Skip when `format_scope` has source `user` or `repo`.
-   - Only the changed lines (recommended), like an IDE's "only VCS changed text": `format_scope=changed`
-   - The functions holding the changed lines (in CSS, the rules), found by the language server:
-     `format_scope=function`
-   - The whole file, best once the repo is fully formatted: `format_scope=file`
 
 Ask only what applies. Never install or change anything the user didn't pick. If nothing applies, say so and
 go to step 4.
@@ -52,17 +45,15 @@ go to step 4.
 - Run the picked commands (`fix` / `configure`, or their `_global` versions) from the repo root, one at a time,
   and stop on a failure. `xcode-select --install` opens macOS's installer and returns at once: ask the user to
   finish it before going on.
-- Apply the trigger and scope choices for all repos:
+- Change a setting only when the user objects to its default. For all repos:
 
   ```bash
-  claude plugin install broom@claude-code-broom --config format_on=<value> --config check_on=<value> \
-    --config format_scope=<value>
+  claude plugin install broom@claude-code-broom --config <name>=<value>
   ```
 
-  If the user wants them for this repo only, write them to `.broom.json` at the repo root instead, for example
-  `{"format_on": "commit", "check_on": "stop", "format_scope": "function"}`. It overrides the user settings in
-  this repo. Paths broom should never touch (generated code, vendored code) go in `"exclude"` as globs relative
-  to the repo root, for example `["vendor/**", "**/*.pb.go"]`.
+  For this repo only, write it to `.broom.json` at the repo root, for example `{"check_on": "commit"}`; it
+  overrides the user settings here. Paths broom should never touch (generated code, vendored code) go in
+  `"exclude"` as globs relative to the repo root, for example `["vendor/**", "**/*.pb.go"]`.
 
 - Whole-repo reformat, if picked: `broom sweep --all --fix`.
 - A `conflict` means another plugin serves the same files. Offer its `claude plugin disable …` command; the

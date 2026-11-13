@@ -49,11 +49,12 @@ Python 3.9+ as `python3` (macOS's system Python works), and git.
    ```
 
 2. Start a session in a repo. If anything is missing, Claude offers `/broom:setup`; accept, or run it yourself.
-   It asks up to four questions, installs what you pick, and checks the result. You set up once: tools install
-   machine-wide, settings are user settings, and a gap you leave alone isn't raised again in any repo. A new
+   It asks at most two questions, whether to install the missing tools and whether to add formatter configs,
+   installs what you pick, and checks the result. It never asks you to pick settings: they start at defaults. You
+   set up once: tools install machine-wide, and a gap you leave alone isn't raised again in any repo. A new
    repo only asks about kinds of gap you haven't answered yet (usually just its missing formatter config).
 
-3. Optional: adjust the settings in `/config`.
+3. Optional: change a setting in `/config` when you disagree with its default.
 
 If you'd rather install the tools yourself, these are the ones broom uses:
 
@@ -87,7 +88,7 @@ Mostly, you don't: broom sweeps on its own. When you want a look first, ask for 
 | Setting | Default | Choices |
 |---|---|---|
 | `format_on` | `commit` | `edit` (also after every edit), `off` |
-| `check_on` | `commit` | `stop` (also at every turn end), `off` |
+| `check_on` | `stop` (at every turn end, and at commit) | `commit` (only at commit), `off` |
 | `format_scope` | `changed` | `function` (whole changed functions; in CSS, rules; in Swift, computed properties too), `file` |
 
 A `.broom.json` at the repo root overrides these for one repo and can exclude paths:
