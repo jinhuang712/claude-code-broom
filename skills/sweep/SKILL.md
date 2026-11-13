@@ -25,3 +25,4 @@ Turn the request (`$ARGUMENTS`, or the conversation) into a `broom sweep` comman
   anywhere. Issues accepted earlier stay hidden, and the output says how many.
 - Relay the report grouped as printed. Fix the findings only if the user asked for fixes.
 - If it reports missing tools, offer /broom:setup.
+- For code smells ranked across the repo and a cleanup worst first, use /broom:clean instead.

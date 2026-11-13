@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 import unittest
 from pathlib import Path
@@ -108,6 +109,30 @@ class SmellTest(BroomCase):
         everything, _ = find_smells(r, [r / "pkg/util.py"], None)
         self.assertEqual(len([s for s in everything if s.metric == "dead_code"]), 2, "a whole-repo sweep lists all")
 
+    def test_smells_ranks_the_repo_worst_first(self) -> None:
+        medium = self.py_function("medium", 60).replace("+=", "-=")  # not a copy of the other
+        r = self.repo({"b.py": medium, "a.py": self.py_function("huge", 120)})
+        out = self.cli(r, "smells", "--top", "5")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn("1 past the hard limit", out.stdout)
+        data = json.loads(self.cli(r, "smells", "--json").stdout)
+        self.assertEqual(data["hotspots"][0]["file"], "a.py")
+        self.assertEqual(data["smells"][0]["text"], "huge is 120 lines long (hard limit 100)", "a scan has no 'new'")
+        self.assertEqual(json.loads(self.cli(r, "smells", "--json", str(r / "b.py")).stdout)["severe"], 0)
+
+    def test_session_note_offers_a_cleanup_until_dismissed(self) -> None:
+        r = self.repo({"a.py": self.py_function("huge", 120)})
+        note = self.session(r, "s5", self.env)["hookSpecificOutput"]["additionalContext"]
+        self.assertIn("1 code smell(s) past the hard limit", note)
+        self.assertIn("/broom:clean", note)
+        self.assertEqual(self.session(r, "s5", self.env), {}, "once per session")
+        self.assertIn("stays quiet", self.cli(r, "smells", "--dismiss").stdout)
+        self.assertNotIn("/broom:clean", str(self.session(r, "s6", self.env)))
+        (r / "b.py").write_text(self.py_function("bigger", 130).replace("+=", "-="))  # not a copy of a.py
+        self.sh(r, "git", "add", "b.py")
+        self.sh(r, "git", "commit", "-qm", "more")
+        self.assertIn("2 code smell(s) past the hard limit", str(self.session(r, "s7", self.env)))
+
     def test_doctor_offers_jscpd_where_smells_measure_code(self) -> None:
         r = self.repo({"pyproject.toml": "[project]\nname = 'a'\n", "a.py": "x = 1\n"})
         item = next(i for i in self.doctor(r, self.fake_path(keep=("ruff",)))["items"] if i["tool"] == "jscpd")
@@ -156,7 +181,8 @@ class SmellTest(BroomCase):
         self.assertEqual(self.commit(r, "git commit -m same-size"), {}, "an untouched-size legacy function is quiet")
         (r / "a.py").write_text(self.py_function("legacy", 155))
         self.sh(r, "git", "add", "a.py")
-        self.assertIn("legacy is 155 lines long (hard limit 100; was 150)", self.denied(self.commit(r, "git commit -m x")))
+        reason = self.denied(self.commit(r, "git commit -m x"))
+        self.assertIn("legacy is 155 lines long (hard limit 100; was 150)", reason)
 
     @unittest.skipUnless(HAS_PY, "ruff missing")
     def test_repo_limits_move_the_bar_and_off_turns_smells_off(self) -> None:

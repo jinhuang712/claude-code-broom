@@ -35,6 +35,7 @@ from .gate import (
     select, setup_hint, verdict,
 )
 from .gitcmd import parse, parse_commit, plan_commit
+from .hotspots import session_note
 from .smells import Smell, gate_smells, hint_text
 
 MAX_BLOCKS = 3
@@ -306,14 +307,19 @@ def hook_session(data: dict) -> None:
     sd = session_dir(data.get("session_id") or "cli")
     if str(repo) in read_lines(sd / "nudged.txt"):
         return  # once per session: a compaction or /clear doesn't repeat it
-    found = new_gaps(repo, diagnose_cached(repo))  # gaps the user already answered, in any repo, stay quiet
-    if not found:
+    notes = [n for n in (setup_note(repo), session_note(repo)) if n]
+    if not notes:
         return
     append_line(sd / "nudged.txt", str(repo))
+    emit({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "\n\n".join(notes)}})
+
+
+def setup_note(repo: Path) -> Optional[str]:
+    found = new_gaps(repo, diagnose_cached(repo))  # gaps the user already answered, in any repo, stay quiet
+    if not found:
+        return None
     summary = "; ".join(describe(i) for i in found[:6]) + (f"; and {len(found) - 6} more" if len(found) > 6 else "")
-    emit({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": (
-        f"broom (the code-hygiene plugin) found gaps in this repo: {summary}. At a natural point, and before your "
-        "first commit here at the latest, offer the user /broom:setup. Don't install anything they haven't agreed "
-        "to; if they decline, run `broom setup --dismiss` so broom stops asking, here and in other repos, until a new "
-        "kind of gap turns up."
-    )}})
+    return (f"broom (the code-hygiene plugin) found gaps in this repo: {summary}. At a natural point, and before "
+            "your first commit here at the latest, offer the user /broom:setup. Don't install anything they haven't "
+            "agreed to; if they decline, run `broom setup --dismiss` so broom stops asking, here and in other repos, "
+            "until a new kind of gap turns up.")

@@ -425,9 +425,11 @@ def check_repo_file(repo: Path) -> List[Item]:
         problems.append(f"smells_off must list smell names from: {', '.join(sorted(names))}")
     if problems:
         return [Item("broom", "config", REPO_FILE, "broken", ".", "; ".join(problems))]
-    shown = ", ".join(f"{k}={data[k]}" for k in SETTINGS if k in data)
-    excl = f"{len(data.get('exclude', []))} exclude pattern(s)" if data.get("exclude") else ""
-    return [Item("broom", "config", REPO_FILE, "ok", ".", ", ".join(x for x in (shown, excl) if x) or "empty")]
+    shown = [f"{k}={data[k]}" for k in SETTINGS if k in data]
+    shown += [f"{len(data['exclude'])} exclude pattern(s)"] if data.get("exclude") else []
+    shown += [f"limits for {', '.join(data['limits'])}"] if data.get("limits") else []
+    shown += [f"smells off: {', '.join(data['smells_off'])}"] if data.get("smells_off") else []
+    return [Item("broom", "config", REPO_FILE, "ok", ".", ", ".join(shown) or "empty")]
 
 
 def plan_commands(items: List[Item], machine_wide: bool = False) -> Tuple[List[str], List[str]]:

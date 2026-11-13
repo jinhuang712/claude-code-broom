@@ -79,6 +79,7 @@ class Smell:
     level: str  # "hint" past the soft limit, "block" past the hard one
     limit: int
     added: List[int] = field(default_factory=list)  # an occurrence smell's lines this change added
+    compared: bool = True  # measured against a base; a whole-repo scan isn't, so nothing in it is "new"
 
     def text(self) -> str:
         if self.metric == DEAD_CODE:
@@ -91,6 +92,8 @@ class Smell:
                     f"new or changed at line(s) {where}")
         what = DESCRIBE[self.metric].format(key=self.key, value=self.value)
         bar = f"hard limit {self.limit}" if self.level == "block" else f"over {self.limit}"
+        if not self.compared:
+            return f"{what} ({bar})"
         how = "new" if self.was is None else f"was {self.was}"
         return f"{what} ({bar}; {how})"
 
@@ -286,6 +289,8 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str]) -> Tuple[Lis
         found = compare(now.result(), before.result() if before else ([] if base else None), lim, repo, off)
         found += clone_smells(repo, clones.result() if clones else [], set(now_text), base, lim)
         found += unused_smells(repo, unused.result() if unused else [], set(now_text), base)
+    for s in found:
+        s.compared = base is not None
     return sorted(found, key=lambda s: (s.level != "block", str(s.file), s.line)), list(dict.fromkeys(notes))
 
 

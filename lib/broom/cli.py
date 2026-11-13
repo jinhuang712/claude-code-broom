@@ -221,6 +221,18 @@ def cmd_init(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------- known issues
 
 
+def cmd_smells(args: argparse.Namespace) -> int:
+    from .hotspots import dismiss, render, report
+
+    repo = repo_or_exit()
+    if args.dismiss:
+        print(dismiss(repo))
+        return 0
+    data = report(repo, [Path(p).resolve() for p in args.paths], args.top)
+    print(json.dumps(data, indent=1) if args.json else render(data))
+    return 0
+
+
 def cmd_known(args: argparse.Namespace) -> int:
     roots = [Path(p).resolve() for p in args.paths] or [repo_or_exit()]
     if args.accept is not None:
@@ -285,7 +297,7 @@ def cmd_lsp(args: argparse.Namespace) -> int:
 def main(argv: List[str]) -> int:
     p = argparse.ArgumentParser(prog="broom", description="Format, lint and type-check with each project's own tools.")
     p.add_argument("--version", action="version", version=f"broom {__version__}")
-    sub = p.add_subparsers(dest="cmd", required=True, metavar="{sweep,fmt,doctor,setup,init,known}")
+    sub = p.add_subparsers(dest="cmd", required=True, metavar="{sweep,smells,fmt,doctor,setup,init,known}")
 
     s = sub.add_parser("sweep", help="format, then lint and type-check a scope (default: uncommitted changes)")
     scope = s.add_mutually_exclusive_group()
@@ -328,6 +340,13 @@ def main(argv: List[str]) -> int:
     k.add_argument("--clear", action="store_true")
     k.add_argument("paths", nargs="*", help="limit to these files or directories (default: the repo)")
     k.set_defaults(fn=cmd_known)
+
+    m = sub.add_parser("smells", help="the code smells in the repo or some paths, worst first, for a cleanup")
+    m.add_argument("paths", nargs="*", help="limit to these files or directories (default: the repo)")
+    m.add_argument("--top", type=int, default=10, help="how many hotspot files and smells to list (default: 10)")
+    m.add_argument("--json", action="store_true", help="the same as JSON")
+    m.add_argument("--dismiss", action="store_true", help="quiet the session note until severe smells grow")
+    m.set_defaults(fn=cmd_smells)
 
     h = sub.add_parser("hook")  # for Claude Code; left out of --help
     h.add_argument("event", choices=["commit", "edit", "stop", "session"])
