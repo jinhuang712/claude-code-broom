@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.15.0
+
+- Dead code, with jscpd's `--dead-code`: a file, export, symbol or import that nothing uses, in TS/JS and Python,
+  gets a hint when the change added it. Tests and entry points are left out. `smells_off: ["dead_code"]` turns
+  it off where code loads dynamically.
+
 ## 0.14.0
 
 - Duplicate code, with jscpd 5: a new duplicate block with a side in the change's files hints past 10 lines and

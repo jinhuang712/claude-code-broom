@@ -60,6 +60,12 @@ away still counts. jscpd 5 scans every code file and, given the base ref, scans 
 clones it lacked, in under half a second on the user's repos. Test-to-test clones are left out: sampled over
 20 commits in four repos, they were 22 of 27 new clones, setup that tests repeat on purpose.
 
+Dead code uses the same scan, in TS/JS and Python only: Go's `deadcode` sees only programs with a `main`,
+and Swift's periphery needs a full build, too slow for a hook. A finding counts on a line the change added:
+an export that a change left unused elsewhere is missed, a price paid to stay quiet about legacy code.
+Layering rules (depguard, dependency-cruiser) would run only with a project's own rules, and none of the
+user's repos has any, so broom doesn't add them.
+
 Go runs only linters that read syntax alone. The scratch copy holds the changed files, not their packages, so
 imports don't resolve; a single linter that needs types makes golangci-lint skip every linter in the run.
 

@@ -119,6 +119,9 @@ These count by occurrence: a change that adds one gets the smell's level.
 - Duplicate code comes from jscpd 5, which scans every code file in the repo and, with `--baseline-from-ref`,
   the base tree: a clone counts when it is new and has a side in the change's files. Clones between two test
   files, and clones of generated or vendored code, don't count. `broom doctor` checks for jscpd.
+- `dead_code` (a hint) comes from jscpd's `--dead-code`: a file, export, symbol or import nothing uses, in
+  TS/JS and Python, tests and entry points left out. It counts on a line the change added, or in a new file.
+  What loads dynamically (a manifest's scripts, plugins) looks unused too; turn it off per repo if so.
 - `.broom.json` `smells_off` turns single smells off: `{"smells_off": ["magic_numbers", "debug_output"]}`.
 
 - Each tool runs alone in a scratch copy with a config broom writes, so the project's lint config doesn't change
