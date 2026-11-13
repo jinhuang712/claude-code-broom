@@ -17,6 +17,7 @@ from .checks import Issue
 from .common import DATA_ROOT, ChangedLines, excluded, load_json, save_json, short_hash
 
 BASELINE = DATA_ROOT / "baseline.json"
+COMMITS = DATA_ROOT / "commits.json"  # per repo: the last blocked commit's verdict, denials and pending issues
 BASELINE_DAYS = 30
 MAX_SHOWN = 40
 
@@ -68,6 +69,18 @@ def baseline_add_entries(entries: Dict[str, dict]) -> None:
     data.update(entries)
     cutoff = time.time() - BASELINE_DAYS * 86400
     save_json(BASELINE, {k: v for k, v in data.items() if v.get("t", 0) >= cutoff})
+
+
+def accept_blocked(repo: Path, why: str) -> int:
+    """Record the issues of the last commit broom blocked in `repo` as known, with the reason. Returns how many."""
+    state = load_json(COMMITS, {})
+    pending = (state.get(str(repo)) or {}).get("pending") or {}
+    if pending:
+        now = time.time()
+        baseline_add_entries({k: {**v, "t": now, "why": why} for k, v in pending.items()})
+        state.pop(str(repo), None)
+        save_json(COMMITS, state)
+    return len(pending)
 
 
 def baseline_under(roots: List[Path]) -> Dict[str, dict]:

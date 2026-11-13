@@ -20,7 +20,9 @@ from .common import (
     read_hook_input, ruff_configured, run, setting, setting_source,
 )
 from .fmt import format_files
-from .gate import baseline_keys, baseline_remove, baseline_under, display, issue_key, render, select
+from .gate import (
+    accept_blocked, baseline_keys, baseline_remove, baseline_under, display, issue_key, render, select,
+)
 from .gitcmd import staged
 
 
@@ -208,6 +210,19 @@ def cmd_init(args: argparse.Namespace) -> int:
 
 def cmd_known(args: argparse.Namespace) -> int:
     roots = [Path(p).resolve() for p in args.paths] or [repo_or_exit()]
+    if args.accept is not None:
+        why = args.accept.strip()
+        if not why:
+            raise SystemExit('broom: say why: broom known --accept "<why>"')
+        repo = git_root(roots[0] if roots[0].is_dir() else roots[0].parent)
+        if repo is None:
+            raise SystemExit("broom: not inside a git repository")
+        n = accept_blocked(repo, why)
+        if not n:
+            print(f"broom: no blocked commit to accept in {display(repo)}")
+            return 1
+        print(f"broom: accepted {n} issue(s) as known ({why}); commit again")
+        return 0
     entries = baseline_under(roots)
     if args.clear:
         baseline_remove(list(entries))
@@ -220,7 +235,9 @@ def cmd_known(args: argparse.Namespace) -> int:
     for e in sorted(entries.values(), key=lambda v: (str(v.get("file")), v.get("line", 0))):
         when = time.strftime("%Y-%m-%d", time.localtime(e.get("t", 0)))
         where = f"{display(Path(str(e.get('file', '?'))))}:{e.get('line', '?')}"
-        print(f"  {where}  {e.get('tool', '?')} {e.get('rule', '')}  {e.get('msg', '(recorded by broom 0.2)')}  [{when}]")
+        why = f"  ({e['why']})" if e.get("why") else ""
+        msg = e.get("msg", "(recorded by broom 0.2)")
+        print(f"  {where}  {e.get('tool', '?')} {e.get('rule', '')}  {msg}  [{when}]{why}")
     return 0
 
 
@@ -293,7 +310,8 @@ def main(argv: List[str]) -> int:
     i.add_argument("--dry-run", action="store_true")
     i.set_defaults(fn=cmd_init)
 
-    k = sub.add_parser("known", help="list (or --clear) issues accepted as known")
+    k = sub.add_parser("known", help="list, --accept or --clear issues accepted as known")
+    k.add_argument("--accept", metavar="WHY", help="accept the issues of the last blocked commit here, with the reason")
     k.add_argument("--clear", action="store_true")
     k.add_argument("paths", nargs="*", help="limit to these files or directories (default: the repo)")
     k.set_defaults(fn=cmd_known)

@@ -8,14 +8,16 @@
 - session (SessionStart): when the repo is missing tools or configs broom needs, ask Claude to offer the user
   /broom:setup. Hooks can't ask the user anything themselves; Claude does, with the user's consent.
 
-A result Claude has already seen once passes the second time unchanged, so broom never traps Claude in a loop
-over a false positive or an issue that predates it.
+Lint findings Claude has already seen once pass the second time unchanged, so broom never traps Claude in a loop
+over a false positive or an issue that predates it. Type and compile errors don't pass on a retry: they pass fixed,
+or after Claude accepts them with `broom known --accept "<why>"`, which puts the reason on record.
 """
 
 from __future__ import annotations
 
 import os
 import re
+import shlex
 import time
 from pathlib import Path
 from typing import List, Optional
@@ -28,8 +30,8 @@ from .common import (
 from .doctor import describe, diagnose_cached, new_gaps
 from .fmt import format_files
 from .gate import (
-    baseline_add, baseline_add_entries, baseline_keys, issue_entry, issue_key, new_notes, note_text, render, select,
-    setup_hint, verdict,
+    COMMITS, baseline_add, baseline_add_entries, baseline_keys, issue_entry, issue_key, new_notes, note_text, render,
+    select, setup_hint, verdict,
 )
 from .gitcmd import parse, parse_commit, plan_commit
 
@@ -65,6 +67,16 @@ def claim(tool_use_id: Optional[str]) -> bool:
         return False
 
 
+def block_head(count: int, hard: int, repo: Path, cwd: Path) -> str:
+    head = f"[broom] Commit blocked: {count} issue(s) in the files being committed"
+    if not hard:
+        return (f"{head}. Fix them and commit again. If one is pre-existing or a false positive, say so and run the "
+                "same commit again: broom lets an unchanged result through.")
+    accept = 'broom known --accept "<why>"' + ("" if repo == cwd else f" {shlex.quote(str(repo))}")
+    return (f"{head}, {hard} of them type or compile errors, which don't pass on a retry. Fix them and commit again. "
+            f"If they predate this change or are false positives, run `{accept}`, then commit again.")
+
+
 def hook_commit(data: dict) -> None:
     command = (data.get("tool_input") or {}).get("command") or ""
     cwd = Path(data.get("cwd") or os.getcwd()).resolve()
@@ -72,7 +84,7 @@ def hook_commit(data: dict) -> None:
     if not any(op.kind == "commit" for op in ops) or not claim(data.get("tool_use_id")):
         return
     sd = session_dir(data.get("session_id") or "cli")
-    state_path = DATA_ROOT / "commits.json"
+    state_path = COMMITS
     state = load_json(state_path, {})
     denials: List[str] = []
     context: List[str] = []
@@ -110,6 +122,8 @@ def hook_commit(data: dict) -> None:
         blocking = select(issues, set(files), baseline_keys())
         key = str(plan.repo)
         prior = state.get(key, {})
+        hard = sum(1 for i in blocking if i.hard)
+        seen = prior.get("verdict") == verdict(blocking) or int(prior.get("denials", 0)) >= MAX_BLOCKS
         if not blocking:
             state.pop(key, None)
             fresh = new_notes(sd / "notes.json", notes)
@@ -117,16 +131,16 @@ def hook_commit(data: dict) -> None:
                 context.append("broom skipped: " + "; ".join(note_text(n) for n in fresh))
                 if setup_hint(fresh):
                     context.append(setup_hint(fresh))
-        elif prior.get("verdict") == verdict(blocking) or int(prior.get("denials", 0)) >= MAX_BLOCKS:
-            # Claude saw this result and committed again unchanged: the issues are known, the commit goes ahead.
+        elif seen and not hard:
+            # Claude saw these lint findings and committed again unchanged: they are known, the commit goes ahead.
             baseline_add(blocking)
             state.pop(key, None)
             context.append(f"broom let the commit through with {len(blocking)} known issue(s)")
         else:
-            state[key] = {"verdict": verdict(blocking), "denials": int(prior.get("denials", 0)) + 1}
-            head = (f"[broom] Commit blocked: {len(blocking)} issue(s) in the files being committed. Fix them "
-                    "and commit again. If one is pre-existing or a false positive, say so and run the same commit "
-                    "again: broom lets an unchanged result through.")
+            # Type and compile errors never pass on a retry alone: fixed, or accepted with a reason on record.
+            state[key] = {"verdict": verdict(blocking), "denials": int(prior.get("denials", 0)) + 1,
+                          "pending": {issue_key(i): issue_entry(i) for i in blocking}}
+            head = block_head(len(blocking), hard, plan.repo, cwd)
             denials.append(render(head, blocking, new_notes(sd / "notes.json", notes), set(files)))
     save_json(state_path, state)
 

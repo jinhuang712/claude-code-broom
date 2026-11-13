@@ -328,6 +328,21 @@ class BroomTest(unittest.TestCase):
         self.assertIn("TS2345", self.denied(self.commit(r, "git commit -m x")))
 
     @unittest.skipUnless(HAS_TS, "oxlint/tsc missing")
+    def test_type_errors_pass_only_when_accepted_with_a_reason(self) -> None:
+        r = self.ts_repo()
+        (r / "src/main.ts").write_text(TS_MAIN.replace("fetchIt(1)", 'fetchIt("1")'))
+        self.sh(r, "git", "add", "src/main.ts")
+        first = self.denied(self.commit(r, "git commit -m x"))
+        self.assertIn("broom known --accept", first)
+        self.assertIn("TS2345", self.denied(self.commit(r, "git commit -m x")), "a retry alone doesn't pass")
+        self.assertNotEqual(self.cli(r, "known", "--accept", " ").returncode, 0, "a reason is required")
+        accepted = self.cli(r, "known", "--accept", "fetchIt takes strings upstream")
+        self.assertIn("accepted 1 issue(s)", accepted.stdout)
+        self.assertEqual(self.denied(self.commit(r, "git commit -m x")), "")
+        self.assertIn("(fetchIt takes strings upstream)", self.cli(r, "known").stdout)
+        self.assertEqual(self.cli(r, "known", "--accept", "again").returncode, 1, "nothing left to accept")
+
+    @unittest.skipUnless(HAS_TS, "oxlint/tsc missing")
     def test_solution_style_tsconfig_checks_its_references(self) -> None:
         r = self.ts_repo({"tsconfig.app.json": '{"compilerOptions":{"target":"es2022","module":"nodenext",'
                                                '"strict":true,"composite":true},"include":["src"]}\n'})
