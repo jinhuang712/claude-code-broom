@@ -93,6 +93,7 @@ indented syntax, Stylus, `<style>` blocks in `.vue` or `.svelte` files and CSS-i
 | `complexity` | 10 | 20 | `C901` | `complexity` | `gocognit` | `cyclomatic_complexity` |
 | `nested_ternary` | — | any | — | `no-nested-ternary` | — | — |
 | `type_lines` | 250 | — | `ast` | — | — | `type_body_length` |
+| `duplicate_lines` | 10 | 30 | jscpd | jscpd | jscpd | jscpd |
 
 These count by occurrence: a change that adds one gets the smell's level.
 
@@ -115,6 +116,9 @@ These count by occurrence: a change that adds one gets the smell's level.
 - Unused variables and imports stay with the project's linter, which already reports them. In Go only linters
   that read syntax alone run, since the scratch copy's imports don't resolve: no repeated literals, globals or
   debug prints there.
+- Duplicate code comes from jscpd 5, which scans every code file in the repo and, with `--baseline-from-ref`,
+  the base tree: a clone counts when it is new and has a side in the change's files. Clones between two test
+  files, and clones of generated or vendored code, don't count. `broom doctor` checks for jscpd.
 - `.broom.json` `smells_off` turns single smells off: `{"smells_off": ["magic_numbers", "debug_output"]}`.
 
 - Each tool runs alone in a scratch copy with a config broom writes, so the project's lint config doesn't change

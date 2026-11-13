@@ -12,8 +12,8 @@ project's own rules.
   configure it. Nothing is installed without your yes.
 - **Sweeps.** When it should, broom formats, lints and type-checks Claude's changes, and holds them back until
   they're clean.
-- **Smells.** Long functions, files and types, many parameters, deep nesting, high complexity and nested
-  ternaries that a change makes worse: a hint past the soft limit, a block past the hard one. Lint suppressions
+- **Smells.** Long functions, files and types, many parameters, deep nesting, high complexity, nested ternaries
+  and duplicate code that a change makes worse: a hint past the soft limit, a block past the hard one. Lint suppressions
   without a reason, swallowed errors and commented-out code a change adds block; magic numbers, debug prints,
   TODOs, type escapes and the like hint. Legacy code left as it was never comes up.
 - **Sees.** Language servers for Go, TS/JS, Rust, Python, Swift and CSS (with SCSS and Less) give Claude diagnostics
@@ -70,6 +70,7 @@ If you'd rather install the tools yourself, these are the ones broom uses:
 | Python | `brew install ruff` · `npm i -g pyright` |
 | CSS, SCSS, Less | `npm i -D stylelint` in the project, plus `stylelint-config-recommended-scss` for SCSS or `stylelint-config-recommended-less` for Less · `npm i -g vscode-langservers-extracted` |
 | Swift | Xcode 16+ or a Swift 6+ toolchain, which bring swift-format and sourcekit-lsp · `brew install swiftlint` |
+| Duplicate code, any of them | `npm i -g jscpd` (version 5 or later) |
 
 Don't also enable `gopls-lsp`, `typescript-lsp`, `rust-analyzer-lsp`, `pyright-lsp` or `swift-lsp`: broom's servers
 already do what they do (for TypeScript, the same typescript-language-server, with the project's TypeScript), and

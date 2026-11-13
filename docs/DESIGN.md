@@ -55,6 +55,11 @@ limits: one more magic number in a file of 225 is the signal. They count when th
 file, matched by line text so moved code stays old. Counting edited lines too made count-neutral edits hint, which
 sampling the user's repos showed as noise.
 
+Duplicate code is the one smell that needs the whole repo: new code that repeats something three directories
+away still counts. jscpd 5 scans every code file and, given the base ref, scans that tree too and marks the
+clones it lacked, in under half a second on the user's repos. Test-to-test clones are left out: sampled over
+20 commits in four repos, they were 22 of 27 new clones, setup that tests repeat on purpose.
+
 Go runs only linters that read syntax alone. The scratch copy holds the changed files, not their packages, so
 imports don't resolve; a single linter that needs types makes golangci-lint skip every linter in the run.
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.14.0
+
+- Duplicate code, with jscpd 5: a new duplicate block with a side in the change's files hints past 10 lines and
+  blocks past 30. It's found anywhere in the repo, and compared with the base revision so old copies stay quiet.
+  Clones between two test files, and of generated or vendored code, don't count.
+- `broom doctor` checks for jscpd (`npm i -g jscpd`) wherever smells measure code, so `/broom:setup` offers it.
+
 ## 0.13.0
 
 - Smells that count by occurrence. A change that adds a lint suppression without a reason, a swallowed error or
