@@ -16,7 +16,7 @@ from . import __version__
 from .checks import run_checks
 from .common import (
     BIOME_CFG, DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG, SETTINGS, SWIFT_FORMAT_CFG,
-    SWIFTFORMAT_CFG, ChangedLines, git, excluded, git_changed_files, git_root, lang_of, pkg_has_key,
+    SWIFTFORMAT_CFG, ChangedLines, changed_since, git, excluded, git_changed_files, git_root, lang_of, pkg_has_key,
     read_hook_input, ruff_configured, run, setting, setting_source,
 )
 from .fmt import format_files
@@ -40,11 +40,10 @@ def scope_files(args: argparse.Namespace) -> Tuple[List[Path], ChangedLines, Opt
         out = git(["ls-files", "--cached", "--others", "--exclude-standard"], root) or ""
         files = [(root / n).resolve() for n in out.splitlines() if n]
     elif args.base:
-        out = git(["diff", "--name-only", "--diff-filter=ACMR", args.base], root)
-        if out is None:
+        found = changed_since(root, args.base)
+        if found is None:
             raise SystemExit(f"broom: unknown revision {args.base!r}")
-        untracked = git(["ls-files", "--others", "--exclude-standard"], root) or ""
-        files = [(root / n).resolve() for n in (out + untracked).splitlines() if n]
+        files = found
         changed = ChangedLines(base=args.base)
     elif args.staged:
         files = sorted(staged(root))
@@ -228,7 +227,7 @@ def cmd_smells(args: argparse.Namespace) -> int:
     if args.dismiss:
         print(dismiss(repo))
         return 0
-    data = report(repo, [Path(p).resolve() for p in args.paths], args.top)
+    data = report(repo, [Path(p).resolve() for p in args.paths], args.top, args.base)
     print(json.dumps(data, indent=1) if args.json else render(data))
     return 0
 
@@ -343,6 +342,7 @@ def main(argv: List[str]) -> int:
 
     m = sub.add_parser("smells", help="the code smells in the repo or some paths, worst first, for a cleanup")
     m.add_argument("paths", nargs="*", help="limit to these files or directories (default: the repo)")
+    m.add_argument("--base", metavar="REV", help="only what the changes since REV made worse, e.g. HEAD or main")
     m.add_argument("--top", type=int, default=10, help="how many hotspot files and smells to list (default: 10)")
     m.add_argument("--json", action="store_true", help="the same as JSON")
     m.add_argument("--dismiss", action="store_true", help="quiet the session note until severe smells grow")

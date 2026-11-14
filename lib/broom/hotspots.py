@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from .common import DATA_ROOT, git, load_json, save_json, setting, short_hash
+from .common import DATA_ROOT, changed_since, drop_excluded, git, load_json, save_json, setting, short_hash
 from .gate import display
 from .smells import Smell, find_smells
 
@@ -19,10 +19,18 @@ FILES_IN_NOTE = 3
 NOTE_MAX_FILES = 5000  # past this, a session start doesn't scan: `broom smells` still does
 
 
-def repo_files(repo: Path, paths: List[Path]) -> List[Path]:
-    out = git(["ls-files", "--cached", "--others", "--exclude-standard"], repo) or ""
-    files = [(repo / n).resolve() for n in out.splitlines() if n]
-    return [f for f in files if any(f == p or p in f.parents for p in paths)] if paths else files
+def repo_files(repo: Path, paths: List[Path], base: Optional[str] = None) -> List[Path]:
+    """The repo's files, or those changed since `base`, within `paths` (all when empty), minus .broom.json's
+    `exclude`."""
+    if base:
+        files = changed_since(repo, base)
+        if files is None:
+            raise SystemExit(f"broom: unknown revision {base!r}")
+    else:
+        out = git(["ls-files", "--cached", "--others", "--exclude-standard"], repo) or ""
+        files = [(repo / n).resolve() for n in out.splitlines() if n]
+    files = [f for f in files if any(f == p or p in f.parents for p in paths)] if paths else files
+    return drop_excluded(repo, files)
 
 
 def severity(s: Smell) -> Tuple[bool, float]:
@@ -41,20 +49,23 @@ def rank(smells: List[Smell]) -> Tuple[List[Smell], List[dict]]:
     return ordered, sorted(files, key=lambda f: (f["severe"], f["hints"]), reverse=True)
 
 
-def report(repo: Path, paths: List[Path], top: int) -> dict:
-    """The smells in `paths` (the repo when empty): counts, the `top` hotspot files and the `top` worst smells."""
-    found, notes = find_smells(repo, repo_files(repo, paths), None)
+def report(repo: Path, paths: List[Path], top: int, base: Optional[str] = None) -> dict:
+    """The smells in `paths` (the repo when empty): counts, the `top` hotspot files and the `top` worst smells.
+    With `base`, only what the changes since that revision made worse; each smell's `was` is then its size or
+    count at `base`, None for a new one."""
+    found, notes = find_smells(repo, repo_files(repo, paths, base), base)
     ordered, files = rank(found)
     severe = sum(s.level == "block" for s in found)
     smells = [{"file": str(s.file.relative_to(repo)), "line": s.line, "smell": s.metric, "level": s.level,
-               "text": s.text()} for s in ordered[:top]]
-    return {"repo": str(repo), "total": len(found), "severe": severe, "hints": len(found) - severe,
+               "text": s.text(), "was": s.was if base else None} for s in ordered[:top]]
+    return {"repo": str(repo), "base": base, "total": len(found), "severe": severe, "hints": len(found) - severe,
             "hotspots": files[:top], "smells": smells, "notes": notes}
 
 
 def render(data: dict) -> str:
-    rows = [f"[broom] {data['total']} code smell(s) in {display(Path(data['repo']))}: {data['severe']} past the hard "
-            f"limit, {data['hints']} hints."]
+    where = f"the changes since {data['base']} made worse" if data["base"] else f"in {display(Path(data['repo']))}"
+    rows = [f"[broom] {data['total']} code smell(s) {where}: {data['severe']} past the hard limit, "
+            f"{data['hints']} hints."]
     if data["hotspots"]:
         rows += ["", "Hotspots:"] + [f"  {f['file']}  {f['severe']} severe, {f['hints']} hints; worst: {f['worst']}"
                                      for f in data["hotspots"]]

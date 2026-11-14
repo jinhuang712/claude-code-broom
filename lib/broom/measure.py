@@ -97,6 +97,31 @@ def measure_files(r: Reader, rels: List[str], lim: Limits) -> None:
         r.add(rel, 1, "file_lines", count if count > lim["file_lines"][0] else None, "file")
 
 
+# A line that starts an import; one that opens a bracket runs on to the line that closes it.
+JS_IMPORT = re.compile(r"import[\s{*'\"]|export\s+(\*|\{|type\s*\{)|(const|let|var)\s+[\w{},:\s]+=\s*require\(")
+IMPORT_START = {
+    **{ext: re.compile(r"import\s+[\w.]|from\s+[\w.]+\s+import\b") for ext in PY_EXTS},
+    **{ext: JS_IMPORT for ext in JS_EXTS},
+    **{ext: re.compile(r"import\b") for ext in GO_EXTS},
+    **{ext: re.compile(r"(@testable\s+)?import\s") for ext in SWIFT_EXTS},
+}
+
+
+def code_lines(rel: str, text: str) -> int:
+    """The file's lines besides its imports, for telling a longer file from longer imports."""
+    rows = text.splitlines()
+    start = IMPORT_START.get(Path(rel).suffix)
+    if start is None:
+        return len(rows)
+    imports = depth = 0
+    for row in rows:
+        s = row.strip()
+        if depth or start.match(s):
+            imports += 1
+            depth = max(0, depth + s.count("(") + s.count("{") - s.count(")") - s.count("}"))
+    return len(rows) - imports
+
+
 def python_sizes(r: Reader, rel: str, lim: Limits) -> None:
     """Function and class lengths from Python's own parser; ruff measures neither in lines."""
     try:

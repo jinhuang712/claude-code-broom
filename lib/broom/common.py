@@ -219,6 +219,23 @@ def git_changed_files(root: Path) -> List[Path]:
     return [p for p in ((root / f).resolve() for f in files if f) if p.is_file()]
 
 
+def changed_since(root: Path, base: str) -> Optional[List[Path]]:
+    """Files changed since `base`, a renamed one under its new name, plus untracked, non-ignored files; None for
+    an unknown revision."""
+    out = git(["diff", "--name-only", "--diff-filter=ACMR", base], root)
+    if out is None:
+        return None
+    untracked = git(["ls-files", "--others", "--exclude-standard"], root) or ""
+    return [(root / n).resolve() for n in (out + untracked).splitlines() if n]
+
+
+def renamed(root: Path, since: List[str]) -> Dict[str, str]:
+    """Files git sees as renamed (`git mv`, or a move staged with `git add`), new path to old, both relative to
+    `root`. `since` is what `git diff` compares with: `[rev]` for the working tree, `["--cached", rev]` the index."""
+    parts = (git(["diff", "-M", "--diff-filter=R", "--name-status", "-z", *since], root) or "").split("\0")
+    return {parts[i + 2]: parts[i + 1] for i in range(0, len(parts) - 2, 3) if parts[i].startswith("R")}
+
+
 # ---------------------------------------------------------------- lookup
 
 
@@ -264,17 +281,27 @@ def boundary(path: Path) -> Path:
 def excluded(path: Path) -> bool:
     """Whether the repo's .broom.json `exclude` globs (relative to the git root) cover this file."""
     root = git_root(path.parent)
-    patterns = repo_config(path).get("exclude") if root else None
-    if not isinstance(patterns, list):
-        return False
-    try:
-        rel = path.resolve().relative_to(root).as_posix()
-    except ValueError:
-        return False
-    for pat in map(str, patterns):
-        if fnmatch.fnmatch(rel, pat) or (pat.startswith("**/") and fnmatch.fnmatch(rel, pat[3:])):
-            return True
-    return False
+    return root is not None and not drop_excluded(root, [path.resolve()])
+
+
+def drop_excluded(root: Path, files: List[Path]) -> List[Path]:
+    """`files` (resolved paths) minus those the .broom.json `exclude` globs of the repo at `root` cover; one read
+    of the config for the lot, where `excluded` finds each file's repo."""
+    patterns = repo_config(root).get("exclude")
+    if not isinstance(patterns, list) or not patterns:
+        return files
+    globs = [str(p) for p in patterns]
+    globs += [g[3:] for g in globs if g.startswith("**/")]
+    out = []
+    for f in files:
+        try:
+            rel = f.relative_to(root).as_posix()
+        except ValueError:
+            out.append(f)
+            continue
+        if not any(fnmatch.fnmatch(rel, g) for g in globs):
+            out.append(f)
+    return out
 
 
 def read_jsonc(path: Path) -> dict:
@@ -499,7 +526,7 @@ def short_hash(text: str) -> str:
 
 class ChangedLines:
     """Line numbers of each file that differ from `base` (the index against HEAD when `cached`); None means
-    every line counts."""
+    every line counts. A renamed file is compared with its old path, so moving a file changes none of its lines."""
 
     HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 
@@ -507,6 +534,16 @@ class ChangedLines:
         self.base = base
         self.cached = cached
         self._cache: Dict[Path, Optional[Set[int]]] = {}
+        self._renames: Dict[Path, Dict[str, str]] = {}
+
+    def old_path(self, f: Path, root: Path) -> Optional[Path]:
+        if root not in self._renames:
+            self._renames[root] = renamed(root, (["--cached"] if self.cached else []) + [self.base])
+        try:
+            old = self._renames[root].get(f.resolve().relative_to(root).as_posix())
+        except ValueError:
+            return None
+        return root / old if old else None
 
     def get(self, f: Path) -> Optional[Set[int]]:
         if f not in self._cache:
@@ -520,7 +557,9 @@ class ChangedLines:
         if git(["ls-files", "--error-unmatch", str(f)], root) is None:
             return None  # untracked: all of it is new
         mode = ["--cached"] if self.cached else []
-        out = git(["diff", "-U0", "--no-color", "--no-ext-diff", *mode, self.base, "--", str(f)], root) or ""
+        old = self.old_path(f, root)
+        paths = [str(f)] + ([str(old)] if old else [])
+        out = git(["diff", "-U0", "-M", "--no-color", "--no-ext-diff", *mode, self.base, "--", *paths], root) or ""
         lines: Set[int] = set()
         for row in out.splitlines():
             m = self.HUNK.match(row)

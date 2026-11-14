@@ -41,6 +41,12 @@ HAS_SWIFT_FORMAT = swift_format_runs()
 HAS_SOURCEKIT = HAS_SWIFT_FORMAT and shutil.which("sourcekit-lsp") is not None
 
 
+def py_function(name: str, lines: int) -> str:
+    """A Python function `lines` long; the same name and length give the same body, so two are a clone."""
+    body = "".join(f"    x += {i}\n" for i in range(lines - 2))
+    return f"def {name}(x):\n{body}    return x\n"
+
+
 class BroomCase(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp()).resolve()

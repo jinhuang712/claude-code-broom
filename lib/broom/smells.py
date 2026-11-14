@@ -18,20 +18,15 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from .checks import Issue
-from .common import DEAD_CODE, SMELL_LIMITS, SMELL_PRESENCE, ChangedLines, repo_config, setting
+from .common import DEAD_CODE, SMELL_LIMITS, SMELL_PRESENCE, ChangedLines, renamed, repo_config, setting
 from .clones import Clone, Unused, find_clones, find_unused
 from .gate import issue_key
-from .measure import SMELL_EXTS, Limits, Raw, measure
+from .maintained import Maintained
+from .measure import SMELL_EXTS, Limits, Raw, code_lines, measure
 
-# Dependencies, environments and build output, which nobody here maintains, and generated code.
-SKIP_DIRS = {
-    "node_modules", "vendor", "Pods", "Carthage", ".venv", "venv", "site-packages", "__pycache__",
-    ".build", "DerivedData", "dist", "build", "out", "release", "target", ".bundle", ".next", "coverage",
-    "test-results", "testdata", "Generated", "generated",
-}
 GENERATED = re.compile(r"DO NOT EDIT|@generated")
 TEST_FILE = re.compile(r"(^|/)(tests?|__tests__|Tests)/|_test\.(go|py)$|(^|/)test_[^/]*\.py$|"
                        r"\.(test|spec)\.[cm]?[jt]sx?$|Tests?\.swift$")
@@ -190,12 +185,7 @@ def compare(now: List[Raw], before: Optional[List[Raw]], lim: Limits, repo: Path
     return sorted(found, key=lambda s: (s.level != "block", str(s.file), s.line))
 
 
-def maintained(rel: str) -> bool:
-    """Code someone here maintains, by its path: not a dependency, build output or minified file."""
-    return not (SKIP_DIRS & set(rel.split("/")[:-1]) or rel.endswith((".min.js", ".d.ts")))
-
-
-def current_texts(repo: Path, files: List[Path]) -> Dict[str, str]:
+def current_texts(repo: Path, files: List[Path], keep: Maintained) -> Dict[str, str]:
     """The files' text, leaving out what nobody maintains here: decided by path before any file is read, then
     generated code by its header."""
     out = {}
@@ -204,16 +194,18 @@ def current_texts(repo: Path, files: List[Path]) -> Dict[str, str]:
             rel = str(f.resolve().relative_to(repo))
         except ValueError:
             continue
-        if f.suffix in SMELL_EXTS and maintained(rel) and f.is_file():
+        if f.suffix in SMELL_EXTS and keep.record(rel) and f.is_file():
             text = f.read_text(errors="replace")
             if not GENERATED.search("\n".join(text.splitlines()[:5])):
                 out[rel] = text
     return out
 
 
-def base_texts(repo: Path, base: str, rels: List[str]) -> Dict[str, str]:
-    """The files as they were at `base`, read by one `git cat-file --batch`; files it lacks are left out."""
-    query = "".join(f"{base}:{rel}\n" for rel in rels).encode()
+def base_texts(repo: Path, base: str, rels: List[str], was: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+    """The files as they were at `base`, read by one `git cat-file --batch`; files it lacks are left out. `was`
+    maps a renamed file to its path at `base`."""
+    was = was or {}
+    query = "".join(f"{base}:{was.get(rel, rel)}\n" for rel in rels).encode()
     try:
         out = subprocess.run(["git", "cat-file", "--batch"], input=query, cwd=repo, capture_output=True,
                              timeout=GIT_TIMEOUT).stdout
@@ -242,14 +234,15 @@ def generated(path: Path) -> bool:
         return False
 
 
-def clone_smells(repo: Path, clones: List[Clone], scope: set, base: Optional[str], lim: Limits) -> List[Smell]:
-    """New duplicate blocks with a side in `scope`, the files measured (every clone when `base` is None). Clones
-    between two test files are left out: tests repeat their setup on purpose."""
+def clone_smells(keep: Maintained, clones: List[Clone], scope: set, base: Optional[str], lim: Limits) -> List[Smell]:
+    """New duplicate blocks with a side in `scope`, the files measured (every clone when `base` is None), the other
+    side code someone maintains. Clones between two test files are left out: tests repeat their setup on purpose."""
+    repo = keep.repo
     out = []
     for c in clones:
         sides = [(c.rel, c.line, c.other, c.other_line), (c.other, c.other_line, c.rel, c.line)]
         mine = next((s for s in sides if s[0] in scope), None)
-        if (base is not None and not c.new) or mine is None or not maintained(mine[2]) or generated(repo / mine[2]):
+        if (base is not None and not c.new) or mine is None or not keep(mine[2]) or generated(repo / mine[2]):
             continue
         at = level(c.lines, lim["duplicate_lines"])
         if at and not (TEST_FILE.search(c.rel) and TEST_FILE.search(c.other)):
@@ -272,22 +265,34 @@ def unused_smells(repo: Path, unused: List[Unused], scope: set, base: Optional[s
     return out
 
 
+def drop_import_growth(rows: List[Raw], now: Dict[str, str], before: Optional[Dict[str, str]]) -> List[Raw]:
+    """`rows` without the file length of files whose lines besides imports didn't grow since `before`: rewired
+    imports (a moved module's new paths, a formatter's line breaks) don't make a long file worse."""
+    steady: Set[str] = {rel for rel, text in now.items()
+                        if before and rel in before and code_lines(rel, text) <= code_lines(rel, before[rel])}
+    return [r for r in rows if not (r.metric == "file_lines" and r.rel in steady)]
+
+
 def find_smells(repo: Path, files: List[Path], base: Optional[str]) -> Tuple[List[Smell], List[str]]:
-    """Smells in `files` that are new or worse than at `base`; every smell when `base` is None."""
-    now_text = current_texts(repo, files)
+    """Smells in `files` that are new or worse than at `base`; every smell when `base` is None. A file renamed
+    since `base` is compared with its old path."""
+    keep = Maintained(repo)
+    now_text = current_texts(repo, files, keep)
+    notes = [n for n in (keep.note(),) if n]
     if not now_text:
-        return [], []
-    lim, notes = limits(repo), []
+        return [], notes
+    lim = limits(repo)
     off = tuple(repo_config(repo).get("smells_off") or ())
-    old_text = base_texts(repo, base, list(now_text)) if base else None
+    old_text = base_texts(repo, base, list(now_text), renamed(repo, [base])) if base else None
     with tempfile.TemporaryDirectory(prefix="broom-smells-") as tmp, ThreadPoolExecutor(4) as pool:
         now = pool.submit(measure, Path(tmp) / "now", now_text, lim, repo, notes)
         before = pool.submit(measure, Path(tmp) / "before", old_text, lim, repo, []) if old_text else None
         clones = None if "duplicate_lines" in off else pool.submit(
-            find_clones, repo, base, lim["duplicate_lines"][0] + 1, sorted(SKIP_DIRS), notes)
-        unused = None if DEAD_CODE in off else pool.submit(find_unused, repo, sorted(SKIP_DIRS), notes)
-        found = compare(now.result(), before.result() if before else ([] if base else None), lim, repo, off)
-        found += clone_smells(repo, clones.result() if clones else [], set(now_text), base, lim)
+            find_clones, repo, base, lim["duplicate_lines"][0] + 1, keep.clone_skips(), notes)
+        unused = None if DEAD_CODE in off else pool.submit(find_unused, repo, keep.dead_code_skips(), notes)
+        found = compare(drop_import_growth(now.result(), now_text, old_text),
+                        before.result() if before else ([] if base else None), lim, repo, off)
+        found += clone_smells(keep, clones.result() if clones else [], set(now_text), base, lim)
         found += unused_smells(repo, unused.result() if unused else [], set(now_text), base)
     for s in found:
         s.compared = base is not None
