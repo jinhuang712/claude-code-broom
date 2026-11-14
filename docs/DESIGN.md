@@ -8,7 +8,7 @@
 | `bin/broom` | The one entry point, for hooks and for people; on the Bash PATH while the plugin is enabled |
 | `.lsp.json` | Language servers Claude Code starts: gopls, `broom lsp typescript` (picks the TypeScript server), rust-analyzer, pyright, sourcekit-lsp, vscode-css-language-server |
 | `skills/` | `/broom:setup` and `/broom:sweep`, which call `broom` |
-| `lib/broom/` | `gitcmd` reads commits, `fmt` formats, `checks` runs linters, `gate` decides what counts, `doctor` diagnoses, `lsp` asks servers for function ranges |
+| `lib/broom/` | `hooks` and `commitgate` handle the hooks, `gitcmd` reads commits, `fmt` formats, `checks` runs linters, `gate` decides what counts, `smells` and `measure` measure smells, `doctor` and `needs` diagnose, `lsp` asks servers for function ranges; `config`, `state`, `gitutil` and `toolchain` are the shared ground |
 | `defaults/` | Lint configs used only where a project has none, and the tool registry for installs |
 
 Python 3.9+ standard library only. State lives in `~/.claude/plugins/data/broom-claude-code-broom/`, including a

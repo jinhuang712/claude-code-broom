@@ -13,6 +13,9 @@
 | SubagentStop | each subagent's end | Checks the files that subagent edited; a block goes to the subagent, which fixes its own | the same |
 | git pre-commit (optional) | every commit, once `broom install-hook` adds it | Checks the staged files like the PreToolUse hook, without formatting: for commits that hook doesn't see, a wrapper script's or a person's | content that passed already goes through at once |
 
+Files outside any git repo, such as drafts in a temp directory, are no project's code: the hooks neither record
+nor format them.
+
 File content that passed a check (nothing blocked, nothing hinted, nothing timed out) is recorded by git's blob id
 for a day, and no hook checks it again: a turn that edits and commits checks its files once, not at the commit, at
 the turn's end and in git's hook.
@@ -63,7 +66,9 @@ the turn's end and in git's hook.
 }
 ```
 
-At the git root. Any setting above overrides the user setting in this repo; `exclude` globs, relative to the
+At the git root; a linked worktree without one reads the main worktree's, so a `.broom.json` that git ignores
+still reaches the worktrees agents work in (`broom doctor` says where it was read from, and when git ignores it).
+Any setting above overrides the user setting in this repo; `exclude` globs, relative to the
 root, keep paths out of formatting, checks and smells entirely. `legacy` globs mark code on its way out: new code
 that repeats it isn't a duplicate, as during a migration. `limits` moves smell limits, and `test_limits` moves them
 again for test files. `broom doctor` flags unknown keys and values.

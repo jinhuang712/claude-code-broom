@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.16.4
+
+- A linked worktree without a `.broom.json` reads the main worktree's. One repo's `.broom.json` was ignored by a
+  global gitignore, so the worktrees its agents worked in never had it and ran with broom's defaults instead of
+  the repo's limits and excludes. `broom doctor` says where the file was read from, and when git ignores it.
+- Files outside any git repo, such as a subagent's draft script in a temp directory, are neither recorded for the
+  turn's end nor formatted per edit. Style findings in one such draft once stopped a session's turn; 0.16.3's pass
+  records already happened to drop these files, and now it is deliberate.
+- jscpd gets a baseline only from a base git can resolve, and a failure note quotes jscpd: a missing git ref had
+  read as "version 5 or later needed".
+- broom measured by its own bar: 35 smells, 4 of them past the hard limit, now 23 and none past it. `diagnose`
+  (184 lines, complexity 45) becomes a method per language; `plan` (complexity 25) a grouping class; the
+  1001-line test file five files of 161 to 257 lines; `common.py` (577 lines) four modules of 92 to 274 lines;
+  the commit gate leaves `hooks.py` (409 to 231 lines) for its own module. Files over 400 lines: 5 to 1. No
+  behavior changes beyond the three above: 111 tests, every subcommand's `--help` unchanged.
+
 ## 0.16.3
 
 - `broom install-hook` adds git's own pre-commit hook, for commits Claude Code's commit hook never sees: a
