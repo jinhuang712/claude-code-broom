@@ -103,13 +103,16 @@ until things get worse.
 | `format_scope` | `changed` | `function` (whole changed functions; in CSS, rules; in Swift, computed properties too), `file` |
 | `smells` | `on` | `off` |
 
-A `.broom.json` at the repo root overrides these for one repo, can exclude paths and can move the smell limits:
+A `.broom.json` at the repo root overrides these for one repo, can exclude paths, can mark legacy code that new
+code may repeat, and can move the smell limits, separately for tests:
 
 ```json
 { "format_scope": "function", "exclude": ["vendor/**", "**/*.pb.go"], "limits": { "function_lines": [60, 120] } }
 ```
 
-The `broom` command is on the PATH too: `broom sweep`, `broom smells`, `broom doctor`, `broom known`. See [Features](docs/FEATURES.md).
+The `broom` command is on the PATH too: `broom sweep`, `broom smells`, `broom doctor`, `broom known`. Commits made by
+a wrapper script or by hand skip Claude Code's commit hook; `broom install-hook` adds git's own pre-commit hook for
+those. See [Features](docs/FEATURES.md).
 
 ## Docs
 

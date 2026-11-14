@@ -93,13 +93,14 @@ tsc (~/code/app):
 | `format_scope` | `changed` | `function`（整个改动过的函数；CSS 里是整条规则；Swift 里也包括计算属性）、`file` |
 | `smells` | `on` | `off` |
 
-仓库根目录的 `.broom.json` 可以为单个仓库覆盖这些设置，还能排除路径、调整坏味道的上限：
+仓库根目录的 `.broom.json` 可以为单个仓库覆盖这些设置，还能排除路径、标出新代码可以重复的待删旧代码、调整坏味道的上限（测试文件可单独设）：
 
 ```json
 { "format_scope": "function", "exclude": ["vendor/**", "**/*.pb.go"], "limits": { "function_lines": [60, 120] } }
 ```
 
-`broom` 命令也在 PATH 上：`broom sweep`、`broom smells`、`broom doctor`、`broom known`。详见 [Features](FEATURES.md)。
+`broom` 命令也在 PATH 上：`broom sweep`、`broom smells`、`broom doctor`、`broom known`。包装脚本或手动做的提交不经过
+Claude Code 的提交钩子，`broom install-hook` 会为它们加上 git 自己的 pre-commit 钩子。详见 [Features](FEATURES.md)。
 
 ## 文档（英文）
 

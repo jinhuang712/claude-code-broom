@@ -28,7 +28,8 @@ unless they already asked for the cleanup itself.
 - Refactor the smell away, not the metric: no splitting a function at an arbitrary line, no `smells_off` to
   silence something fixable.
 - A smell that is deliberate (a long lookup table, a protocol's fixed parameter list, code loaded dynamically)
-  stays: say so, and offer `.broom.json` `exclude`, `limits` or `smells_off` instead of contorting the code.
+  stays: say so, and offer `.broom.json` `exclude`, `limits` (`test_limits` for tests that are long because they
+  list cases), `legacy` (code a migration is replacing) or `smells_off` instead of contorting the code.
 
 ## 4. Check and commit
 

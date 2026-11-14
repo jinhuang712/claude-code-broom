@@ -11,6 +11,11 @@
 | PostToolUse | Edit, Write, MultiEdit, Serena's edit tools | Formats per edit (`format_on=edit`); records files for the stop check (`check_on=stop`), a subagent's under its own id | one Python start: 30–45 ms measured on macOS |
 | Stop | each turn end | Checks what the turn changed (`check_on=stop`): files Claude edited, and files changed or committed since the prompt by any means, measured against the prompt's HEAD. Waits while background work runs, up to half an hour | one Python start: 30–45 ms measured on macOS |
 | SubagentStop | each subagent's end | Checks the files that subagent edited; a block goes to the subagent, which fixes its own | the same |
+| git pre-commit (optional) | every commit, once `broom install-hook` adds it | Checks the staged files like the PreToolUse hook, without formatting: for commits that hook doesn't see, a wrapper script's or a person's | content that passed already goes through at once |
+
+File content that passed a check (nothing blocked, nothing hinted, nothing timed out) is recorded by git's blob id
+for a day, and no hook checks it again: a turn that edits and commits checks its files once, not at the commit, at
+the turn's end and in git's hook.
 
 ## Skills
 
@@ -31,8 +36,9 @@
 | `broom fmt [paths]` | Format only. `--scope` |
 | `broom doctor [--json]` | Languages, tools, configs and conflicts, with the commands that fix them |
 | `broom init [dir]` | Add default configs where missing. Never overwrites. `--dry-run` |
-| `broom smells [paths] [--base REV] [--top N] [--json] [--dismiss]` | The code smells of the repo or some paths: the hotspot files and the worst smells, worst first. `--base REV` lists only what the changes since REV made worse, each smell's size or count at REV as `was` in the JSON (`null` for a new one). `--dismiss` quiets the session note until the count past the hard limit grows |
-| `broom known [--accept WHY] [--clear] [paths]` | List or clear accepted issues. `--accept WHY` accepts the last blocked commit's issues with the reason: how an unfixed type or compile error gets through |
+| `broom smells [paths] [--base REV] [--top N] [--json] [--dismiss]` | The code smells of the repo or some paths: the hotspot files and the worst smells, worst first. `--base REV` lists only what the changes since REV made worse, each smell's size or count at REV as `was` in the JSON (`null` for a new one). Missing tools are named in the first line. `--dismiss` quiets the session note until the count past the hard limit grows |
+| `broom known [--accept WHY] [--clear] [paths]` | List or clear accepted issues. `--accept WHY` accepts the last blocked commit's issues with the reason: how an unfixed type or compile error gets through. `BROOM_NO_ACCEPT=1` in the environment turns `--accept` off, for agents that must fix what they break |
+| `broom install-hook` | Add git's pre-commit hook, so commits the PreToolUse hook doesn't see are checked too. Never replaces another tool's hook; prints the line to add to it instead |
 | `broom setup --done / --dismiss / --reset` | Record the setup decision; gaps left alone are remembered by kind for every repo. `--reset` forgets them all |
 
 ## Settings (`/config`)
@@ -50,12 +56,17 @@
 {
   "format_scope": "function",
   "check_on": "commit",
-  "exclude": ["vendor/**", "**/*.pb.go"]
+  "exclude": ["vendor/**", "**/*.pb.go"],
+  "legacy": ["src/old/**"],
+  "limits": { "file_lines": [300, 500] },
+  "test_limits": { "file_lines": [600, 1000] }
 }
 ```
 
 At the git root. Any setting above overrides the user setting in this repo; `exclude` globs, relative to the
-root, keep paths out of formatting, checks and smells entirely. `broom doctor` flags unknown keys and values.
+root, keep paths out of formatting, checks and smells entirely. `legacy` globs mark code on its way out: new code
+that repeats it isn't a duplicate, as during a migration. `limits` moves smell limits, and `test_limits` moves them
+again for test files. `broom doctor` flags unknown keys and values.
 
 ## Languages and tools
 
@@ -152,7 +163,9 @@ These count by occurrence: a change that adds one gets the smell's level.
   are fixtures. Neither do the length or complexity of
   `describe`/`it`/`test` callbacks, which are containers. Long test functions still count.
 - Swift has no control-flow nesting rule; complexity covers it.
-- `.broom.json` `limits` moves a smell's bar per repo: `{"limits": {"function_lines": [60, 120]}}`.
+- `.broom.json` `limits` moves a smell's bar per repo: `{"limits": {"function_lines": [60, 120]}}`. `test_limits`,
+  of the same shape, moves it for test files on top of that: tests grow long by listing cases, not by doing more.
+- Clones with a side in `.broom.json` `legacy` don't count: new code may repeat the code it replaces.
 
 ## Doctor checks
 

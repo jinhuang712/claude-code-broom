@@ -4,7 +4,7 @@
 
 | Part | Role |
 |---|---|
-| `hooks/hooks.json` | SessionStart (offer setup, and an async smell scan), UserPromptSubmit (async: note the working tree), PreToolUse on `git commit` (the sweep), PostToolUse on edits, Stop and SubagentStop |
+| `hooks/hooks.json` | SessionStart (offer setup, and an async smell scan), UserPromptSubmit (async: note the working tree), PreToolUse on `git commit` (the sweep), PostToolUse on edits, Stop and SubagentStop; git's pre-commit hook comes from `broom install-hook` |
 | `bin/broom` | The one entry point, for hooks and for people; on the Bash PATH while the plugin is enabled |
 | `.lsp.json` | Language servers Claude Code starts: gopls, `broom lsp typescript` (picks the TypeScript server), rust-analyzer, pyright, sourcekit-lsp, vscode-css-language-server |
 | `skills/` | `/broom:setup` and `/broom:sweep`, which call `broom` |
@@ -31,7 +31,16 @@ it stored, which hands a worktree another directory's issues. Caches unused for 
    It also measures code smells (see Code smells below).
 5. Committing the same lint result again passes and records the issues as known. Type and compile errors don't
    pass on a retry: they pass fixed, or after `broom known --accept "<why>"`, which records the blocked result as
-   known with the reason. A retry alone let a subagent commit 167 tsc errors without a word.
+   known with the reason. A retry alone let a subagent commit 167 tsc errors without a word. `BROOM_NO_ACCEPT`
+   turns accepting off where agents must fix what they break: in one migration, workers accepted their own blocks
+   although their instructions said not to.
+
+The hook sees only the command Claude sends. A wrapper that commits for you (`kgf save`, an integration script)
+holds no `git commit`, so in one repo the main path of committing was never checked, while the agents that used
+plain `git commit` were. `broom install-hook` adds git's own pre-commit hook, which runs the same gate on whatever
+commits, a person's included; it checks and doesn't format, as rewriting files under a person's commit is theirs to
+choose. Content that passed is recorded by blob id, so Claude's own commit isn't checked by both hooks, nor again
+at the turn's end. Only content that passed with no hint is recorded: a hint still stops the turn's end once.
 
 ## What counts
 
@@ -70,7 +79,12 @@ sampling the user's repos showed as noise.
 Duplicate code is the one smell that needs the whole repo: new code that repeats something three directories
 away still counts. jscpd 5 scans every code file and, given the base ref, scans that tree too and marks the
 clones it lacked, in under half a second on the user's repos. Test-to-test clones are left out: sampled over
-20 commits in four repos, they were 22 of 27 new clones, setup that tests repeat on purpose.
+20 commits in four repos, they were 22 of 27 new clones, setup that tests repeat on purpose. A migration writes
+the new code beside the old before deleting it, and every step of it repeated code the repo was about to drop:
+`.broom.json` `legacy` names that code, and clones with a side in it don't count.
+
+Tests take their own limits (`test_limits`) because they grow by listing cases. One repo with file limits of 150
+and 200 lines for its source split a test file into four numbered parts to fit, which helped no reader.
 
 Dead code uses the same scan, in TS/JS and Python only: Go's `deadcode` sees only programs with a `main`,
 and Swift's periphery needs a full build, too slow for a hook. A finding counts on a line the change added:
