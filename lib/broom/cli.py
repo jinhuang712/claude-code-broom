@@ -284,9 +284,8 @@ def cmd_install_hook(_args: argparse.Namespace) -> int:
 
 
 def cmd_hook(args: argparse.Namespace) -> int:
-    from .hooks import (
-        hook_commit, hook_edit, hook_pre_commit, hook_prompt, hook_session, hook_session_scan, hook_stop,
-    )
+    from .commitgate import hook_commit, hook_pre_commit
+    from .hooks import hook_edit, hook_prompt, hook_session, hook_session_scan, hook_stop
 
     if args.event == "pre-commit":
         try:
@@ -318,12 +317,10 @@ def cmd_lsp(args: argparse.Namespace) -> int:
     return 1  # not reached
 
 
-def main(argv: List[str]) -> int:
-    p = argparse.ArgumentParser(prog="broom", description="Format, lint and type-check with each project's own tools.")
-    p.add_argument("--version", action="version", version=f"broom {__version__}")
-    sub = p.add_subparsers(dest="cmd", required=True,
-                           metavar="{sweep,smells,fmt,doctor,setup,init,known,install-hook}")
+SCOPE_HELP = "format changed lines, the functions holding them, or whole files (default: the format_scope setting)"
 
+
+def add_sweep_parsers(sub: argparse._SubParsersAction) -> None:
     s = sub.add_parser("sweep", help="format, then lint and type-check a scope (default: uncommitted changes)")
     scope = s.add_mutually_exclusive_group()
     scope.add_argument("--staged", action="store_true", help="only the staged changes")
@@ -333,39 +330,37 @@ def main(argv: List[str]) -> int:
     mode.add_argument("--check", action="store_true", help="report only, don't format")
     mode.add_argument("--fix", action="store_true", help="with --all, also format every file")
     s.add_argument("--include-known", action="store_true", help="also show issues accepted earlier")
-    s.add_argument("--scope", choices=["changed", "function", "file"], help="format changed lines, the functions "
-                   "holding them, or whole files (default: the format_scope setting)")
+    s.add_argument("--scope", choices=["changed", "function", "file"], help=SCOPE_HELP)
     s.add_argument("paths", nargs="*", help="narrow the scope to these files or directories")
     s.set_defaults(fn=cmd_sweep)
-
     f = sub.add_parser("fmt", help="format changed files (default: uncommitted changes)")
-    f.add_argument("--scope", choices=["changed", "function", "file"], help="format changed lines, the functions "
-                   "holding them, or whole files (default: the format_scope setting)")
+    f.add_argument("--scope", choices=["changed", "function", "file"], help=SCOPE_HELP)
     f.add_argument("paths", nargs="*")
     f.set_defaults(fn=cmd_fmt)
 
+
+def add_setup_parsers(sub: argparse._SubParsersAction) -> None:
     d = sub.add_parser("doctor", help="languages, tools, configs and conflicts for this repo, with fixes")
     d.add_argument("--json", action="store_true")
     d.set_defaults(fn=cmd_doctor)
-
     st = sub.add_parser("setup", help="record that setup is done, or declined; the answer holds in every repo")
     st_mode = st.add_mutually_exclusive_group(required=True)
     st_mode.add_argument("--done", action="store_true")
     st_mode.add_argument("--dismiss", action="store_true")
     st_mode.add_argument("--reset", action="store_true", help="forget every answer, so setup asks again everywhere")
     st.set_defaults(fn=cmd_setup)
-
     i = sub.add_parser("init", help="add default lint/format configs where a project has none")
     i.add_argument("dir", nargs="?", help="project directory (default: the repo root)")
     i.add_argument("--dry-run", action="store_true")
     i.set_defaults(fn=cmd_init)
 
+
+def add_issue_parsers(sub: argparse._SubParsersAction) -> None:
     k = sub.add_parser("known", help="list, --accept or --clear issues accepted as known")
     k.add_argument("--accept", metavar="WHY", help="accept the issues of the last blocked commit here, with the reason")
     k.add_argument("--clear", action="store_true")
     k.add_argument("paths", nargs="*", help="limit to these files or directories (default: the repo)")
     k.set_defaults(fn=cmd_known)
-
     m = sub.add_parser("smells", help="the code smells in the repo or some paths, worst first, for a cleanup")
     m.add_argument("paths", nargs="*", help="limit to these files or directories (default: the repo)")
     m.add_argument("--base", metavar="REV", help="only what the changes since REV made worse, e.g. HEAD or main")
@@ -373,19 +368,28 @@ def main(argv: List[str]) -> int:
     m.add_argument("--json", action="store_true", help="the same as JSON")
     m.add_argument("--dismiss", action="store_true", help="quiet the session note until severe smells grow")
     m.set_defaults(fn=cmd_smells)
-
     ih = sub.add_parser("install-hook", help="add a git pre-commit hook for commits Claude Code's hook doesn't see")
     ih.set_defaults(fn=cmd_install_hook)
 
-    h = sub.add_parser("hook")  # for Claude Code and git; left out of --help
+
+def add_internal_parsers(sub: argparse._SubParsersAction) -> None:
+    """Commands for Claude Code and git, left out of --help."""
+    h = sub.add_parser("hook")
     h.add_argument("event", choices=["commit", "edit", "prompt", "stop", "subagent-stop", "session", "session-scan",
                                      "pre-commit"])
     h.set_defaults(fn=cmd_hook)
-
-    ls = sub.add_parser("lsp")  # for .lsp.json; left out of --help
+    ls = sub.add_parser("lsp")  # for .lsp.json
     ls.add_argument("language", choices=["typescript"])
     ls.set_defaults(fn=cmd_lsp)
 
+
+def main(argv: List[str]) -> int:
+    p = argparse.ArgumentParser(prog="broom", description="Format, lint and type-check with each project's own tools.")
+    p.add_argument("--version", action="version", version=f"broom {__version__}")
+    sub = p.add_subparsers(dest="cmd", required=True,
+                           metavar="{sweep,smells,fmt,doctor,setup,init,known,install-hook}")
+    for add in (add_sweep_parsers, add_setup_parsers, add_issue_parsers, add_internal_parsers):
+        add(sub)
     args = p.parse_args(argv)
     if args.cmd == "sweep" and args.fix and not args.all:
         args.fix = False  # formatting is the default outside --all
