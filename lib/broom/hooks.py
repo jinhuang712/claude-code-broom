@@ -3,11 +3,14 @@
 - commit (PreToolUse on `git commit`): format the files the commit takes, then lint and type-check them; deny
   the commit while issues remain. Runs unless an option is off.
 - edit (PostToolUse on Edit, Write and Serena's edit tools): format per edit when format_on=edit, and record
-  the file for the stop gate when check_on=stop.
-- stop (Stop): lint and type-check the files edited this turn when check_on=stop, the default: it catches what
-  Claude writes even when the user commits by hand, which the commit hook never sees.
+  the file for the stop gate when check_on=stop, a subagent's edit for that subagent's own stop.
+- prompt (UserPromptSubmit): note the working tree, so the turn's end also checks what Bash changed or committed.
+- stop (Stop, and SubagentStop for a subagent): lint and type-check what the turn changed when check_on=stop, the
+  default: it catches what Claude writes even when the user commits by hand, which the commit hook never sees.
+  A turn that ends while background work runs waits for a later one.
 - session (SessionStart): when the repo is missing tools or configs broom needs, ask Claude to offer the user
-  /broom:setup. Hooks can't ask the user anything themselves; Claude does, with the user's consent.
+  /broom:setup. Hooks can't ask the user anything themselves; Claude does, with the user's consent. The smell
+  note comes from a scan of HEAD, cached; session-scan, an async hook, runs the scan when there is none.
 
 Lint findings Claude has already seen once pass the second time unchanged, so broom never traps Claude in a loop
 over a false positive or an issue that predates it. Type and compile errors don't pass on a retry: they pass fixed,
@@ -25,8 +28,8 @@ from typing import Dict, List, Optional, Tuple
 
 from .checks import Issue, run_checks
 from .common import (
-    DATA_ROOT, append_line, emit, excluded, git, git_changed_files, git_root, lang_of, load_json, prune_sessions,
-    save_json, session_dir, setting,
+    DATA_ROOT, ChangedLines, append_line, emit, excluded, git, git_changed_files, git_root, lang_of, load_json,
+    prune_sessions, save_json, session_dir, setting, short_hash,
 )
 from .doctor import describe, diagnose_cached, new_gaps
 from .fmt import format_files
@@ -35,11 +38,11 @@ from .gate import (
     select, setup_hint, verdict,
 )
 from .gitcmd import parse, parse_commit, plan_commit
-from .hotspots import session_note
+from .hotspots import cached_summary, session_note, summary
 from .smells import Smell, gate_smells, hint_text
+from .turns import DEFERRED, changed_since_snapshot, paused, snapshot, turn_base, turn_dir, waiting
 
 MAX_BLOCKS = 3
-EDITING_TASKS = {"subagent", "workflow", "teammate"}
 SERENA_ONE_FILE = re.compile(
     r"^mcp__.*serena.*__(replace_symbol_body|insert_after_symbol|insert_before_symbol|replace_content|create_text_file)$"
 )
@@ -70,14 +73,15 @@ def claim(tool_use_id: Optional[str]) -> bool:
         return False
 
 
-def checked(files: List[Path], sd: Path) -> Tuple[List[Issue], List[Smell], List[str]]:
-    """What blocks (lint and type issues not yet known, smells past the hard limit), the smell hints, and notes."""
+def checked(files: List[Path], sd: Path, base: str = "HEAD") -> Tuple[List[Issue], List[Smell], List[str]]:
+    """What blocks (lint and type issues not yet known, smells past the hard limit), the smell hints, and notes,
+    for what changed since `base`."""
     issues, notes = run_checks(files, sd / "slow.json")
     known = baseline_keys()
-    blocking = select(issues, set(files), known)
+    blocking = select(issues, set(files), known, ChangedLines(base))
     hints: List[Smell] = []
     for repo, group in by_repo(files).items():
-        smell_blocks, smell_hints, smell_notes = gate_smells(repo, group, known)
+        smell_blocks, smell_hints, smell_notes = gate_smells(repo, group, known, base)
         blocking += smell_blocks
         hints += smell_hints
         notes += smell_notes
@@ -195,7 +199,7 @@ def hook_edit(data: dict) -> None:
     tool = data.get("tool_name") or ""
     args = data.get("tool_input") or {}
     cwd = Path(data.get("cwd") or os.getcwd()).resolve()
-    sd = session_dir(data.get("session_id") or "cli")
+    sd = turn_dir(data)
     path: Optional[Path] = None
     if tool in ("Edit", "Write", "MultiEdit"):
         path = Path(args["file_path"]) if args.get("file_path") else None
@@ -238,80 +242,123 @@ def by_repo(files: List[Path]) -> Dict[Path, List[Path]]:
     return groups
 
 
-def clear_turn(sd: Path) -> None:
-    for name in ("edits.txt", "scan.txt", "gate.json"):
+def end_turn(d: Path, root: Optional[Path]) -> None:
+    """Forget the turn's records; the working tree as it is now is where the next turn's changes start."""
+    for name in ("edits.txt", "scan.txt", "gate.json", DEFERRED):
         try:
-            (sd / name).unlink()
+            (d / name).unlink()
         except OSError:
             pass
+    if root:
+        snapshot(d, root)
+
+
+def turn_files(data: dict, d: Path, root: Optional[Path]) -> Tuple[List[Path], str]:
+    """The code files the turn changed: recorded edits, a whole repo after a many-file Serena edit, and in the main
+    session what changed or was committed since the prompt. And a mark that changes whenever any of them does."""
+    recorded = read_lines(d / "edits.txt")
+    scans = read_lines(d / "scan.txt")
+    files = [Path(p) for p in recorded]
+    for repo in dict.fromkeys(scans):
+        files += git_changed_files(Path(repo))
+    since = changed_since_snapshot(d, root) if root and not data.get("agent_id") else []
+    mark = short_hash(f"{len(recorded)}|{len(scans)}|{sorted((str(f), f.stat().st_mtime_ns) for f in since)}")
+    files = [f for f in dict.fromkeys(files + since) if lang_of(f) and f.is_file() and not excluded(f)]
+    return files, mark
 
 
 def hook_stop(data: dict) -> None:
-    if setting("check_on", Path(data.get("cwd") or os.getcwd())) != "stop" or data.get("permission_mode") == "plan":
+    """The turn's end, or with an agent_id a subagent's (SubagentStop), whose block goes to the subagent."""
+    cwd = Path(data.get("cwd") or os.getcwd()).resolve()
+    if setting("check_on", cwd) != "stop" or data.get("permission_mode") == "plan":
         return
-    if any(isinstance(t, dict) and t.get("type") in EDITING_TASKS for t in data.get("background_tasks") or []):
-        return  # a background agent may still be editing
+    d = turn_dir(data)
+    if paused(data, d):
+        return  # the background work wakes a later turn, whose end checks this one's changes too
     prune_sessions()
-    sd = session_dir(data.get("session_id") or "cli")
-    recorded = read_lines(sd / "edits.txt")
-    scans = read_lines(sd / "scan.txt")
-    edit_count = len(recorded) + len(scans)
-    files = [Path(p) for p in recorded]
-    for root in dict.fromkeys(scans):
-        files += git_changed_files(Path(root))
-    files = [f for f in dict.fromkeys(files) if lang_of(f) and f.is_file() and not excluded(f)]
+    root = None if data.get("agent_id") else git_root(cwd)
+    files, mark = turn_files(data, d, root)
     if not files:
-        clear_turn(sd)
+        end_turn(d, root)
         return
 
-    gate = load_json(sd / "gate.json", {})
-    if gate.get("verdict") and gate.get("edits_at") == edit_count:
+    gate = load_json(d / "gate.json", {})
+    if gate.get("verdict") and gate.get("edits_at") == mark:
         # Claude stopped again without editing: what is left is known, and the turn ends.
         pending = gate.get("pending") or {}
         baseline_add_entries(pending if isinstance(pending, dict) else {k: {"t": time.time()} for k in pending})
-        clear_turn(sd)
+        end_turn(d, root)
         emit({"systemMessage": f"broom: {gate.get('count', 0)} issue(s) left unfixed"})
         return
 
-    blocking, hints, notes = checked(files, sd)
+    blocking, hints, notes = checked(files, d, turn_base(d, root))
     blocking += [s.issue() for s in hints]  # at a turn's end a hint stops Claude once: it cleans up now
     if not blocking:
-        clear_turn(sd)
-        fresh = new_notes(sd / "notes.json", notes)
+        end_turn(d, root)
+        fresh = new_notes(d / "notes.json", notes)
         if fresh:
             hint = " (run /broom:setup)" if setup_hint(fresh) else ""
             emit({"systemMessage": "broom: " + "; ".join(note_text(n) for n in fresh) + hint})
         return
     blocks = int(gate.get("blocks", 0)) + 1
     if blocks > MAX_BLOCKS:
-        clear_turn(sd)
+        end_turn(d, root)
         emit({"systemMessage": f"broom: gave up after {MAX_BLOCKS} rounds, {len(blocking)} issue(s) left"})
         return
     # Stopping again records what is left as known; type errors and severe smells stay out, so a commit still
     # stops on them.
     pending = {issue_key(i): issue_entry(i) for i in blocking if not sticky(i)}
-    save_json(sd / "gate.json", {"verdict": verdict(blocking), "edits_at": edit_count, "blocks": blocks,
-                                 "count": len(blocking), "pending": pending})
+    save_json(d / "gate.json", {"verdict": verdict(blocking), "edits_at": mark, "blocks": blocks,
+                                "count": len(blocking), "pending": pending})
     head = (f"[broom] {len(blocking)} issue(s) in this turn's changes. Fix them before finishing. If one is "
             "pre-existing or a false positive, say so and stop again: broom doesn't block twice without a new edit.")
-    emit({"decision": "block", "reason": render(head, blocking, new_notes(sd / "notes.json", notes), set(files))})
+    emit({"decision": "block", "reason": render(head, blocking, new_notes(d / "notes.json", notes), set(files))})
+
+
+def hook_prompt(data: dict) -> None:
+    """A new prompt starts a turn: note the working tree, so the turn's end sees what Bash changed or committed.
+    Not while a gate is waiting or blocked: those changes still belong to the turn before. It runs as an async hook
+    (0.2 s on a 2,376-file repo, which no prompt should wait for); Claude's first tool call comes seconds later."""
+    cwd = Path(data.get("cwd") or os.getcwd()).resolve()
+    root = git_root(cwd)
+    d = turn_dir(data)
+    if root and setting("check_on", cwd) == "stop" and not waiting(d) and not (d / "gate.json").exists():
+        snapshot(d, root)
 
 
 # ---------------------------------------------------------------- session
 
 
 def hook_session(data: dict) -> None:
+    """Notes for Claude's first turn, which waits for this hook: so only what is quick, the cached doctor and the
+    smell counts of a scan that already ran."""
     repo = git_root(Path(data.get("cwd") or os.getcwd()).resolve())
     if repo is None:
         return
     sd = session_dir(data.get("session_id") or "cli")
     if str(repo) in read_lines(sd / "nudged.txt"):
         return  # once per session: a compaction or /clear doesn't repeat it
-    notes = [n for n in (setup_note(repo), session_note(repo)) if n]
+    smells = session_note(repo, cached_summary(repo))
+    notes = [n for n in (setup_note(repo), smells) if n]
+    if smells:
+        append_line(sd / "smells-noted.txt", str(repo))
     if not notes:
         return
     append_line(sd / "nudged.txt", str(repo))
     emit({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "\n\n".join(notes)}})
+
+
+def hook_session_scan(data: dict) -> None:
+    """The scan behind the smell note, in the background (an async hook) when HEAD has none cached; the note
+    reaches Claude with its next turn."""
+    repo = git_root(Path(data.get("cwd") or os.getcwd()).resolve())
+    if repo is None or setting("smells", repo) == "off" or cached_summary(repo) is not None:
+        return  # with a cached scan, the session hook has already said what there is to say
+    sd = session_dir(data.get("session_id") or "cli")
+    note = session_note(repo, summary(repo))
+    if note and str(repo) not in read_lines(sd / "smells-noted.txt"):
+        append_line(sd / "smells-noted.txt", str(repo))
+        emit({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": note}})
 
 
 def setup_note(repo: Path) -> Optional[str]:

@@ -111,8 +111,9 @@ class BroomCase(unittest.TestCase):
         (d / "settings.json").write_text(json.dumps(settings or {}))
         return d
 
-    def session(self, repo: Path, session_id: str, env: dict) -> dict:
-        r = subprocess.run([str(BROOM), "hook", "session"], capture_output=True, text=True, env=env,
+    def session(self, repo: Path, session_id: str, env: dict, event: str = "session") -> dict:
+        """A session-start hook: `session`, or the async `session-scan`."""
+        r = subprocess.run([str(BROOM), "hook", event], capture_output=True, text=True, env=env,
                            input=json.dumps({"session_id": session_id, "cwd": str(repo), "source": "startup"}))
         self.assertEqual(r.stderr.strip(), "", "hook raised")
         return json.loads(r.stdout) if r.stdout.strip() else {}

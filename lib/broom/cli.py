@@ -269,11 +269,13 @@ def cmd_known(args: argparse.Namespace) -> int:
 
 
 def cmd_hook(args: argparse.Namespace) -> int:
-    from .hooks import hook_commit, hook_edit, hook_session, hook_stop
+    from .hooks import hook_commit, hook_edit, hook_prompt, hook_session, hook_session_scan, hook_stop
 
     data = read_hook_input()
+    handlers = {"commit": hook_commit, "edit": hook_edit, "prompt": hook_prompt, "stop": hook_stop,
+                "subagent-stop": hook_stop, "session": hook_session, "session-scan": hook_session_scan}
     try:
-        {"commit": hook_commit, "edit": hook_edit, "stop": hook_stop, "session": hook_session}[args.event](data)
+        handlers[args.event](data)
     except Exception as e:  # a broken check must never trap Claude or block its edits
         print(f"broom hook {args.event}: {e}", file=sys.stderr)
     return 0
@@ -349,7 +351,7 @@ def main(argv: List[str]) -> int:
     m.set_defaults(fn=cmd_smells)
 
     h = sub.add_parser("hook")  # for Claude Code; left out of --help
-    h.add_argument("event", choices=["commit", "edit", "stop", "session"])
+    h.add_argument("event", choices=["commit", "edit", "prompt", "stop", "subagent-stop", "session", "session-scan"])
     h.set_defaults(fn=cmd_hook)
 
     ls = sub.add_parser("lsp")  # for .lsp.json; left out of --help

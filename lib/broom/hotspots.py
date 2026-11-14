@@ -1,7 +1,8 @@
 """The repo's code smells as a whole, ranked worst first for whoever cleans up: Claude through /broom:clean, or a
 person running `broom smells`. And the session note that tells Claude, once per session, when the repo has
 smells past the hard limit, so it raises them with the user at a natural point. The user's "not now"
-(`broom smells --dismiss`) keeps the note quiet until that count grows.
+(`broom smells --dismiss`) keeps the note quiet until that count grows. The scan behind the note runs in the
+background: on a 2,376-file repo it took 13 to 36 seconds, and Claude's first reply waits for session-start hooks.
 """
 
 from __future__ import annotations
@@ -74,14 +75,25 @@ def render(data: dict) -> str:
     return "\n".join(rows + [f"note: {n}" for n in data["notes"]])
 
 
+def head_of(repo: Path) -> str:
+    return (git(["rev-parse", "HEAD"], repo) or "").strip()
+
+
+def cached_summary(repo: Path) -> Optional[dict]:
+    """The repo's smell counts at HEAD if a scan already counted them, else None: what a session start can read
+    without waiting for a scan."""
+    head = head_of(repo)
+    cached = load_json(CACHE / f"{short_hash(str(repo))}.json", {})
+    return cached if head and cached.get("head") == head else None
+
+
 def summary(repo: Path) -> Optional[dict]:
     """The repo's smell counts at HEAD, scanned once per commit; None without a commit or past the size limit."""
-    head = (git(["rev-parse", "HEAD"], repo) or "").strip()
+    head = head_of(repo)
     if not head:
         return None
-    path = CACHE / f"{short_hash(str(repo))}.json"
-    cached = load_json(path, {})
-    if cached.get("head") == head:
+    cached = cached_summary(repo)
+    if cached:
         return cached
     files = repo_files(repo, [])
     if len(files) > NOTE_MAX_FILES:
@@ -90,14 +102,15 @@ def summary(repo: Path) -> Optional[dict]:
     _, hot = rank(found)
     data = {"head": head, "total": len(found), "severe": sum(s.level == "block" for s in found),
             "hotspots": [f["file"] for f in hot[:FILES_IN_NOTE]]}
-    save_json(path, data)
+    save_json(CACHE / f"{short_hash(str(repo))}.json", data)
     return data
 
 
-def session_note(repo: Path) -> Optional[str]:
+def session_note(repo: Path, data: Optional[dict]) -> Optional[str]:
+    """The note that asks Claude to offer a cleanup, from a summary: none when smells are off, there are no severe
+    ones, or the user dismissed this many."""
     if setting("smells", repo) == "off":
         return None
-    data = summary(repo)
     if not data or not data["severe"] or data["severe"] <= load_json(DISMISSED, {}).get(str(repo), -1):
         return None
     return (f"broom found {data['severe']} code smell(s) past the hard limit in this repo ({data['total']} in all; "
