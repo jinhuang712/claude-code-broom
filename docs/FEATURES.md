@@ -4,10 +4,13 @@
 
 | Hook | Fires on | Does | Cost when idle |
 |---|---|---|---|
-| SessionStart | new, resumed and cleared sessions | Runs a cached doctor; if the repo has gaps, asks Claude to offer `/broom:setup`. If it has smells past the hard limit, asks Claude to raise them and offer `/broom:clean` at a natural point. Once per session | ~0.1 s; a smell scan once per commit, under a second on the author's repos |
+| SessionStart | new, resumed and cleared sessions | Runs a cached doctor; if the repo has gaps, asks Claude to offer `/broom:setup`. If a cached scan of HEAD has smells past the hard limit, asks Claude to raise them and offer `/broom:clean` at a natural point. Once per session | 0.1–0.25 s, measured on a 2,376-file repo |
+| SessionStart, async | the same | Scans HEAD for smells when no scan is cached, in the background; the note reaches Claude with its next turn | nothing Claude waits for; the scan took 13–36 s on that repo |
+| UserPromptSubmit, async | each prompt | Notes the working tree's changed code files and HEAD, for the stop check (`check_on=stop`) | nothing Claude waits for; 0.2 s on that repo |
 | PreToolUse | every Bash call; acts on `git commit` | Formats the commit's files, lints and type-checks them, blocks the commit while issues remain | ~13 ms (a shell start); ~60 ms when the command mentions git and commit without committing |
-| PostToolUse | Edit, Write, MultiEdit, Serena's edit tools | Formats per edit (`format_on=edit`); records files for the stop check (`check_on=stop`) | one Python start: 30–45 ms measured on macOS |
-| Stop | each turn end | Checks the files Claude edited this turn (`check_on=stop`) | one Python start: 30–45 ms measured on macOS |
+| PostToolUse | Edit, Write, MultiEdit, Serena's edit tools | Formats per edit (`format_on=edit`); records files for the stop check (`check_on=stop`), a subagent's under its own id | one Python start: 30–45 ms measured on macOS |
+| Stop | each turn end | Checks what the turn changed (`check_on=stop`): files Claude edited, and files changed or committed since the prompt by any means, measured against the prompt's HEAD. Waits while background work runs, up to half an hour | one Python start: 30–45 ms measured on macOS |
+| SubagentStop | each subagent's end | Checks the files that subagent edited; a block goes to the subagent, which fixes its own | the same |
 
 ## Skills
 

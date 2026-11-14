@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.16.2
+
+- Session start no longer waits for a smell scan. The scan runs in an async hook and its note reaches Claude with
+  the next turn; the session hook says only what a cached scan knows. On a 2,376-file repo the session hook takes
+  0.13 to 0.24 s, where the scan inside it took 13 to 36 s and passed its 30 s timeout once in six runs, losing the
+  result and the cache.
+- The turn-end check waits while background work runs (a test suite, a build, a subagent), for half an hour at
+  most, and checks at the turn that work wakes. A hint no longer stops Claude in a pause and has it change files
+  under a running test suite.
+- The turn-end check sees what Bash changed (sed, a codemod, `git mv`) and what a wrapper committed (`kgf save`, an
+  integration script), measured against HEAD as the prompt found it. An async prompt hook notes the working tree;
+  it took 0.2 s on the same repo, which no prompt waits for.
+- A subagent's edits are checked at its own end (SubagentStop) and the block goes to it, so it fixes its own work;
+  the main session's turn end no longer checks them for it.
+
 ## 0.16.1
 
 - `build`, `out`, `release` and `target` count as build output only where git doesn't track the files. A repo

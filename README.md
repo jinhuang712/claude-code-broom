@@ -11,7 +11,8 @@ project's own rules.
 - **Sets up.** When you open a session in a repo, broom notices what's missing and Claude offers to install and
   configure it. Nothing is installed without your yes.
 - **Sweeps.** When it should, broom formats, lints and type-checks Claude's changes, and holds them back until
-  they're clean.
+  they're clean: changes made with an edit or a shell command, at the end of a turn rather than in a pause while
+  tests run, and a subagent's at that subagent's end, so it fixes its own.
 - **Smells.** Long functions, files and types, many parameters, deep nesting, high complexity, nested ternaries
   and duplicate code that a change makes worse: a hint past the soft limit, a block past the hard one. Lint suppressions
   without a reason, swallowed errors and commented-out code a change adds block; magic numbers, debug prints,

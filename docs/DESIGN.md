@@ -4,7 +4,7 @@
 
 | Part | Role |
 |---|---|
-| `hooks/hooks.json` | SessionStart (offer setup), PreToolUse on `git commit` (the sweep), PostToolUse on edits and Stop (both opt-in) |
+| `hooks/hooks.json` | SessionStart (offer setup, and an async smell scan), UserPromptSubmit (async: note the working tree), PreToolUse on `git commit` (the sweep), PostToolUse on edits, Stop and SubagentStop |
 | `bin/broom` | The one entry point, for hooks and for people; on the Bash PATH while the plugin is enabled |
 | `.lsp.json` | Language servers Claude Code starts: gopls, `broom lsp typescript` (picks the TypeScript server), rust-analyzer, pyright, sourcekit-lsp, vscode-css-language-server |
 | `skills/` | `/broom:setup` and `/broom:sweep`, which call `broom` |
@@ -104,10 +104,34 @@ Hooks gate what a change makes worse; the smells already in a repo need someone 
 ranks them for that, and `/broom:clean` tells Claude how to work through them: worst first, in batches the user
 agrees to, behavior kept, each batch re-checked and committed alone.
 
-To make that happen without the user remembering to ask, the session hook scans the repo once per commit (cached
-by HEAD; under a second on the user's repos) and, when smells past the hard limit exist, tells Claude to raise them
-at a natural point. It doesn't start a cleanup: the user decides. "Not now" (`broom smells --dismiss`) records the
-count, and the note returns only when it grows, the same ratchet the gates use.
+To make that happen without the user remembering to ask, the repo is scanned once per commit (cached by HEAD) and,
+when smells past the hard limit exist, Claude is told to raise them at a natural point. It doesn't start a cleanup:
+the user decides. "Not now" (`broom smells --dismiss`) records the count, and the note returns only when it grows,
+the same ratchet the gates use.
+
+The scan runs in an async hook. Claude's first reply waits for session-start hooks, and on a 2,376-file repo the
+scan took 13 to 36 seconds, past the hook's 30-second timeout once in six runs, which threw the result away and
+left nothing cached, so the next session paid again. The session hook says only what a cached scan knows; a scan
+still to run reaches Claude with its next turn.
+
+## When a turn ends
+
+A Stop hook fires whenever Claude finishes responding, not only when the work is done. A turn that ends while a
+test suite or a build runs in the background is a pause: blocking it there, for a hint, once made Claude change
+files under a running test suite, which then had to run again. The gate waits while any background task runs and
+checks at the turn the work wakes, giving up the wait after half an hour, as a server left running would keep it
+waiting forever.
+
+What the turn changed isn't only what Edit and Write touched. A Bash command can rewrite files (sed, a codemod,
+`git mv`), and a wrapper that commits (`kgf save`) holds no `git commit` for the commit hook: in one repo that was
+the main way changes landed, and nothing checked it. An async prompt hook notes the changed code files (by
+modification time and size, cheap enough for every prompt) and HEAD; the turn's end adds what changed since, and
+what was committed since, and measures it all against that HEAD, so a commit made during the turn still shows as
+the turn's change.
+
+Hooks run inside subagents too, with an `agent_id`. A subagent's edits are recorded under it, and its own end
+(SubagentStop) checks them: a block goes to the subagent as its next instruction, so it fixes its own work instead
+of the session that started it inheriting the bill.
 
 ## Setup
 
