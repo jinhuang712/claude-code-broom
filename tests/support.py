@@ -47,6 +47,42 @@ def py_function(name: str, lines: int) -> str:
     return f"def {name}(x):\n{body}    return x\n"
 
 
+# Code the commit, doctor and sweep tests share.
+GO_MAIN = """package main
+
+import (
+\t"fmt"
+
+\t"example.com/m/internal/util"
+)
+
+func main() { fmt.Println(util.Add(1, 2)) }
+"""
+GO_UTIL = """package util
+
+func Add(a, b int) int { return a + b }
+"""
+TS_LIB = """export async function fetchIt(n: number): Promise<number> {
+  return n * 2;
+}
+"""
+TS_MAIN = """import { fetchIt } from "./lib.js";
+
+export async function run(): Promise<number> {
+  return await fetchIt(1);
+}
+"""
+TS_BAD = """import { fetchIt } from "./lib.js";
+
+export async function run(): Promise<number> {
+  const unused = 5;
+  fetchIt(3);
+  return await fetchIt(1);
+}
+"""
+
+
+
 class BroomCase(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp()).resolve()
@@ -125,3 +161,14 @@ class BroomCase(unittest.TestCase):
         spec = out.get("hookSpecificOutput", {})
         return spec.get("permissionDecisionReason", "") if spec.get("permissionDecision") == "deny" else ""
 
+    # repos with code
+
+    def go_repo(self) -> Path:
+        return self.repo({"go.mod": "module example.com/m\n\ngo 1.26\n", "cmd/app/main.go": GO_MAIN,
+                          "internal/util/util.go": GO_UTIL})
+
+    def ts_repo(self, extra: dict = None) -> Path:
+        return self.repo({"package.json": '{"name":"t","private":true,"type":"module"}\n',
+                          "tsconfig.json": '{"compilerOptions":{"target":"es2022","module":"nodenext","strict":true,'
+                                           '"noEmit":true},"include":["src"]}\n',
+                          "src/lib.ts": TS_LIB, "src/main.ts": TS_MAIN, **(extra or {})})

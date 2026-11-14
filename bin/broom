@@ -23,7 +23,7 @@ def _repo_file() -> bool:
 
 
 # The edit and stop hooks fire on every edit and every turn: when the options switch them off, leave before
-# loading anything, so an idle hook costs one interpreter start. The defaults mirror SETTINGS in broom.common.
+# loading anything, so an idle hook costs one interpreter start. The defaults mirror SETTINGS in broom.config.
 if sys.argv[1:2] == ["hook"] and not _repo_file():
     event = sys.argv[2:3]
     if event == ["edit"] and _option("format_on", "commit") != "edit" and _option("check_on", "stop") != "stop":
