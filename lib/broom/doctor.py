@@ -6,57 +6,27 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
-from concurrent.futures import ThreadPoolExecutor
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import __version__
 from .common import (
-    BIOME_CFG, DATA_ROOT, DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG, REPO_FILE, RUFF_CFG,
-    DEAD_CODE, DIALECT_DEFAULTS, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, STYLELINT_CFG, SWIFT_FORMAT_CFG,
-    SWIFTFORMAT_CFG, SWIFTLINT_CFG,
-    css_linters, find_up, git, in_node_modules, js_formatter, js_linters, load_json, read_jsonc, repo_file, resolve_bin,
-    ruff_configured, run, save_json, setting, short_hash, swift_format_cmd, swift_formatter, swift_linter,
+    BIOME_CFG, DATA_ROOT, DEAD_CODE, DIALECT_DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG,
+    REPO_FILE, RUFF_CFG, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, STYLELINT_CFG, SWIFT_FORMAT_CFG, SWIFTFORMAT_CFG,
+    SWIFTLINT_CFG,
+    find_up, git, load_json, repo_file, save_json, short_hash,
 )
+from .needs import LANG_NAMES, LOCKFILES, Diagnosis, Item, settings_files
 
 MARKERS = {"go.mod": "go", "package.json": "js", "tsconfig.json": "js", "Cargo.toml": "rust",
            "pyproject.toml": "py", "setup.py": "py", "requirements.txt": "py"}
 SKIP_DIRS = {"node_modules", "vendor", "target", "dist", "build", "out", "venv", "__pycache__", "coverage", "Pods",
              "Carthage", "DerivedData"}
-LANG_NAMES = {"go": "Go", "js": "TS/JS", "rust": "Rust", "py": "Python", "css": "CSS", "scss": "SCSS",
-              "less": "Less", "swift": "Swift", "broom": "broom"}
-# Plugins that start a language server for the same files as broom's .lsp.json. Claude Code starts only the
-# first server registered for an extension, so either one silently never runs.
-LSP_PLUGINS = {"gopls-lsp": "go", "gopls": "go", "typescript-lsp": "js", "vtsls": "js", "ts7-lsp": "js",
-               "typescript-language-server": "js", "rust-analyzer-lsp": "rust", "rust-analyzer": "rust",
-               "pyright-lsp": "py", "pyright": "py", "swift-lsp": "swift", "sourcekit-lsp": "swift"}
-LOCKFILES = (("pnpm-lock.yaml", "pnpm"), ("bun.lock", "bun"), ("bun.lockb", "bun"), ("yarn.lock", "yarn"),
-             ("package-lock.json", "npm"))
-ADD_DEV = {"pnpm": "pnpm add -D", "bun": "bun add -d", "yarn": "yarn add -D", "npm": "npm i -D"}
 CONFIG_NAMES = (*GOLANGCI_CFG, *BIOME_CFG, *OXFMT_CFG, *PRETTIER_CFG, *OXLINT_CFG, *ESLINT_CFG, *RUFF_CFG,
                 *STYLELINT_CFG, SWIFTLINT_CFG, SWIFT_FORMAT_CFG, SWIFTFORMAT_CFG, "Package.swift", *MARKERS,
                 *(lock for lock, _ in LOCKFILES))
 MAX_PROJECTS = 20
-
-
-@dataclass
-class Item:
-    lang: str
-    role: str  # format, lint, types, lsp, plugin or deps
-    tool: str
-    status: str  # ok, missing, broken, off (a config is missing so broom stays hands-off) or conflict
-    project: str = ""  # directory for project-local tools and configs; "" for machine-wide ones
-    detail: str = ""
-    fix: str = ""  # shell command that fixes it
-    dev: str = ""  # devDependency the fix adds, so fixes for one project can share one install command
-    pm: str = ""  # the project's add-a-devDependency command
-    global_fix: str = ""  # for a devDependency fix: the machine-wide install, which serves every repo
-
-
-def tools_db() -> dict:
-    return json.loads((DEFAULTS / "tools.json").read_text())
 
 
 def scan(root: Path, max_depth: int = 3) -> Dict[str, List[Path]]:
@@ -102,288 +72,26 @@ def tracked_projects(root: Path) -> Dict[str, List[Path]]:
     return found
 
 
-def package_manager(project: Path, stop: Path) -> str:
-    for lock, pm in LOCKFILES:
-        if find_up(project, [lock], stop):
-            return pm
-    return "npm"
-
-
-def add_dev_command(project: Path, stop: Path) -> str:
-    pm = package_manager(project, stop)
-    cmd = ADD_DEV[pm]
-    if pm == "pnpm" and (project / "pnpm-workspace.yaml").exists():
-        cmd += " -w"  # pnpm refuses to add to a workspace root without it
-    elif pm == "yarn" and "workspaces" in read_jsonc(project / "package.json"):
-        cmd += " -W"
-    return cmd
-
-
-def install_command(spec: dict) -> str:
-    options = spec.get("install") or []
-    for manager, cmd in options:
-        if shutil.which(manager):
-            return cmd
-    return options[0][1] if options else ""
-
-
-def probe(exe: str, spec: dict, cwd: Path) -> Tuple[bool, str]:
-    """(runs, first line of its output). A rustup proxy without its component exists on PATH but fails here."""
-    cmd = spec.get("probe")
-    if not cmd:
-        return True, ""
-    rc, out, err = run([exe, *cmd[1:]], cwd, timeout=20)
-    first = next((r.strip() for r in (out + "\n" + err).splitlines() if r.strip()), "")
-    return rc == 0, first[:120]
-
-
-def settings_files(repo: Path) -> List[Path]:
-    config = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
-    return [config / "settings.json", repo / ".claude" / "settings.json", repo / ".claude" / "settings.local.json"]
-
-
 def diagnose(repo: Path, projects: Optional[Dict[str, List[Path]]] = None) -> dict:
-    db = tools_db()
+    """Everything `broom doctor` reports for the repo, and the commands that fix it."""
     projects = scan(repo) if projects is None else projects
-    items: List[Item] = []
-    machine: List[Tuple[str, str, str, str]] = []  # (lang, role, tool, name on PATH)
-
-    def rel(p: Path) -> str:
-        return "." if p == repo else str(p.relative_to(repo))
-
-    def in_project(p: Path, cmd: str) -> str:
-        return cmd if p == repo else f"cd {rel(p)} && {cmd}"
-
-    def dev_fix(item: Item, project: Path, pkg: str) -> Item:
-        """Missing JS tools go in as devDependencies, at the repo root when it has a package.json (tools resolve
-        from node_modules/.bin up to the root, so one install serves every package), else in the project, else
-        globally."""
-        target = repo if (repo / "package.json").exists() else project
-        global_fix = install_command(db.get(item.tool, {}))
-        if (target / "package.json").exists():
-            item.project = rel(target)
-            item.dev, item.pm = pkg, add_dev_command(target, repo)
-            item.fix, item.global_fix = f"{item.pm} {pkg}", global_fix
-        else:
-            item.fix = global_fix
-        return item
-
-    def config_home(dirs: List[Path]) -> Path:
-        """Where a missing config goes: configs are found by walking up, so one at the root covers a monorepo."""
-        return dirs[0] if len(dirs) == 1 else repo
-
-    if "go" in projects:
-        machine += [("go", "types", "go", "go"), ("go", "format", "gofmt", "gofmt"),
-                    ("go", "lint", "golangci-lint", "golangci-lint"), ("go", "lsp", "gopls", "gopls")]
-        for p in projects["go"]:
-            cfg = find_up(p, GOLANGCI_CFG, repo)
-            items.append(Item("go", "config", "golangci config", "ok", rel(p),
-                              f"project {cfg.name}" if cfg else "broom's defaults (no project config)"))
-
-    for p in projects.get("js", []):
-        probe_file = p / "_.ts"
-        for tool, _ in js_linters(probe_file, repo):
-            name = "oxlint" if tool.startswith("oxlint") else tool
-            local_only = tool in ("eslint",)
-            exe = resolve_bin(name, p, repo, local_only=local_only)
-            detail = "broom's defaults (no project config)" if tool == "oxlint-default" else f"project {name} config"
-            if exe:
-                items.append(Item("js", "lint", name, "ok", rel(p), detail))
-            elif tool in ("eslint", "biome"):
-                items.append(Item("js", "deps", name, "missing", rel(p),
-                                  "configured, but the project's dependencies aren't installed",
-                                  in_project(p, f"{package_manager(p, repo)} install")))
-            else:
-                items.append(dev_fix(Item("js", "lint", "oxlint", "missing", rel(p), detail), p, "oxlint"))
-            if tool == "oxlint-default" and find_up(p, ["tsconfig.json"], repo) \
-                    and not resolve_bin("tsgolint", p, repo):
-                items.append(dev_fix(Item("js", "lint", "tsgolint", "missing", rel(p), "type-aware rules"), p,
-                                     "oxlint-tsgolint"))
-        fmt = js_formatter(probe_file, repo)
-        if fmt is None:
-            pass  # reported once for all such projects, below
-        elif resolve_bin(fmt[0], p, repo):
-            items.append(Item("js", "format", fmt[0], "ok", rel(p), f"project {fmt[0]} config"))
-        else:
-            items.append(Item("js", "deps", fmt[0], "missing", rel(p),
-                              "configured, but the project's dependencies aren't installed",
-                              in_project(p, f"{package_manager(p, repo)} install")))
-        if (p / "tsconfig.json").exists():
-            if resolve_bin("tsc", p, repo):
-                items.append(Item("js", "types", "tsc", "ok", rel(p)))
-            else:
-                items.append(dev_fix(Item("js", "types", "tsc", "missing", rel(p)), p, "typescript"))
-    unformatted = [p for p in projects.get("js", []) if js_formatter(p / "_.ts", repo) is None]
-    if unformatted:
-        home = config_home(unformatted)
-        items.append(Item("js", "format", "oxfmt", "off", rel(home),
-                          f"no formatter config ({len(unformatted)} project(s)), so broom doesn't format TS/JS",
-                          f"broom init {rel(home)}"))
-        if not resolve_bin("oxfmt", home, repo):
-            items.append(dev_fix(Item("js", "format", "oxfmt", "off", rel(home), "needed once formatting is on"), home,
-                                 "oxfmt"))
-    if "js" in projects:
-        items.append(typescript_lsp(repo, db))
-
-    if "rust" in projects:
-        machine += [("rust", "types", "cargo", "cargo"), ("rust", "format", "rustfmt", "rustfmt"),
-                    ("rust", "lint", "cargo-clippy", "cargo"), ("rust", "lsp", "rust-analyzer", "rust-analyzer")]
-
-    if "py" in projects:
-        machine += [("py", "lint", "ruff", "ruff"), ("py", "lsp", "pyright-langserver", "pyright-langserver")]
-        unformatted = [p for p in projects["py"] if not ruff_configured(p / "_.py", repo)]
-        if unformatted:
-            home = config_home(unformatted)
-            items.append(Item("py", "format", "ruff format", "off", rel(home),
-                              f"no ruff config ({len(unformatted)} project(s)), so broom doesn't format Python",
-                              f"broom init {rel(home)}"))
-
-    for p in projects.get("css", []):
-        for tool, d in css_linters(p / "_.css", repo):
-            name = "stylelint" if tool.startswith("stylelint") else tool
-            if tool == "stylelint-default":
-                detail = "broom's defaults (no project config)"
-                if resolve_bin("stylelint", d, repo):
-                    items.append(Item("css", "lint", name, "ok", rel(d), detail))
-                else:
-                    items.append(dev_fix(Item("css", "lint", name, "missing", rel(d), detail), d, "stylelint"))
-            elif resolve_bin(name, d, repo, local_only=name == "eslint"):
-                items.append(Item("css", "lint", name, "ok", rel(d), f"project {name} config"))
-            else:
-                items.append(Item("css", "deps", name, "missing", rel(d),
-                                  "configured, but the project's dependencies aren't installed",
-                                  in_project(d, f"{package_manager(d, repo)} install")))
-    for ext, (dialect, pkg) in DIALECT_DEFAULTS.items():
-        lang = ext[1:]
-        for p in projects.get(lang, []):
-            for tool, d in css_linters(p / f"_{ext}", repo):
-                if tool != "stylelint-default" or in_node_modules(pkg, d, repo):
-                    continue
-                item = Item(lang, "lint", pkg, "missing", rel(d), f"broom's {dialect} defaults")
-                if (repo / "package.json").exists() or (d / "package.json").exists():
-                    items.append(dev_fix(item, d, pkg))
-                else:  # stylelint loads it from the project, so a global install wouldn't do
-                    item.detail += ": stylelint loads it from node_modules, so this needs a package.json"
-                    items.append(item)
-    # CSS in a JS project is formatted (or not) along with it; this is CSS elsewhere, as in a Go service's static/.
-    unformatted = [p for p in projects.get("css", [])
-                   if p not in projects.get("js", []) and js_formatter(p / "_.css", repo) is None]
-    if unformatted:
-        home = config_home(unformatted)
-        items.append(Item("css", "format", "oxfmt", "off", rel(home),
-                          f"no formatter config ({len(unformatted)} project(s)), so broom doesn't format CSS",
-                          f"broom init {rel(home)}"))
-        if not resolve_bin("oxfmt", home, repo):
-            items.append(dev_fix(Item("css", "format", "oxfmt", "off", rel(home), "needed once formatting is on"),
-                                 home, "oxfmt"))
-    if "css" in projects:
-        machine.append(("css", "lsp", "vscode-css-language-server", "vscode-css-language-server"))
-    coded = [lang for lang in ("go", "js", "py", "swift") if lang in projects]
-    if coded and setting("smells", repo) != "off":  # duplicate code, in every language smells measure
-        machine.append((coded[0], "smells", "jscpd", "jscpd"))
-
-    if projects.get("swift"):
-        swift_found, swift_tools = swift_items(repo, projects["swift"], db)
-        items += swift_found
-        machine += swift_tools
-
-    def check_machine(entry: Tuple[str, str, str, str]) -> Item:
-        lang, role, tool, name = entry
-        spec = db.get(tool, {})
-        exe = shutil.which(name)
-        if not exe:
-            return Item(lang, role, tool, "missing", fix=install_command(spec))
-        works, first = probe(exe, spec, repo)
-        if not works:
-            return Item(lang, role, tool, "broken", detail=first, fix=install_command(spec))
-        return Item(lang, role, tool, "ok", detail=first if spec.get("probe_is_version", True) else "")
-
-    with ThreadPoolExecutor(max_workers=6) as pool:
-        items += list(pool.map(check_machine, machine))
-
-    for path in settings_files(repo):
-        enabled = load_json(path, {}).get("enabledPlugins") or {}
-        for key, on in enabled.items():
-            lang = LSP_PLUGINS.get(key.split("@")[0])
-            if on is True and lang in projects:
-                items.append(Item(lang, "plugin", key, "conflict", "",
-                                  f"also starts a {LANG_NAMES[lang]} language server; only the first one "
-                                  "registered for an extension runs", f"claude plugin disable {key}"))
-
-    items += check_repo_file(repo)
     unique: Dict[Tuple[str, ...], Item] = {}
-    for i in items:  # one package's missing tool installed at the root is the same fix for every package
+    for i in Diagnosis(repo, projects).findings() + check_repo_file(repo):
+        # one package's missing tool installed at the root is the same fix for every package
         unique.setdefault((i.lang, i.role, i.tool, i.status, i.project, i.fix), i)
     items = list(unique.values())
     fixes, configure = plan_commands(items)
     fixes_global, configure_global = plan_commands(items, machine_wide=True)
     return {
         "version": __version__, "repo": str(repo),
-        "languages": {lang: [rel(p) for p in dirs] for lang, dirs in projects.items()},
+        "languages": {lang: ["." if p == repo else str(p.relative_to(repo)) for p in dirs]
+                      for lang, dirs in projects.items()},
         "items": [asdict(i) for i in items],
         "fix": fixes, "configure": configure,
         # the same, with JS tools installed machine-wide instead of as devDependencies: once for every repo
         "fix_global": fixes_global, "configure_global": configure_global,
         "healthy": all(i.status == "ok" for i in items),
     }
-
-
-def swift_items(repo: Path, swift: List[Path], db: dict) -> Tuple[List[Item], List[Tuple[str, str, str, str]]]:
-    """Swift's linter config and formatter, and the tools to probe on PATH."""
-    def rel(p: Path) -> str:
-        return "." if p == repo else str(p.relative_to(repo))
-
-    items: List[Item] = []
-    machine = [("swift", "lint", "swiftlint", "swiftlint"), ("swift", "lsp", "sourcekit-lsp", "sourcekit-lsp")]
-    if any((p / "Package.swift").exists() for p in swift):  # Xcode projects aren't built
-        machine.append(("swift", "types", "swift", "swift"))
-    swift_format = swift_format_version(repo)
-    for p in swift:
-        tool, d = swift_linter(p / "_.swift", repo)
-        detail = f"project {SWIFTLINT_CFG}" if tool == "swiftlint" else "broom's defaults (no project config)"
-        items.append(Item("swift", "config", "swiftlint config", "ok", rel(d), detail))
-        fmt = swift_formatter(p / "_.swift", repo)
-        if fmt is None:
-            continue  # reported once for all such projects, below
-        tool, d = fmt
-        cfg = SWIFTFORMAT_CFG if tool == "swiftformat" else SWIFT_FORMAT_CFG
-        if (shutil.which(tool) if tool == "swiftformat" else swift_format):
-            items.append(Item("swift", "format", tool, "ok", rel(d), f"project {cfg}"))
-        else:
-            items.append(Item("swift", "format", tool, "missing", detail=f"the project's {cfg} needs it",
-                              fix=install_command(db.get(tool, {}))))
-    unformatted = [p for p in swift if swift_formatter(p / "_.swift", repo) is None]
-    if unformatted:
-        home = unformatted[0] if len(unformatted) == 1 else repo  # one config at the root covers a monorepo
-        items.append(Item("swift", "format", "swift-format", "off", rel(home),
-                          f"no formatter config ({len(unformatted)} project(s)), so broom doesn't format Swift",
-                          f"broom init {rel(home)}"))
-        if not swift_format:  # the toolchain has it from Swift 6
-            items.append(Item("swift", "format", "swift-format", "off", detail="needed once formatting is on",
-                              fix=install_command(db.get("swift-format", {}))))
-    return items, machine
-
-
-def typescript_lsp(repo: Path, db: dict) -> Item:
-    """The TypeScript server broom's launcher starts for this repo. Claude Code starts one per session, from the
-    repo root, so that is where it's decided."""
-    from .lsp import typescript_server
-
-    cmd, why = typescript_server(repo)
-    tool = "typescript-language-server"
-    if cmd and Path(cmd[0]).name == tool:
-        return Item("js", "lsp", tool, "ok", detail=why)
-    detail = f"without it the language server is {why}" if cmd else why
-    return Item("js", "lsp", tool, "missing", detail=detail, fix=install_command(db.get(tool, {})))
-
-
-def swift_format_version(cwd: Path) -> str:
-    """swift-format's version; "" when neither a standalone install nor the toolchain's (Swift 6 and later) runs."""
-    cmd = swift_format_cmd()
-    if not cmd:
-        return ""
-    rc, out, _ = run([*cmd, "--version"], cwd, timeout=20)
-    return out.strip() if rc == 0 else ""
 
 
 def limit_problems(limits: object, key: str = "limits") -> List[str]:
@@ -587,6 +295,3 @@ def new_gaps(repo: Path, result: dict) -> List[dict]:
     known = answered_kinds()
     return [i for i in found if gap_kind(i) not in known]
 
-
-def needs_setup(repo: Path, result: dict) -> bool:
-    return bool(new_gaps(repo, result))
