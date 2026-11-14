@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.16.3
+
+- `broom install-hook` adds git's own pre-commit hook, for commits Claude Code's commit hook never sees: a
+  wrapper's (`kgf save`, an integration script) or a person's. It checks the staged files the same way, without
+  formatting; it never replaces another tool's hook, and passes over a broom too old to know it.
+- File content that passed a check, with nothing blocked, hinted or timed out, is recorded by git's blob id for a
+  day, and no hook checks it again. On a TypeScript repo where checking a 29-file commit took 55 to 81 s, the skip
+  takes about 30 ms.
+- `.broom.json` `legacy` names code on its way out: new code that repeats it isn't a duplicate, as during a
+  migration that writes the new code beside the old before deleting it.
+- `.broom.json` `test_limits` moves the smell limits for test files on top of `limits`. A repo with 150- and
+  200-line file limits for its source had split a test file into four numbered parts to fit.
+- `BROOM_NO_ACCEPT=1` turns `broom known --accept` off, and the block message stops offering it, for agents that
+  must fix what they break.
+- `broom smells` names missing tools in its first line, where counts without them read as cleaner than the code
+  is.
+
 ## 0.16.2
 
 - Session start no longer waits for a smell scan. The scan runs in an async hook and its note reaches Claude with
