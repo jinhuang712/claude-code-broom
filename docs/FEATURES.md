@@ -28,7 +28,7 @@
 | `broom fmt [paths]` | Format only. `--scope` |
 | `broom doctor [--json]` | Languages, tools, configs and conflicts, with the commands that fix them |
 | `broom init [dir]` | Add default configs where missing. Never overwrites. `--dry-run` |
-| `broom smells [paths] [--top N] [--json] [--dismiss]` | The code smells of the repo or some paths: the hotspot files and the worst smells, worst first. `--dismiss` quiets the session note until the count past the hard limit grows |
+| `broom smells [paths] [--base REV] [--top N] [--json] [--dismiss]` | The code smells of the repo or some paths: the hotspot files and the worst smells, worst first. `--base REV` lists only what the changes since REV made worse, each smell's size or count at REV as `was` in the JSON (`null` for a new one). `--dismiss` quiets the session note until the count past the hard limit grows |
 | `broom known [--accept WHY] [--clear] [paths]` | List or clear accepted issues. `--accept WHY` accepts the last blocked commit's issues with the reason: how an unfixed type or compile error gets through |
 | `broom setup --done / --dismiss / --reset` | Record the setup decision; gaps left alone are remembered by kind for every repo. `--reset` forgets them all |
 
@@ -52,7 +52,7 @@
 ```
 
 At the git root. Any setting above overrides the user setting in this repo; `exclude` globs, relative to the
-root, keep paths out of formatting and checks entirely. `broom doctor` flags unknown keys and values.
+root, keep paths out of formatting, checks and smells entirely. `broom doctor` flags unknown keys and values.
 
 ## Languages and tools
 
@@ -132,13 +132,19 @@ These count by occurrence: a change that adds one gets the smell's level.
 - Only what a change made worse counts: each file is measured as it is and at the base revision (HEAD for hooks).
   A smell counts when the change pushed it past a limit, or grew it while past the hard one; growth between the
   limits is left alone.
+- A file git sees as renamed (`git mv`, or a move staged with `git add`) is measured against its old path, and its
+  changed lines are those that differ from it: moving a file makes nothing new. A file whose lines besides imports
+  didn't grow isn't longer for the change: rewired imports, such as a moved module's new paths or a formatter's line
+  breaks, don't count.
 - A hint goes into the commit's context, and stops a turn's end once. A block stops the commit and passes only
   fixed or accepted with `broom known --accept "<why>"`, like a type error.
 - `broom sweep` lists the smells the changes made worse; `broom sweep --all` lists every smell in the repo.
 - Dependencies, environments and build output (`node_modules`, `vendor`, `Pods`, `Carthage`, `.venv`, `venv`,
-  `site-packages`, `__pycache__`, `.build`, `DerivedData`, `dist`, `build`, `out`, `release`, `target`, `.bundle`,
-  `.next`, `coverage`, `test-results`, `testdata`, `Generated`, `generated`), minified files, `.d.ts` and generated code (`DO NOT EDIT`, `@generated`)
-  are skipped.
+  `site-packages`, `__pycache__`, `.build`, `DerivedData`, `dist`, `.bundle`, `.next`, `coverage`, `test-results`),
+  generated code and fixtures (`Generated`, `generated`, `testdata`, and files headed `DO NOT EDIT` or `@generated`),
+  minified files and `.d.ts` are skipped. `build`, `out`, `release` and `target` are build output in some projects
+  and source in others: files under them are skipped only where git doesn't track them. Tracked directories skipped
+  by name are listed in a note. Generated code still counts as using code, so what only it calls isn't dead.
 - In tests, complexity and magic numbers don't count: every assertion's `if` adds to complexity, and the numbers
   are fixtures. Neither do the length or complexity of
   `describe`/`it`/`test` callbacks, which are containers. Long test functions still count.

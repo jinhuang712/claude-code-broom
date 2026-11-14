@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.16.1
+
+- `build`, `out`, `release` and `target` count as build output only where git doesn't track the files. A repo
+  that keeps hand-written code in a `release/` directory had its smells there unreported, and five files only that
+  directory imported were called dead. Untracked ones stay skipped: the list was made for an unignored
+  `node_modules` and app build. A note lists the tracked directories still skipped by name (`vendor`,
+  `generated`, ...), and generated code counts as using code, so what only it calls isn't dead.
+- A renamed file (`git mv`, or a move staged with `git add`) is measured against its old path, and none of its
+  lines count as changed: a moved file over the hard limit no longer blocks as "new", and its old lint findings
+  and dead code stay quiet.
+- A long file whose lines besides imports didn't grow isn't longer for the change: rewiring imports after a move,
+  wrapped by a formatter, no longer blocks a commit.
+- `broom smells --base REV` lists only what the changes since REV made worse, with each smell's size or count at
+  REV as `was` in the JSON.
+- `broom smells` and the session note leave out `.broom.json`'s `exclude`, as formatting and checks already did.
+- On a 2,376-file TypeScript repo the new steps add about 0.25 s to a whole-repo scan of 15 to 20 s, and about
+  0.2 s to a hook's check; the scan finds the same 915 smells as 0.16.0.
+
 ## 0.16.0
 
 - `broom smells [paths] [--top N] [--json]`: the code smells of the repo or some paths, ranked: the hotspot files

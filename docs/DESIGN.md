@@ -50,6 +50,18 @@ A smell counts when the change pushed it past a limit or grew it while past the 
 more literal but measured badly: across six of the user's repos, 20 to 265 source files sit over 400 lines, so a
 hint on every added line would have been the norm, and noise teaches Claude to override broom.
 
+"Made worse" needs the same file on both sides. A file git sees as renamed is read at its old path, and its changed
+lines come from a rename-aware diff; read at the new path, a moved file over the hard limit was "new" and blocked,
+as a refactor that moved modules into a new layout found on every move. A long file whose lines besides imports
+didn't grow isn't counted either: rewiring imports after a move, which a formatter then wraps, lengthened files
+already past the limit by a line or two and blocked commits that changed no logic.
+
+Skipping by directory name keeps dependencies out without reading them, but a name is a guess. `release` held a
+family of hand-written adapters in a user's repo: their smells went unreported, and since a skipped directory's
+imports went unread too, five files it used were called dead. `build`, `out`, `release` and `target` now count as
+build output only where git doesn't track the files, which keeps the case the list was made for, an unignored and
+untracked `node_modules` and app build. Tracked directories still skipped by name are listed in a note.
+
 Smells that count by occurrence (suppressions, swallowed errors, magic numbers, TODOs and the like) can't use
 limits: one more magic number in a file of 225 is the signal. They count when the change raises the count in a
 file, matched by line text so moved code stays old. Counting edited lines too made count-neutral edits hint, which

@@ -99,7 +99,7 @@ tsc (~/code/app):
 { "format_scope": "function", "exclude": ["vendor/**", "**/*.pb.go"], "limits": { "function_lines": [60, 120] } }
 ```
 
-`broom` 命令也在 PATH 上：`broom sweep`、`broom doctor`、`broom known`。详见 [Features](FEATURES.md)。
+`broom` 命令也在 PATH 上：`broom sweep`、`broom smells`、`broom doctor`、`broom known`。详见 [Features](FEATURES.md)。
 
 ## 文档（英文）
 
