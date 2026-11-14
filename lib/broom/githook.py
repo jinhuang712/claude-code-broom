@@ -8,7 +8,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Tuple
 
-from .common import PLUGIN_ROOT, git
+from .gitutil import git
+from .state import PLUGIN_ROOT
 
 MARK = "Added by `broom install-hook`"
 MARKETPLACE_BROOM = '"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/marketplaces/claude-code-broom/bin/broom"'

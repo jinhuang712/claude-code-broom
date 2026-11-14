@@ -11,7 +11,8 @@ import time
 from pathlib import Path
 from typing import Dict, List
 
-from .common import DATA_ROOT, git, load_json, save_json
+from .gitutil import git
+from .state import DATA_ROOT, load_json, save_json
 
 PASSED = DATA_ROOT / "passed.json"  # {repo: {path: [blob id, time]}}
 KEEP_SECONDS = 86400

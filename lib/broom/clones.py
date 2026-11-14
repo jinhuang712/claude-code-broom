@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
-from .common import git, run
+from .gitutil import git, run
 
 FORMATS = "javascript,typescript,jsx,tsx,python,go,swift"
 TIMEOUT = 120

@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-from .common import git, git_root
+from .gitutil import git, git_root
 
 COMMIT_LONG_VALUE = {
     "--message", "--file", "--reuse-message", "--reedit-message", "--author", "--date", "--template",

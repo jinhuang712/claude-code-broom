@@ -17,7 +17,9 @@ import threading
 from pathlib import Path
 from typing import IO, Any, Dict, List, Optional, Set, Tuple
 
-from .common import PLUGIN_ROOT, boundary, find_up, git_root, in_node_modules, run
+from .gitutil import git_root, run
+from .state import PLUGIN_ROOT
+from .toolchain import boundary, find_up, in_node_modules
 
 FUNCTION_KINDS = {6, 9, 12}  # LSP SymbolKind: Method, Constructor, Function
 # In Swift, properties too (Property, Variable): a computed property is code, SwiftUI's `body` most of all, and a

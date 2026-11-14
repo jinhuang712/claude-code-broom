@@ -9,7 +9,7 @@ import unittest
 from support import BroomCase, py_function
 
 from broom.clones import failure_note
-from broom.common import ChangedLines
+from broom.gitutil import ChangedLines
 from broom.measure import code_lines
 from broom.smells import base_texts, find_smells
 

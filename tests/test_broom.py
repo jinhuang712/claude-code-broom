@@ -795,7 +795,7 @@ class BroomTest(BroomCase):
         self.assertNotIn("colr", reason)
 
     def test_css_linters_follow_the_nearest_config(self) -> None:
-        from broom.common import css_linters
+        from broom.toolchain import css_linters
 
         r = self.repo({"package.json": "{}\n", "biome.json": "{}\n",
                        "web/package.json": '{"devDependencies": {"@eslint/css": "^1"}}\n',

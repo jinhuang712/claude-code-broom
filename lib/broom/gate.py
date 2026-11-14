@@ -15,7 +15,9 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 from .checks import Issue
-from .common import DATA_ROOT, ChangedLines, excluded, load_json, save_json, short_hash
+from .config import excluded
+from .gitutil import ChangedLines
+from .state import DATA_ROOT, load_json, save_json, short_hash
 
 BASELINE = DATA_ROOT / "baseline.json"
 COMMITS = DATA_ROOT / "commits.json"  # per repo: the last blocked commit's verdict, denials and pending issues

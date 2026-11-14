@@ -14,7 +14,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
-from .common import GO_EXTS, JS_EXTS, PY_EXTS, SMELL_PRESENCE, SWIFT_EXTS, resolve_bin, run
+from .config import SMELL_PRESENCE
+from .gitutil import run
+from .toolchain import GO_EXTS, JS_EXTS, PY_EXTS, SWIFT_EXTS, resolve_bin
 
 Limits = Dict[str, Tuple[int, int]]
 TOOL_TIMEOUT = 90

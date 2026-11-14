@@ -10,9 +10,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from .common import DATA_ROOT, changed_since, drop_excluded, git, load_json, save_json, setting, short_hash
+from .config import drop_excluded, setting
 from .gate import display, note_text
+from .gitutil import changed_since, git
 from .smells import Smell, find_smells
+from .state import DATA_ROOT, load_json, save_json, short_hash
 
 CACHE = DATA_ROOT / "hotspots"
 DISMISSED = DATA_ROOT / "smells-dismissed.json"

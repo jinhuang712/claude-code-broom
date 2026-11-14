@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 BROOM = ROOT / "bin" / "broom"
 sys.path.insert(0, str(ROOT / "lib"))
 
-from broom.common import swift_format_cmd  # noqa: E402
+from broom.toolchain import swift_format_cmd  # noqa: E402
 
 GIT_ENV = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
 HAS_GO = all(shutil.which(t) for t in ("go", "gofmt", "golangci-lint"))

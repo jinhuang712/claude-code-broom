@@ -11,13 +11,14 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import __version__
-from .common import (
-    BIOME_CFG, DATA_ROOT, DEAD_CODE, DIALECT_DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG,
-    REPO_FILE, RUFF_CFG, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, STYLELINT_CFG, SWIFT_FORMAT_CFG, SWIFTFORMAT_CFG,
-    SWIFTLINT_CFG,
-    find_up, git, load_json, repo_file, save_json, short_hash,
-)
+from .config import DEAD_CODE, REPO_FILE, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, repo_file
+from .gitutil import git
 from .needs import LANG_NAMES, LOCKFILES, Diagnosis, Item, settings_files
+from .state import DATA_ROOT, load_json, save_json, short_hash
+from .toolchain import (
+    BIOME_CFG, DIALECT_DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG, RUFF_CFG,
+    STYLELINT_CFG, SWIFT_FORMAT_CFG, SWIFTFORMAT_CFG, SWIFTLINT_CFG, find_up,
+)
 
 MARKERS = {"go.mod": "go", "package.json": "js", "tsconfig.json": "js", "Cargo.toml": "rust",
            "pyproject.toml": "py", "setup.py": "py", "requirements.txt": "py"}

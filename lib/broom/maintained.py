@@ -11,7 +11,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Set
 
-from .common import git, glob_matcher, repo_config
+from .config import glob_matcher, repo_config
+from .gitutil import git
 
 # Dependencies, environments and build output nobody here maintains: never read, not even for what uses what.
 DEPENDENCY_DIRS = {

@@ -18,8 +18,10 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from .common import git, git_changed_files, lang_of, load_json, save_json, session_dir
+from .gitutil import git, git_changed_files
 from .maintained import DEPENDENCY_DIRS
+from .state import load_json, save_json, session_dir
+from .toolchain import lang_of
 
 SNAPSHOT = "snapshot.json"  # {repo: {"head": sha, "files": {path: [mtime_ns, size]}}}
 DEFERRED = "deferred.json"  # {"t": when the gate first waited for background work}

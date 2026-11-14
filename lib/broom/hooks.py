@@ -28,10 +28,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from .checks import Issue, run_checks
-from .common import (
-    DATA_ROOT, ChangedLines, append_line, emit, excluded, git, git_changed_files, git_root, lang_of, load_json,
-    prune_sessions, save_json, session_dir, setting, short_hash,
-)
+from .config import excluded, setting
 from .doctor import describe, diagnose_cached, new_gaps
 from .fmt import format_files
 from .gate import (
@@ -39,9 +36,12 @@ from .gate import (
     note_text, render, select, setup_hint, verdict,
 )
 from .gitcmd import parse, parse_commit, plan_commit, staged
+from .gitutil import ChangedLines, git, git_changed_files, git_root
 from .hotspots import cached_summary, session_note, summary
 from .passed import record, staged_blobs, unpassed, worktree_blobs
 from .smells import Smell, gate_smells, hint_text
+from .state import DATA_ROOT, append_line, emit, load_json, prune_sessions, save_json, session_dir, short_hash
+from .toolchain import lang_of
 from .turns import DEFERRED, changed_since_snapshot, paused, snapshot, turn_base, turn_dir, waiting
 
 MAX_BLOCKS = 3

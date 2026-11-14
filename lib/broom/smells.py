@@ -21,9 +21,10 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 from .checks import Issue
-from .common import DEAD_CODE, SMELL_LIMITS, SMELL_PRESENCE, ChangedLines, renamed, repo_config, setting
 from .clones import Clone, Unused, find_clones, find_unused
+from .config import DEAD_CODE, SMELL_LIMITS, SMELL_PRESENCE, repo_config, setting
 from .gate import issue_key
+from .gitutil import ChangedLines, renamed
 from .maintained import Maintained
 from .measure import SMELL_EXTS, Limits, Raw, code_lines, measure
 
