@@ -40,6 +40,31 @@ class ScopeTest(BroomCase):
         self.assertEqual([s.text() for s in found if s.metric == "dead_code" and s.file.name == "util.py"], [],
                          "a new module only a tracked release/ imports is used")
 
+    @unittest.skipUnless(shutil.which("jscpd"), "jscpd missing")
+    def test_copies_of_legacy_code_dont_count(self) -> None:
+        body = py_function("one", 40).split("\n", 1)[1]
+        r = self.repo({"old/a.py": "def one(x):\n" + body, ".broom.json": '{"legacy": ["old/**"]}'})
+        (r / "b.py").write_text("def two(x):\n" + body)
+        found, _ = find_smells(r, [r / "b.py"], "HEAD")
+        self.assertEqual([s.text() for s in found if s.metric == "duplicate_lines"], [], "b.py replaces old/a.py")
+
+    def test_test_files_get_their_own_limits(self) -> None:
+        lines = "".join(f"x{i} = {i}\n" for i in range(25))
+        both = {"a.py": lines, "tests/test_a.py": lines}
+        cases = [('{"limits": {"file_lines": [10, 20]}, "test_limits": {"file_lines": [30, 40]}}', ["a.py"]),
+                 ('{"test_limits": {"file_lines": [10, 20]}}', ["tests/test_a.py"])]
+        for config, flagged in cases:
+            with self.subTest(config):
+                r = self.repo({**both, ".broom.json": config})
+                found, _ = find_smells(r, [r / "a.py", r / "tests/test_a.py"], None)
+                self.assertEqual([str(s.file.relative_to(r)) for s in found if s.metric == "file_lines"], flagged)
+        item = next(i for i in self.doctor(r, self.fake_path())["items"] if i["tool"] == ".broom.json")
+        self.assertIn("test limits for file_lines", item["detail"])
+        (r / ".broom.json").write_text('{"legacy": "old", "test_limits": {"file_lines": [9, 3]}}')
+        item = next(i for i in self.doctor(r, self.fake_path())["items"] if i["tool"] == ".broom.json")
+        self.assertIn("legacy must be a list of globs", item["detail"])
+        self.assertIn("test_limits: file_lines must be [soft, hard]", item["detail"])
+
     def test_smells_leave_out_what_the_repo_excludes(self) -> None:
         r = self.repo({"gen/a.py": py_function("huge", 120), ".broom.json": '{"exclude": ["gen/**"]}'})
         self.assertEqual(json.loads(self.cli(r, "smells", "--json").stdout)["total"], 0)

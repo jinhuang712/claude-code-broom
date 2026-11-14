@@ -3,7 +3,7 @@
 Dependencies and environments are left out wherever they are, and so is generated code. A few names (`build`,
 `out`, `release`, `target`) are build output in some projects and source in others: files under them are left out
 only where git doesn't track them. Tracked files left out by name are reported, so a skipped directory is never a
-silent one.
+silent one. Code the repo marks as legacy is maintained, but on its way out: new code repeating it isn't a copy.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Set
 
-from .common import git
+from .common import git, glob_matcher, repo_config
 
 # Dependencies, environments and build output nobody here maintains: never read, not even for what uses what.
 DEPENDENCY_DIRS = {
@@ -39,6 +39,8 @@ class Maintained:
         self.repo = repo
         self.tracked = tracked_output(repo)
         self.skipped: Set[str] = set()  # the directories left out by name, as `record` saw them
+        # .broom.json `legacy`: code on its way out, which new code may repeat while it replaces it.
+        self.legacy = glob_matcher(repo_config(repo).get("legacy"))
 
     def skipped_dir(self, rel: str) -> Optional[str]:
         """The directory `rel` is left out for, by its name, or None."""

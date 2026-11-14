@@ -21,7 +21,7 @@ from .common import (
 )
 from .fmt import format_files
 from .gate import (
-    accept_blocked, baseline_keys, baseline_remove, baseline_under, display, issue_key, render, select,
+    accept_allowed, accept_blocked, baseline_keys, baseline_remove, baseline_under, display, issue_key, render, select,
 )
 from .gitcmd import staged
 from .smells import find_smells
@@ -235,6 +235,8 @@ def cmd_smells(args: argparse.Namespace) -> int:
 def cmd_known(args: argparse.Namespace) -> int:
     roots = [Path(p).resolve() for p in args.paths] or [repo_or_exit()]
     if args.accept is not None:
+        if not accept_allowed():
+            raise SystemExit("broom: accepting is off here (BROOM_NO_ACCEPT is set): fix the issues, or ask the user")
         why = args.accept.strip()
         if not why:
             raise SystemExit('broom: say why: broom known --accept "<why>"')

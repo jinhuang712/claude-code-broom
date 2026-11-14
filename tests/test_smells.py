@@ -107,6 +107,9 @@ class SmellTest(BroomCase):
         self.assertEqual(data["hotspots"][0]["file"], "a.py")
         self.assertEqual(data["smells"][0]["text"], "huge is 120 lines long (hard limit 100)", "a scan has no 'new'")
         self.assertEqual(json.loads(self.cli(r, "smells", "--json", str(r / "b.py")).stdout)["severe"], 0)
+        first = self.cli(r, "smells", env=self.fake_path()).stdout.splitlines()[0]
+        self.assertIn("Not all measured, missing: ", first, "missing tools go in the first line")
+        self.assertIn("ruff (brew install ruff)", first)
 
     def test_session_note_offers_a_cleanup_until_dismissed(self) -> None:
         r = self.repo({"a.py": py_function("huge", 120)})

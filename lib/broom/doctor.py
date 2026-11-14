@@ -386,18 +386,22 @@ def swift_format_version(cwd: Path) -> str:
     return out.strip() if rc == 0 else ""
 
 
-def limit_problems(limits: object) -> List[str]:
-    """.broom.json `limits`: {"function_lines": [soft, hard], ...} with known names and soft <= hard."""
+def limit_problems(limits: object, key: str = "limits") -> List[str]:
+    """.broom.json `limits` or `test_limits`: {"function_lines": [soft, hard], ...} with known names and
+    soft <= hard."""
     if limits is None:
         return []
     if not isinstance(limits, dict):
-        return ["limits must be an object of [soft, hard] pairs"]
-    out = [f"limits: unknown name {k}" for k in limits if k not in SMELL_LIMITS]
+        return [f"{key} must be an object of [soft, hard] pairs"]
+    out = [f"{key}: unknown name {k}" for k in limits if k not in SMELL_LIMITS]
     for k, pair in limits.items():
         ok = isinstance(pair, list) and len(pair) == 2 and all(isinstance(n, int) for n in pair)
         if k in SMELL_LIMITS and not (ok and pair[0] <= pair[1]):
-            out.append(f"limits: {k} must be [soft, hard] with soft <= hard")
+            out.append(f"{key}: {k} must be [soft, hard] with soft <= hard")
     return out
+
+
+REPO_KEYS = ("exclude", "legacy", "limits", "test_limits", "smells_off")  # beside the settings
 
 
 def check_repo_file(repo: Path) -> List[Item]:
@@ -413,12 +417,12 @@ def check_repo_file(repo: Path) -> List[Item]:
         return [Item("broom", "config", REPO_FILE, "broken", ".", "must be a JSON object")]
     problems = [f"{k}: {data[k]!r} is not one of {', '.join(SETTINGS[k][1])}" for k in SETTINGS
                 if k in data and str(data[k]).lower() not in SETTINGS[k][1]]
-    unknown = [k for k in data if k not in SETTINGS and k not in ("exclude", "limits", "smells_off")]
+    unknown = [k for k in data if k not in SETTINGS and k not in REPO_KEYS]
     if unknown:
         problems.append("unknown key(s): " + ", ".join(unknown))
-    if "exclude" in data and not isinstance(data["exclude"], list):
-        problems.append("exclude must be a list of globs")
-    problems += limit_problems(data.get("limits"))
+    problems += [f"{k} must be a list of globs" for k in ("exclude", "legacy")
+                 if k in data and not isinstance(data[k], list)]
+    problems += limit_problems(data.get("limits")) + limit_problems(data.get("test_limits"), "test_limits")
     off = data.get("smells_off", [])
     names = set(SMELL_LIMITS) | set(SMELL_PRESENCE) | {DEAD_CODE}
     if not isinstance(off, list) or not all(n in names for n in off):
@@ -427,7 +431,9 @@ def check_repo_file(repo: Path) -> List[Item]:
         return [Item("broom", "config", REPO_FILE, "broken", ".", "; ".join(problems))]
     shown = [f"{k}={data[k]}" for k in SETTINGS if k in data]
     shown += [f"{len(data['exclude'])} exclude pattern(s)"] if data.get("exclude") else []
+    shown += [f"{len(data['legacy'])} legacy pattern(s)"] if data.get("legacy") else []
     shown += [f"limits for {', '.join(data['limits'])}"] if data.get("limits") else []
+    shown += [f"test limits for {', '.join(data['test_limits'])}"] if data.get("test_limits") else []
     shown += [f"smells off: {', '.join(data['smells_off'])}"] if data.get("smells_off") else []
     return [Item("broom", "config", REPO_FILE, "ok", ".", ", ".join(shown) or "empty")]
 

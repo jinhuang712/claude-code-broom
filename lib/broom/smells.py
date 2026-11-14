@@ -97,13 +97,28 @@ class Smell:
                      severe=self.level == "block")
 
 
-def limits(repo: Path) -> Limits:
-    """broom's limits, with any the repo's .broom.json `limits` sets: {"function_lines": [50, 100], ...}."""
-    merged = dict(SMELL_LIMITS)
-    for name, pair in (repo_config(repo).get("limits") or {}).items():
-        if name in merged and isinstance(pair, list) and len(pair) == 2 and all(isinstance(n, int) for n in pair):
-            merged[name] = (pair[0], pair[1])
-    return merged
+def moved(base: Limits, pairs: object) -> Limits:
+    """`base` with the pairs a .broom.json entry sets: {"function_lines": [50, 100], ...}."""
+    out = dict(base)
+    for name, pair in (pairs if isinstance(pairs, dict) else {}).items():
+        if name in out and isinstance(pair, list) and len(pair) == 2 and all(isinstance(n, int) for n in pair):
+            out[name] = (pair[0], pair[1])
+    return out
+
+
+class RepoLimits:
+    """broom's limits as the repo's .broom.json moves them: `limits` for all code, then `test_limits` on top of
+    those for test files, which grow long by listing cases rather than by doing more."""
+
+    def __init__(self, repo: Path) -> None:
+        config = repo_config(repo)
+        self.code = moved(SMELL_LIMITS, config.get("limits"))
+        self.test = moved(self.code, config.get("test_limits"))
+        # The tools report what is past the soft limit they get: the lower of the two, so neither set misses one.
+        self.measured = {k: (min(self.code[k][0], self.test[k][0]), self.code[k][1]) for k in self.code}
+
+    def of(self, rel: str) -> Limits:
+        return self.test if TEST_FILE.search(rel) else self.code
 
 
 # ---------------------------------------------------------------- comparing versions
@@ -133,14 +148,15 @@ def noise(r: Raw) -> bool:
     return r.metric in ("function_lines", "complexity") and bool(TEST_BLOCK.match(r.key))
 
 
-def compare_sizes(now: List[Raw], before: Optional[List[Raw]], lim: Limits, repo: Path) -> List[Smell]:
+def compare_sizes(now: List[Raw], before: Optional[List[Raw]], lim: RepoLimits, repo: Path) -> List[Smell]:
     was = {(r.rel, r.metric, r.key): r.value for r in before or []}
     out = []
     for r in now:
         old = was.get((r.rel, r.metric, r.key))
-        at = level(r.value, lim[r.metric])
-        if at and (before is None or made_worse(r.value, old, lim[r.metric])):
-            limit = lim[r.metric][1] if at == "block" else lim[r.metric][0]
+        pair = lim.of(r.rel)[r.metric]
+        at = level(r.value, pair)
+        if at and (before is None or made_worse(r.value, old, pair)):
+            limit = pair[1] if at == "block" else pair[0]
             out.append(Smell(repo, repo / r.rel, r.line, r.metric, r.key, r.value, old, r.tool, at, limit))
     return out
 
@@ -172,7 +188,7 @@ def compare_occurrences(now: List[Raw], before: Optional[List[Raw]], repo: Path)
             for (rel, metric), rows in added.items() if before is None or total[(rel, metric)] > was[(rel, metric)]]
 
 
-def compare(now: List[Raw], before: Optional[List[Raw]], lim: Limits, repo: Path,
+def compare(now: List[Raw], before: Optional[List[Raw]], lim: RepoLimits, repo: Path,
             off: Tuple[str, ...] = ()) -> List[Smell]:
     """`before` is None to report every finding (a whole-repo sweep), else the base version's findings. `off`
     names smells the repo turned off."""
@@ -234,9 +250,11 @@ def generated(path: Path) -> bool:
         return False
 
 
-def clone_smells(keep: Maintained, clones: List[Clone], scope: set, base: Optional[str], lim: Limits) -> List[Smell]:
+def clone_smells(keep: Maintained, clones: List[Clone], scope: set, base: Optional[str],
+                 lim: RepoLimits) -> List[Smell]:
     """New duplicate blocks with a side in `scope`, the files measured (every clone when `base` is None), the other
-    side code someone maintains. Clones between two test files are left out: tests repeat their setup on purpose."""
+    side code someone maintains. Clones between two test files are left out: tests repeat their setup on purpose.
+    So are clones of legacy code, which the new code is there to replace."""
     repo = keep.repo
     out = []
     for c in clones:
@@ -244,9 +262,12 @@ def clone_smells(keep: Maintained, clones: List[Clone], scope: set, base: Option
         mine = next((s for s in sides if s[0] in scope), None)
         if (base is not None and not c.new) or mine is None or not keep(mine[2]) or generated(repo / mine[2]):
             continue
-        at = level(c.lines, lim["duplicate_lines"])
+        if keep.legacy(c.rel) or keep.legacy(c.other):
+            continue
+        pair = lim.of(mine[0])["duplicate_lines"]
+        at = level(c.lines, pair)
         if at and not (TEST_FILE.search(c.rel) and TEST_FILE.search(c.other)):
-            limit = lim["duplicate_lines"][1] if at == "block" else lim["duplicate_lines"][0]
+            limit = pair[1] if at == "block" else pair[0]
             out.append(Smell(repo, repo / mine[0], mine[1], "duplicate_lines", f"{mine[2]}:{mine[3]}", c.lines,
                              None, "jscpd", at, limit))
     return out
@@ -281,14 +302,14 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str]) -> Tuple[Lis
     notes = [n for n in (keep.note(),) if n]
     if not now_text:
         return [], notes
-    lim = limits(repo)
+    lim = RepoLimits(repo)
     off = tuple(repo_config(repo).get("smells_off") or ())
     old_text = base_texts(repo, base, list(now_text), renamed(repo, [base])) if base else None
     with tempfile.TemporaryDirectory(prefix="broom-smells-") as tmp, ThreadPoolExecutor(4) as pool:
-        now = pool.submit(measure, Path(tmp) / "now", now_text, lim, repo, notes)
-        before = pool.submit(measure, Path(tmp) / "before", old_text, lim, repo, []) if old_text else None
+        now = pool.submit(measure, Path(tmp) / "now", now_text, lim.measured, repo, notes)
+        before = pool.submit(measure, Path(tmp) / "before", old_text, lim.measured, repo, []) if old_text else None
         clones = None if "duplicate_lines" in off else pool.submit(
-            find_clones, repo, base, lim["duplicate_lines"][0] + 1, keep.clone_skips(), notes)
+            find_clones, repo, base, lim.measured["duplicate_lines"][0] + 1, keep.clone_skips(), notes)
         unused = None if DEAD_CODE in off else pool.submit(find_unused, repo, keep.dead_code_skips(), notes)
         found = compare(drop_import_growth(now.result(), now_text, old_text),
                         before.result() if before else ([] if base else None), lim, repo, off)

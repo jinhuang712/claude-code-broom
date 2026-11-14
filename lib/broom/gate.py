@@ -8,6 +8,7 @@ not raised again; `broom known` lists and clears those.
 
 from __future__ import annotations
 
+import os
 import time
 from collections import Counter
 from pathlib import Path
@@ -69,6 +70,12 @@ def baseline_add_entries(entries: Dict[str, dict]) -> None:
     data.update(entries)
     cutoff = time.time() - BASELINE_DAYS * 86400
     save_json(BASELINE, {k: v for k, v in data.items() if v.get("t", 0) >= cutoff})
+
+
+def accept_allowed() -> bool:
+    """Whether `broom known --accept` works here: `BROOM_NO_ACCEPT` (set to anything but 0) turns it off, for
+    agents that must fix what they break instead of accepting it."""
+    return os.environ.get("BROOM_NO_ACCEPT", "") in ("", "0")
 
 
 def accept_blocked(repo: Path, why: str) -> int:

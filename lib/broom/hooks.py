@@ -34,8 +34,8 @@ from .common import (
 from .doctor import describe, diagnose_cached, new_gaps
 from .fmt import format_files
 from .gate import (
-    COMMITS, baseline_add, baseline_add_entries, baseline_keys, issue_entry, issue_key, new_notes, note_text, render,
-    select, setup_hint, verdict,
+    COMMITS, accept_allowed, baseline_add, baseline_add_entries, baseline_keys, issue_entry, issue_key, new_notes,
+    note_text, render, select, setup_hint, verdict,
 )
 from .gitcmd import parse, parse_commit, plan_commit
 from .hotspots import cached_summary, session_note, summary
@@ -98,10 +98,12 @@ def block_head(count: int, hard: int, repo: Path, cwd: Path) -> str:
     if not hard:
         return (f"{head}. Fix them and commit again. If one is pre-existing or a false positive, say so and run the "
                 "same commit again: broom lets an unchanged result through.")
+    head = f"{head}, {hard} of them type errors or code smells past the hard limit, which don't pass on a retry."
+    if not accept_allowed():
+        return f"{head} Fix them and commit again; accepting them is off here (BROOM_NO_ACCEPT)."
     accept = 'broom known --accept "<why>"' + ("" if repo == cwd else f" {shlex.quote(str(repo))}")
-    return (f"{head}, {hard} of them type errors or code smells past the hard limit, which don't pass on a retry. "
-            f"Fix them and commit again. If they predate this change or are false positives, run `{accept}`, then "
-            "commit again.")
+    return (f"{head} Fix them and commit again. If they predate this change or are false positives, run "
+            f"`{accept}`, then commit again.")
 
 
 def hook_commit(data: dict) -> None:

@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from .common import DATA_ROOT, changed_since, drop_excluded, git, load_json, save_json, setting, short_hash
-from .gate import display
+from .gate import display, note_text
 from .smells import Smell, find_smells
 
 CACHE = DATA_ROOT / "hotspots"
@@ -64,15 +64,18 @@ def report(repo: Path, paths: List[Path], top: int, base: Optional[str] = None) 
 
 
 def render(data: dict) -> str:
+    """The report for a person. Missing tools go in the first line: counts without them read as cleaner than the
+    code is."""
     where = f"the changes since {data['base']} made worse" if data["base"] else f"in {display(Path(data['repo']))}"
+    missing = [note_text(n) for n in data["notes"] if n.startswith("missing:")]
     rows = [f"[broom] {data['total']} code smell(s) {where}: {data['severe']} past the hard limit, "
-            f"{data['hints']} hints."]
+            f"{data['hints']} hints." + (f" Not all measured, missing: {'; '.join(missing)}." if missing else "")]
     if data["hotspots"]:
         rows += ["", "Hotspots:"] + [f"  {f['file']}  {f['severe']} severe, {f['hints']} hints; worst: {f['worst']}"
                                      for f in data["hotspots"]]
         rows += ["", "Worst smells:"] + [f"  {s['file']}:{s['line']}  {s['smell']}  {s['text']}"
                                          for s in data["smells"]]
-    return "\n".join(rows + [f"note: {n}" for n in data["notes"]])
+    return "\n".join(rows + [f"note: {note_text(n)}" for n in data["notes"] if not n.startswith("missing:")])
 
 
 def head_of(repo: Path) -> str:

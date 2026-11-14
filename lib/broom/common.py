@@ -12,7 +12,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Set, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple
 
 # Resolved from this file, not CLAUDE_PLUGIN_ROOT: that variable is set for hooks but not for `broom` run from Bash.
 PLUGIN_ROOT = Path(__file__).resolve().parents[2]
@@ -284,14 +284,21 @@ def excluded(path: Path) -> bool:
     return root is not None and not drop_excluded(root, [path.resolve()])
 
 
+def glob_matcher(patterns: object) -> Callable[[str], bool]:
+    """Whether a path relative to the git root matches one of .broom.json's globs (`exclude`, `legacy`); `**/x`
+    matches `x` at the root too."""
+    globs = [str(p) for p in patterns] if isinstance(patterns, list) else []
+    globs += [g[3:] for g in globs if g.startswith("**/")]
+    return lambda rel: any(fnmatch.fnmatch(rel, g) for g in globs)
+
+
 def drop_excluded(root: Path, files: List[Path]) -> List[Path]:
     """`files` (resolved paths) minus those the .broom.json `exclude` globs of the repo at `root` cover; one read
     of the config for the lot, where `excluded` finds each file's repo."""
     patterns = repo_config(root).get("exclude")
-    if not isinstance(patterns, list) or not patterns:
+    if not patterns:
         return files
-    globs = [str(p) for p in patterns]
-    globs += [g[3:] for g in globs if g.startswith("**/")]
+    matches = glob_matcher(patterns)
     out = []
     for f in files:
         try:
@@ -299,7 +306,7 @@ def drop_excluded(root: Path, files: List[Path]) -> List[Path]:
         except ValueError:
             out.append(f)
             continue
-        if not any(fnmatch.fnmatch(rel, g) for g in globs):
+        if not matches(rel):
             out.append(f)
     return out
 
