@@ -11,7 +11,7 @@ import re
 import shlex
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 from .gitutil import git, git_root
 
@@ -69,50 +69,87 @@ def split_commands(command: str) -> List[List[str]]:
     return cmds
 
 
-def parse(command: str, cwd: Path) -> List[GitOp]:
-    """The `git add` and `git commit` invocations in a shell command, in order, with the directory each runs in."""
-    try:
-        commands = split_commands(command)
-    except ValueError:  # quoting shlex can't follow, such as an unquoted heredoc: read the flags up to any quote
-        m = re.search(r"\bgit\b[^\n;&|]*?\bcommit\b(?P<rest>[^\n;&|'\"]*)", command)
-        return [GitOp("commit", cwd, re.findall(r"(?<!\S)-{1,2}[A-Za-z][\w-]*", m["rest"]))] if m else []
-    ops: List[GitOp] = []
-    here = cwd
-    # Variables the command sets for itself (`T=~/repo; git -C $T commit`); anything else comes from the
-    # environment the hook runs in, which is the one the Bash tool started from.
-    names: Dict[str, str] = {}
+def _commit_in_unquotable(command: str, cwd: Path) -> List[GitOp]:
+    """A command shlex can't follow, such as an unquoted heredoc: read the commit's flags up to any quote."""
+    m = re.search(r"\bgit\b[^\n;&|]*?\bcommit\b(?P<rest>[^\n;&|'\"]*)", command)
+    return [GitOp("commit", cwd, re.findall(r"(?<!\S)-{1,2}[A-Za-z][\w-]*", m["rest"]))] if m else []
 
-    def expand(tok: str) -> str:
-        return VAR_REF.sub(lambda m: names.get(m[1] or m[2], os.environ.get(m[1] or m[2], m[0])), tok)
 
-    for toks in commands:
-        if toks[0] == "export":
-            toks = toks[1:]
-        if toks and all(ASSIGNMENT.match(t) for t in toks):  # a statement of its own: it sets the variables
-            for t in toks:
-                name, value = ASSIGNMENT.match(t).groups()  # type: ignore[union-attr]
-                names[name] = expand(value)
-            continue
-        toks = [expand(t) for t in toks]
+def _git_op(toks: List[str], here: Path) -> Optional[GitOp]:
+    """The `git add` or `git commit` a git command is, with the directory its `-C` options point it at."""
+    i, gdir = 1, here
+    while i < len(toks) and toks[i].startswith("-"):
+        if toks[i] == "-C" and i + 1 < len(toks):
+            gdir = (gdir / os.path.expanduser(toks[i + 1])).resolve()
+        i += 2 if toks[i] in GIT_GLOBAL_VALUE else 1
+    if i < len(toks) and toks[i] in ("add", "commit"):
+        return GitOp(toks[i], gdir, toks[i + 1:])
+    return None
+
+
+class _Shell:
+    """What the commands of a line have set for the ones after them: the directory and the variables."""
+
+    def __init__(self, cwd: Path):
+        self.here = cwd
+        # Variables the command sets for itself (`T=~/repo; git -C $T commit`); anything else comes from the
+        # environment the hook runs in, which is the one the Bash tool started from.
+        self.names: Dict[str, str] = {}
+
+    def expand(self, tok: str) -> str:
+        return VAR_REF.sub(lambda m: self.names.get(m[1] or m[2], os.environ.get(m[1] or m[2], m[0])), tok)
+
+    def assigns(self, toks: List[str]) -> bool:
+        """A statement of its own that sets variables (`T=~/repo`): take them. False for any other command."""
+        if not toks or not all(ASSIGNMENT.match(t) for t in toks):
+            return False
+        for t in toks:
+            name, value = ASSIGNMENT.match(t).groups()  # type: ignore[union-attr]
+            self.names[name] = self.expand(value)
+        return True
+
+    def words(self, toks: List[str]) -> List[str]:
+        """A command's words, expanded, without the assignments set for it alone and the wrappers before it."""
+        toks = [self.expand(t) for t in toks]
         while toks and ASSIGNMENT.match(toks[0]):  # set for one command only, after its arguments are expanded
             toks = toks[1:]
         while toks and toks[0] in WRAPPERS:
             toks = toks[1:]
+        return toks
+
+    def run(self, toks: List[str]) -> Optional[GitOp]:
+        """Take one command: note what it sets, and return the git add or commit it makes, if it makes one."""
+        if toks[0] == "export":
+            toks = toks[1:]
+        if self.assigns(toks):
+            return None
+        toks = self.words(toks)
         if not toks:
-            continue
+            return None
         if toks[0] == "cd" and len(toks) > 1:
-            here = (here / os.path.expanduser(toks[1])).resolve()
-            continue
-        if Path(toks[0]).name != "git":
-            continue
-        i, gdir = 1, here
-        while i < len(toks) and toks[i].startswith("-"):
-            if toks[i] == "-C" and i + 1 < len(toks):
-                gdir = (gdir / os.path.expanduser(toks[i + 1])).resolve()
-            i += 2 if toks[i] in GIT_GLOBAL_VALUE else 1
-        if i < len(toks) and toks[i] in ("add", "commit"):
-            ops.append(GitOp(toks[i], gdir, toks[i + 1:]))
-    return ops
+            self.here = (self.here / os.path.expanduser(toks[1])).resolve()
+            return None
+        return _git_op(toks, self.here) if Path(toks[0]).name == "git" else None
+
+
+def parse(command: str, cwd: Path) -> List[GitOp]:
+    """The `git add` and `git commit` invocations in a shell command, in order, with the directory each runs in."""
+    try:
+        commands = split_commands(command)
+    except ValueError:
+        return _commit_in_unquotable(command, cwd)
+    shell = _Shell(cwd)
+    return [op for op in (shell.run(toks) for toks in commands) if op]
+
+
+def _short_flags(cluster: str, spec: CommitSpec) -> bool:
+    """Read a cluster of short options such as `-am`; True when its last one takes the next argument as its value."""
+    for j, c in enumerate(cluster[1:]):
+        spec.all |= c == "a"
+        spec.no_verify |= c == "n"
+        if c in COMMIT_SHORT_VALUE:
+            return j == len(cluster) - 2
+    return False
 
 
 def parse_commit(op: GitOp) -> CommitSpec:
@@ -131,14 +168,8 @@ def parse_commit(op: GitOp) -> CommitSpec:
             spec.dry_run |= name == "--dry-run"
             if name in COMMIT_LONG_VALUE and "=" not in a:
                 i += 1
-        else:
-            for j, c in enumerate(a[1:]):
-                spec.all |= c == "a"
-                spec.no_verify |= c == "n"
-                if c in COMMIT_SHORT_VALUE:
-                    if j == len(a) - 2:
-                        i += 1
-                    break
+        elif _short_flags(a, spec):
+            i += 1
         i += 1
     return spec
 
@@ -160,22 +191,32 @@ def staged(repo: Path) -> Set[Path]:
     return _names(repo, ["diff", "--cached", "--name-only", "--diff-filter=ACMR"])
 
 
-def add_targets(op: GitOp, repo: Path) -> Set[Path]:
-    """Files a `git add` will stage, predicted from its arguments before it runs."""
+def _add_args(args: List[str]) -> Optional[Tuple[Set[str], List[str]]]:
+    """The mode flags ("all", "update") and the paths of a `git add`; None when it stages nothing, or something
+    only a person picks."""
     flags: Set[str] = set()
     paths: List[str] = []
     paths_only = False
-    for a in op.args:
+    for a in args:
         if paths_only or not a.startswith("-"):
             paths.append(a)
         elif a == "--":
             paths_only = True
         elif a in ("-n", "--dry-run", "-p", "--patch", "-i", "--interactive", "-e", "--edit"):
-            return set()  # stages nothing, or something only a person picks
+            return None
         elif a in ("-A", "--all", "--no-ignore-removal") or (not a.startswith("--") and "A" in a):
             flags.add("all")
         elif a in ("-u", "--update") or (not a.startswith("--") and "u" in a):
             flags.add("update")
+    return flags, paths
+
+
+def add_targets(op: GitOp, repo: Path) -> Set[Path]:
+    """Files a `git add` will stage, predicted from its arguments before it runs."""
+    parsed = _add_args(op.args)
+    if parsed is None:
+        return set()
+    flags, paths = parsed
     pool = tracked_changes(repo) | staged(repo)
     if "update" not in flags:
         pool |= untracked(repo)
