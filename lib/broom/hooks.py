@@ -22,6 +22,7 @@ from __future__ import annotations
 import os
 import re
 import shlex
+import sys
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -37,8 +38,9 @@ from .gate import (
     COMMITS, accept_allowed, baseline_add, baseline_add_entries, baseline_keys, issue_entry, issue_key, new_notes,
     note_text, render, select, setup_hint, verdict,
 )
-from .gitcmd import parse, parse_commit, plan_commit
+from .gitcmd import parse, parse_commit, plan_commit, staged
 from .hotspots import cached_summary, session_note, summary
+from .passed import record, staged_blobs, unpassed, worktree_blobs
 from .smells import Smell, gate_smells, hint_text
 from .turns import DEFERRED, changed_since_snapshot, paused, snapshot, turn_base, turn_dir, waiting
 
@@ -75,7 +77,11 @@ def claim(tool_use_id: Optional[str]) -> bool:
 
 def checked(files: List[Path], sd: Path, base: str = "HEAD") -> Tuple[List[Issue], List[Smell], List[str]]:
     """What blocks (lint and type issues not yet known, smells past the hard limit), the smell hints, and notes,
-    for what changed since `base`."""
+    for what changed since `base`. Content that passed before isn't checked again; content that passes now is
+    recorded."""
+    files = [f for repo, group in by_repo(files).items() for f in unpassed(repo, group, worktree_blobs(repo, group))]
+    if not files:
+        return [], [], []
     issues, notes = run_checks(files, sd / "slow.json")
     known = baseline_keys()
     blocking = select(issues, set(files), known, ChangedLines(base))
@@ -85,6 +91,9 @@ def checked(files: List[Path], sd: Path, base: str = "HEAD") -> Tuple[List[Issue
         blocking += smell_blocks
         hints += smell_hints
         notes += smell_notes
+    if not (blocking or hints or any(n.startswith("timeout:") for n in notes)):
+        for repo, group in by_repo(files).items():
+            record(repo, group)
     return blocking, hints, notes
 
 
@@ -104,6 +113,52 @@ def block_head(count: int, hard: int, repo: Path, cwd: Path) -> str:
     accept = 'broom known --accept "<why>"' + ("" if repo == cwd else f" {shlex.quote(str(repo))}")
     return (f"{head} Fix them and commit again. If they predate this change or are false positives, run "
             f"`{accept}`, then commit again.")
+
+
+def gate_files(repo: Path, files: List[Path], sd: Path, cwd: Path, state: dict) -> Tuple[Optional[str], List[str]]:
+    """Check what a commit takes from `repo`: the denial when it must stop (else None), and lines of context.
+    `state` holds each repo's last blocked commit, for the retry rule and `broom known --accept`."""
+    files = sorted(f for f in files if lang_of(f))
+    blocking, hints, notes = checked(files, sd)
+    context = [hint_text(hints)] if hints else []
+    key = str(repo)
+    prior = state.get(key, {})
+    hard = sum(1 for i in blocking if sticky(i))
+    if not blocking:
+        state.pop(key, None)
+        fresh = new_notes(sd / "notes.json", notes)
+        if fresh:
+            context.append("broom skipped: " + "; ".join(note_text(n) for n in fresh))
+            context += [setup_hint(fresh)] if setup_hint(fresh) else []
+        return None, context
+    if not hard and (prior.get("verdict") == verdict(blocking) or int(prior.get("denials", 0)) >= MAX_BLOCKS):
+        # Claude saw these lint findings and committed again unchanged: they are known, the commit goes ahead.
+        baseline_add(blocking)
+        state.pop(key, None)
+        return None, context + [f"broom let the commit through with {len(blocking)} known issue(s)"]
+    # Type errors and severe smells never pass on a retry alone: fixed, or accepted with a reason on record.
+    state[key] = {"verdict": verdict(blocking), "denials": int(prior.get("denials", 0)) + 1,
+                  "pending": {issue_key(i): issue_entry(i) for i in blocking}}
+    head = block_head(len(blocking), hard, repo, cwd)
+    return render(head, blocking, new_notes(sd / "notes.json", notes), set(files)), context
+
+
+def hook_pre_commit() -> int:
+    """git's own pre-commit hook, which `broom install-hook` adds: the commit gate for commits Claude Code's hook
+    never sees, a wrapper script's or a person's. It checks and doesn't format. Content that passed already, as at
+    Claude's own `git commit`, goes through at once."""
+    repo = git_root(Path.cwd().resolve())
+    if repo is None or setting("check_on", repo) == "off":
+        return 0
+    files = [f for f in sorted(staged(repo)) if not excluded(f) and lang_of(f)]
+    if not unpassed(repo, files, staged_blobs(repo, files)):
+        return 0
+    state = load_json(COMMITS, {})
+    denial, context = gate_files(repo, files, session_dir("git-pre-commit"), repo, state)
+    save_json(COMMITS, state)
+    for line in context + ([denial] if denial else []):
+        print(line, file=sys.stderr)
+    return 1 if denial else 0
 
 
 def hook_commit(data: dict) -> None:
@@ -146,32 +201,10 @@ def hook_commit(data: dict) -> None:
                                + ", ".join(sorted(p.name for p in plan.partial)))
         if check_on == "off":
             continue
-        files = sorted(f for f in plan.files if lang_of(f))
-        blocking, hints, notes = checked(files, sd)
-        if hints:
-            context.append(hint_text(hints))
-        key = str(plan.repo)
-        prior = state.get(key, {})
-        hard = sum(1 for i in blocking if sticky(i))
-        seen = prior.get("verdict") == verdict(blocking) or int(prior.get("denials", 0)) >= MAX_BLOCKS
-        if not blocking:
-            state.pop(key, None)
-            fresh = new_notes(sd / "notes.json", notes)
-            if fresh:
-                context.append("broom skipped: " + "; ".join(note_text(n) for n in fresh))
-                if setup_hint(fresh):
-                    context.append(setup_hint(fresh))
-        elif seen and not hard:
-            # Claude saw these lint findings and committed again unchanged: they are known, the commit goes ahead.
-            baseline_add(blocking)
-            state.pop(key, None)
-            context.append(f"broom let the commit through with {len(blocking)} known issue(s)")
-        else:
-            # Type errors and severe smells never pass on a retry alone: fixed, or accepted with a reason on record.
-            state[key] = {"verdict": verdict(blocking), "denials": int(prior.get("denials", 0)) + 1,
-                          "pending": {issue_key(i): issue_entry(i) for i in blocking}}
-            head = block_head(len(blocking), hard, plan.repo, cwd)
-            denials.append(render(head, blocking, new_notes(sd / "notes.json", notes), set(files)))
+        denial, more = gate_files(plan.repo, list(plan.files), sd, cwd, state)
+        context += more
+        if denial:
+            denials.append(denial)
     save_json(state_path, state)
 
     out: dict = {"hookEventName": "PreToolUse"}

@@ -270,9 +270,28 @@ def cmd_known(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------- hooks
 
 
-def cmd_hook(args: argparse.Namespace) -> int:
-    from .hooks import hook_commit, hook_edit, hook_prompt, hook_session, hook_session_scan, hook_stop
+def cmd_install_hook(_args: argparse.Namespace) -> int:
+    from .githook import LINE, install
 
+    written, path = install(repo_or_exit())
+    if not written:
+        print(f"broom: {display(path)} is another tool's hook; add this line to it instead:\n  {LINE}")
+        return 1
+    print(f"broom: added {display(path)}: commits Claude Code's commit hook doesn't see are checked too")
+    return 0
+
+
+def cmd_hook(args: argparse.Namespace) -> int:
+    from .hooks import (
+        hook_commit, hook_edit, hook_pre_commit, hook_prompt, hook_session, hook_session_scan, hook_stop,
+    )
+
+    if args.event == "pre-commit":
+        try:
+            return hook_pre_commit()
+        except Exception as e:  # a broken check must never stop a commit
+            print(f"broom pre-commit: {e}", file=sys.stderr)
+            return 0
     data = read_hook_input()
     handlers = {"commit": hook_commit, "edit": hook_edit, "prompt": hook_prompt, "stop": hook_stop,
                 "subagent-stop": hook_stop, "session": hook_session, "session-scan": hook_session_scan}
@@ -300,7 +319,8 @@ def cmd_lsp(args: argparse.Namespace) -> int:
 def main(argv: List[str]) -> int:
     p = argparse.ArgumentParser(prog="broom", description="Format, lint and type-check with each project's own tools.")
     p.add_argument("--version", action="version", version=f"broom {__version__}")
-    sub = p.add_subparsers(dest="cmd", required=True, metavar="{sweep,smells,fmt,doctor,setup,init,known}")
+    sub = p.add_subparsers(dest="cmd", required=True,
+                           metavar="{sweep,smells,fmt,doctor,setup,init,known,install-hook}")
 
     s = sub.add_parser("sweep", help="format, then lint and type-check a scope (default: uncommitted changes)")
     scope = s.add_mutually_exclusive_group()
@@ -352,8 +372,12 @@ def main(argv: List[str]) -> int:
     m.add_argument("--dismiss", action="store_true", help="quiet the session note until severe smells grow")
     m.set_defaults(fn=cmd_smells)
 
-    h = sub.add_parser("hook")  # for Claude Code; left out of --help
-    h.add_argument("event", choices=["commit", "edit", "prompt", "stop", "subagent-stop", "session", "session-scan"])
+    ih = sub.add_parser("install-hook", help="add a git pre-commit hook for commits Claude Code's hook doesn't see")
+    ih.set_defaults(fn=cmd_install_hook)
+
+    h = sub.add_parser("hook")  # for Claude Code and git; left out of --help
+    h.add_argument("event", choices=["commit", "edit", "prompt", "stop", "subagent-stop", "session", "session-scan",
+                                     "pre-commit"])
     h.set_defaults(fn=cmd_hook)
 
     ls = sub.add_parser("lsp")  # for .lsp.json; left out of --help
