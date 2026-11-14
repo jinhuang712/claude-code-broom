@@ -8,6 +8,7 @@ import unittest
 
 from support import BroomCase, py_function
 
+from broom.clones import failure_note
 from broom.common import ChangedLines
 from broom.measure import code_lines
 from broom.smells import base_texts, find_smells
@@ -64,6 +65,28 @@ class ScopeTest(BroomCase):
         item = next(i for i in self.doctor(r, self.fake_path())["items"] if i["tool"] == ".broom.json")
         self.assertIn("legacy must be a list of globs", item["detail"])
         self.assertIn("test_limits: file_lines must be [soft, hard]", item["detail"])
+
+    def test_a_worktree_without_broom_json_reads_the_main_ones(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        (r / ".broom.json").write_text('{"limits": {"file_lines": [10, 20]}}')
+        (r / ".git/info/exclude").write_text(".broom.json\n")  # ignored, as a global `**/.broom.json` does
+        wt = self.tmp / "linked"
+        self.sh(r, "git", "worktree", "add", "-q", str(wt))
+        (wt / "a.py").write_text("".join(f"x{i} = {i}\n" for i in range(25)))
+        found, _ = find_smells(wt, [wt / "a.py"], "HEAD")
+        self.assertIn("the file is 25 lines long (hard limit 20; new)", [s.text() for s in found], "main's limits")
+        item = next(i for i in self.doctor(wt, self.fake_path())["items"] if i["tool"] == ".broom.json")
+        self.assertIn("read from the main worktree", item["detail"])
+        self.assertIn("ignored by git", item["detail"])
+
+    @unittest.skipUnless(shutil.which("jscpd"), "jscpd missing")
+    def test_a_base_git_cant_resolve_gives_jscpd_no_baseline(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        _, notes = find_smells(r, [r / "a.py"], "no-such-rev")
+        self.assertEqual([n for n in notes if "jscpd" in n], [])
+        self.assertEqual(failure_note("Error: --baseline-from-ref: git ref 'HEAD' not found"),
+                         "jscpd failed: Error: --baseline-from-ref: git ref 'HEAD' not found", "said as it is")
+        self.assertIn("version 5 or later needed", failure_note("error: unknown option '--dead-code'"))
 
     def test_smells_leave_out_what_the_repo_excludes(self) -> None:
         r = self.repo({"gen/a.py": py_function("huge", 120), ".broom.json": '{"exclude": ["gen/**"]}'})

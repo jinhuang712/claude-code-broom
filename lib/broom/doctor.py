@@ -17,7 +17,7 @@ from .common import (
     BIOME_CFG, DATA_ROOT, DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG, REPO_FILE, RUFF_CFG,
     DEAD_CODE, DIALECT_DEFAULTS, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, STYLELINT_CFG, SWIFT_FORMAT_CFG,
     SWIFTFORMAT_CFG, SWIFTLINT_CFG,
-    css_linters, find_up, git, in_node_modules, js_formatter, js_linters, load_json, read_jsonc, resolve_bin,
+    css_linters, find_up, git, in_node_modules, js_formatter, js_linters, load_json, read_jsonc, repo_file, resolve_bin,
     ruff_configured, run, save_json, setting, short_hash, swift_format_cmd, swift_formatter, swift_linter,
 )
 
@@ -405,9 +405,9 @@ REPO_KEYS = ("exclude", "legacy", "limits", "test_limits", "smells_off")  # besi
 
 
 def check_repo_file(repo: Path) -> List[Item]:
-    """The repo's .broom.json: values broom would otherwise ignore without a word."""
-    path = repo / REPO_FILE
-    if not path.exists():
+    """The repo's .broom.json: values broom would otherwise ignore without a word, and where it comes from."""
+    path = repo_file(repo)
+    if path is None:
         return []
     try:
         data = json.loads(re.sub(r"^\s*//.*$", "", path.read_text(), flags=re.M))
@@ -435,6 +435,9 @@ def check_repo_file(repo: Path) -> List[Item]:
     shown += [f"limits for {', '.join(data['limits'])}"] if data.get("limits") else []
     shown += [f"test limits for {', '.join(data['test_limits'])}"] if data.get("test_limits") else []
     shown += [f"smells off: {', '.join(data['smells_off'])}"] if data.get("smells_off") else []
+    shown += ["read from the main worktree, as this one has none"] if path.parent != repo else []
+    if git(["check-ignore", "-q", str(path)], path.parent) is not None:
+        shown.append("ignored by git, so clones don't get it and worktrees read the main worktree's")
     return [Item("broom", "config", REPO_FILE, "ok", ".", ", ".join(shown) or "empty")]
 
 

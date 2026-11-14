@@ -5,13 +5,14 @@ clones the base didn't have; dead code (JavaScript, TypeScript and Python) leave
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
-from .common import run
+from .common import git, run
 
 FORMATS = "javascript,typescript,jsx,tsx,python,go,swift"
 TIMEOUT = 120
@@ -50,13 +51,24 @@ def run_jscpd(repo: Path, args: List[str], report: str, skip_dirs: List[str], no
         try:
             return json.loads((Path(out) / report).read_text())
         except (OSError, ValueError):
-            notes.append(f"jscpd failed (version 5 or later needed): {err.strip()[:120]}")
+            notes.append(failure_note(err))
             return None
+
+
+def failure_note(err: str) -> str:
+    """What jscpd said when it failed. Only an option it doesn't know means an older jscpd: a missing git ref
+    once read as `version 5 or later needed`."""
+    said = (err.strip().splitlines() or [""])[-1][:160]
+    old = re.search(r"unknown (option|argument)|unexpected argument", err, re.I)
+    return f"jscpd failed{' (version 5 or later needed)' if old else ''}: {said or 'no report'}"
 
 
 def find_clones(repo: Path, base: Optional[str], min_lines: int, skip_dirs: List[str],
                 notes: List[str]) -> List[Clone]:
-    args = ["-f", FORMATS, "--min-lines", str(min_lines), *(["--baseline-from-ref", base] if base else [])]
+    """Clones across the repo; with `base`, the ones `base` lacked are new. A base git can't resolve (a repo with
+    no commit yet) gives no baseline, so no clone counts as new."""
+    known = base is not None and git(["rev-parse", "--verify", "-q", f"{base}^{{commit}}"], repo) is not None
+    args = ["-f", FORMATS, "--min-lines", str(min_lines), *(["--baseline-from-ref", base] if known else [])]
     found = (run_jscpd(repo, args, "jscpd-report.json", skip_dirs, notes) or {}).get("duplicates", [])
     return [Clone(d["firstFile"]["name"], int(d["firstFile"]["start"]), d["secondFile"]["name"],
                   int(d["secondFile"]["start"]), int(d["lines"]), bool(d.get("isNew"))) for d in found]

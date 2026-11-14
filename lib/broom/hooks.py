@@ -249,7 +249,9 @@ def hook_edit(data: dict) -> None:
     if path is None or not path.is_file():
         return
     path = path.resolve()
-    if excluded(path):
+    if git_root(path.parent) is None or excluded(path):
+        # Outside any repo is a scratch file, a draft script in a temp directory: no project's code. Ten style
+        # findings in one subagent's draft once stopped its session's turn.
         return
     if setting("check_on", path) == "stop" and lang_of(path):
         append_line(sd / "edits.txt", str(path))

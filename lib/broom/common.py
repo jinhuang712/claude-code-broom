@@ -62,16 +62,28 @@ REPO_FILE = ".broom.json"
 
 
 def repo_config(start: Optional[Path]) -> dict:
-    """The repo's .broom.json (at the git root), or {}. It holds only choices and path patterns, never commands,
-    so honoring it in a repo you don't trust is safe."""
+    """The repo's .broom.json, or {}. It holds only choices and path patterns, never commands, so honoring it in a
+    repo you don't trust is safe."""
     if start is None:
         return {}
     root = git_root(start if start.is_dir() else start.parent)
     if root is None:
         return {}
     if root not in _repo_configs:
-        _repo_configs[root] = read_jsonc(root / REPO_FILE)
+        path = repo_file(root)
+        _repo_configs[root] = read_jsonc(path) if path else {}
     return _repo_configs[root]
+
+
+def repo_file(root: Path) -> Optional[Path]:
+    """The .broom.json a repo reads: at its git root, else, in a linked worktree that has none, the main worktree's.
+    A .broom.json that git ignores (a global `**/.broom.json`, say) never reaches a new worktree, which then ran
+    with broom's defaults instead of the repo's limits and excludes."""
+    if (root / REPO_FILE).is_file():
+        return root / REPO_FILE
+    common = git(["rev-parse", "--path-format=absolute", "--git-common-dir"], root)
+    main = Path(common.strip()).parent if common else None
+    return main / REPO_FILE if main and main != root and (main / REPO_FILE).is_file() else None
 
 
 _repo_configs: Dict[Path, dict] = {}
