@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
-from .checks import Issue
+from .findings import Issue
 from .clones import Clone, Unused, find_clones, find_unused
 from .config import DEAD_CODE, SMELL_LIMITS, SMELL_PRESENCE, repo_config, setting
 from .gate import issue_key

@@ -14,7 +14,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
-from .checks import Issue
+from .findings import Issue
 from .config import excluded
 from .gitutil import ChangedLines
 from .state import DATA_ROOT, load_json, save_json, short_hash

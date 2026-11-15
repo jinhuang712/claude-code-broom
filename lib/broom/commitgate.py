@@ -18,7 +18,8 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from .checks import Issue, run_checks
+from .checks import run_checks
+from .findings import Issue
 from .config import excluded, setting
 from .fmt import format_files
 from .gate import (
