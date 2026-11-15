@@ -130,7 +130,9 @@ LEVELS = ("", "hint", "block")
 
 def level(value: int, limit: Tuple[int, int]) -> str:
     soft, hard = limit
-    return "block" if value > hard else "hint" if value > soft else ""
+    if value > hard:
+        return "block"
+    return "hint" if value > soft else ""
 
 
 def made_worse(value: int, old: Optional[int], limit: Tuple[int, int]) -> bool:
@@ -312,8 +314,11 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str]) -> Tuple[Lis
         clones = None if "duplicate_lines" in off else pool.submit(
             find_clones, repo, base, lim.measured["duplicate_lines"][0] + 1, keep.clone_skips(), notes)
         unused = None if DEAD_CODE in off else pool.submit(find_unused, repo, keep.dead_code_skips(), notes)
-        found = compare(drop_import_growth(now.result(), now_text, old_text),
-                        before.result() if before else ([] if base else None), lim, repo, off)
+        if before:
+            old_rows = before.result()
+        else:
+            old_rows = [] if base else None
+        found = compare(drop_import_growth(now.result(), now_text, old_text), old_rows, lim, repo, off)
         found += clone_smells(keep, clones.result() if clones else [], set(now_text), base, lim)
         found += unused_smells(repo, unused.result() if unused else [], set(now_text), base)
     for s in found:
