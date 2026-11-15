@@ -8,7 +8,7 @@ import re
 import shutil
 import time
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Tuple
 
 from .findings import Findings, Issue, failure, resolve_in, targets
 from .gitutil import run
@@ -184,17 +184,29 @@ def check_swiftlint(cfg_dir: Path, files: List[Path], *, defaults: bool, whole: 
 SWIFT_ERROR = re.compile(
     r"^(?P<file>/.+?\.swift):(?P<line>\d+):(?P<col>\d+): error: (?P<msg>.+?)(?: \[#(?P<group>[\w-]+)\])?$"
 )
-# macOS's Command Line Tools have neither test framework, where Xcode has both (checked in 26.6).
-NO_TEST_FRAMEWORK = re.compile(r"^no such module '(XCTest|Testing)'$")
+# Swift 6.4's build system words a failure of its own as `error: <file>:<line>:<col> <message>`.
+SWIFT_BUILD_ERROR = re.compile(r"^error: (?P<file>/.+?\.swift):(?P<line>\d+):(?P<col>\d+) (?P<msg>.+)$")
+# macOS's Command Line Tools have neither test framework, where Xcode has both (checked in 26.6 and 6.4).
+NO_TEST_FRAMEWORK = re.compile(r"^(no such module|unable to resolve module dependency:) '(XCTest|Testing)'$")
+
+
+ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def swift_build(swift: str, package: Path, args: List[str], timeout: float) -> Tuple[Optional[int], str, str]:
+    """`swift build` with its output as plain text: Swift 6.4 colors its diagnostics even into a pipe, which
+    leaves escape codes between `:` and `error:`, where the patterns below look for them."""
+    rc, out, err = run([swift, "build", *args], package, timeout=timeout)
+    return rc, ANSI.sub("", out), ANSI.sub("", err)
 
 
 def swift_errors(package: Path, out: str) -> List[Issue]:
     issues = []
     for row in out.splitlines():
-        m = SWIFT_ERROR.match(row)
+        m = SWIFT_ERROR.match(row) or SWIFT_BUILD_ERROR.match(row)
         if m:
             issues.append(Issue("swift build", package, Path(m["file"]).resolve(), int(m["line"]), int(m["col"]),
-                                m["group"] or "error", m["msg"], hard=True))
+                                m.groupdict().get("group") or "error", m["msg"], hard=True))
     return issues
 
 
@@ -206,13 +218,13 @@ def check_swift_build(package: Path) -> Findings:
     if not swift:
         return [], ["missing:swift (install Xcode or the Swift toolchain)"]
     deadline = time.monotonic() + 150
-    rc, out, err = run([swift, "build", "--build-tests"], package, timeout=150)
+    rc, out, err = swift_build(swift, package, ["--build-tests"], 150)
     notes: List[str] = []
     issues = swift_errors(package, out + err) if rc is not None else []
     if any(NO_TEST_FRAMEWORK.match(i.msg) for i in issues):  # the tests can't be built here, the sources can
         notes.append(f"swift build in {package} left the tests out: this toolchain has no XCTest or swift-testing "
                      "(the Command Line Tools without Xcode?)")
-        rc, out, err = run([swift, "build"], package, timeout=max(deadline - time.monotonic(), 10))
+        rc, out, err = swift_build(swift, package, [], max(deadline - time.monotonic(), 10))
         issues = swift_errors(package, out + err) if rc is not None else []
     if rc is None:
         return [], [*notes, f"timeout:swift build in {package} (cold build? it is skipped for the rest of this "

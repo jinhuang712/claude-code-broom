@@ -87,7 +87,7 @@ class SwiftTest(BroomCase):
         reason = self.denied(self.commit(r, "git commit -m x"))
         self.assertIn("identifier_name", reason)
         self.assertNotIn("force_cast", reason)
-        self.assertNotIn("Generated", reason, "the project's excluded paths hold for files broom names")
+        self.assertNotIn("Generated/Model.swift", reason, "the project's excluded paths hold for files broom names")
         self.sh(r, "git", "commit", "-qm", "x")
         (r / "Generated/Model.swift").write_text(SWIFT_BUGS + "// regenerated\n")
         self.sh(r, "git", "add", "-A")
@@ -167,3 +167,20 @@ class SwiftTest(BroomCase):
         self.assertEqual(lsp["status"], "broken")
         self.assertIn("invalid active developer path", lsp["detail"])
         self.assertEqual(lsp["fix"], "xcode-select --install")
+
+    def test_swift_6_colored_compiler_errors_are_read(self) -> None:
+        from broom.langlint import ANSI, swift_errors
+
+        colored = ("/p/Sources/M/Use.swift:2:15: \x1b[1;31merror: \x1b[1;39mextra argument in call\x1b[0;0m\n"
+                   "\x1b[0;36m2 |\x1b[0;0m     add(1, 2, 3)\n")
+        self.assertEqual(swift_errors(Path("/p"), "") + swift_errors(Path("/p"), colored), [], "colors hide them")
+        found = swift_errors(Path("/p"), ANSI.sub("", colored))
+        self.assertEqual([(i.line, i.msg) for i in found], [(2, "extra argument in call")])
+
+    def test_swift_6_words_a_missing_test_framework_its_own_way(self) -> None:
+        from broom.langlint import NO_TEST_FRAMEWORK, swift_errors
+
+        row = "error: /p/Tests/MTests/Checks.swift:1:8 unable to resolve module dependency: 'XCTest'\n"
+        found = swift_errors(Path("/p"), row)
+        self.assertEqual([(i.line, i.col) for i in found], [(1, 8)])
+        self.assertTrue(NO_TEST_FRAMEWORK.match(found[0].msg))

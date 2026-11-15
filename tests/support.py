@@ -29,7 +29,15 @@ HAS_STYLELINT = shutil.which("stylelint") is not None
 HAS_CSS_LSP = shutil.which("vscode-css-language-server") is not None and shutil.which("oxfmt") is not None
 HAS_SWIFT = shutil.which("swift") is not None
 HAS_SWIFTLINT = shutil.which("swiftlint") is not None
-HAS_SWIFTFORMAT = shutil.which("swiftformat") is not None
+def runs(cmd: list) -> bool:
+    """Whether `cmd` exits 0: a tool can be on the PATH and not run, as a version manager's shim with no version."""
+    try:
+        return shutil.which(cmd[0]) is not None and subprocess.run(cmd, capture_output=True, timeout=30).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
+HAS_SWIFTFORMAT = runs(["swiftformat", "--version"])
 
 
 def swift_format_runs() -> bool:
