@@ -113,7 +113,7 @@ indented syntax, Stylus, `<style>` blocks in `.vue` or `.svelte` files and CSS-i
 | `params` | 5 | 8 | `PLR0913` | `max-params` | `revive` `argument-limit` | `function_parameter_count` |
 | `nesting` | 4 | 6 | `PLR1702` | `max-depth` | `nestif` | — |
 | `complexity` | 10 | 20 | `C901` | `complexity` | `gocognit` | `cyclomatic_complexity` |
-| `nested_ternary` | — | any | `ast` | `no-nested-ternary` | — | — |
+| `nested_ternary` | — | any | `ast` | `no-nested-ternary` | — | a custom rule: two ternary operators on one line |
 | `type_lines` | 250 | — | `ast` | `broom/class-lines` | — | `type_body_length` |
 | `duplicate_lines` | 10 | 30 | jscpd | jscpd | jscpd | jscpd |
 
@@ -129,16 +129,16 @@ These count by occurrence: a change that adds one gets the smell's level.
 | `debug_output` | hint | `T201` `T203` | `no-console` | `forbidigo` (real tree) | a custom rule: `print` `debugPrint` `NSLog` `dump` |
 | `todo` | hint | `FIX` | `no-warning-comments` | `godox` | `todo` |
 | `type_escape` | hint | `ANN401` | `no-explicit-any` `no-non-null-assertion` | `revive` `unchecked-type-assertion` | `force_cast` `force_unwrapping` `force_try` |
-| `globals` | hint | `PLW0603` | `broom/module-state` | `gochecknoglobals` (real tree) | — |
+| `globals` | hint | `PLW0603` | `broom/module-state` | `gochecknoglobals` (real tree) | a custom rule: a `var` at file level, `main.swift` aside |
 | `bool_params` | hint | `FBT001` | `broom/bool-params` | `revive` `flag-parameter` | — |
 | `broad_test_asserts` | hint | `PT011` | `jest/require-to-throw-message` | — | — |
-| `import_cycle` | hint | — | `import/no-cycle` (real tree) | — | — |
+| `import_cycle` | hint | broom reads the imports | `import/no-cycle` (real tree) | — | — |
 
 - An occurrence counts when the change raises the count in a file. Lines match the base by text: a moved line
   stays old, and an edited line that keeps its occurrence adds nothing. A line counts once per smell.
 - Unused variables and imports stay with the project's linter, which already reports them.
 - Tools that need the project's own checkout, where imports and dependencies resolve, run there and not in the
-  scratch copy of the changed files: Go's typed linters and TS/JS import cycles. With no copy of the base to
+  scratch copy of the changed files: Go's typed linters and import cycles. With no copy of the base to
   compare with, a finding counts when it is on a line the change added, a new file included. Only linters that
   read syntax alone run in the scratch copy, so Go's repeated literals stay unmeasured.
 - `broom/bool-params`, `broom/class-lines`, `broom/module-state` and `broom/commented-code` are rules of broom's own
@@ -150,6 +150,9 @@ These count by occurrence: a change that adds one gets the smell's level.
   skipped as a label; TypeScript syntax in a comment doesn't compile, so it is missed. Because it guesses, and
   Go's `gocritic` is a heuristic too, `commented_code` is a hint in TS/JS and Go, and blocks in Python. oxlint's
   own rule list (read in full, 2026-11) has nothing for these, bar Jest's `require-to-throw-message`.
+- A Python import closes a cycle when what it imports leads back to its file. broom reads the module-level imports
+  itself, as no tool does; an import inside a function, or under `if TYPE_CHECKING:`, is how code breaks a cycle,
+  so it doesn't count. Names are matched by their path, and a name two files share is skipped.
 - Rust has no column, as clippy runs in the real tree, with thresholds from a `clippy.toml` of broom's own:
   `too_many_arguments` is `params`, `fn_params_excessive_bools` is `bool_params`, `dbg_macro` and `print_stdout`
   and `print_stderr` are `debug_output`, `unwrap_used` is `type_escape`, and `allow_attributes_without_reason` is

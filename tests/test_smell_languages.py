@@ -55,6 +55,9 @@ class SmellLanguageTest(BroomCase):
                      ("hint", "globals")),
             "g.test.ts": ("oxlint", 'test("t", () => {\n  expect(() => f()).toThrow();\n});\n',
                           ("hint", "broad_test_asserts")),
+            "c.swift": ("swiftlint", "func f(a: Int) -> Int {\n    return a > 1 ? (a > 2 ? 1 : 2) : 3\n}\n",
+                        ("block", "nested_ternary")),
+            "d.swift": ("swiftlint", "var counter = 0\n", ("hint", "globals")),
         }
         r = self.repo({"README.md": "x\n"})
         for rel, (tool, text, expected) in samples.items():
@@ -77,6 +80,10 @@ class SmellLanguageTest(BroomCase):
             "e.ts": ("oxlint", "let quiet = 0;\nexport const z = quiet + 1;\n", "globals"),
             "h.test.ts": ("oxlint", 'test("t", () => {\n  expect(() => f()).toThrow("boom");\n});\n',
                           "broad_test_asserts"),
+            "e.swift": ("swiftlint", 'func f(a: Int?) -> Int {\n    // x ? y ? 1 : 2 : 3\n    let s = "a ? b ? c : d : e"\n'
+                        "    let t = a?.signum() ?? 0\n    return a != nil ? t : s.count\n}\n", "nested_ternary"),
+            "f.swift": ("swiftlint", "struct S {\n    var x = 0\n}\n", "globals"),
+            "main.swift": ("swiftlint", "var counter = 0\nprint(counter)\n", "globals"),
         }
         r = self.repo({"README.md": "x\n"})
         for rel, (tool, text, metric) in samples.items():

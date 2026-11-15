@@ -18,6 +18,7 @@ from .findings import failure
 from .gitutil import run
 from .jsmeasure import OXLINT_CATEGORIES
 from .langlint import golangci_cache
+from .pycycles import import_cycles
 from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS, find_up, resolve_bin
 
 TOOL_TIMEOUT = 150
@@ -213,4 +214,5 @@ def rust_found(repo: Path, rels: List[str], params: int, notes: List[str]) -> Li
 def find_in_real_tree(repo: Path, rels: List[str], params: int, notes: List[str]) -> List[Found]:
     """What the tools that need the real tree find in the files `rels` (their package or crate, more exactly).
     `params` is the soft limit on a function's parameters."""
-    return go_found(repo, rels, notes) + js_found(repo, rels, notes) + rust_found(repo, rels, params, notes)
+    cycles = [Found(rel, line, "import_cycle", "broom") for rel, line in import_cycles(repo, rels)]
+    return go_found(repo, rels, notes) + js_found(repo, rels, notes) + rust_found(repo, rels, params, notes) + cycles

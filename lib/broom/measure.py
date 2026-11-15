@@ -203,18 +203,29 @@ SWIFTLINT_METRICS = {
 }
 
 
-# SwiftLint custom rules of broom's own, for what it has no rule for. The name must not follow a dot or a word
-# character: `printer.print(` is a method, not the global function.
-SWIFT_CUSTOM_RULES = {"debug_output": r"(?<![\w.])(print|debugPrint|NSLog|dump)\("}
+# SwiftLint custom rules of broom's own, for what it has no rule for: what a regex on the source can see.
+SWIFT_CUSTOM_RULES = {
+    # The name must not follow a dot or a word character: `printer.print(` is a method, not the global function.
+    "debug_output": {"regex": r"(?<![\w.])(print|debugPrint|NSLog|dump)\(", "match_kinds": ["identifier"]},
+    # Two `?` and two `:` with spaces around them on one line: a ternary in a ternary. `x?.y` and `[k: v]` have none.
+    "nested_ternary": {"regex": r"\s\?\s[^\n]*?\s\?\s[^\n]*?\s:\s[^\n]*?\s:\s",
+                       "excluded_match_kinds": ["comment", "string"]},
+    # A `var` at the start of a line is file-level state; a script's main.swift is made of it.
+    "globals": {"regex": r"^(public |internal |fileprivate |private )?var\s", "excluded": r".*main\.swift"},
+}
+
+
+def yaml_value(value: object) -> str:
+    return f"[{', '.join(value)}]" if isinstance(value, list) else f"'{value}'"
 
 
 def swiftlint_config(lim: Limits) -> str:
     rows = [f"only_rules: [{', '.join([*SWIFTLINT_METRICS, 'custom_rules'])}]"]
     rows += [f"{rule}: {{warning: {lim[metric][0]}, error: {UNREACHABLE}}}" for rule, metric in SWIFTLINT_SIZES.items()]
     rows.append("custom_rules:")
-    for name, regex in SWIFT_CUSTOM_RULES.items():
-        rows += [f"  {name}:", f"    regex: '{regex}'", "    match_kinds: [identifier]", f"    message: {name}",
-                 "    severity: warning"]
+    for name, rule in SWIFT_CUSTOM_RULES.items():
+        rows += [f"  {name}:", *(f"    {key}: {yaml_value(value)}" for key, value in rule.items()),
+                 f"    message: {name}", "    severity: warning"]
     return "\n".join(rows) + "\n"
 
 
@@ -231,7 +242,8 @@ def measure_swift(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None
         rule = d.get("rule_id", "")
         metric = SWIFTLINT_METRICS.get(rule) or (rule if rule in SWIFT_CUSTOM_RULES else None)
         if metric:
-            value = 1 if metric in SMELL_PRESENCE else number(r"(\d+)\D*$", d.get("reason", ""))
+            counted = metric in SMELL_PRESENCE or metric in SWIFT_CUSTOM_RULES
+            value = 1 if counted else number(r"(\d+)\D*$", d.get("reason", ""))
             r.add(d.get("file", ""), int(d.get("line") or 0), metric, value)
 
 

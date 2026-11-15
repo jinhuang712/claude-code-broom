@@ -103,3 +103,22 @@ class RealTreeTest(BroomCase):
         r = self.repo({"Cargo.toml": CARGO, "src/lib.rs": RS_SMELLY})
         (r / "src/lib.rs").write_text(RS_SMELLY + "\n// a note\n")
         self.assertEqual(self.metrics(r, "src/lib.rs"), [])
+
+    def test_a_python_import_that_closes_a_cycle_is_found_where_it_is_added(self) -> None:
+        r = self.repo({"pkg/__init__.py": "", "pkg/a.py": "X = 1\n", "pkg/b.py": "from pkg import a\n\nY = a.X\n"})
+        (r / "pkg/a.py").write_text("from . import b\n\nX = b.Y\n")
+        self.assertIn(("hint", "import_cycle"), self.metrics(r, "pkg/a.py"))
+
+    def test_python_imports_that_break_a_cycle_on_purpose_do_not_close_one(self) -> None:
+        r = self.repo({"pkg/__init__.py": "", "pkg/b.py": "from pkg import a\n\nY = a.X\n", "pkg/a.py": "X = 1\n"})
+        (r / "pkg/a.py").write_text(
+            "from __future__ import annotations\n\nfrom typing import TYPE_CHECKING\n\n"
+            "if TYPE_CHECKING:\n    from . import b\n\n\ndef later() -> int:\n    from . import b\n\n"
+            "    return b.Y\n\n\nX = 1\n")
+        self.assertNotIn("import_cycle", [m for _, m in self.metrics(r, "pkg/a.py")])
+
+    def test_a_python_cycle_that_was_there_before_stays_quiet(self) -> None:
+        cycle = {"pkg/__init__.py": "", "pkg/a.py": "from . import b\n\nX = 1\n", "pkg/b.py": "from . import a\n"}
+        r = self.repo(cycle)
+        (r / "pkg/a.py").write_text(cycle["pkg/a.py"] + "Z = 2\n")
+        self.assertNotIn("import_cycle", [m for _, m in self.metrics(r, "pkg/a.py")])
