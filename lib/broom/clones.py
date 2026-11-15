@@ -14,7 +14,7 @@ from typing import List, Optional
 
 from .gitutil import git, run
 
-FORMATS = "javascript,typescript,jsx,tsx,python,go,swift"
+FORMATS = "javascript,typescript,jsx,tsx,python,go,swift,rust,css,scss,less"
 TIMEOUT = 120
 
 

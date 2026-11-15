@@ -16,7 +16,7 @@ from .config import SMELL_PRESENCE
 from .gitutil import run
 from .jsmeasure import measure_js
 from .reading import TOOL_TIMEOUT, Limits, Raw, Reader, match, number, quoted_name
-from .toolchain import GO_EXTS, JS_EXTS, PY_EXTS, SWIFT_EXTS
+from .toolchain import CSS_EXTS, GO_EXTS, JS_EXTS, PY_EXTS, RS_EXTS, SWIFT_EXTS
 
 UNREACHABLE = 1_000_000  # a SwiftLint error level nothing reaches: broom tells hints from blocks itself
 GO_MOD = "module broomsmells\n\ngo 1.22\n"
@@ -238,7 +238,9 @@ def measure_swift(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None
 MEASURES: List[Tuple[set, Callable[[Reader, List[str], Limits, Path], None]]] = [
     (PY_EXTS, measure_python), (JS_EXTS, measure_js), (GO_EXTS, measure_go), (SWIFT_EXTS, measure_swift),
 ]
-SMELL_EXTS = PY_EXTS | JS_EXTS | GO_EXTS | SWIFT_EXTS
+# Rust and CSS have no smell tool here, but a file's length needs none, and jscpd reads them for duplicates.
+LINES_ONLY_EXTS = RS_EXTS | CSS_EXTS
+SMELL_EXTS = PY_EXTS | JS_EXTS | GO_EXTS | SWIFT_EXTS | LINES_ONLY_EXTS
 
 
 def measure(root: Path, contents: Dict[str, str], lim: Limits, start: Path, notes: List[str]) -> List[Raw]:

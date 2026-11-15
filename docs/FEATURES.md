@@ -109,7 +109,7 @@ indented syntax, Stylus, `<style>` blocks in `.vue` or `.svelte` files and CSS-i
 | Smell | Soft (hint) | Hard (block) | Python | TS/JS | Go | Swift |
 |---|---|---|---|---|---|---|
 | `function_lines` | 50 | 100 | `ast` | `max-lines-per-function` | `funlen` | `function_body_length` |
-| `file_lines` | 400 | 1000 | broom counts lines, in every language | | | |
+| `file_lines` | 400 | 1000 | broom counts lines, in every language here and in Rust and CSS | | | |
 | `params` | 5 | 8 | `PLR0913` | `max-params` | `revive` `argument-limit` | `function_parameter_count` |
 | `nesting` | 4 | 6 | `PLR1702` | `max-depth` | `nestif` | — |
 | `complexity` | 10 | 20 | `C901` | `complexity` | `gocognit` | `cyclomatic_complexity` |
@@ -145,6 +145,8 @@ These count by occurrence: a change that adds one gets the smell's level.
   full, 2026-11) has nothing for commented-out code, global state or class length; the one outside route,
   `sonarjs/no-commented-code`, needs that plugin installed in every project, so `commented_code` and `globals`
   stay as the table shows.
+- Rust, CSS, SCSS and Less have no smell tool in the table, but their files count for `file_lines` and
+  `duplicate_lines`.
 - Duplicate code comes from jscpd 5, which scans every code file in the repo and, with `--baseline-from-ref`,
   the base tree: a clone counts when it is new and has a side in the change's files. Clones between two test
   files, and clones of generated or vendored code, don't count. `broom doctor` checks for jscpd.

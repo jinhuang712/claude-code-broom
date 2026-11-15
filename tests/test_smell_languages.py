@@ -12,6 +12,23 @@ from broom.smells import find_smells
 
 
 class SmellLanguageTest(BroomCase):
+    def test_a_long_rust_or_css_file_is_a_smell_though_no_tool_reads_them(self) -> None:
+        r = self.repo({"README.md": "x\n"})
+        for rel, line in (("a.rs", "fn f() {}\n"), ("a.css", ".a { color: red; }\n")):
+            with self.subTest(rel):
+                self.assertIn(("hint", "file_lines"), self.measured(r, rel, "git", line * 450))
+
+    def test_a_copy_of_rust_or_css_code_is_a_smell(self) -> None:
+        if not shutil.which("jscpd"):
+            self.skipTest("jscpd missing")
+        rust = "".join(f"    let value{n} = values[{n}] + offsets[{n}] * scale;\n" for n in range(40))
+        css = "".join(f".item{n} {{\n  color: #{n:03d};\n  margin: {n}px;\n}}\n" for n in range(1, 20))
+        samples = {"rs": (f"fn one() {{\n{rust}}}\n", f"fn two() {{\n{rust}}}\n"), "css": (css, css)}
+        for ext, (old, new) in samples.items():
+            with self.subTest(ext):
+                r = self.repo({f"a.{ext}": old})
+                self.assertIn(("block", "duplicate_lines"), self.measured(r, f"b.{ext}", "git", new))
+
     def measured(self, r: Path, rel: str, tool: str, text: str) -> list:
         """The smells `text` has as a new file `rel`, or a skipped subtest when the tool is missing."""
         if not shutil.which(tool):
