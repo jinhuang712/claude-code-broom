@@ -9,6 +9,7 @@ from pathlib import Path
 
 from support import HAS_PY, BroomCase, py_function
 
+from broom.hotspots import render
 from broom.measure import Raw
 from broom.smells import compare_occurrences, find_smells, made_worse, noise
 
@@ -60,6 +61,13 @@ class SmellTest(BroomCase):
                 (r / rel).write_text(text)
                 found, _ = find_smells(r, [r / rel], "HEAD")
                 self.assertIn(("block", metric), [(s.level, s.metric) for s in found])
+
+    def test_the_report_says_how_many_smells_the_list_cut_off(self) -> None:
+        one = {"file": "a.py", "line": 1, "smell": "todo", "text": "1 TODO/FIXME comment(s)"}
+        data = {"repo": "/r", "base": None, "total": 5, "severe": 0, "hints": 5, "notes": [], "smells": [one],
+                "hotspots": [{"file": "a.py", "severe": 0, "hints": 5, "worst": "x"}]}
+        self.assertIn("and 4 more; `--top 5` lists them all", render(data))
+        self.assertNotIn("more;", render({**data, "total": 1}))
 
     def test_test_complexity_and_describe_blocks_are_noise(self) -> None:
         self.assertTrue(noise(Raw("pkg/a_test.go", 1, "complexity", "TestX", 30, "go")))

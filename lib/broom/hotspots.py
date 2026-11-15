@@ -78,6 +78,8 @@ def render(data: dict) -> str:
                                      for f in data["hotspots"]]
         rows += ["", "Worst smells:"] + [f"  {s['file']}:{s['line']}  {s['smell']}  {s['text']}"
                                          for s in data["smells"]]
+        if data["total"] > len(data["smells"]):
+            rows.append(f"  ... and {data['total'] - len(data['smells'])} more; `--top {data['total']}` lists them all")
     return "\n".join(rows + [f"note: {note_text(n)}" for n in data["notes"] if not n.startswith("missing:")])
 
 
