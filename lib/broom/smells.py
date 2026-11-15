@@ -338,7 +338,7 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str]) -> Tuple[Lis
     off = tuple(repo_config(repo).get("smells_off") or ())
     old_text = base_texts(repo, base, list(now_text), renamed(repo, [base])) if base else None
     with tempfile.TemporaryDirectory(prefix="broom-smells-") as tmp, ThreadPoolExecutor(5) as pool:
-        real = pool.submit(find_in_real_tree, repo, list(now_text), notes)
+        real = pool.submit(find_in_real_tree, repo, list(now_text), lim.measured["params"][0], notes)
         now = pool.submit(measure, Path(tmp) / "now", now_text, lim.measured, repo, notes)
         before = pool.submit(measure, Path(tmp) / "before", old_text, lim.measured, repo, []) if old_text else None
         clones = None if "duplicate_lines" in off else pool.submit(

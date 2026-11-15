@@ -32,6 +32,28 @@ func helper() int {
 }
 """
 
+CARGO = '[package]\nname = "x"\nversion = "0.1.0"\nedition = "2021"\n\n[dependencies]\n'
+RS_CLEAN = "pub fn double(x: i32) -> i32 {\n    x * 2\n}\n"
+RS_SMELLY = """pub fn many(a: i32, b: i32, c: i32, d: i32, e: i32, f: i32, g: i32) -> i32 {
+    a + b + c + d + e + f + g
+}
+
+pub fn flag(x: i32, verbose: bool) -> i32 {
+    if verbose {
+        println!("x = {}", x);
+    }
+    x
+}
+
+pub fn first(v: Vec<i32>) -> i32 {
+    *v.first().unwrap()
+}
+
+#[allow(dead_code)]
+fn hidden() {}
+"""
+HAS_CLIPPY = bool(shutil.which("cargo") and shutil.which("cargo-clippy"))
+
 
 class RealTreeTest(BroomCase):
     def metrics(self, r, rel: str) -> list:
@@ -67,3 +89,17 @@ class RealTreeTest(BroomCase):
         r = self.repo(cycle)
         (r / "a.ts").write_text(cycle["a.ts"] + "export const other = 2;\n")
         self.assertNotIn("import_cycle", [m for _, m in self.metrics(r, "a.ts")])
+
+    @unittest.skipUnless(HAS_CLIPPY, "cargo clippy missing")
+    def test_rust_smells_come_from_clippy_on_the_lines_a_change_adds(self) -> None:
+        r = self.repo({"Cargo.toml": CARGO, "src/lib.rs": RS_CLEAN})
+        (r / "src/lib.rs").write_text(RS_SMELLY)
+        self.assertEqual(self.metrics(r, "src/lib.rs"),
+                         [("block", "suppression"), ("hint", "bool_params"), ("hint", "debug_output"),
+                          ("hint", "params"), ("hint", "type_escape")])
+
+    @unittest.skipUnless(HAS_CLIPPY, "cargo clippy missing")
+    def test_a_rust_smell_the_change_did_not_add_stays_quiet(self) -> None:
+        r = self.repo({"Cargo.toml": CARGO, "src/lib.rs": RS_SMELLY})
+        (r / "src/lib.rs").write_text(RS_SMELLY + "\n// a note\n")
+        self.assertEqual(self.metrics(r, "src/lib.rs"), [])

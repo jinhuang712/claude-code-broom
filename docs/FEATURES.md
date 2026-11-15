@@ -148,7 +148,11 @@ These count by occurrence: a change that adds one gets the smell's level.
   full, 2026-11) has nothing for commented-out code, global state or class length; the one outside route,
   `sonarjs/no-commented-code`, needs that plugin installed in every project, so `commented_code` and `globals`
   stay as the table shows.
-- Rust, CSS, SCSS and Less have no smell tool in the table, but their files count for `file_lines` and
+- Rust has no column, as clippy runs in the real tree, with thresholds from a `clippy.toml` of broom's own:
+  `too_many_arguments` is `params`, `fn_params_excessive_bools` is `bool_params`, `dbg_macro` and `print_stdout`
+  and `print_stderr` are `debug_output`, `unwrap_used` is `type_escape`, and `allow_attributes_without_reason` is
+  `suppression`; a test may unwrap and print. A crate is checked whole, and only what is on a line the change
+  added counts. CSS, SCSS and Less have no smell tool; with Rust, their files count for `file_lines` and
   `duplicate_lines`.
 - Duplicate code comes from jscpd 5, which scans every code file in the repo and, with `--baseline-from-ref`,
   the base tree: a clone counts when it is new and has a side in the change's files. Clones between two test

@@ -18,7 +18,7 @@ from .findings import failure
 from .gitutil import run
 from .jsmeasure import OXLINT_CATEGORIES
 from .langlint import golangci_cache
-from .toolchain import GO_EXTS, JS_EXTS, find_up, resolve_bin
+from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS, find_up, resolve_bin
 
 TOOL_TIMEOUT = 150
 
@@ -138,6 +138,79 @@ def js_found(repo: Path, rels: List[str], notes: List[str]) -> List[Found]:
     return found
 
 
-def find_in_real_tree(repo: Path, rels: List[str], notes: List[str]) -> List[Found]:
-    """What the tools that need the real tree find in the files `rels` (their package or crate, more exactly)."""
-    return go_found(repo, rels, notes) + js_found(repo, rels, notes)
+# clippy's lints, by what they find. The thresholds come from a clippy.toml in a directory of broom's own, so the
+# project's is never read and nothing is written into the crate. A test may unwrap and print.
+RUST_LINTS = {
+    "clippy::too_many_arguments": "params", "clippy::fn_params_excessive_bools": "bool_params",
+    "clippy::dbg_macro": "debug_output", "clippy::print_stdout": "debug_output",
+    "clippy::print_stderr": "debug_output", "clippy::unwrap_used": "type_escape",
+    "clippy::allow_attributes_without_reason": "suppression",
+}
+RUST_CONFIG = """too-many-arguments-threshold = {params}
+max-fn-params-bools = 0
+allow-unwrap-in-tests = true
+allow-print-in-tests = true
+allow-dbg-in-tests = true
+"""
+RUST_FLAGS = [flag for lint in RUST_LINTS for flag in ("-W", lint)]
+FN_NAME = re.compile(r"\bfn\s+(\w+)")
+ARGUMENTS = re.compile(r"\((\d+)/\d+\)")
+
+
+def locate(repo: Path, crate: Path, name: str) -> Optional[str]:
+    """The repo-relative path of a file clippy names: relative to the crate's workspace, so to it or a parent."""
+    for base in (crate, *crate.parents):
+        if (base / name).is_file():
+            return rel_of(repo, base / name)
+        if base == repo:
+            break
+    return None
+
+
+def rust_messages(repo: Path, crate: Path, out: str) -> List[Found]:
+    found = []
+    for row in out.splitlines():
+        try:
+            d = json.loads(row)
+        except ValueError:
+            continue
+        message = d.get("message") or {}
+        metric = RUST_LINTS.get((message.get("code") or {}).get("code") or "")
+        span = next((s for s in message.get("spans") or [] if s.get("is_primary")), None)
+        rel = locate(repo, crate, span["file_name"]) if metric and span else None
+        if not (rel and span):
+            continue
+        line = int(span["line_start"])
+        text = (repo / rel).read_text(errors="replace").splitlines()[line - 1:line]
+        name = FN_NAME.search(text[0]) if text else None
+        size = ARGUMENTS.search(message.get("message", ""))
+        found.append(Found(rel, line, metric, "clippy", name[1] if name else "function",
+                           int(size[1]) if size else 1))
+    return found
+
+
+def rust_found(repo: Path, rels: List[str], params: int, notes: List[str]) -> List[Found]:
+    """clippy's structural and presence lints in the crates the changed Rust files belong to. A crate is checked
+    whole; smells.py keeps what is on the lines the change added."""
+    cargo = shutil.which("cargo")
+    manifests = [find_up((repo / rel).parent, ["Cargo.toml"], repo) for rel in rels if Path(rel).suffix in RS_EXTS]
+    crates = sorted({m.parent for m in manifests if m})
+    if not cargo or not crates:
+        return []
+    found: List[Found] = []
+    with tempfile.TemporaryDirectory(prefix="broom-realtree-") as tmp:
+        (Path(tmp) / "clippy.toml").write_text(RUST_CONFIG.format(params=params))
+        for crate in crates:
+            rc, out, _ = run([cargo, "clippy", "--message-format=json", "--quiet", "--", *RUST_FLAGS], crate,
+                             timeout=TOOL_TIMEOUT, env={"CLIPPY_CONF_DIR": tmp})
+            if rc is None:
+                notes.append(f"timeout:cargo clippy measuring smells in {crate} (cold build?)")
+                continue
+            found += rust_messages(repo, crate, out)
+    return found
+
+
+def find_in_real_tree(repo: Path, rels: List[str], params: int, notes: List[str]) -> List[Found]:
+    """What the tools that need the real tree find in the files `rels` (their package or crate, more exactly).
+    `params` is the soft limit on a function's parameters."""
+    return go_found(repo, rels, notes) + js_found(repo, rels, notes) + rust_found(repo, rels, params, notes)
