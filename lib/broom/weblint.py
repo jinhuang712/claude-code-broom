@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Tuple
 
 from .findings import Findings, Issue, failure, resolve_in, targets
 from .gitutil import run
@@ -16,7 +16,7 @@ from .toolchain import DIALECT_DEFAULTS, find_up, in_node_modules, pkg_scripts_m
 # ---------------------------------------------------------------- JS / TS
 
 
-def check_oxlint(cfg_dir: Path, files: List[Path], stop: Path, defaults: bool, whole: bool = False) -> Findings:
+def check_oxlint(cfg_dir: Path, files: List[Path], stop: Path, *, defaults: bool, whole: bool = False) -> Findings:
     exe = resolve_bin("oxlint", cfg_dir, stop)
     if not exe:
         return [], ["missing:oxlint (npm i -g oxlint oxlint-tsgolint)"]
@@ -28,7 +28,7 @@ def check_oxlint(cfg_dir: Path, files: List[Path], stop: Path, defaults: bool, w
         type_aware = pkg_scripts_mention(cfg_dir, "--type-aware") or pkg_scripts_mention(stop, "--type-aware")
     if type_aware and resolve_bin("tsgolint", cfg_dir, stop):
         cmd.append("--type-aware")
-    rc, out, err = run(cmd + targets(files, whole), cfg_dir, timeout=90)
+    rc, out, err = run(cmd + targets(files, whole=whole), cfg_dir, timeout=90)
     if rc is None:
         return [], [f"timeout:oxlint in {cfg_dir}"]
     try:
@@ -43,13 +43,16 @@ def check_oxlint(cfg_dir: Path, files: List[Path], stop: Path, defaults: bool, w
     return issues, []
 
 
-def check_eslint(cfg_dir: Path, files: List[Path], stop: Path, whole: bool = False) -> Findings:
+ESLINT_FATAL = 2  # the exit code when ESLint stops on an option or a config it can't use
+
+
+def check_eslint(cfg_dir: Path, files: List[Path], stop: Path, *, whole: bool = False) -> Findings:
     exe = resolve_bin("eslint", cfg_dir, stop, local_only=True)
     if not exe:
         return [], [f"missing:eslint in {cfg_dir} (install the project's dependencies)"]
-    rc, out, err = run([exe, "-f", "json", "--no-warn-ignored", *targets(files, whole)], cfg_dir, timeout=120)
-    if rc == 2 and "no-warn-ignored" in err:  # eslintrc-era ESLint
-        rc, out, err = run([exe, "-f", "json", *targets(files, whole)], cfg_dir, timeout=120)
+    rc, out, err = run([exe, "-f", "json", "--no-warn-ignored", *targets(files, whole=whole)], cfg_dir, timeout=120)
+    if rc == ESLINT_FATAL and "no-warn-ignored" in err:  # eslintrc-era ESLint
+        rc, out, err = run([exe, "-f", "json", *targets(files, whole=whole)], cfg_dir, timeout=120)
     if rc is None:
         return [], [f"timeout:eslint in {cfg_dir}"]
     try:
@@ -64,11 +67,11 @@ def check_eslint(cfg_dir: Path, files: List[Path], stop: Path, whole: bool = Fal
     return issues, []
 
 
-def check_biome(cfg_dir: Path, files: List[Path], stop: Path, whole: bool = False) -> Findings:
+def check_biome(cfg_dir: Path, files: List[Path], stop: Path, *, whole: bool = False) -> Findings:
     exe = resolve_bin("biome", cfg_dir, stop)
     if not exe:
         return [], [f"missing:biome in {cfg_dir} (install the project's dependencies)"]
-    rc, out, err = run([exe, "lint", "--reporter=json", *targets(files, whole)], cfg_dir, timeout=90)
+    rc, out, err = run([exe, "lint", "--reporter=json", *targets(files, whole=whole)], cfg_dir, timeout=90)
     if rc is None:
         return [], [f"timeout:biome in {cfg_dir}"]
     start = out.find("{")
@@ -136,43 +139,38 @@ def check_tsc(config: Path, stop: Path) -> Findings:
 STYLELINT_DEFAULT_IGNORES = ("**/dist/**", "**/build/**", "**/out/**", "**/coverage/**", "**/*.min.css")
 
 
-def check_stylelint(cfg_dir: Path, files: List[Path], stop: Path, defaults: bool) -> Findings:
-    """stylelint on the files themselves, even for a whole-project sweep: a glob would also hand broom's defaults
-    the files of packages that have a config of their own."""
-    exe = resolve_bin("stylelint", cfg_dir, stop)
-    if not exe:
-        if defaults:
-            return [], ["missing:stylelint (npm i -D stylelint in the project)"]
-        return [], [f"missing:stylelint in {cfg_dir} (install the project's dependencies)"]
-    notes: List[str] = []
-    cmd = [exe, "-f", "json", "--allow-empty-input"]
-    if defaults:
-        cmd += ["-c", str(DEFAULTS / "stylelintrc.yml")]
-        for pattern in STYLELINT_DEFAULT_IGNORES:
-            cmd += ["--ignore-pattern", pattern]
-        # stylelint loads the SCSS and Less configs from the project, the way it loads a project's own plugins.
-        for ext, (dialect, pkg) in DIALECT_DEFAULTS.items():
-            if any(f.suffix.lower() == ext for f in files) and not in_node_modules(pkg, cfg_dir, stop):
-                files = [f for f in files if f.suffix.lower() != ext]
-                notes.append(f"missing:{pkg} (npm i -D {pkg} in the project, for {dialect})")
-    if not files:
-        return [], notes
-    rc, out, err = run(cmd + [str(f) for f in files], cfg_dir, timeout=90)
-    if rc is None:
-        return [], notes + [f"timeout:stylelint in {cfg_dir}"]
-    # stylelint 16+ reports on stderr, older ones on stdout.
-    results = None
+def _stylelint_defaults(cfg_dir: Path, files: List[Path], stop: Path) -> Tuple[List[str], List[Path], List[str]]:
+    """The options that load broom's defaults, the files stylelint can take with them, and notes on the rest."""
+    options = ["-c", str(DEFAULTS / "stylelintrc.yml")]
+    for pattern in STYLELINT_DEFAULT_IGNORES:
+        options += ["--ignore-pattern", pattern]
+    notes = []
+    # stylelint loads the SCSS and Less configs from the project, the way it loads a project's own plugins.
+    for ext, (dialect, pkg) in DIALECT_DEFAULTS.items():
+        if any(f.suffix.lower() == ext for f in files) and not in_node_modules(pkg, cfg_dir, stop):
+            files = [f for f in files if f.suffix.lower() != ext]
+            notes.append(f"missing:{pkg} (npm i -D {pkg} in the project, for {dialect})")
+    return options, files, notes
+
+
+def _stylelint_report(out: str, err: str) -> Optional[list]:
+    """stylelint's JSON report, or None. stylelint 16+ writes it on stderr, older ones on stdout."""
     for stream in (out, err):
         start = stream.find("[")
+        if start < 0:
+            continue
         try:
-            results = json.JSONDecoder().raw_decode(stream[start:])[0] if start >= 0 else None
+            results = json.JSONDecoder().raw_decode(stream[start:])[0]
         except ValueError:
             continue
         if isinstance(results, list):
-            break
-    if not isinstance(results, list):
-        return [], notes + [f"stylelint failed in {cfg_dir}: {failure(out, err)}"]
+            return results
+    return None
+
+
+def _stylelint_findings(results: list, cfg_dir: Path) -> Findings:
     issues = []
+    notes = []
     for r in results:
         for w in r.get("warnings", []):
             rule = w.get("rule", "")
@@ -180,4 +178,29 @@ def check_stylelint(cfg_dir: Path, files: List[Path], stop: Path, defaults: bool
             issues.append(Issue("stylelint", cfg_dir, Path(r.get("source", "")).resolve(), int(w.get("line") or 0),
                                 int(w.get("column") or 0), rule, msg))
         notes += [f"stylelint config in {cfg_dir}: {w.get('text', '')}" for w in r.get("invalidOptionWarnings", [])]
-    return issues, list(dict.fromkeys(notes))
+    return issues, notes
+
+
+def check_stylelint(cfg_dir: Path, files: List[Path], stop: Path, *, defaults: bool) -> Findings:
+    """stylelint on the files themselves, even for a whole-project sweep: a glob would also hand broom's defaults
+    the files of packages that have a config of their own."""
+    exe = resolve_bin("stylelint", cfg_dir, stop)
+    if not exe:
+        if defaults:
+            return [], ["missing:stylelint (npm i -D stylelint in the project)"]
+        return [], [f"missing:stylelint in {cfg_dir} (install the project's dependencies)"]
+    cmd = [exe, "-f", "json", "--allow-empty-input"]
+    notes: List[str] = []
+    if defaults:
+        options, files, notes = _stylelint_defaults(cfg_dir, files, stop)
+        cmd += options
+    if not files:
+        return [], notes
+    rc, out, err = run(cmd + [str(f) for f in files], cfg_dir, timeout=90)
+    if rc is None:
+        return [], notes + [f"timeout:stylelint in {cfg_dir}"]
+    results = _stylelint_report(out, err)
+    if results is None:
+        return [], notes + [f"stylelint failed in {cfg_dir}: {failure(out, err)}"]
+    issues, found = _stylelint_findings(results, cfg_dir)
+    return issues, list(dict.fromkeys(notes + found))

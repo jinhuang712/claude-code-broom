@@ -36,48 +36,59 @@ def golangci_cache(module: Path) -> Path:
     return d
 
 
-def check_go(module: Path, files: List[Path], stop: Path, whole: bool = False) -> Findings:
-    issues: List[Issue] = []
-    notes: List[str] = []
+def _golangci(module: Path, files: List[Path], stop: Path, *, whole: bool) -> Findings:
     exe = shutil.which("golangci-lint")
-    if exe:
-        cfg = find_up(module, GOLANGCI_CFG, stop) or DEFAULTS / "golangci.yml"
-        pkgs = ["./..."] if whole else sorted({"./" + os.path.relpath(f.parent, module) for f in files})
-        rc, out, err = run([
-            exe, "run", "-c", str(cfg), "--path-mode=abs", "--output.text.path=stdout",
-            "--output.text.print-issued-lines=false", "--output.text.colors=false", "--show-stats=false",
-            "--max-issues-per-linter=0", "--max-same-issues=0", "--allow-parallel-runners", *pkgs,
-        ], module, timeout=150, env={"GOLANGCI_LINT_CACHE": str(golangci_cache(module))})
-        if rc is None:
-            notes.append(f"timeout:golangci-lint in {module}")
-        else:
-            for row in out.splitlines():
-                m = GOLANGCI_ROW.match(row)
-                if not m or m["msg"].startswith((": #", "# ")):
-                    continue
-                rule = m["rule"] or "typecheck"
-                issues.append(Issue("golangci-lint", module, resolve_in(module, m["file"]), int(m["line"]),
-                                    int(m["col"] or 0), rule, m["msg"], hard=rule == "typecheck"))
-            if rc not in (0, 1) and not issues:
-                notes.append(f"golangci-lint failed in {module}: {failure(out, err)}")
-    else:
-        notes.append("missing:golangci-lint (brew install golangci-lint)")
-
-    # Packages nobody touched still have to compile against the ones that changed.
-    go = shutil.which("go")
-    if go and not whole:  # the whole module was just linted, typecheck included
-        edited_dirs = {f.parent for f in files}
-        rc, out, err = run([go, "vet", "./..."], module, timeout=150)
-        if rc is None:
-            notes.append(f"timeout:go vet in {module}")
-        for row in (err + out).splitlines():
-            m = VET_TYPE_ERROR.match(row)
-            if m:
-                f = resolve_in(module, m["file"])
-                if f.parent not in edited_dirs:
-                    issues.append(Issue("go vet", module, f, int(m["line"]), int(m["col"]), "typecheck",
-                                        m["msg"], hard=True))
+    if not exe:
+        return [], ["missing:golangci-lint (brew install golangci-lint)"]
+    cfg = find_up(module, GOLANGCI_CFG, stop) or DEFAULTS / "golangci.yml"
+    pkgs = ["./..."] if whole else sorted({"./" + os.path.relpath(f.parent, module) for f in files})
+    rc, out, err = run([
+        exe, "run", "-c", str(cfg), "--path-mode=abs", "--output.text.path=stdout",
+        "--output.text.print-issued-lines=false", "--output.text.colors=false", "--show-stats=false",
+        "--max-issues-per-linter=0", "--max-same-issues=0", "--allow-parallel-runners", *pkgs,
+    ], module, timeout=150, env={"GOLANGCI_LINT_CACHE": str(golangci_cache(module))})
+    if rc is None:
+        return [], [f"timeout:golangci-lint in {module}"]
+    issues: List[Issue] = []
+    for row in out.splitlines():
+        m = GOLANGCI_ROW.match(row)
+        if not m or m["msg"].startswith((": #", "# ")):
+            continue
+        rule = m["rule"] or "typecheck"
+        issues.append(Issue("golangci-lint", module, resolve_in(module, m["file"]), int(m["line"]),
+                            int(m["col"] or 0), rule, m["msg"], hard=rule == "typecheck"))
+    notes = []
+    if rc not in (0, 1) and not issues:
+        notes.append(f"golangci-lint failed in {module}: {failure(out, err)}")
     return issues, notes
+
+
+def _vet(module: Path, files: List[Path]) -> Findings:
+    """Packages nobody touched still have to compile against the ones that changed."""
+    go = shutil.which("go")
+    if not go:
+        return [], []
+    edited_dirs = {f.parent for f in files}
+    rc, out, err = run([go, "vet", "./..."], module, timeout=150)
+    if rc is None:
+        return [], [f"timeout:go vet in {module}"]
+    issues = []
+    for row in (err + out).splitlines():
+        m = VET_TYPE_ERROR.match(row)
+        if m:
+            f = resolve_in(module, m["file"])
+            if f.parent not in edited_dirs:
+                issues.append(Issue("go vet", module, f, int(m["line"]), int(m["col"]), "typecheck", m["msg"],
+                                    hard=True))
+    return issues, []
+
+
+def check_go(module: Path, files: List[Path], stop: Path, *, whole: bool = False) -> Findings:
+    issues, notes = _golangci(module, files, stop, whole=whole)
+    if whole:  # the whole module was just linted, typecheck included
+        return issues, notes
+    vetted, vet_notes = _vet(module, files)
+    return issues + vetted, notes + vet_notes
 
 
 # ---------------------------------------------------------------- Rust / Python
@@ -108,12 +119,12 @@ def check_rust(crate: Path, stop: Path) -> Findings:
 RUFF_ROW = re.compile(r"^(?P<file>.+?):(?P<line>\d+):(?P<col>\d+): (?P<rule>[\w-]+):? (?P<msg>.*)$")
 
 
-def check_python(root: Path, files: List[Path], whole: bool = False) -> Findings:
+def check_python(root: Path, files: List[Path], *, whole: bool = False) -> Findings:
     ruff = shutil.which("ruff")
     if not ruff:
         return [], ["missing:ruff (brew install ruff)"]
     rc, out, err = run([ruff, "check", "--output-format", "concise", "--no-fix", "--force-exclude",
-                        *targets(files, whole)], root, timeout=60)
+                        *targets(files, whole=whole)], root, timeout=60)
     if rc is None:
         return [], [f"timeout:ruff in {root}"]
     issues = []
@@ -140,7 +151,7 @@ def swift_vendored(f: Path, root: Path) -> bool:
     return bool(SWIFT_VENDORED & set(parts[:-1]))
 
 
-def check_swiftlint(cfg_dir: Path, files: List[Path], defaults: bool, whole: bool = False) -> Findings:
+def check_swiftlint(cfg_dir: Path, files: List[Path], *, defaults: bool, whole: bool = False) -> Findings:
     exe = shutil.which("swiftlint")
     if not exe:
         return [], ["missing:swiftlint (brew install swiftlint)"]
@@ -152,7 +163,7 @@ def check_swiftlint(cfg_dir: Path, files: List[Path], defaults: bool, whole: boo
             return [], []
     else:  # the project's `excluded` holds even for files named on the command line
         cmd.append("--force-exclude")
-        paths = targets(files, whole)
+        paths = targets(files, whole=whole)
     rc, out, err = run(cmd + paths, cfg_dir, timeout=90)
     if rc is None:
         return [], [f"timeout:swiftlint in {cfg_dir}"]

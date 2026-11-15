@@ -33,7 +33,7 @@ def resolve_in(root: Path, name: str, *fallbacks: Optional[Path]) -> Path:
     return (root / p).resolve()
 
 
-def targets(files: List[Path], whole: bool) -> List[str]:
+def targets(files: List[Path], *, whole: bool) -> List[str]:
     """What to hand a linter: the files, or its whole project (it runs from the project directory)."""
     return ["."] if whole else [str(f) for f in files]
 

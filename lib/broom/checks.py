@@ -68,42 +68,42 @@ class Plan:
         if package:  # an Xcode project has no command-line build broom can run
             self.swift.add(package.parent)
 
-    def checks(self, whole: bool) -> List[Check]:
-        out: List[Check] = [(f"go:{mod}", partial(check_go, mod, fs, stop, whole))
+    def checks(self, *, whole: bool) -> List[Check]:
+        out: List[Check] = [(f"go:{mod}", partial(check_go, mod, fs, stop, whole=whole))
                             for (mod, stop), fs in self.go.items()]
-        out += [(f"{tool}:{d}", web_check(tool, d, fs, stop, whole)) for (tool, d, stop), fs in self.web.items()]
+        out += [(f"{tool}:{d}", web_check(tool, d, fs, stop, whole=whole)) for (tool, d, stop), fs in self.web.items()]
         out += [(f"tsc:{cfg}", partial(check_tsc, cfg, stop)) for cfg, stop in self.tsc]
         out += [(f"clippy:{crate}", partial(check_rust, crate, stop)) for crate, stop in self.rust]
-        out += [(f"ruff:{root}", partial(check_python, root, fs, whole)) for (root, _stop), fs in self.py.items()]
-        out += [(f"{tool}:{d}", partial(check_swiftlint, d, fs, tool == "swiftlint-default", whole))
+        out += [(f"ruff:{root}", partial(check_python, root, fs, whole=whole)) for (root, _stop), fs in self.py.items()]
+        out += [(f"{tool}:{d}", partial(check_swiftlint, d, fs, defaults=tool == "swiftlint-default", whole=whole))
                 for (tool, d), fs in self.swiftlint.items()]
         out += [(f"swift-build:{package}", partial(check_swift_build, package)) for package in self.swift]
         return out
 
 
-def web_check(tool: str, d: Path, files: List[Path], stop: Path, whole: bool) -> Callable[[], Findings]:
+def web_check(tool: str, d: Path, files: List[Path], stop: Path, *, whole: bool) -> Callable[[], Findings]:
     """The check for one JS/TS or CSS linter in its config directory."""
     if tool in ("oxlint", "oxlint-default"):
-        return partial(check_oxlint, d, files, stop, tool == "oxlint-default", whole)
+        return partial(check_oxlint, d, files, stop, defaults=tool == "oxlint-default", whole=whole)
     if tool in ("stylelint", "stylelint-default"):
-        return partial(check_stylelint, d, files, stop, tool == "stylelint-default")
+        return partial(check_stylelint, d, files, stop, defaults=tool == "stylelint-default")
     if tool == "eslint":
-        return partial(check_eslint, d, files, stop, whole)
-    return partial(check_biome, d, files, stop, whole)
+        return partial(check_eslint, d, files, stop, whole=whole)
+    return partial(check_biome, d, files, stop, whole=whole)
 
 
-def plan(files: List[Path], whole: bool = False) -> List[Check]:
+def plan(files: List[Path], *, whole: bool = False) -> List[Check]:
     """A check per project and tool. With `whole`, each tool checks its whole project instead of the given files."""
     grouped = Plan()
     for f in files:
         grouped.add(f)
-    return grouped.checks(whole)
+    return grouped.checks(whole=whole)
 
 
-def run_checks(files: List[Path], slow_path: Optional[Path] = None, whole: bool = False) -> Findings:
+def run_checks(files: List[Path], slow_path: Optional[Path] = None, *, whole: bool = False) -> Findings:
     """Run every check in parallel; a check that times out is recorded in `slow_path` and skipped after."""
     slow = set(load_json(slow_path, [])) if slow_path else set()
-    todo = [(k, fn) for k, fn in plan(files, whole) if k not in slow]
+    todo = [(k, fn) for k, fn in plan(files, whole=whole) if k not in slow]
     issues: List[Issue] = []
     notes: List[str] = []
     with ThreadPoolExecutor(max_workers=4) as pool:
