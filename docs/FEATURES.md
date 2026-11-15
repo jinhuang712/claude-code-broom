@@ -113,7 +113,7 @@ indented syntax, Stylus, `<style>` blocks in `.vue` or `.svelte` files and CSS-i
 | `params` | 5 | 8 | `PLR0913` | `max-params` | `revive` `argument-limit` | `function_parameter_count` |
 | `nesting` | 4 | 6 | `PLR1702` | `max-depth` | `nestif` | — |
 | `complexity` | 10 | 20 | `C901` | `complexity` | `gocognit` | `cyclomatic_complexity` |
-| `nested_ternary` | — | any | — | `no-nested-ternary` | — | — |
+| `nested_ternary` | — | any | `ast` | `no-nested-ternary` | — | — |
 | `type_lines` | 250 | — | `ast` | — | — | `type_body_length` |
 | `duplicate_lines` | 10 | 30 | jscpd | jscpd | jscpd | jscpd |
 
@@ -124,11 +124,11 @@ These count by occurrence: a change that adds one gets the smell's level.
 | `suppression` | block | `PGH003` `PGH004` | `ban-ts-comment` | `nolintlint` | `blanket_disable_command` |
 | `swallowed_error` | block | `S110` | `no-empty` `no-useless-catch` | `revive` `empty-block` | `no_empty_block` |
 | `commented_code` | block | `ERA001` | — | — | — |
-| `unused_params` | hint | `ARG` | — | `revive` `unused-parameter` | `unused_parameter` |
+| `unused_params` | hint | `ARG` | `no-unused-vars` (parameters only) | `revive` `unused-parameter` | `unused_parameter` |
 | `magic_numbers` | hint | `PLR2004` | `no-magic-numbers` | `mnd` | `no_magic_numbers` |
-| `debug_output` | hint | `T201` `T203` | `no-console` | — | — |
+| `debug_output` | hint | `T201` `T203` | `no-console` | — | a custom rule: `print` `debugPrint` `NSLog` `dump` |
 | `todo` | hint | `FIX` | `no-warning-comments` | `godox` | `todo` |
-| `type_escape` | hint | `ANN401` | `no-explicit-any` `no-non-null-assertion` | — | `force_cast` `force_unwrapping` `force_try` |
+| `type_escape` | hint | `ANN401` | `no-explicit-any` `no-non-null-assertion` | `revive` `unchecked-type-assertion` | `force_cast` `force_unwrapping` `force_try` |
 | `globals` | hint | `PLW0603` | — | — | — |
 | `bool_params` | hint | `FBT001` | — | `revive` `flag-parameter` | — |
 | `broad_test_asserts` | hint | `PT011` | — | — | — |

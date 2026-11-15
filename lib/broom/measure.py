@@ -124,8 +124,18 @@ def code_lines(rel: str, text: str) -> int:
     return len(rows) - imports
 
 
+def nested_ternaries(r: Reader, rel: str, tree: ast.AST) -> None:
+    """A conditional expression inside another one's test, value or alternative; ruff has no rule for it."""
+    for node in ast.walk(tree):
+        if isinstance(node, ast.IfExp):
+            for part in (node.test, node.body, node.orelse):
+                if isinstance(part, ast.IfExp):
+                    r.add(rel, part.lineno, "nested_ternary", 1)
+
+
 def python_sizes(r: Reader, rel: str, lim: Limits) -> None:
-    """Function and class lengths from Python's own parser; ruff measures neither in lines."""
+    """Function and class lengths from Python's own parser, which ruff doesn't measure in lines, and its nested
+    conditional expressions."""
     try:
         tree = ast.parse((r.root / rel).read_text(errors="replace"))
     except (SyntaxError, ValueError):
@@ -141,6 +151,7 @@ def python_sizes(r: Reader, rel: str, lim: Limits) -> None:
             walk(child, f"{prefix}{child.name}.")
 
     walk(tree, "")
+    nested_ternaries(r, rel, tree)
 
 
 RUFF_METRICS = {
@@ -179,7 +190,7 @@ OXLINT_METRICS = {
     "complexity": "complexity", "no-nested-ternary": "nested_ternary",
     "ban-ts-comment": "suppression", "no-empty": "swallowed_error", "no-useless-catch": "swallowed_error",
     "no-magic-numbers": "magic_numbers", "no-console": "debug_output", "no-warning-comments": "todo",
-    "no-explicit-any": "type_escape", "no-non-null-assertion": "type_escape",
+    "no-explicit-any": "type_escape", "no-non-null-assertion": "type_escape", "no-unused-vars": "unused_params",
 }
 OXLINT_CATEGORIES = ("correctness", "suspicious", "perf", "pedantic", "style", "restriction", "nursery")
 OXLINT_MAGIC = {"ignore": [-1, 0, 1, 2], "ignoreArrayIndexes": True, "ignoreDefaultValues": True, "ignoreEnums": True}
@@ -196,7 +207,15 @@ def oxlint_config(lim: Limits) -> dict:
     present = {rule: "warn" for rule, metric in OXLINT_METRICS.items() if metric in SMELL_PRESENCE}
     return {"plugins": ["typescript"], "categories": {c: "off" for c in OXLINT_CATEGORIES},
             "rules": {**{f"typescript/{r}" if r in TS_RULES else r: v for r, v in present.items()},
-                      "no-magic-numbers": ["warn", OXLINT_MAGIC], "no-nested-ternary": "warn", **sized}}
+                      "no-magic-numbers": ["warn", OXLINT_MAGIC], "no-nested-ternary": "warn",
+                      "no-unused-vars": ["warn", {"args": "all", "argsIgnorePattern": "^_"}], **sized}}
+
+
+def oxlint_metric(rule: str, msg: str) -> Optional[str]:
+    """The metric an oxlint finding stands for. no-unused-vars also reports variables and imports, which the
+    project's own linter already covers, so only its parameters count."""
+    metric = OXLINT_METRICS.get(rule)
+    return None if metric == "unused_params" and not msg.startswith("Parameter") else metric
 
 
 TS_RULES = {"ban-ts-comment", "no-explicit-any", "no-non-null-assertion"}
@@ -219,9 +238,9 @@ def measure_js(r: Reader, rels: List[str], lim: Limits, start: Path) -> None:
                      timeout=TOOL_TIMEOUT)
     for d in r.json(rc, out, {}).get("diagnostics", []):
         rule = re.sub(r"^[\w-]+\(|\)$", "", d.get("code", ""))
-        metric = OXLINT_METRICS.get(rule)
+        msg = d.get("message", "")
+        metric = oxlint_metric(rule, msg)
         if metric:
-            msg = d.get("message", "")
             line = int(((d.get("labels") or [{}])[0].get("span") or {}).get("line", 0))
             r.add(d.get("filename", ""), line, metric, oxlint_value(metric, msg), quoted_name(msg))
 
@@ -239,7 +258,7 @@ def golangci_config(lim: Limits) -> str:
     """Linters that read syntax alone: the scratch tree holds only the changed files, so imports don't resolve,
     and one linter that needs types (goconst, forbidigo, gochecknoglobals) would stop them all."""
     revive = [f"{{name: argument-limit, arguments: [{lim['params'][0]}]}}", "{name: unused-parameter}",
-              "{name: empty-block}", "{name: flag-parameter}"]
+              "{name: empty-block}", "{name: flag-parameter}", "{name: unchecked-type-assertion}"]
     return "\n".join([
         'version: "2"',
         "linters:",
@@ -267,6 +286,7 @@ GOLANGCI_READS: List[Tuple[str, str, str, Optional[str], Optional[str]]] = [
     ("revive", "unused-parameter", "unused_params", None, None),
     ("revive", "empty-block", "swallowed_error", None, None),
     ("revive", "flag-parameter", "bool_params", None, None),
+    ("revive", "unchecked-type-assertion", "type_escape", None, None),
     ("mnd", "", "magic_numbers", None, None),
     ("nolintlint", "", "suppression", None, None),
     ("godox", "", "todo", None, None),
@@ -311,9 +331,18 @@ SWIFTLINT_METRICS = {
 }
 
 
+# SwiftLint custom rules of broom's own, for what it has no rule for. The name must not follow a dot or a word
+# character: `printer.print(` is a method, not the global function.
+SWIFT_CUSTOM_RULES = {"debug_output": r"(?<![\w.])(print|debugPrint|NSLog|dump)\("}
+
+
 def swiftlint_config(lim: Limits) -> str:
-    rows = [f"only_rules: [{', '.join(SWIFTLINT_METRICS)}]"]
+    rows = [f"only_rules: [{', '.join([*SWIFTLINT_METRICS, 'custom_rules'])}]"]
     rows += [f"{rule}: {{warning: {lim[metric][0]}, error: {UNREACHABLE}}}" for rule, metric in SWIFTLINT_SIZES.items()]
+    rows.append("custom_rules:")
+    for name, regex in SWIFT_CUSTOM_RULES.items():
+        rows += [f"  {name}:", f"    regex: '{regex}'", "    match_kinds: [identifier]", f"    message: {name}",
+                 "    severity: warning"]
     return "\n".join(rows) + "\n"
 
 
@@ -327,7 +356,8 @@ def measure_swift(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None
     rc, out, _ = run([exe, "lint", "--quiet", "--config", str(cfg), "--reporter", "json", *rels], r.root,
                      timeout=TOOL_TIMEOUT)
     for d in r.json(rc, out, []):
-        metric = SWIFTLINT_METRICS.get(d.get("rule_id", ""))
+        rule = d.get("rule_id", "")
+        metric = SWIFTLINT_METRICS.get(rule) or (rule if rule in SWIFT_CUSTOM_RULES else None)
         if metric:
             value = 1 if metric in SMELL_PRESENCE else number(r"(\d+)\D*$", d.get("reason", ""))
             r.add(d.get("file", ""), int(d.get("line") or 0), metric, value)

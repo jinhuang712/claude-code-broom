@@ -60,6 +60,44 @@ class SmellTest(BroomCase):
                 (r / rel).write_text(text)
                 found, _ = find_smells(r, [r / rel], "HEAD")
                 self.assertIn(("block", metric), [(s.level, s.metric) for s in found])
+
+    def measured(self, r: Path, rel: str, tool: str, text: str) -> list:
+        """The smells `text` has as a new file `rel`, or a skipped subtest when the tool is missing."""
+        if not shutil.which(tool):
+            self.skipTest(f"{tool} missing")
+        (r / rel).parent.mkdir(parents=True, exist_ok=True)
+        (r / rel).write_text(text)
+        found, _ = find_smells(r, [r / rel], "HEAD")
+        return [(s.level, s.metric) for s in found]
+
+    def test_what_only_some_languages_measure(self) -> None:
+        samples = {
+            "a.py": ("ruff", "def f(x):\n    return 1 if x else (2 if x > 1 else 3)\n", ("block", "nested_ternary")),
+            "a.ts": ("oxlint", "export function f(a: number, unused: string): number {\n  return a;\n}\n",
+                     ("hint", "unused_params")),
+            "go/a.go": ("golangci-lint", "package a\n\nfunc F(a interface{}) string {\n\treturn a.(string)\n}\n",
+                        ("hint", "type_escape")),
+            "a.swift": ("swiftlint", 'func f() {\n    print("x")\n    NSLog("y")\n}\n', ("hint", "debug_output")),
+        }
+        r = self.repo({"README.md": "x\n"})
+        for rel, (tool, text, expected) in samples.items():
+            with self.subTest(rel):
+                self.assertIn(expected, self.measured(r, rel, tool, text))
+
+    def test_what_looks_alike_is_not_flagged(self) -> None:
+        samples = {
+            "b.py": ("ruff", "def f(x):\n    return 1 if x else 2\n", "nested_ternary"),
+            "b.ts": ("oxlint", "export function f(a: number, _b: string): number {\n  const unusedVar = a;\n"
+                     "  return a;\n}\n", "unused_params"),
+            "go/b.go": ("golangci-lint", "package b\n\nfunc F(a interface{}) string {\n\ts, ok := a.(string)\n"
+                        '\tif !ok {\n\t\treturn ""\n\t}\n\treturn s\n}\n', "type_escape"),
+            "b.swift": ("swiftlint", 'func f(printer: Printer) {\n    printer.print("x")\n}\n', "debug_output"),
+        }
+        r = self.repo({"README.md": "x\n"})
+        for rel, (tool, text, metric) in samples.items():
+            with self.subTest(rel):
+                self.assertNotIn(metric, [m for _, m in self.measured(r, rel, tool, text)])
+
     def test_test_complexity_and_describe_blocks_are_noise(self) -> None:
         self.assertTrue(noise(Raw("pkg/a_test.go", 1, "complexity", "TestX", 30, "go")))
         self.assertTrue(noise(Raw("src/a.test.ts", 1, "function_lines", 'describe("x", () => {', 120, "js")))
