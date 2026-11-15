@@ -277,9 +277,13 @@ class Diagnosis:
                         self.items.append(item)
 
     def smells(self) -> None:
-        coded = [lang for lang in ("go", "js", "py", "swift") if lang in self.projects]
-        if coded and setting("smells", self.repo) != "off":  # duplicate code, in every language smells measure
+        if setting("smells", self.repo) == "off":
+            return
+        coded = [lang for lang in ("go", "js", "py", "swift", "rust", "css") if lang in self.projects]
+        if coded:  # duplicate code, in every language smells measure
             self.machine.append((coded[0], "smells", "jscpd", "jscpd"))
+        if "js" in self.projects:  # broom's own TS/JS rules are an oxlint plugin, which runs on Node
+            self.machine.append(("js", "smells", "node", "node"))
 
     def swift(self) -> None:
         swift = self.projects.get("swift") or []

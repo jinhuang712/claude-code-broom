@@ -161,7 +161,7 @@ These count by occurrence: a change that adds one gets the smell's level.
   `duplicate_lines`.
 - Duplicate code comes from jscpd 5, which scans every code file in the repo and, with `--baseline-from-ref`,
   the base tree: a clone counts when it is new and has a side in the change's files. Clones between two test
-  files, and clones of generated or vendored code, don't count. `broom doctor` checks for jscpd.
+  files, and clones of generated or vendored code, don't count. `broom doctor` checks for jscpd, and for Node in a TS/JS repo.
 - `dead_code` (a hint) comes from jscpd's `--dead-code`: a file, export, symbol or import nothing uses, in
   TS/JS and Python, tests and entry points left out; in Go, from golangci-lint's `unused`, which finds unexported
   code nothing uses. It counts on a line the change added, or in a new file.

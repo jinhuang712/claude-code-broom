@@ -19,6 +19,17 @@ from support import (
 class DoctorTest(BroomCase):
     # doctor
 
+    def tools(self, r: Path, env: dict) -> dict:
+        return {i["tool"]: i for i in self.doctor(r, env)["items"]}
+
+    def test_doctor_asks_for_node_where_broom_s_ts_rules_run_on_it(self) -> None:
+        r = self.repo({"package.json": "{}", "a.ts": "export const a = 1;\n"})
+        missing = self.tools(r, self.fake_path(fakes={"brew": "exit 0"}))["node"]
+        self.assertEqual((missing["status"], missing["fix"]), ("missing", "brew install node"))
+        self.assertEqual(self.tools(r, self.fake_path(fakes={"node": "echo v99.0.0"}))["node"]["status"], "ok")
+        (r / ".broom.json").write_text('{"smells": "off"}')
+        self.assertNotIn("node", self.tools(r, self.fake_path()), "nothing here needs Node once smells are off")
+
     def test_doctor_reports_missing_tools_with_install_commands(self) -> None:
         r = self.go_repo()
         result = self.doctor(r, self.fake_path(keep=("go", "gofmt")))
