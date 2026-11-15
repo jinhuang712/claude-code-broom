@@ -7,87 +7,19 @@ is past the soft limit as Raw rows: file, line, metric, the function's name (els
 from __future__ import annotations
 
 import ast
-import json
 import re
 import shutil
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 from .config import SMELL_PRESENCE
 from .gitutil import run
-from .toolchain import GO_EXTS, JS_EXTS, PY_EXTS, SWIFT_EXTS, resolve_bin
+from .jsmeasure import measure_js
+from .reading import TOOL_TIMEOUT, Limits, Raw, Reader, match, number, quoted_name
+from .toolchain import GO_EXTS, JS_EXTS, PY_EXTS, SWIFT_EXTS
 
-Limits = Dict[str, Tuple[int, int]]
-TOOL_TIMEOUT = 90
 UNREACHABLE = 1_000_000  # a SwiftLint error level nothing reaches: broom tells hints from blocks itself
 GO_MOD = "module broomsmells\n\ngo 1.22\n"
-
-
-@dataclass
-class Raw:
-    rel: str
-    line: int
-    metric: str
-    key: str  # what matches a finding across versions: the function's name, else the line's text
-    value: int
-    tool: str
-
-
-class Reader:
-    """Turns one tool's findings in one scratch tree into Raw rows."""
-
-    def __init__(self, root: Path, tool: str, notes: List[str]) -> None:
-        self.root, self.tool, self.notes = root, tool, notes
-        self.rows: List[Raw] = []
-
-    def json(self, rc: Optional[int], out: str, empty):
-        if rc is None:
-            self.notes.append(f"timeout:{self.tool} measuring smells")
-            return empty
-        try:
-            return json.loads(out) if out.strip() else empty
-        except ValueError:
-            self.notes.append(f"{self.tool} failed measuring smells: {out.strip()[:120]}")
-            return empty
-
-    def add(self, rel: str, line: int, metric: str, value: Optional[int], name: Optional[str] = None) -> None:
-        if value is None:
-            return
-        rel = self.rel(rel)
-        text = self.line_text(rel, line)
-        key = name or match(r"\b(?:def|func|function|fn)\s+([A-Za-z_]\w*)", text) or text
-        self.rows.append(Raw(rel, line, metric, key, value, self.tool))
-
-    def rel(self, name: str) -> str:
-        p = Path(name)
-        if not p.is_absolute():
-            return name
-        try:
-            return str(p.resolve().relative_to(self.root.resolve()))
-        except ValueError:
-            return name
-
-    def line_text(self, rel: str, line: int) -> str:
-        try:
-            rows = (self.root / rel).read_text(errors="replace").splitlines()
-        except OSError:
-            return ""
-        return rows[line - 1].strip() if 0 < line <= len(rows) else ""
-
-
-def number(pattern: str, text: str) -> Optional[int]:
-    m = re.search(pattern, text)
-    return int(m.group(1)) if m else None
-
-
-def match(pattern: str, text: str) -> Optional[str]:
-    m = re.search(pattern, text)
-    return m.group(1) if m else None
-
-
-def quoted_name(text: str) -> Optional[str]:
-    return match(r"[`']([^`']+)[`']", text)
 
 
 # ---------------------------------------------------------------- measures per language
@@ -183,66 +115,6 @@ def measure_python(r: Reader, rels: List[str], lim: Limits, _start: Path) -> Non
             name = quoted_name(msg) if metric == "complexity" else None
             value = 1 if metric in SMELL_PRESENCE else number(r"\((\d+) > \d+\)", msg)
             r.add(d.get("filename", ""), int(d["location"]["row"]), metric, value, name)
-
-
-OXLINT_METRICS = {
-    "max-lines-per-function": "function_lines", "max-params": "params", "max-depth": "nesting",
-    "complexity": "complexity", "no-nested-ternary": "nested_ternary",
-    "ban-ts-comment": "suppression", "no-empty": "swallowed_error", "no-useless-catch": "swallowed_error",
-    "no-magic-numbers": "magic_numbers", "no-console": "debug_output", "no-warning-comments": "todo",
-    "no-explicit-any": "type_escape", "no-non-null-assertion": "type_escape", "no-unused-vars": "unused_params",
-}
-OXLINT_CATEGORIES = ("correctness", "suspicious", "perf", "pedantic", "style", "restriction", "nursery")
-OXLINT_MAGIC = {"ignore": [-1, 0, 1, 2], "ignoreArrayIndexes": True, "ignoreDefaultValues": True, "ignoreEnums": True}
-
-
-def oxlint_config(lim: Limits) -> dict:
-    whole = {"skipBlankLines": False, "skipComments": False}
-    sized = {
-        "max-lines-per-function": ["warn", {"max": lim["function_lines"][0], **whole}],
-        "max-params": ["warn", {"max": lim["params"][0]}],
-        "max-depth": ["warn", {"max": lim["nesting"][0]}],
-        "complexity": ["warn", {"max": lim["complexity"][0]}],
-    }
-    present = {rule: "warn" for rule, metric in OXLINT_METRICS.items() if metric in SMELL_PRESENCE}
-    return {"plugins": ["typescript"], "categories": {c: "off" for c in OXLINT_CATEGORIES},
-            "rules": {**{f"typescript/{r}" if r in TS_RULES else r: v for r, v in present.items()},
-                      "no-magic-numbers": ["warn", OXLINT_MAGIC], "no-nested-ternary": "warn",
-                      "no-unused-vars": ["warn", {"args": "all", "argsIgnorePattern": "^_"}], **sized}}
-
-
-def oxlint_metric(rule: str, msg: str) -> Optional[str]:
-    """The metric an oxlint finding stands for. no-unused-vars also reports variables and imports, which the
-    project's own linter already covers, so only its parameters count."""
-    metric = OXLINT_METRICS.get(rule)
-    return None if metric == "unused_params" and not msg.startswith("Parameter") else metric
-
-
-TS_RULES = {"ban-ts-comment", "no-explicit-any", "no-non-null-assertion"}
-
-
-def oxlint_value(metric: str, msg: str) -> Optional[int]:
-    if metric == "nested_ternary" or metric in SMELL_PRESENCE:
-        return 1
-    return number(r"complexity of (\d+)", msg) if metric == "complexity" else number(r"\((\d+)\)", msg)
-
-
-def measure_js(r: Reader, rels: List[str], lim: Limits, start: Path) -> None:
-    exe = resolve_bin("oxlint", start, start)
-    if not exe:
-        r.notes.append("missing:oxlint (npm i -g oxlint), so TS/JS smells aren't measured")
-        return
-    cfg = r.root.parent / f"{r.root.name}-oxlint.json"
-    cfg.write_text(json.dumps(oxlint_config(lim)))
-    rc, out, _ = run([exe, "-c", str(cfg), "-f", "json", "--no-error-on-unmatched-pattern", *rels], r.root,
-                     timeout=TOOL_TIMEOUT)
-    for d in r.json(rc, out, {}).get("diagnostics", []):
-        rule = re.sub(r"^[\w-]+\(|\)$", "", d.get("code", ""))
-        msg = d.get("message", "")
-        metric = oxlint_metric(rule, msg)
-        if metric:
-            line = int(((d.get("labels") or [{}])[0].get("span") or {}).get("line", 0))
-            r.add(d.get("filename", ""), line, metric, oxlint_value(metric, msg), quoted_name(msg))
 
 
 def nestif_complexity(depth: int) -> int:

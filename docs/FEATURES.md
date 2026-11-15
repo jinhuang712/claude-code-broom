@@ -114,7 +114,7 @@ indented syntax, Stylus, `<style>` blocks in `.vue` or `.svelte` files and CSS-i
 | `nesting` | 4 | 6 | `PLR1702` | `max-depth` | `nestif` | — |
 | `complexity` | 10 | 20 | `C901` | `complexity` | `gocognit` | `cyclomatic_complexity` |
 | `nested_ternary` | — | any | `ast` | `no-nested-ternary` | — | — |
-| `type_lines` | 250 | — | `ast` | — | — | `type_body_length` |
+| `type_lines` | 250 | — | `ast` | `broom/class-lines` | — | `type_body_length` |
 | `duplicate_lines` | 10 | 30 | jscpd | jscpd | jscpd | jscpd |
 
 These count by occurrence: a change that adds one gets the smell's level.
@@ -130,7 +130,7 @@ These count by occurrence: a change that adds one gets the smell's level.
 | `todo` | hint | `FIX` | `no-warning-comments` | `godox` | `todo` |
 | `type_escape` | hint | `ANN401` | `no-explicit-any` `no-non-null-assertion` | `revive` `unchecked-type-assertion` | `force_cast` `force_unwrapping` `force_try` |
 | `globals` | hint | `PLW0603` | — | — | — |
-| `bool_params` | hint | `FBT001` | — | `revive` `flag-parameter` | — |
+| `bool_params` | hint | `FBT001` | `broom/bool-params` | `revive` `flag-parameter` | — |
 | `broad_test_asserts` | hint | `PT011` | — | — | — |
 
 - An occurrence counts when the change raises the count in a file. Lines match the base by text: a moved line
@@ -138,6 +138,13 @@ These count by occurrence: a change that adds one gets the smell's level.
 - Unused variables and imports stay with the project's linter, which already reports them. In Go only linters
   that read syntax alone run, since the scratch copy's imports don't resolve: no repeated literals, globals or
   debug prints there.
+- `broom/bool-params` and `broom/class-lines` are two rules of broom's own (`defaults/oxlint-rules.mjs`), loaded as
+  an oxlint JS plugin, an alpha feature, in a second oxlint pass. They need Node: without it, or with an oxlint that
+  can't load plugins, only these two smells go unmeasured, and a note says so. A function handed to a call
+  (`items.map((x, ok: boolean) => ...)`) is the callee's choice and doesn't count. oxlint's own rule list (read in
+  full, 2026-11) has nothing for commented-out code, global state or class length; the one outside route,
+  `sonarjs/no-commented-code`, needs that plugin installed in every project, so `commented_code` and `globals`
+  stay as the table shows.
 - Duplicate code comes from jscpd 5, which scans every code file in the repo and, with `--baseline-from-ref`,
   the base tree: a clone counts when it is new and has a side in the change's files. Clones between two test
   files, and clones of generated or vendored code, don't count. `broom doctor` checks for jscpd.
