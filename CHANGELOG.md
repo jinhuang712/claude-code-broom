@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.17.0
+
+- Smells that need the project's own checkout, where imports and dependencies resolve, run there and not in the
+  scratch copy of the changed files: Go's typed linters (`debug_output`, `globals`, `commented_code`, and
+  `dead_code` from `unused`), TS/JS and Python import cycles (a new smell, `import_cycle`), and clippy for Rust
+  (`params`, `bool_params`, `debug_output`, `type_escape`, `suppression`). With no copy of the base to compare
+  with, a finding counts when it is on a line the change added. The scan at session start gives these tools 60
+  seconds between them, quick ones first, and says what it skipped.
+- TS/JS get `bool_params`, `type_lines`, `globals` and `commented_code` from four oxlint rules of broom's own
+  (`defaults/oxlint-rules.mjs`, an oxlint JS plugin, so they need Node), `unused_params` and `broad_test_asserts`
+  from oxlint and its Jest rules. Python gets `nested_ternary`; Go `type_escape`; Swift `debug_output`,
+  `nested_ternary`, `globals` and unlabeled `bool_params`, as SwiftLint custom rules. Python and TS/JS now have a
+  source for every smell. `commented_code` is a hint in TS/JS and Go, whose detectors guess, and blocks in Python.
+- Rust and CSS files count for `file_lines` and `duplicate_lines`.
+- Swift 6.4 colors its diagnostics even into a pipe, which hid every compile error from broom, so a commit that
+  broke a call in another file went through; and it words a missing XCTest as `unable to resolve module
+  dependency`, so the fallback that builds the sources without the tests never ran. Both are read now.
+- `broom doctor` asks for Node in a TS/JS repo, and for jscpd in a Rust or CSS one.
+- `broom smells` ends its list with how many smells `--top` cut off. The clean skill gets a table of the usual
+  fix for each smell, and a rule for a repo whose tests already fail.
+- broom measured by its own bar again: 23 smells, now none. `checks.py` (529 lines) became four modules of 44 to
+  234 lines, `measure.py` (412) three, `broom init` its own module, and the longest functions were split. 131
+  tests, none failing on a machine where five Swift tests failed before.
+
 ## 0.16.4
 
 - A linked worktree without a `.broom.json` reads the main worktree's. One repo's `.broom.json` was ignored by a
