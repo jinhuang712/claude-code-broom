@@ -27,6 +27,7 @@ from .gate import issue_key
 from .gitutil import ChangedLines, renamed
 from .maintained import Maintained
 from .measure import SMELL_EXTS, Limits, Raw, code_lines, measure
+from .realtree import Found, find_in_real_tree
 
 GENERATED = re.compile(r"DO NOT EDIT|@generated")
 TEST_FILE = re.compile(r"(^|/)(tests?|__tests__|Tests)/|_test\.(go|py)$|(^|/)test_[^/]*\.py$|"
@@ -57,6 +58,7 @@ LABELS = {
     "globals": "global statement(s)",
     "bool_params": "boolean flag parameter(s)",
     "broad_test_asserts": "too broad test assertion(s)",
+    "import_cycle": "import(s) that close a cycle between modules",
 }
 HINTS_SHOWN = 10
 LINES_SHOWN = 5
@@ -289,6 +291,33 @@ def unused_smells(repo: Path, unused: List[Unused], scope: set, base: Optional[s
     return out
 
 
+def real_tree_smells(repo: Path, found: List[Found], base: Optional[str], lim: RepoLimits,
+                     off: Tuple[str, ...]) -> List[Smell]:
+    """What the tools run in the real tree found on lines the change added, a new file included (all of it when
+    `base` is None): without a copy of the base, that is what makes a smell the change's own."""
+    changed = ChangedLines(base) if base else None
+    added: Dict[Tuple[str, str], List[Found]] = {}
+    out = []
+    for f in found:
+        lines = changed.get(repo / f.rel) if changed else None
+        if f.metric in off or not (lines is None or f.line in lines):
+            continue
+        if f.metric in SMELL_PRESENCE:
+            added.setdefault((f.rel, f.metric), []).append(f)
+        elif f.metric == DEAD_CODE:
+            out.append(Smell(repo, repo / f.rel, f.line, DEAD_CODE, f.key, 1, None, f.tool, "hint", 0))
+        else:
+            pair = lim.of(f.rel)[f.metric]
+            at = level(f.value, pair)
+            if at:
+                out.append(Smell(repo, repo / f.rel, f.line, f.metric, f.key, f.value, None, f.tool, at,
+                                 pair[1] if at == "block" else pair[0]))
+    for (rel, metric), rows in added.items():
+        out.append(Smell(repo, repo / rel, rows[0].line, metric, metric, len(rows), None, rows[0].tool,
+                         SMELL_PRESENCE[metric], 0, [r.line for r in rows]))
+    return out
+
+
 def drop_import_growth(rows: List[Raw], now: Dict[str, str], before: Optional[Dict[str, str]]) -> List[Raw]:
     """`rows` without the file length of files whose lines besides imports didn't grow since `before`: rewired
     imports (a moved module's new paths, a formatter's line breaks) don't make a long file worse."""
@@ -308,7 +337,8 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str]) -> Tuple[Lis
     lim = RepoLimits(repo)
     off = tuple(repo_config(repo).get("smells_off") or ())
     old_text = base_texts(repo, base, list(now_text), renamed(repo, [base])) if base else None
-    with tempfile.TemporaryDirectory(prefix="broom-smells-") as tmp, ThreadPoolExecutor(4) as pool:
+    with tempfile.TemporaryDirectory(prefix="broom-smells-") as tmp, ThreadPoolExecutor(5) as pool:
+        real = pool.submit(find_in_real_tree, repo, list(now_text), notes)
         now = pool.submit(measure, Path(tmp) / "now", now_text, lim.measured, repo, notes)
         before = pool.submit(measure, Path(tmp) / "before", old_text, lim.measured, repo, []) if old_text else None
         clones = None if "duplicate_lines" in off else pool.submit(
@@ -321,6 +351,7 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str]) -> Tuple[Lis
         found = compare(drop_import_growth(now.result(), now_text, old_text), old_rows, lim, repo, off)
         found += clone_smells(keep, clones.result() if clones else [], set(now_text), base, lim)
         found += unused_smells(repo, unused.result() if unused else [], set(now_text), base)
+        found += real_tree_smells(repo, real.result(), base, lim, off)
     for s in found:
         s.compared = base is not None
     return sorted(found, key=lambda s: (s.level != "block", str(s.file), s.line)), list(dict.fromkeys(notes))

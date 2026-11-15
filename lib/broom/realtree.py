@@ -1,0 +1,143 @@
+"""Smells found by tools that need the project's own checkout: a typed linter or a module graph can't work on the
+scratch copy of the changed files, whose imports don't resolve. These run in the real tree, and say where the
+smells are; smells.py keeps those on the lines the change added, so no copy of the base is needed."""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import shutil
+import tempfile
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Dict, List, Optional
+
+from .config import DEAD_CODE
+from .findings import failure
+from .gitutil import run
+from .jsmeasure import OXLINT_CATEGORIES
+from .langlint import golangci_cache
+from .toolchain import GO_EXTS, JS_EXTS, find_up, resolve_bin
+
+TOOL_TIMEOUT = 150
+
+
+@dataclass
+class Found:
+    rel: str  # relative to the repo
+    line: int
+    metric: str
+    tool: str
+    key: str = ""  # what a dead-code finding names; a sized smell's function
+    value: int = 1  # a sized smell's size
+
+
+# The linters that need types, by what they find. They run with broom's own config, never the project's.
+GO_TYPED = {"forbidigo": "debug_output", "gochecknoglobals": "globals", "gocritic": "commented_code",
+            "unused": DEAD_CODE}
+GO_CONFIG = """version: "2"
+linters:
+  default: none
+  enable: [forbidigo, gochecknoglobals, gocritic, unused]
+  settings:
+    forbidigo:
+      forbid:
+        - pattern: '^(fmt\\.Print(f|ln)?|print|println)$'
+    gocritic:
+      disable-all: true
+      enabled-checks: [commentedOutCode]
+run: {tests: true, relative-path-mode: wd}
+issues: {max-issues-per-linter: 0, max-same-issues: 0, uniq-by-line: false}
+"""
+
+
+def rel_of(repo: Path, path: Path) -> Optional[str]:
+    try:
+        return path.resolve().relative_to(repo.resolve()).as_posix()
+    except ValueError:
+        return None
+
+
+def go_modules(repo: Path, rels: List[str]) -> Dict[Path, List[Path]]:
+    """The Go files among `rels`, by the module each belongs to."""
+    modules: Dict[Path, List[Path]] = {}
+    for rel in rels:
+        f = repo / rel
+        mod = find_up(f.parent, ["go.mod"], repo) if f.suffix in GO_EXTS else None
+        if mod:
+            modules.setdefault(mod.parent, []).append(f)
+    return modules
+
+
+def go_found(repo: Path, rels: List[str], notes: List[str]) -> List[Found]:
+    exe = shutil.which("golangci-lint")  # the lint check says when it is missing
+    modules = go_modules(repo, rels)
+    if not exe or not modules:
+        return []
+    found: List[Found] = []
+    with tempfile.TemporaryDirectory(prefix="broom-realtree-") as tmp:
+        cfg = Path(tmp) / "golangci.yml"
+        cfg.write_text(GO_CONFIG)
+        for module, files in modules.items():
+            pkgs = sorted({"./" + os.path.relpath(f.parent, module) for f in files})
+            rc, out, err = run([exe, "run", "-c", str(cfg), "--output.json.path", "stdout",
+                                "--output.text.path", "stderr", "--show-stats=false", *pkgs], module,
+                               timeout=TOOL_TIMEOUT, env={"GOLANGCI_LINT_CACHE": str(golangci_cache(module))})
+            if rc is None:
+                notes.append(f"timeout:golangci-lint measuring smells in {module}")
+                continue
+            try:
+                issues = (json.loads(out) if out.strip() else {}).get("Issues") or []
+            except ValueError:
+                notes.append(f"golangci-lint failed measuring smells in {module}: {failure(out, err)}")
+                continue
+            found += go_issues(repo, module, issues)
+    return found
+
+
+def go_issues(repo: Path, module: Path, issues: List[dict]) -> List[Found]:
+    found = []
+    for i in issues:
+        metric = GO_TYPED.get(i.get("FromLinter", ""))  # `typecheck`, a module that doesn't compile, has none
+        rel = rel_of(repo, module / (i.get("Pos") or {}).get("Filename", ""))
+        if metric and rel:
+            what = re.sub(r" is unused.*$", "", i.get("Text", "")) if metric == DEAD_CODE else ""
+            found.append(Found(rel, int((i.get("Pos") or {}).get("Line", 0)), metric, "golangci-lint", what))
+    return found
+
+
+def js_found(repo: Path, rels: List[str], notes: List[str]) -> List[Found]:
+    """Import cycles through the changed TS/JS files: oxlint's `import/no-cycle` follows imports on disk, so the
+    modules the changed files import have to be there. It finds each file's tsconfig itself."""
+    files = [str(repo / rel) for rel in rels if Path(rel).suffix in JS_EXTS]
+    exe = resolve_bin("oxlint", repo, repo)  # jsmeasure says when it is missing
+    if not files or not exe:
+        return []
+    config = {"plugins": ["import"], "categories": {c: "off" for c in OXLINT_CATEGORIES},
+              "rules": {"import/no-cycle": "warn"}}
+    with tempfile.TemporaryDirectory(prefix="broom-realtree-") as tmp:
+        cfg = Path(tmp) / "oxlint.json"
+        cfg.write_text(json.dumps(config))
+        rc, out, _ = run([exe, "-c", str(cfg), "-f", "json", "--no-error-on-unmatched-pattern", *files], repo,
+                         timeout=TOOL_TIMEOUT)
+    if rc is None:
+        notes.append("timeout:oxlint measuring import cycles")
+        return []
+    try:
+        diagnostics = (json.loads(out) if out.strip() else {}).get("diagnostics") or []
+    except ValueError:
+        notes.append(f"oxlint failed measuring import cycles: {out.strip()[:120]}")
+        return []
+    found = []
+    for d in diagnostics:
+        rel = rel_of(repo, repo / d.get("filename", ""))
+        if rel and "no-cycle" in d.get("code", ""):
+            line = int(((d.get("labels") or [{}])[0].get("span") or {}).get("line", 0))
+            found.append(Found(rel, line, "import_cycle", "oxlint"))
+    return found
+
+
+def find_in_real_tree(repo: Path, rels: List[str], notes: List[str]) -> List[Found]:
+    """What the tools that need the real tree find in the files `rels` (their package or crate, more exactly)."""
+    return go_found(repo, rels, notes) + js_found(repo, rels, notes)

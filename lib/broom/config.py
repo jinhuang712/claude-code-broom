@@ -46,6 +46,7 @@ SMELL_PRESENCE = {
     "globals": "hint",
     "bool_params": "hint",
     "broad_test_asserts": "hint",
+    "import_cycle": "hint",  # modules that import one another in a ring
 }
 PLUGIN_ID = "broom@claude-code-broom"
 

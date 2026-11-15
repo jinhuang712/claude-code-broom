@@ -123,21 +123,24 @@ These count by occurrence: a change that adds one gets the smell's level.
 |---|---|---|---|---|---|
 | `suppression` | block | `PGH003` `PGH004` | `ban-ts-comment` | `nolintlint` | `blanket_disable_command` |
 | `swallowed_error` | block | `S110` | `no-empty` `no-useless-catch` | `revive` `empty-block` | `no_empty_block` |
-| `commented_code` | block | `ERA001` | — | — | — |
+| `commented_code` | block | `ERA001` | — | `gocritic` `commentedOutCode` (real tree) | — |
 | `unused_params` | hint | `ARG` | `no-unused-vars` (parameters only) | `revive` `unused-parameter` | `unused_parameter` |
 | `magic_numbers` | hint | `PLR2004` | `no-magic-numbers` | `mnd` | `no_magic_numbers` |
-| `debug_output` | hint | `T201` `T203` | `no-console` | — | a custom rule: `print` `debugPrint` `NSLog` `dump` |
+| `debug_output` | hint | `T201` `T203` | `no-console` | `forbidigo` (real tree) | a custom rule: `print` `debugPrint` `NSLog` `dump` |
 | `todo` | hint | `FIX` | `no-warning-comments` | `godox` | `todo` |
 | `type_escape` | hint | `ANN401` | `no-explicit-any` `no-non-null-assertion` | `revive` `unchecked-type-assertion` | `force_cast` `force_unwrapping` `force_try` |
-| `globals` | hint | `PLW0603` | — | — | — |
+| `globals` | hint | `PLW0603` | — | `gochecknoglobals` (real tree) | — |
 | `bool_params` | hint | `FBT001` | `broom/bool-params` | `revive` `flag-parameter` | — |
 | `broad_test_asserts` | hint | `PT011` | — | — | — |
+| `import_cycle` | hint | — | `import/no-cycle` (real tree) | — | — |
 
 - An occurrence counts when the change raises the count in a file. Lines match the base by text: a moved line
   stays old, and an edited line that keeps its occurrence adds nothing. A line counts once per smell.
-- Unused variables and imports stay with the project's linter, which already reports them. In Go only linters
-  that read syntax alone run, since the scratch copy's imports don't resolve: no repeated literals, globals or
-  debug prints there.
+- Unused variables and imports stay with the project's linter, which already reports them.
+- Tools that need the project's own checkout, where imports and dependencies resolve, run there and not in the
+  scratch copy of the changed files: Go's typed linters and TS/JS import cycles. With no copy of the base to
+  compare with, a finding counts when it is on a line the change added, a new file included. Only linters that
+  read syntax alone run in the scratch copy, so Go's repeated literals stay unmeasured.
 - `broom/bool-params` and `broom/class-lines` are two rules of broom's own (`defaults/oxlint-rules.mjs`), loaded as
   an oxlint JS plugin, an alpha feature, in a second oxlint pass. They need Node: without it, or with an oxlint that
   can't load plugins, only these two smells go unmeasured, and a note says so. A function handed to a call
@@ -151,7 +154,8 @@ These count by occurrence: a change that adds one gets the smell's level.
   the base tree: a clone counts when it is new and has a side in the change's files. Clones between two test
   files, and clones of generated or vendored code, don't count. `broom doctor` checks for jscpd.
 - `dead_code` (a hint) comes from jscpd's `--dead-code`: a file, export, symbol or import nothing uses, in
-  TS/JS and Python, tests and entry points left out. It counts on a line the change added, or in a new file.
+  TS/JS and Python, tests and entry points left out; in Go, from golangci-lint's `unused`, which finds unexported
+  code nothing uses. It counts on a line the change added, or in a new file.
   What loads dynamically (a manifest's scripts, plugins) looks unused too; turn it off per repo if so.
 - `.broom.json` `smells_off` turns single smells off: `{"smells_off": ["magic_numbers", "debug_output"]}`.
 
