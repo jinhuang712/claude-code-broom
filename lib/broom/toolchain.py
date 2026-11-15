@@ -97,7 +97,7 @@ def in_node_modules(rel: str, start: Path, stop: Optional[Path]) -> Optional[Pat
         d = d.parent
 
 
-def resolve_bin(name: str, start: Path, stop: Optional[Path], local_only: bool = False) -> Optional[str]:
+def resolve_bin(name: str, start: Path, stop: Optional[Path], *, local_only: bool = False) -> Optional[str]:
     """Project-local node_modules/.bin first (never above `stop`), then PATH."""
     local = in_node_modules(f".bin/{name}", start, stop)
     if local:

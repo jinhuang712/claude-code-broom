@@ -98,11 +98,14 @@ class Smell:
                      severe=self.level == "block")
 
 
+LIMIT_PAIR = 2  # a limit in .broom.json is [hint, hard]
+
+
 def moved(base: Limits, pairs: object) -> Limits:
     """`base` with the pairs a .broom.json entry sets: {"function_lines": [50, 100], ...}."""
     out = dict(base)
     for name, pair in (pairs if isinstance(pairs, dict) else {}).items():
-        if name in out and isinstance(pair, list) and len(pair) == 2 and all(isinstance(n, int) for n in pair):
+        if name in out and isinstance(pair, list) and len(pair) == LIMIT_PAIR and all(isinstance(n, int) for n in pair):
             out[name] = (pair[0], pair[1])
     return out
 

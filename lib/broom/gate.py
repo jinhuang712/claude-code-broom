@@ -113,7 +113,7 @@ def baseline_remove(keys: List[str]) -> None:
 
 
 def select(issues: List[Issue], files: Set[Path], known: Set[str], changed: Optional[ChangedLines] = None,
-           whole: bool = False) -> List[Issue]:
+           *, whole: bool = False) -> List[Issue]:
     """The findings that count: see the module docstring. `whole` counts every line of every file. Files the
     repo's .broom.json excludes never count."""
     changed = changed or ChangedLines()

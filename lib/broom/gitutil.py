@@ -71,7 +71,7 @@ class ChangedLines:
 
     HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 
-    def __init__(self, base: str = "HEAD", cached: bool = False) -> None:
+    def __init__(self, base: str = "HEAD", *, cached: bool = False) -> None:
         self.base = base
         self.cached = cached
         self._cache: Dict[Path, Optional[Set[int]]] = {}

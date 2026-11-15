@@ -15,7 +15,7 @@ import shutil
 import subprocess
 import threading
 from pathlib import Path
-from typing import IO, Any, Dict, List, Optional, Set, Tuple
+from typing import IO, Dict, List, Optional, Set, Tuple
 
 from .gitutil import git_root, run
 from .state import PLUGIN_ROOT
@@ -67,6 +67,7 @@ def project_typescript(root: Path) -> Tuple[str, Optional[Path]]:
     return version, in_node_modules(".bin/tsc", root, stop)
 
 
+TSC_LSP_MAJOR = 7  # the TypeScript major version whose tsc has a language server, and no tsserver
 NO_PUSH = "which gives Claude no diagnostics: TypeScript 7 only sends them on request, and Claude Code never asks"
 
 
@@ -79,16 +80,16 @@ def typescript_server(root: Path) -> Tuple[Optional[List[str]], str]:
     version, tsc = project_typescript(root)
     major = major_version(version)
     if tls:
-        if major is not None and major < 7:
+        if major is not None and major < TSC_LSP_MAJOR:
             return [tls, "--stdio"], f"the project's TypeScript {version}, through typescript-language-server"
         if major is not None:
             return [tls, "--stdio"], (f"typescript-language-server's bundled TypeScript: the project's TypeScript "
                                       f"{version} has no tsserver")
         return [tls, "--stdio"], "typescript-language-server's bundled TypeScript"
-    if major is not None and major >= 7 and tsc:
+    if major is not None and major >= TSC_LSP_MAJOR and tsc:
         return [str(tsc), "--lsp", "--stdio"], f"the project's TypeScript {version} (`tsc --lsp`), {NO_PUSH}"
     exe, global_version = _global_tsc()
-    if exe and (major_version(global_version) or 0) >= 7:
+    if exe and (major_version(global_version) or 0) >= TSC_LSP_MAJOR:
         return [exe, "--lsp", "--stdio"], f"the global TypeScript {global_version} (`tsc --lsp`), {NO_PUSH}"
     return None, f"no typescript-language-server and no TypeScript 7 (global tsc: {global_version or 'none'})"
 
@@ -158,7 +159,7 @@ class Client:
                     self.results[msg["id"]] = msg
                     self.done.notify_all()
 
-    def request(self, method: str, params: dict, timeout: float) -> Any:
+    def request(self, method: str, params: dict, timeout: float) -> object:
         self.next_id += 1
         rid = self.next_id
         self._send({"id": rid, "method": method, "params": params})

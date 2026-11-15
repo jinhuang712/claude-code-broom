@@ -215,11 +215,15 @@ def hook_session_scan(data: dict) -> None:
         emit({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": note}})
 
 
+SETUP_NOTE_GAPS = 6  # how many gaps the session note names before "and N more"
+
+
 def setup_note(repo: Path) -> Optional[str]:
     found = new_gaps(repo, diagnose_cached(repo))  # gaps the user already answered, in any repo, stay quiet
     if not found:
         return None
-    summary = "; ".join(describe(i) for i in found[:6]) + (f"; and {len(found) - 6} more" if len(found) > 6 else "")
+    more = f"; and {len(found) - SETUP_NOTE_GAPS} more" if len(found) > SETUP_NOTE_GAPS else ""
+    summary = "; ".join(describe(i) for i in found[:SETUP_NOTE_GAPS]) + more
     return (f"broom (the code-hygiene plugin) found gaps in this repo: {summary}. At a natural point, and before "
             "your first commit here at the latest, offer the user /broom:setup. Don't install anything they haven't "
             "agreed to; if they decline, run `broom setup --dismiss` so broom stops asking, here and in other repos, "
