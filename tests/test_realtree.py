@@ -7,6 +7,7 @@ import unittest
 
 from support import HAS_GO, BroomCase
 
+from broom.realtree import TOOL_TIMEOUT, Budget, find_in_real_tree
 from broom.smells import find_smells
 
 GO_MOD = "module example.com/x\n\ngo 1.22\n"
@@ -122,3 +123,17 @@ class RealTreeTest(BroomCase):
         r = self.repo(cycle)
         (r / "pkg/a.py").write_text(cycle["pkg/a.py"] + "Z = 2\n")
         self.assertNotIn("import_cycle", [m for _, m in self.metrics(r, "pkg/a.py")])
+
+    def test_a_budget_caps_what_the_next_tool_may_take_and_ends_at_zero(self) -> None:
+        self.assertEqual(Budget().timeout(), TOOL_TIMEOUT, "no budget leaves each tool its own timeout")
+        self.assertEqual(Budget(10_000).timeout(), TOOL_TIMEOUT, "a big one doesn't raise it")
+        self.assertLessEqual(Budget(5).timeout(), 5)
+        self.assertEqual(Budget(0).timeout(), 0)
+
+    @unittest.skipUnless(HAS_GO and shutil.which("oxlint"), "go, golangci-lint or oxlint missing")
+    def test_a_spent_budget_skips_the_tools_and_says_so(self) -> None:
+        r = self.repo({"go.mod": GO_MOD, "main.go": GO_SMELLY, "a.ts": "export const a = 1;\n"})
+        notes: list = []
+        self.assertEqual(find_in_real_tree(r, ["main.go", "a.ts"], 5, notes, Budget(0)), [])
+        self.assertEqual(sorted(n.split(" before ")[1].split(" measured")[0] for n in notes), ["golangci-lint", "oxlint"])
+        self.assertTrue(find_in_real_tree(r, ["main.go"], 5, [], Budget(60)), "a roomy budget still measures")

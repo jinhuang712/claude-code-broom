@@ -9,6 +9,7 @@ import os
 import re
 import shutil
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -22,6 +23,21 @@ from .pycycles import import_cycles
 from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS, find_up, resolve_bin
 
 TOOL_TIMEOUT = 150
+OUT_OF_TIME = "the time budget of this scan ran out before {tool} measured smells"
+
+
+class Budget:
+    """How long the tools of one pass may take between them. A scan of the whole repo, as at session start, has to
+    end; the check of a commit has no budget, and each tool keeps its own timeout."""
+
+    def __init__(self, seconds: Optional[float] = None) -> None:
+        self.end = None if seconds is None else time.monotonic() + seconds
+
+    def timeout(self) -> float:
+        """What the next tool may take: its usual timeout, or what is left of the budget; 0 when none is."""
+        if self.end is None:
+            return TOOL_TIMEOUT
+        return max(0.0, min(TOOL_TIMEOUT, self.end - time.monotonic()))
 
 
 @dataclass
@@ -71,7 +87,7 @@ def go_modules(repo: Path, rels: List[str]) -> Dict[Path, List[Path]]:
     return modules
 
 
-def go_found(repo: Path, rels: List[str], notes: List[str]) -> List[Found]:
+def go_found(repo: Path, rels: List[str], notes: List[str], budget: Budget) -> List[Found]:
     exe = shutil.which("golangci-lint")  # the lint check says when it is missing
     modules = go_modules(repo, rels)
     if not exe or not modules:
@@ -81,10 +97,14 @@ def go_found(repo: Path, rels: List[str], notes: List[str]) -> List[Found]:
         cfg = Path(tmp) / "golangci.yml"
         cfg.write_text(GO_CONFIG)
         for module, files in modules.items():
+            timeout = budget.timeout()
+            if not timeout:
+                notes.append(OUT_OF_TIME.format(tool="golangci-lint"))
+                break
             pkgs = sorted({"./" + os.path.relpath(f.parent, module) for f in files})
             rc, out, err = run([exe, "run", "-c", str(cfg), "--output.json.path", "stdout",
                                 "--output.text.path", "stderr", "--show-stats=false", *pkgs], module,
-                               timeout=TOOL_TIMEOUT, env={"GOLANGCI_LINT_CACHE": str(golangci_cache(module))})
+                               timeout=timeout, env={"GOLANGCI_LINT_CACHE": str(golangci_cache(module))})
             if rc is None:
                 notes.append(f"timeout:golangci-lint measuring smells in {module}")
                 continue
@@ -108,12 +128,16 @@ def go_issues(repo: Path, module: Path, issues: List[dict]) -> List[Found]:
     return found
 
 
-def js_found(repo: Path, rels: List[str], notes: List[str]) -> List[Found]:
+def js_found(repo: Path, rels: List[str], notes: List[str], budget: Budget) -> List[Found]:
     """Import cycles through the changed TS/JS files: oxlint's `import/no-cycle` follows imports on disk, so the
     modules the changed files import have to be there. It finds each file's tsconfig itself."""
     files = [str(repo / rel) for rel in rels if Path(rel).suffix in JS_EXTS]
     exe = resolve_bin("oxlint", repo, repo)  # jsmeasure says when it is missing
     if not files or not exe:
+        return []
+    timeout = budget.timeout()
+    if not timeout:
+        notes.append(OUT_OF_TIME.format(tool="oxlint"))
         return []
     config = {"plugins": ["import"], "categories": {c: "off" for c in OXLINT_CATEGORIES},
               "rules": {"import/no-cycle": "warn"}}
@@ -121,7 +145,7 @@ def js_found(repo: Path, rels: List[str], notes: List[str]) -> List[Found]:
         cfg = Path(tmp) / "oxlint.json"
         cfg.write_text(json.dumps(config))
         rc, out, _ = run([exe, "-c", str(cfg), "-f", "json", "--no-error-on-unmatched-pattern", *files], repo,
-                         timeout=TOOL_TIMEOUT)
+                         timeout=timeout)
     if rc is None:
         notes.append("timeout:oxlint measuring import cycles")
         return []
@@ -190,7 +214,7 @@ def rust_messages(repo: Path, crate: Path, out: str) -> List[Found]:
     return found
 
 
-def rust_found(repo: Path, rels: List[str], params: int, notes: List[str]) -> List[Found]:
+def rust_found(repo: Path, rels: List[str], params: int, notes: List[str], budget: Budget) -> List[Found]:
     """clippy's structural and presence lints in the crates the changed Rust files belong to. A crate is checked
     whole; smells.py keeps what is on the lines the change added."""
     cargo = shutil.which("cargo")
@@ -202,8 +226,12 @@ def rust_found(repo: Path, rels: List[str], params: int, notes: List[str]) -> Li
     with tempfile.TemporaryDirectory(prefix="broom-realtree-") as tmp:
         (Path(tmp) / "clippy.toml").write_text(RUST_CONFIG.format(params=params))
         for crate in crates:
+            timeout = budget.timeout()
+            if not timeout:
+                notes.append(OUT_OF_TIME.format(tool="clippy"))
+                break
             rc, out, _ = run([cargo, "clippy", "--message-format=json", "--quiet", "--", *RUST_FLAGS], crate,
-                             timeout=TOOL_TIMEOUT, env={"CLIPPY_CONF_DIR": tmp})
+                             timeout=timeout, env={"CLIPPY_CONF_DIR": tmp})
             if rc is None:
                 notes.append(f"timeout:cargo clippy measuring smells in {crate} (cold build?)")
                 continue
@@ -211,8 +239,12 @@ def rust_found(repo: Path, rels: List[str], params: int, notes: List[str]) -> Li
     return found
 
 
-def find_in_real_tree(repo: Path, rels: List[str], params: int, notes: List[str]) -> List[Found]:
+def find_in_real_tree(repo: Path, rels: List[str], params: int, notes: List[str],
+                      budget: Optional[Budget] = None) -> List[Found]:
     """What the tools that need the real tree find in the files `rels` (their package or crate, more exactly).
-    `params` is the soft limit on a function's parameters."""
-    cycles = [Found(rel, line, "import_cycle", "broom") for rel, line in import_cycles(repo, rels)]
-    return go_found(repo, rels, notes) + js_found(repo, rels, notes) + rust_found(repo, rels, params, notes) + cycles
+    `params` is the soft limit on a function's parameters. The quick tools go first, so clippy, which may be
+    building a crate cold, gets what is left of a `budget`."""
+    budget = budget or Budget()
+    found = go_found(repo, rels, notes, budget) + js_found(repo, rels, notes, budget)
+    found += [Found(rel, line, "import_cycle", "broom") for rel, line in import_cycles(repo, rels)]
+    return found + rust_found(repo, rels, params, notes, budget)

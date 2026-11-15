@@ -20,6 +20,7 @@ CACHE = DATA_ROOT / "hotspots"
 DISMISSED = DATA_ROOT / "smells-dismissed.json"
 FILES_IN_NOTE = 3
 NOTE_MAX_FILES = 5000  # past this, a session start doesn't scan: `broom smells` still does
+SCAN_SECONDS = 60  # what the tools that run in the real tree have between them in that scan
 
 
 def repo_files(repo: Path, paths: List[Path], base: Optional[str] = None) -> List[Path]:
@@ -103,7 +104,7 @@ def summary(repo: Path) -> Optional[dict]:
     files = repo_files(repo, [])
     if len(files) > NOTE_MAX_FILES:
         return None
-    found, _ = find_smells(repo, files, None)
+    found, _ = find_smells(repo, files, None, budget=SCAN_SECONDS)
     _, hot = rank(found)
     data = {"head": head, "total": len(found), "severe": sum(s.level == "block" for s in found),
             "hotspots": [f["file"] for f in hot[:FILES_IN_NOTE]]}

@@ -27,7 +27,7 @@ from .gate import issue_key
 from .gitutil import ChangedLines, renamed
 from .maintained import Maintained
 from .measure import SMELL_EXTS, Limits, Raw, code_lines, measure
-from .realtree import Found, find_in_real_tree
+from .realtree import Budget, Found, find_in_real_tree
 from .toolchain import GO_EXTS, JS_EXTS
 
 GENERATED = re.compile(r"DO NOT EDIT|@generated")
@@ -335,9 +335,11 @@ def drop_import_growth(rows: List[Raw], now: Dict[str, str], before: Optional[Di
     return [r for r in rows if not (r.metric == "file_lines" and r.rel in steady)]
 
 
-def find_smells(repo: Path, files: List[Path], base: Optional[str]) -> Tuple[List[Smell], List[str]]:
+def find_smells(repo: Path, files: List[Path], base: Optional[str],
+                budget: Optional[float] = None) -> Tuple[List[Smell], List[str]]:
     """Smells in `files` that are new or worse than at `base`; every smell when `base` is None. A file renamed
-    since `base` is compared with its old path."""
+    since `base` is compared with its old path. `budget` is the seconds the tools that run in the real tree have
+    between them (no limit when None)."""
     keep = Maintained(repo)
     now_text = current_texts(repo, files, keep)
     notes = [n for n in (keep.note(),) if n]
@@ -347,7 +349,7 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str]) -> Tuple[Lis
     off = tuple(repo_config(repo).get("smells_off") or ())
     old_text = base_texts(repo, base, list(now_text), renamed(repo, [base])) if base else None
     with tempfile.TemporaryDirectory(prefix="broom-smells-") as tmp, ThreadPoolExecutor(5) as pool:
-        real = pool.submit(find_in_real_tree, repo, list(now_text), lim.measured["params"][0], notes)
+        real = pool.submit(find_in_real_tree, repo, list(now_text), lim.measured["params"][0], notes, Budget(budget))
         now = pool.submit(measure, Path(tmp) / "now", now_text, lim.measured, repo, notes)
         before = pool.submit(measure, Path(tmp) / "before", old_text, lim.measured, repo, []) if old_text else None
         clones = None if "duplicate_lines" in off else pool.submit(

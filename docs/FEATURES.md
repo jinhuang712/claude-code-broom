@@ -141,6 +141,9 @@ These count by occurrence: a change that adds one gets the smell's level.
   scratch copy of the changed files: Go's typed linters and import cycles. With no copy of the base to
   compare with, a finding counts when it is on a line the change added, a new file included. Only linters that
   read syntax alone run in the scratch copy, so Go's repeated literals stay unmeasured.
+  The scan at session start, which covers the whole repo, gives these tools 60 seconds between them: the quick
+  ones go first, clippy last, and a tool the time runs out before is skipped with a note. A commit's check has no
+  such limit, and each tool keeps its own timeout.
 - `broom/bool-params`, `broom/class-lines`, `broom/module-state` and `broom/commented-code` are rules of broom's own
   (`defaults/oxlint-rules.mjs`), loaded as an oxlint JS plugin, an alpha feature, in a second oxlint pass. They need
   Node: without it, or with an oxlint that can't load plugins, only these smells go unmeasured, and a note says so.
