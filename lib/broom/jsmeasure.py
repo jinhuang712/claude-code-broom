@@ -20,6 +20,7 @@ OXLINT_METRICS = {
     "ban-ts-comment": "suppression", "no-empty": "swallowed_error", "no-useless-catch": "swallowed_error",
     "no-magic-numbers": "magic_numbers", "no-console": "debug_output", "no-warning-comments": "todo",
     "no-explicit-any": "type_escape", "no-non-null-assertion": "type_escape", "no-unused-vars": "unused_params",
+    "require-to-throw-message": "broad_test_asserts",
 }
 OXLINT_CATEGORIES = ("correctness", "suspicious", "perf", "pedantic", "style", "restriction", "nursery")
 OXLINT_MAGIC = {"ignore": [-1, 0, 1, 2], "ignoreArrayIndexes": True, "ignoreDefaultValues": True, "ignoreEnums": True}
@@ -34,8 +35,8 @@ def oxlint_config(lim: Limits) -> dict:
         "complexity": ["warn", {"max": lim["complexity"][0]}],
     }
     present = {rule: "warn" for rule, metric in OXLINT_METRICS.items() if metric in SMELL_PRESENCE}
-    return {"plugins": ["typescript"], "categories": {c: "off" for c in OXLINT_CATEGORIES},
-            "rules": {**{f"typescript/{r}" if r in TS_RULES else r: v for r, v in present.items()},
+    return {"plugins": ["typescript", "jest"], "categories": {c: "off" for c in OXLINT_CATEGORIES},
+            "rules": {**{rule_name(r): v for r, v in present.items()},
                       "no-magic-numbers": ["warn", OXLINT_MAGIC], "no-nested-ternary": "warn",
                       "no-unused-vars": ["warn", {"args": "all", "argsIgnorePattern": "^_"}], **sized}}
 
@@ -48,6 +49,14 @@ def oxlint_metric(rule: str, msg: str) -> Optional[str]:
 
 
 TS_RULES = {"ban-ts-comment", "no-explicit-any", "no-non-null-assertion"}
+JEST_RULES = {"require-to-throw-message"}
+
+
+def rule_name(rule: str) -> str:
+    """The name oxlint takes a rule by: the TypeScript and Jest plugins' rules carry their plugin's."""
+    if rule in TS_RULES:
+        return f"typescript/{rule}"
+    return f"jest/{rule}" if rule in JEST_RULES else rule
 
 
 def oxlint_value(metric: str, msg: str) -> Optional[int]:
@@ -79,13 +88,15 @@ def read_oxlint(r: Reader, diagnostics: List[dict], metric_of: Callable[[str, st
 # broom's own oxlint rules (defaults/oxlint-rules.mjs), for what oxlint has none for. They are JS plugins, an alpha
 # feature, so they run in a pass of their own: an old oxlint or a missing Node costs these two smells, no others.
 BROOM_RULES = DEFAULTS / "oxlint-rules.mjs"
-BROOM_RULE_METRICS = {"bool-params": "bool_params", "class-lines": "type_lines"}
+BROOM_RULE_METRICS = {"bool-params": "bool_params", "class-lines": "type_lines", "module-state": "globals",
+                      "commented-code": "commented_code"}
 
 
 def broom_rules_config(lim: Limits) -> dict:
     return {"jsPlugins": [str(BROOM_RULES)], "plugins": ["typescript"],
             "categories": {c: "off" for c in OXLINT_CATEGORIES},
-            "rules": {"broom/bool-params": "warn", "broom/class-lines": ["warn", {"max": lim["type_lines"][0]}]}}
+            "rules": {"broom/bool-params": "warn", "broom/class-lines": ["warn", {"max": lim["type_lines"][0]}],
+                      "broom/module-state": "warn", "broom/commented-code": "warn"}}
 
 
 def broom_rule_metric(rule: str, _msg: str) -> Optional[str]:

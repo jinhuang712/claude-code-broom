@@ -50,6 +50,11 @@ class SmellLanguageTest(BroomCase):
                      ("hint", "bool_params")),
             "d.ts": ("oxlint", "export class Big {\n" + "".join(f"  m{n}() {{ return this; }}\n" for n in range(260))
                      + "}\n", ("hint", "type_lines")),
+            "e.ts": ("oxlint", "// const x = compute(1, 2);\nexport const y = 1;\n", ("hint", "commented_code")),
+            "f.ts": ("oxlint", "let counter = 0;\nexport function bump(): number {\n  counter += 1;\n  return counter;\n}\n",
+                     ("hint", "globals")),
+            "g.test.ts": ("oxlint", 'test("t", () => {\n  expect(() => f()).toThrow();\n});\n',
+                          ("hint", "broad_test_asserts")),
         }
         r = self.repo({"README.md": "x\n"})
         for rel, (tool, text, expected) in samples.items():
@@ -67,6 +72,11 @@ class SmellLanguageTest(BroomCase):
             "c.ts": ("oxlint", "export const mapped = [1, 2].map((x: number, ok: boolean) => (ok ? x : 0));\n"
                      "export function g(options: { verbose: boolean }): boolean {\n  return options.verbose;\n}\n",
                      "bool_params"),
+            "d.ts": ("oxlint", "// This function computes the total (see docs).\n// Note: foo(bar)\n// TODO: tidy this\n"
+                     "/** Documented (with parentheses). */\nexport const y = 1;\n", "commented_code"),
+            "e.ts": ("oxlint", "let quiet = 0;\nexport const z = quiet + 1;\n", "globals"),
+            "h.test.ts": ("oxlint", 'test("t", () => {\n  expect(() => f()).toThrow("boom");\n});\n',
+                          "broad_test_asserts"),
         }
         r = self.repo({"README.md": "x\n"})
         for rel, (tool, text, metric) in samples.items():

@@ -65,7 +65,7 @@ class RealTreeTest(BroomCase):
         r = self.repo({"go.mod": GO_MOD, "main.go": GO_CLEAN})
         (r / "main.go").write_text(GO_SMELLY)
         self.assertEqual(self.metrics(r, "main.go"),  # `counter` and `helper` are both unused
-                         [("block", "commented_code"), ("hint", "dead_code"), ("hint", "dead_code"),
+                         [("hint", "commented_code"), ("hint", "dead_code"), ("hint", "dead_code"),
                           ("hint", "debug_output"), ("hint", "globals")])
 
     @unittest.skipUnless(HAS_GO, "go or golangci-lint missing")

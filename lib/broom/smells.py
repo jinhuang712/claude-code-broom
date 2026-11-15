@@ -28,6 +28,7 @@ from .gitutil import ChangedLines, renamed
 from .maintained import Maintained
 from .measure import SMELL_EXTS, Limits, Raw, code_lines, measure
 from .realtree import Found, find_in_real_tree
+from .toolchain import GO_EXTS, JS_EXTS
 
 GENERATED = re.compile(r"DO NOT EDIT|@generated")
 TEST_FILE = re.compile(r"(^|/)(tests?|__tests__|Tests)/|_test\.(go|py)$|(^|/)test_[^/]*\.py$|"
@@ -55,7 +56,7 @@ LABELS = {
     "debug_output": "debug print(s)",
     "todo": "TODO/FIXME comment(s)",
     "type_escape": "type escape(s): any, force casts or unwraps, non-null assertions",
-    "globals": "global statement(s)",
+    "globals": "global statement(s) or module variable(s) assigned in a function",
     "bool_params": "boolean flag parameter(s)",
     "broad_test_asserts": "too broad test assertion(s)",
     "import_cycle": "import(s) that close a cycle between modules",
@@ -172,6 +173,14 @@ def one_per_line(rows: List[Raw]) -> List[Raw]:
     return sorted(seen.values(), key=lambda r: (r.rel, r.line))
 
 
+# Where a smell is found by a guess, not a parse, it hints even when the same smell blocks in another language.
+GUESSED = {"commented_code": JS_EXTS | GO_EXTS}
+
+
+def presence_level(metric: str, rel: str) -> str:
+    return "hint" if Path(rel).suffix in GUESSED.get(metric, ()) else SMELL_PRESENCE[metric]
+
+
 def compare_occurrences(now: List[Raw], before: Optional[List[Raw]], repo: Path) -> List[Smell]:
     """Per file and smell, the lines the change added, matched by text against the base: a moved line stays old,
     an edited one is new."""
@@ -188,7 +197,7 @@ def compare_occurrences(now: List[Raw], before: Optional[List[Raw]], repo: Path)
     was = Counter((r.rel, r.metric) for r in before or [])
     # An edited line that keeps its occurrence is new by text but adds nothing: only a higher count counts.
     return [Smell(repo, repo / rel, rows[0].line, metric, metric, total[(rel, metric)],
-                  None if before is None else was[(rel, metric)], rows[0].tool, SMELL_PRESENCE[metric], 0,
+                  None if before is None else was[(rel, metric)], rows[0].tool, presence_level(metric, rel), 0,
                   [r.line for r in rows])
             for (rel, metric), rows in added.items() if before is None or total[(rel, metric)] > was[(rel, metric)]]
 
@@ -314,7 +323,7 @@ def real_tree_smells(repo: Path, found: List[Found], base: Optional[str], lim: R
                                  pair[1] if at == "block" else pair[0]))
     for (rel, metric), rows in added.items():
         out.append(Smell(repo, repo / rel, rows[0].line, metric, metric, len(rows), None, rows[0].tool,
-                         SMELL_PRESENCE[metric], 0, [r.line for r in rows]))
+                         presence_level(metric, rel), 0, [r.line for r in rows]))
     return out
 
 

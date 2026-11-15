@@ -123,15 +123,15 @@ These count by occurrence: a change that adds one gets the smell's level.
 |---|---|---|---|---|---|
 | `suppression` | block | `PGH003` `PGH004` | `ban-ts-comment` | `nolintlint` | `blanket_disable_command` |
 | `swallowed_error` | block | `S110` | `no-empty` `no-useless-catch` | `revive` `empty-block` | `no_empty_block` |
-| `commented_code` | block | `ERA001` | — | `gocritic` `commentedOutCode` (real tree) | — |
+| `commented_code` | block; hint in TS/JS and Go | `ERA001` | `broom/commented-code` | `gocritic` `commentedOutCode` (real tree) | — |
 | `unused_params` | hint | `ARG` | `no-unused-vars` (parameters only) | `revive` `unused-parameter` | `unused_parameter` |
 | `magic_numbers` | hint | `PLR2004` | `no-magic-numbers` | `mnd` | `no_magic_numbers` |
 | `debug_output` | hint | `T201` `T203` | `no-console` | `forbidigo` (real tree) | a custom rule: `print` `debugPrint` `NSLog` `dump` |
 | `todo` | hint | `FIX` | `no-warning-comments` | `godox` | `todo` |
 | `type_escape` | hint | `ANN401` | `no-explicit-any` `no-non-null-assertion` | `revive` `unchecked-type-assertion` | `force_cast` `force_unwrapping` `force_try` |
-| `globals` | hint | `PLW0603` | — | `gochecknoglobals` (real tree) | — |
+| `globals` | hint | `PLW0603` | `broom/module-state` | `gochecknoglobals` (real tree) | — |
 | `bool_params` | hint | `FBT001` | `broom/bool-params` | `revive` `flag-parameter` | — |
-| `broad_test_asserts` | hint | `PT011` | — | — | — |
+| `broad_test_asserts` | hint | `PT011` | `jest/require-to-throw-message` | — | — |
 | `import_cycle` | hint | — | `import/no-cycle` (real tree) | — | — |
 
 - An occurrence counts when the change raises the count in a file. Lines match the base by text: a moved line
@@ -141,13 +141,15 @@ These count by occurrence: a change that adds one gets the smell's level.
   scratch copy of the changed files: Go's typed linters and TS/JS import cycles. With no copy of the base to
   compare with, a finding counts when it is on a line the change added, a new file included. Only linters that
   read syntax alone run in the scratch copy, so Go's repeated literals stay unmeasured.
-- `broom/bool-params` and `broom/class-lines` are two rules of broom's own (`defaults/oxlint-rules.mjs`), loaded as
-  an oxlint JS plugin, an alpha feature, in a second oxlint pass. They need Node: without it, or with an oxlint that
-  can't load plugins, only these two smells go unmeasured, and a note says so. A function handed to a call
-  (`items.map((x, ok: boolean) => ...)`) is the callee's choice and doesn't count. oxlint's own rule list (read in
-  full, 2026-11) has nothing for commented-out code, global state or class length; the one outside route,
-  `sonarjs/no-commented-code`, needs that plugin installed in every project, so `commented_code` and `globals`
-  stay as the table shows.
+- `broom/bool-params`, `broom/class-lines`, `broom/module-state` and `broom/commented-code` are rules of broom's own
+  (`defaults/oxlint-rules.mjs`), loaded as an oxlint JS plugin, an alpha feature, in a second oxlint pass. They need
+  Node: without it, or with an oxlint that can't load plugins, only these smells go unmeasured, and a note says so.
+  A function handed to a call (`items.map((x, ok: boolean) => ...)`) is the callee's choice and doesn't count for
+  `bool_params`. `module-state` is a `let` or `var` at module level that a function assigns. `commented-code`
+  guesses: a comment, or a run of line comments, that compiles as JS and has code's punctuation, with `Note: x()`
+  skipped as a label; TypeScript syntax in a comment doesn't compile, so it is missed. Because it guesses, and
+  Go's `gocritic` is a heuristic too, `commented_code` is a hint in TS/JS and Go, and blocks in Python. oxlint's
+  own rule list (read in full, 2026-11) has nothing for these, bar Jest's `require-to-throw-message`.
 - Rust has no column, as clippy runs in the real tree, with thresholds from a `clippy.toml` of broom's own:
   `too_many_arguments` is `params`, `fn_params_excessive_bools` is `bool_params`, `dbg_macro` and `print_stdout`
   and `print_stderr` are `debug_output`, `unwrap_used` is `type_escape`, and `allow_attributes_without_reason` is
