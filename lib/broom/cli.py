@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import shutil
 import sys
 import time
 from pathlib import Path
@@ -20,13 +19,11 @@ from .gate import (
     accept_allowed, accept_blocked, baseline_keys, baseline_remove, baseline_under, display, issue_key, render, select,
 )
 from .gitcmd import staged
-from .gitutil import changed_since, ChangedLines, git, git_changed_files, git_root, run
+from .gitutil import changed_since, ChangedLines, git, git_changed_files, git_root
+from .scaffold import add_default_configs
 from .smells import find_smells
-from .state import DEFAULTS, read_hook_input
-from .toolchain import (
-    BIOME_CFG, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG, SWIFT_FORMAT_CFG, SWIFTFORMAT_CFG,
-    lang_of, pkg_has_key, ruff_configured,
-)
+from .state import read_hook_input
+from .toolchain import lang_of
 
 
 # ---------------------------------------------------------------- sweep and fmt
@@ -157,64 +154,14 @@ def cmd_setup(args: argparse.Namespace) -> int:
     return 0
 
 
-GOLANGCI_FORMATTERS = """
-formatters:
-  enable:
-    - gofumpt
-    - goimports
-"""
-RUFF_DEFAULT = """[lint]
-select = ["E4", "E7", "E9", "F", "B", "UP"]
-"""
-# swift-format, since the toolchain ships it (Swift 6 and later): nothing to install. Its own defaults are 2 spaces
-# and 100 columns; Xcode indents with 4, as most Swift code does, so a reformatted line keeps the file's indent, and
-# 120 columns (SwiftLint's line_length) re-wraps fewer lines of code written without a limit. JSON allows no
-# comments, so this note lives here.
-SWIFT_FORMAT_DEFAULT = """{
-  "version": 1,
-  "indentation": { "spaces": 4 },
-  "lineLength": 120
-}
-"""
-
-
 def cmd_init(args: argparse.Namespace) -> int:
     """Add broom's default configs where the project has none. Never overwrites."""
-    root = Path(args.dir).resolve() if args.dir else (git_root(Path.cwd().resolve()) or Path.cwd().resolve())
-    has = lambda names: any((root / n).exists() for n in names)  # noqa: E731
-    actions: List[str] = []
-
-    def write(name: str, text: str) -> None:
-        actions.append(f"{'would add' if args.dry_run else 'added'} {name}")
-        if not args.dry_run:
-            (root / name).write_text(text)
-
     from .doctor import scan
 
-    langs = scan(root)  # configs are found by walking up: at a monorepo root they cover every package below
-    if "go" in langs and not has(GOLANGCI_CFG):
-        write(".golangci.yml", (DEFAULTS / "golangci.yml").read_text() + GOLANGCI_FORMATTERS)
-    if "js" in langs and not has(OXLINT_CFG) and not has(ESLINT_CFG) and not has(BIOME_CFG):
-        write(".oxlintrc.json", (DEFAULTS / "oxlintrc.json").read_text())
-    # oxfmt formats CSS, SCSS and Less too. CSS needs no lint config: broom's stylelint defaults apply without one.
-    if ("js" in langs or "css" in langs) and not has(BIOME_CFG) and not has(OXFMT_CFG) and not has(PRETTIER_CFG) \
-            and not pkg_has_key(root, "prettier"):
-        oxfmt = shutil.which("oxfmt")
-        if oxfmt and not args.dry_run:
-            run([oxfmt, "--init"], root, timeout=30)
-        if not (root / ".oxfmtrc.json").exists():
-            write(".oxfmtrc.json", "{}\n")
-        elif not args.dry_run:
-            actions.append("added .oxfmtrc.json (oxfmt --init)")
-    if "py" in langs and not ruff_configured(root / "_.py", root):
-        if (root / "pyproject.toml").exists():
-            actions.append("pyproject.toml has no ruff settings; add this under [tool.ruff.lint]:\n"
-                           + RUFF_DEFAULT.split("\n", 1)[1])
-        else:
-            write("ruff.toml", RUFF_DEFAULT)
-    # Swift needs no lint config either: broom's SwiftLint defaults apply without one.
-    if "swift" in langs and not has((SWIFT_FORMAT_CFG, SWIFTFORMAT_CFG)):
-        write(SWIFT_FORMAT_CFG, SWIFT_FORMAT_DEFAULT)
+    here = Path.cwd().resolve()
+    root = Path(args.dir).resolve() if args.dir else (git_root(here) or here)
+    # Configs are found by walking up: at a monorepo root they cover every package below.
+    actions = add_default_configs(root, scan(root), dry_run=args.dry_run)
     print("\n".join(actions) if actions else f"broom: {display(root)} already has its configs")
     return 0
 
@@ -303,7 +250,7 @@ def cmd_hook(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_lsp(args: argparse.Namespace) -> int:
+def cmd_lsp(_args: argparse.Namespace) -> int:
     """Become the language server this project needs. Claude Code starts it from the project directory, with
     stdin and stdout as the protocol channel, so the chosen server replaces this process."""
     from .lsp import typescript_server
