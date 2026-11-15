@@ -36,48 +36,71 @@ def golangci_formatters(path: Path, stop: Path) -> Optional[Path]:
         return None
 
 
-def formatter_cmd(path: Path, final: bool) -> Optional[Tuple[str, List[str], Path]]:
+Command = Tuple[str, List[str], Path]  # tool name, the command, the directory it runs in
+
+
+def _go_cmd(path: Path, stop: Path, *, final: bool) -> Optional[Command]:
+    cfg = golangci_formatters(path, stop) if final else None
+    exe = shutil.which("golangci-lint") if cfg else None
+    if cfg and exe:
+        return "golangci-lint fmt", [exe, "fmt", "-c", str(cfg), str(path)], cfg.parent
+    gofmt = shutil.which("gofmt")
+    return ("gofmt", [gofmt, "-w", str(path)], path.parent) if gofmt else None
+
+
+def _js_cmd(path: Path, stop: Path) -> Optional[Command]:
+    found = js_formatter(path, stop)
+    if not found:
+        return None
+    tool, cfg_dir = found
+    exe = resolve_bin(tool, path.parent, stop)
+    if not exe:
+        return None
+    if tool == "biome":
+        return tool, [exe, "format", "--write", str(path)], cfg_dir
+    if tool == "oxfmt":
+        return tool, [exe, "--no-error-on-unmatched-pattern", str(path)], cfg_dir
+    return tool, [exe, "--write", "--log-level", "silent", "--ignore-unknown", str(path)], cfg_dir
+
+
+def _rust_cmd(path: Path, stop: Path) -> Optional[Command]:
+    rustfmt = shutil.which("rustfmt")
+    if not rustfmt:
+        return None
+    return "rustfmt", [rustfmt, "--edition", rust_edition(path, stop), str(path)], path.parent
+
+
+def _python_cmd(path: Path) -> Optional[Command]:
+    ruff = shutil.which("ruff")
+    return ("ruff format", [ruff, "format", "--quiet", str(path)], path.parent) if ruff else None
+
+
+def _swift_cmd(path: Path, stop: Path) -> Optional[Command]:
+    found = swift_formatter(path, stop)
+    if not found:
+        return None
+    tool, cfg_dir = found  # both find the config by walking up from the file
+    if tool == "swiftformat":
+        exe = shutil.which("swiftformat")
+        return (tool, [exe, str(path), "--quiet"], cfg_dir) if exe else None
+    cmd = swift_format_cmd()
+    return (tool, [*cmd, "format", "--in-place", str(path)], cfg_dir) if cmd else None
+
+
+def formatter_cmd(path: Path, *, final: bool) -> Optional[Command]:
     """(tool name, command, cwd) that formats `path`, or None."""
     ext = path.suffix.lower()
     stop = boundary(path)
     if ext == ".go":
-        cfg = golangci_formatters(path, stop) if final else None
-        exe = shutil.which("golangci-lint") if cfg else None
-        if cfg and exe:
-            return "golangci-lint fmt", [exe, "fmt", "-c", str(cfg), str(path)], cfg.parent
-        gofmt = shutil.which("gofmt")
-        return ("gofmt", [gofmt, "-w", str(path)], path.parent) if gofmt else None
+        return _go_cmd(path, stop, final=final)
     if ext in JS_EXTS or ext in WEB_EXTS:
-        found = js_formatter(path, stop)
-        if not found:
-            return None
-        tool, cfg_dir = found
-        exe = resolve_bin(tool, path.parent, stop)
-        if not exe:
-            return None
-        if tool == "biome":
-            return tool, [exe, "format", "--write", str(path)], cfg_dir
-        if tool == "oxfmt":
-            return tool, [exe, "--no-error-on-unmatched-pattern", str(path)], cfg_dir
-        return tool, [exe, "--write", "--log-level", "silent", "--ignore-unknown", str(path)], cfg_dir
+        return _js_cmd(path, stop)
     if ext == ".rs":
-        rustfmt = shutil.which("rustfmt")
-        if not rustfmt:
-            return None
-        return "rustfmt", [rustfmt, "--edition", rust_edition(path, stop), str(path)], path.parent
+        return _rust_cmd(path, stop)
     if ext in PY_EXTS and ruff_configured(path, stop):
-        ruff = shutil.which("ruff")
-        return ("ruff format", [ruff, "format", "--quiet", str(path)], path.parent) if ruff else None
+        return _python_cmd(path)
     if ext in SWIFT_EXTS:
-        found = swift_formatter(path, stop)
-        if not found:
-            return None
-        tool, cfg_dir = found  # both find the config by walking up from the file
-        if tool == "swiftformat":
-            exe = shutil.which("swiftformat")
-            return (tool, [exe, str(path), "--quiet"], cfg_dir) if exe else None
-        cmd = swift_format_cmd()
-        return (tool, [*cmd, "format", "--in-place", str(path)], cfg_dir) if cmd else None
+        return _swift_cmd(path, stop)
     return None
 
 
@@ -99,10 +122,10 @@ def keep_hunks(before: str, after: str, changed: Set[int]) -> str:
     return "".join(out)
 
 
-def format_file(path: Path, final: bool = True, lines: Optional[Set[int]] = None) -> Optional[str]:
+def format_file(path: Path, *, final: bool = True, lines: Optional[Set[int]] = None) -> Optional[str]:
     """Format in place; the tool's name when it changed the file. With `lines`, only the formatter's edits that
     touch those lines stay (None formats the whole file)."""
-    found = formatter_cmd(path, final)
+    found = formatter_cmd(path, final=final)
     if not found:
         return None
     tool, cmd, cwd = found
@@ -120,8 +143,8 @@ def format_file(path: Path, final: bool = True, lines: Optional[Set[int]] = None
         return None
 
 
-def lines_to_keep(paths: List[Path], final: bool, scope: str,
-                  changed: ChangedLines) -> Tuple[Dict[Path, Optional[Set[int]]], List[str]]:
+def lines_to_keep(paths: List[Path], scope: str, changed: ChangedLines,
+                  *, final: bool) -> Tuple[Dict[Path, Optional[Set[int]]], List[str]]:
     """Per file, the lines whose formatting to keep (None: all of them), and notes on any fallback."""
     if scope == "file":
         return {p: None for p in paths}, []
@@ -130,7 +153,7 @@ def lines_to_keep(paths: List[Path], final: bool, scope: str,
         return lines, []
     from .lsp import expand_to_functions, function_ranges
 
-    todo = [p for p in paths if lines[p] and formatter_cmd(p, final)]
+    todo = [p for p in paths if lines[p] and formatter_cmd(p, final=final)]
     ranges = function_ranges(todo)
     notes = []
     for p in todo:
@@ -142,18 +165,18 @@ def lines_to_keep(paths: List[Path], final: bool, scope: str,
     return lines, notes
 
 
-def format_files(paths: Iterable[Path], final: bool = True, scope: str = "file",
+def format_files(paths: Iterable[Path], *, final: bool = True, scope: str = "file",
                  changed: Optional[ChangedLines] = None, notes: Optional[List[str]] = None) -> List[Tuple[Path, str]]:
     """(path, tool) for every file a formatter changed. Scope `changed` limits each file to its changed lines,
     measured by `changed` (against HEAD by default), and `function` to the functions holding them; a new file
     counts whole. Fallback notes are appended to `notes`."""
     paths = list(paths)
-    lines, fallbacks = lines_to_keep(paths, final, scope, changed or ChangedLines())
+    lines, fallbacks = lines_to_keep(paths, scope, changed or ChangedLines(), final=final)
     if notes is not None:
         notes += fallbacks
     out = []
     for p in paths:
-        tool = format_file(p, final, lines[p])
+        tool = format_file(p, final=final, lines=lines[p])
         if tool:
             out.append((p, tool))
     return out
