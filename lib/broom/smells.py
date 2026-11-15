@@ -22,7 +22,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 from .findings import Issue
 from .clones import Clone, Unused, find_clones, find_unused
-from .config import DEAD_CODE, SMELL_LIMITS, SMELL_PRESENCE, repo_config, setting
+from .config import DEAD_CODE, LIMIT_PAIR, SMELL_LIMITS, SMELL_PRESENCE, repo_config, setting
 from .gate import issue_key
 from .gitutil import ChangedLines, renamed
 from .maintained import Maintained
@@ -96,9 +96,6 @@ class Smell:
     def issue(self) -> Issue:
         return Issue("smells", self.repo, self.file, self.line, 0, self.metric, self.text(),
                      severe=self.level == "block")
-
-
-LIMIT_PAIR = 2  # a limit in .broom.json is [hint, hard]
 
 
 def moved(base: Limits, pairs: object) -> Limits:

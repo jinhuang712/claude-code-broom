@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import __version__
-from .config import DEAD_CODE, REPO_FILE, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, repo_file
+from .config import DEAD_CODE, LIMIT_PAIR, REPO_FILE, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, repo_file
 from .gitutil import git
 from .needs import LANG_NAMES, LOCKFILES, Diagnosis, Item, settings_files
 from .state import DATA_ROOT, load_json, save_json, short_hash
@@ -104,7 +104,7 @@ def limit_problems(limits: object, key: str = "limits") -> List[str]:
         return [f"{key} must be an object of [soft, hard] pairs"]
     out = [f"{key}: unknown name {k}" for k in limits if k not in SMELL_LIMITS]
     for k, pair in limits.items():
-        ok = isinstance(pair, list) and len(pair) == 2 and all(isinstance(n, int) for n in pair)
+        ok = isinstance(pair, list) and len(pair) == LIMIT_PAIR and all(isinstance(n, int) for n in pair)
         if k in SMELL_LIMITS and not (ok and pair[0] <= pair[1]):
             out.append(f"{key}: {k} must be [soft, hard] with soft <= hard")
     return out
@@ -150,35 +150,51 @@ def check_repo_file(repo: Path) -> List[Item]:
     return [Item("broom", "config", REPO_FILE, "ok", ".", ", ".join(shown) or "empty")]
 
 
-def plan_commands(items: List[Item], machine_wide: bool = False) -> Tuple[List[str], List[str]]:
-    """Shell commands in order: `fix` for missing/broken tools and conflicts, `configure` for configs that are
-    off. devDependencies for one project share a command; brew formulae share one `brew install`. With
-    `machine_wide`, JS tools get their global install instead of a devDependency."""
-    buckets: Dict[str, List[str]] = {"fix": [], "configure": []}
-    dev: Dict[Tuple[str, str, str], List[str]] = {}
-    brew: Dict[str, List[str]] = {"fix": [], "configure": []}
-    for i in items:
-        if i.status == "ok":
-            continue
+def _append_new(items: List[str], item: str) -> None:
+    if item not in items:
+        items.append(item)
+
+
+class _Commands:
+    """The shell commands that fix or configure what the items lack. devDependencies for one project share a
+    command, and brew formulae share one `brew install`."""
+
+    def __init__(self, *, machine_wide: bool) -> None:
+        self.machine_wide = machine_wide
+        self.buckets: Dict[str, List[str]] = {"fix": [], "configure": []}
+        self.dev: Dict[Tuple[str, str, str], List[str]] = {}
+        self.brew: Dict[str, List[str]] = {"fix": [], "configure": []}
+
+    def add(self, i: Item) -> None:
         bucket = "configure" if i.status == "off" else "fix"
-        if machine_wide and i.global_fix:
-            if i.global_fix not in buckets[bucket]:
-                buckets[bucket].append(i.global_fix)
+        if self.machine_wide and i.global_fix:
+            _append_new(self.buckets[bucket], i.global_fix)
         elif i.dev:
-            pkgs = dev.setdefault((bucket, i.project, i.pm), [])
-            if i.dev not in pkgs:
-                pkgs.append(i.dev)
+            _append_new(self.dev.setdefault((bucket, i.project, i.pm), []), i.dev)
         elif i.fix.startswith("brew install ") and "&&" not in i.fix:
-            brew[bucket] += [f for f in i.fix.split()[2:] if f not in brew[bucket]]
-        elif i.fix and i.fix not in buckets[bucket]:
-            buckets[bucket].append(i.fix)
-    for bucket in buckets:
-        if brew[bucket]:
-            buckets[bucket].insert(0, "brew install " + " ".join(brew[bucket]))
-    for (bucket, project, pm), pkgs in dev.items():
-        cmd = f"{pm} {' '.join(pkgs)}"
-        buckets[bucket].append(cmd if project in ("", ".") else f"cd {project} && {cmd}")
-    return buckets["fix"], buckets["configure"]
+            self.brew[bucket] += [f for f in i.fix.split()[2:] if f not in self.brew[bucket]]
+        elif i.fix:
+            _append_new(self.buckets[bucket], i.fix)
+
+    def ordered(self) -> Tuple[List[str], List[str]]:
+        """The `fix` commands and the `configure` ones, the brew install first and the per-project ones last."""
+        for bucket in self.buckets:
+            if self.brew[bucket]:
+                self.buckets[bucket].insert(0, "brew install " + " ".join(self.brew[bucket]))
+        for (bucket, project, pm), pkgs in self.dev.items():
+            cmd = f"{pm} {' '.join(pkgs)}"
+            self.buckets[bucket].append(cmd if project in ("", ".") else f"cd {project} && {cmd}")
+        return self.buckets["fix"], self.buckets["configure"]
+
+
+def plan_commands(items: List[Item], *, machine_wide: bool = False) -> Tuple[List[str], List[str]]:
+    """Shell commands in order: `fix` for missing/broken tools and conflicts, `configure` for configs that are
+    off. With `machine_wide`, JS tools get their global install instead of a devDependency."""
+    commands = _Commands(machine_wide=machine_wide)
+    for i in items:
+        if i.status != "ok":
+            commands.add(i)
+    return commands.ordered()
 
 
 def cache_key(repo: Path, projects: Dict[str, List[Path]]) -> str:

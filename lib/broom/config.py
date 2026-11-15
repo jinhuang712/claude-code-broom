@@ -20,6 +20,7 @@ SETTINGS = {
 }
 # Code smell limits, (soft, hard): past soft is a hint, past hard a block. SwiftLint's own warning and error
 # defaults, except nesting; .broom.json `limits` moves them per repo.
+LIMIT_PAIR = 2  # a limit in .broom.json is [soft, hard]
 SMELL_LIMITS = {
     "function_lines": (50, 100),
     "file_lines": (400, 1000),

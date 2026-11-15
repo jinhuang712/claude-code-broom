@@ -152,7 +152,7 @@ RUFF_METRICS = {
 }
 
 
-def measure_python(r: Reader, rels: List[str], lim: Limits, start: Path) -> None:
+def measure_python(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None:
     for rel in rels:
         python_sizes(r, rel, lim)
     ruff = shutil.which("ruff")
@@ -284,7 +284,7 @@ def golangci_read(linter: str, text: str) -> Optional[Tuple[str, Optional[int], 
     return None
 
 
-def measure_go(r: Reader, rels: List[str], lim: Limits, start: Path) -> None:
+def measure_go(r: Reader, _rels: List[str], lim: Limits, _start: Path) -> None:
     exe = shutil.which("golangci-lint")
     if not exe:
         r.notes.append("missing:golangci-lint (brew install golangci-lint)")
@@ -317,7 +317,7 @@ def swiftlint_config(lim: Limits) -> str:
     return "\n".join(rows) + "\n"
 
 
-def measure_swift(r: Reader, rels: List[str], lim: Limits, start: Path) -> None:
+def measure_swift(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None:
     exe = shutil.which("swiftlint")
     if not exe:
         r.notes.append("missing:swiftlint (brew install swiftlint)")
