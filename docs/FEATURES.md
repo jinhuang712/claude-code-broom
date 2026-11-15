@@ -130,7 +130,7 @@ These count by occurrence: a change that adds one gets the smell's level.
 | `todo` | hint | `FIX` | `no-warning-comments` | `godox` | `todo` |
 | `type_escape` | hint | `ANN401` | `no-explicit-any` `no-non-null-assertion` | `revive` `unchecked-type-assertion` | `force_cast` `force_unwrapping` `force_try` |
 | `globals` | hint | `PLW0603` | `broom/module-state` | `gochecknoglobals` (real tree) | a custom rule: a `var` at file level, `main.swift` aside |
-| `bool_params` | hint | `FBT001` | `broom/bool-params` | `revive` `flag-parameter` | — |
+| `bool_params` | hint | `FBT001` | `broom/bool-params` | `revive` `flag-parameter` | a custom rule: an unlabeled `_ flag: Bool` |
 | `broad_test_asserts` | hint | `PT011` | `jest/require-to-throw-message` | — | — |
 | `import_cycle` | hint | broom reads the imports | `import/no-cycle` (real tree) | — | — |
 

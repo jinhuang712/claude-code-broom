@@ -212,6 +212,9 @@ SWIFT_CUSTOM_RULES = {
                        "excluded_match_kinds": ["comment", "string"]},
     # A `var` at the start of a line is file-level state; a script's main.swift is made of it.
     "globals": {"regex": r"^(public |internal |fileprivate |private )?var\s", "excluded": r".*main\.swift"},
+    # An unlabeled Bool (`_ flag: Bool`) is called as `f(true)`: the boolean trap. A labeled one reads fine there.
+    "bool_params": {"regex": r"func\s+\w+[^\n]*[(,]\s*_\s+\w+\s*:\s*Bool\b",
+                    "excluded_match_kinds": ["comment", "string"]},
 }
 
 

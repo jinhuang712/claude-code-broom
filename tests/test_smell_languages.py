@@ -58,6 +58,7 @@ class SmellLanguageTest(BroomCase):
             "c.swift": ("swiftlint", "func f(a: Int) -> Int {\n    return a > 1 ? (a > 2 ? 1 : 2) : 3\n}\n",
                         ("block", "nested_ternary")),
             "d.swift": ("swiftlint", "var counter = 0\n", ("hint", "globals")),
+            "g.swift": ("swiftlint", "func setEnabled(_ enabled: Bool) {}\n", ("hint", "bool_params")),
         }
         r = self.repo({"README.md": "x\n"})
         for rel, (tool, text, expected) in samples.items():
@@ -84,6 +85,7 @@ class SmellLanguageTest(BroomCase):
                         "    let t = a?.signum() ?? 0\n    return a != nil ? t : s.count\n}\n", "nested_ternary"),
             "f.swift": ("swiftlint", "struct S {\n    var x = 0\n}\n", "globals"),
             "main.swift": ("swiftlint", "var counter = 0\nprint(counter)\n", "globals"),
+            "g.swift": ("swiftlint", "func setEnabled(enabled: Bool, _ delay: Int) {}\n", "bool_params"),
         }
         r = self.repo({"README.md": "x\n"})
         for rel, (tool, text, metric) in samples.items():
