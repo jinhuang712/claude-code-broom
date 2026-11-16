@@ -7,11 +7,27 @@
 | SessionStart | new, resumed and cleared sessions | Runs a cached doctor; if the repo has gaps, asks Claude to offer `/broom:setup`. If a cached scan of HEAD has smells past the hard limit, asks Claude to raise them and offer `/broom:clean` at a natural point. Once per session | 0.1–0.25 s, measured on a 2,376-file repo |
 | SessionStart, async | the same | Scans HEAD for smells when no scan is cached, in the background; the note reaches Claude with its next turn | nothing Claude waits for; the scan took 13–36 s on that repo, 20.7 s cold and 4.0 s warm on a 3,184-file one |
 | UserPromptSubmit, async | each prompt | Notes the working tree's changed code files and HEAD, for the stop check (`check_on=stop`) | nothing Claude waits for; 0.2 s on that repo |
-| PreToolUse | every Bash call; acts on `git commit` | Formats the commit's files, lints and type-checks them, blocks the commit while issues remain | ~13 ms (a shell start); ~60 ms when the command mentions git and commit without committing |
+| PreToolUse | every Bash call; acts on `git commit` | Formats the commit's files, lints and type-checks them, blocks the commit while issues remain; where `broom install-hook` has added git's own hook, that hook checks, on the files the commit really takes, and this one only formats | ~13 ms (a shell start); ~60 ms when the command mentions git and commit without committing |
 | PostToolUse | Edit, Write, MultiEdit, Serena's edit tools | Formats per edit (`format_on=edit`); records files for the stop check (`check_on=stop`), a subagent's under its own id | one Python start: 30–45 ms measured on macOS |
 | Stop | each turn end | Checks what the turn changed (`check_on=stop`): files Claude edited, and files changed or committed since the prompt by any means, measured against the prompt's HEAD. Waits while background work runs, up to half an hour | one Python start: 30–45 ms measured on macOS |
 | SubagentStop | each subagent's end | Checks the files that subagent edited; a block goes to the subagent, which fixes its own | the same |
 | git pre-commit (optional) | every commit, once `broom install-hook` adds it | Checks the staged files like the PreToolUse hook, without formatting: for commits that hook doesn't see, a wrapper script's or a person's | content that passed already goes through at once |
+
+Many hooks run at once, so what they share is locked: each read, change and write of `passed.json`, the known
+issues, the last blocked commit, the notes, the setup answers and the measurement cache holds a lock, and no
+hook puts back what another changed meanwhile.
+
+What was checked once isn't checked again: content that passed is recorded file by file (one file with a finding
+doesn't make the rest run again at the next try); what the smell measurers found in a file is kept by its content
+for a day, so the base of a change and a file still blocked aren't measured twice (a tool that moved or went missing
+gets its files measured again); a check that ran out of time is skipped for 20 minutes in every session, with a
+note; broom's clippy run keeps a config path and a target directory of its own, so it and the project's own
+clippy run don't make cargo check the crate again each time. git is asked once per repo for what is tracked and
+what differs, not once per file, and the repo of a directory is found without a process. Each tool a hook starts
+is kept to a quarter of the cores (`GOMAXPROCS`, `RAYON_NUM_THREADS`, `CARGO_BUILD_JOBS`, unless set): beside a
+busy foreground job this took the check from 9.7 to 11.8 s and left that job 97 to 104 percent of its speed, not
+73 to 82. Lowering the priority didn't help (`nice 10` changed nothing; macOS's background class made it 3.6
+times slower).
 
 One run of any hook, async ones too, takes at most 30 seconds: `hooks.json` gives each hook that `timeout`. The
 commands a run starts share 25 seconds (`BROOM_HOOK_SECONDS` sets it, for tests), so a tool is cut off with everything
@@ -141,6 +157,7 @@ These count by occurrence: a change that adds one gets the smell's level.
 | `bool_params` | hint | `FBT001` | `broom/bool-params` | `revive` `flag-parameter` | a custom rule: an unlabeled `_ flag: Bool` |
 | `broad_test_asserts` | hint | `PT011` | `jest/require-to-throw-message` | — | — |
 | `import_cycle` | hint | broom reads the imports | `import/no-cycle` (real tree) | — | — |
+| `folder_cycle` | hint | broom reads the imports | `dependency-cruiser` (real tree) | — | — |
 
 - An occurrence counts when the change raises the count in a file. Lines match the base by text: a moved line
   stays old, and an edited line that keeps its occurrence adds nothing. A line counts once per smell.
@@ -152,9 +169,18 @@ These count by occurrence: a change that adds one gets the smell's level.
   The scan at session start, which covers the whole repo, gives these tools 20 seconds between them: the quick
   ones go first, clippy last, and a tool the time runs out before is skipped with a note. A commit's check has no
   such limit of its own, but shares the hook's 25 seconds with everything else it runs.
+- A folder cycle is an import that leads into a folder whose files lead back to this one (`auth` importing `providers`
+  while `providers` imports `auth`): the layers going the wrong way, where `import_cycle` is a module importing
+  back what imports it. It counts where the change adds the import. Python's are read by broom. TS/JS's are read
+  by dependency-cruiser, package by package (the nearest `package.json`), runtime imports only; it needs a
+  TypeScript below 7 next to it (the project's own, or `npm i -D typescript@6`) and reads no `.ts` file without
+  one, silently, so a changed file it didn't read is said so. `broom doctor` offers it; without it nothing is
+  measured and nothing nags. Go refuses package cycles itself; Swift and Rust aren't read.
 - `broom/bool-params`, `broom/class-lines`, `broom/module-state` and `broom/commented-code` are rules of broom's own
   (`defaults/oxlint-rules.mjs`), loaded as an oxlint JS plugin, an alpha feature, in a second oxlint pass. They need
-  Node: without it, or with an oxlint that can't load plugins, only these smells go unmeasured, and a note says so.
+  Node: without it, or with an oxlint that can't load plugins, only these smells go unmeasured, and a note says so
+  (a test loads the plugin with the oxlint installed, so an upgrade that breaks it shows up there; tested with
+  oxlint 1.85 and Node 24).
   A function handed to a call (`items.map((x, ok: boolean) => ...)`) is the callee's choice and doesn't count for
   `bool_params`. `module-state` is a `let` or `var` at module level that a function assigns. `commented-code`
   guesses: a comment, or a run of line comments, that compiles as JS and has code's punctuation, with `Note: x()`

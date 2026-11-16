@@ -284,6 +284,7 @@ class Diagnosis:
             self.machine.append((coded[0], "smells", "jscpd", "jscpd"))
         if "js" in self.projects:  # broom's own TS/JS rules are an oxlint plugin, which runs on Node
             self.machine.append(("js", "smells", "node", "node"))
+            self.machine.append(("js", "smells", "dependency-cruiser", "dependency-cruiser"))
 
     def swift(self) -> None:
         swift = self.projects.get("swift") or []

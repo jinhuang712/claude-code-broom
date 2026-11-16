@@ -16,6 +16,7 @@ from typing import Dict, List, Optional, Tuple
 
 from .config import DEAD_CODE
 from .findings import failure
+from .foldercycles import js_folder_cycles, python_folder_cycles
 from .gitutil import run
 from .jsmeasure import OXLINT_CATEGORIES
 from .langlint import golangci_cache
@@ -267,4 +268,7 @@ def find_in_real_tree(repo: Path, rels: List[str], params: int, notes: List[str]
     budget = budget or Budget()
     found = go_found(repo, rels, notes, budget) + js_found(repo, rels, notes, budget)
     found += [Found(rel, line, "import_cycle", "broom") for rel, line in import_cycles(repo, rels)]
+    found += [Found(rel, line, "folder_cycle", "broom") for rel, line in python_folder_cycles(repo, rels)]
+    found += [Found(rel, line, "folder_cycle", "dependency-cruiser")
+              for rel, line in js_folder_cycles(repo, rels, notes, budget.timeout)]
     return found + rust_found(repo, rels, params, notes, budget)

@@ -46,6 +46,7 @@ How each kind is usually put right:
 | `duplicate_lines` | Extract the shared block; where the copies differ, a function with a parameter for the difference |
 | `dead_code`, `commented_code` | Delete it; git keeps it |
 | `import_cycle` | Move what the files share into a third module both import. An import inside a function is the last resort |
+| `folder_cycle` | Decide which folder is the lower layer, and move what it takes from the upper one into a third folder both import, or into the lower one |
 | `globals` | Pass the state in, or hold it in an object |
 | `debug_output` | Delete it, or use the project's logger |
 | `type_escape` | Narrow the type with a check instead of casting or unwrapping |

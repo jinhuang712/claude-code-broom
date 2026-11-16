@@ -61,6 +61,7 @@ LABELS = {
     "bool_params": "boolean flag parameter(s)",
     "broad_test_asserts": "too broad test assertion(s)",
     "import_cycle": "import(s) that close a cycle between modules",
+    "folder_cycle": "import(s) that close a cycle between folders",
 }
 HINTS_SHOWN = 10
 LINES_SHOWN = 5

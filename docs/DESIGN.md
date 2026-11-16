@@ -39,7 +39,9 @@ The hook sees only the command Claude sends. A wrapper that commits for you (`kg
 holds no `git commit`, so in one repo the main path of committing was never checked, while the agents that used
 plain `git commit` were. `broom install-hook` adds git's own pre-commit hook, which runs the same gate on whatever
 commits, a person's included; it checks and doesn't format, as rewriting files under a person's commit is theirs to
-choose. Content that passed is recorded by blob id, so Claude's own commit isn't checked by both hooks, nor again
+choose. Where it is installed, it is the commit check: the hook above runs before the command, so for
+`git add . && git commit` it can only guess from the command's arguments which files the commit will take, and
+leaves the check to git's hook, which sees the staged files, and only formats. Content that passed is recorded by blob id, so Claude's own commit isn't checked by both hooks, nor again
 at the turn's end. Only content that passed with no hint is recorded: a hint still stops the turn's end once.
 
 ## What counts

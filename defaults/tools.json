@@ -55,6 +55,8 @@
   },
   "_comment_smells": "Duplicate code for the code smells, in every language they measure: jscpd 5 or later.",
   "node": {"probe": ["node", "--version"], "install": [["brew", "brew install node"]]},
+  "_comment_depcruise": "Cycles between folders in TS/JS. It reads .ts files only with a TypeScript below 7 next to it (the project's own, or `npm i -D typescript@6`), and says nothing when it has none.",
+  "dependency-cruiser": {"probe": ["depcruise", "--version"], "dev": "dependency-cruiser", "install": [["npm", "npm i -g dependency-cruiser"]]},
   "jscpd": {
     "probe": ["jscpd", "--version"],
     "install": [["npm", "npm i -g jscpd"], ["cargo", "cargo install jscpd"]]

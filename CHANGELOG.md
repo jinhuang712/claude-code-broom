@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.18.0
+
+- One run of any hook takes at most 30 seconds. Every hook in `hooks.json` has that `timeout` (the commit and stop
+  hooks had 300, the async ones none), the commands a run starts share 25 seconds, one that runs out is killed with
+  everything it started (a linter's compiler no longer keeps running after it), and at 28 seconds the hook gives up
+  and lets the commit, edit or stop through. A check cut off never blocks, and its content isn't recorded as passed.
+  A session-start scan that ran out of time keeps what it counted as a floor ("at least N") and runs again.
+- Checks that passed aren't run again, and work isn't done twice. Content that passed is recorded file by file, so
+  one file with a hint doesn't make the other 19 run again at each try (74 commands the first time and 1 after
+  for a clean batch; 73, 71, 71 with one hint before). What the smell measurers found in a file is kept for a day by
+  its content: a second check of 30 Go files took 3.8 s and 18.5 CPU-seconds, not 8.5 s and 48.6, and a session
+  scan after a new commit 0.8 s on a 3,184-file repo, not 4.0. broom's clippy run keeps its own config path and
+  target directory, so it and the project's clippy run stop making cargo check the crate again each time. git is
+  asked once per repo what is tracked and what differs: 15 git processes for a 30-file check, not 262, and 8, not
+  505. A check that ran out of time is skipped for 20 minutes in every session and agent, with a note.
+- A check no longer takes every core. Each tool a hook starts is kept to a quarter of the cores (`GOMAXPROCS`,
+  `RAYON_NUM_THREADS`, `CARGO_BUILD_JOBS`, unless you set them): next to a busy foreground job the check took 11.8
+  s instead of 9.7, and the job kept 97 to 104 percent of its speed instead of 73 to 82. A lower priority was
+  measured and left out: `nice 10` changed nothing, and macOS's background class made the check 3.6 times slower.
+- Hooks that run at once no longer lose one another's changes to the state they share: the read, change and write
+  of the passed record, known issues, last blocked commit, notes, setup answers and the measurement cache hold a
+  lock. Six processes making 40 changes each kept 58 of the 240 before, and all 240 now.
+- Where `broom install-hook` has added git's own hook, it does the commit check, on the files the commit really
+  takes; the PreToolUse hook, which can only guess them from the command's arguments, only formats.
+- ruff, golangci-lint and clippy are read from their JSON, not their text. The text of golangci-lint read the
+  closing parenthesis of "for loop can be changed to use an integer range (Go 1.22+)" as the linter's name, and
+  so as a compile error that blocks a commit.
+- A new smell, `folder_cycle` (a hint): an import the change adds that leads into a folder whose files lead back
+  to this one, the layers going the wrong way. Python's imports are read by broom, TS/JS's by dependency-cruiser,
+  which `broom doctor` offers and which needs a TypeScript below 7 next to it (it reads no `.ts` file without one,
+  and says nothing; a changed file it didn't read is said so).
+- Measured and left as it was: `tsc --incremental` (800 modules: 0.81 s without, 0.75 s with, and TypeScript 7 does
+  them in 0.08), and jscpd's whole-repo scans (2.9 s on a 9,279-file repo, once per distinct change).
+
 ## 0.17.0
 
 - Smells that need the project's own checkout, where imports and dependencies resolve, run there and not in the
