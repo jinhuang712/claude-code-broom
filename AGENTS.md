@@ -59,7 +59,7 @@ The other docs are read when the work needs them.
 
 The handbook is [CONTRIBUTING.md](docs/CONTRIBUTING.md): how to set up, run the checks and land a change.
 
-17 rules:
+18 rules:
 
 - [MUST] follow these rules strictly unless the user rejects one.
 - [MUST] read every doc you work on in full.
@@ -70,6 +70,7 @@ The handbook is [CONTRIBUTING.md](docs/CONTRIBUTING.md): how to set up, run the 
 - [MUST] push and tag when a checkpoint or a sub-checkpoint ends and the checks pass, then tell the user.
 - [MUST] bump Z for a release, and Y when a whole checkpoint ends.
 - [MUST] keep this repo at zero findings by broom's own measure.
+- [MUST] turn a script written to count or check something in a repo into a broom command, or into a TODO item.
 - [MUST] measure this repo with broom when a stage ends, and record the gain against the baseline in `report/ratchet/`.
 - [NEVER] give a doc to a subagent to read or write.
 - [NEVER] use a script or a search in place of reading a doc in full.

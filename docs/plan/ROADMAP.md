@@ -169,17 +169,20 @@ A block says what is over a limit and not what to do about it. This checkpoint p
 
 A refactor starts from numbers: what is in the repo, where it hurts most and whether the work paid off.
 
-**Delivers** (4):
+**Delivers** (6):
 
 - [F10.1: Whole-repo diagnosis](../features/F10-diagnosis.md#f101-whole-repo-diagnosis)
 - [F10.2: Hotspots by churn](../features/F10-diagnosis.md#f102-hotspots-by-churn)
 - [F10.3: Before and after](../features/F10-diagnosis.md#f103-before-and-after)
+- [F10.4: Numbers on request](../features/F10-diagnosis.md#f104-numbers-on-request)
+- [F10.5: Claude knows what to ask](../features/F10-diagnosis.md#f105-claude-knows-what-to-ask)
 - [I4: The tests write into the real data directory](ISSUES.md#i4-the-tests-write-into-the-real-data-directory)
 
-**Exit criteria** (1):
+**Exit criteria** (2):
 
 - **Objectives**
   - [O5: A full diagnosis of an old repo](GOALS.md#o5-a-full-diagnosis-of-an-old-repo)
+  - [O7: No script to write](GOALS.md#o7-no-script-to-write)
 
 ---
 

@@ -14,7 +14,8 @@ Goals
 │   ├── ⬜ O3: Mistakes seen while editing — a diagnostic after an edit
 │   ├── ⬜ O4: Nothing passes silently — every pass has a reason the user can see
 │   ├── ⬜ O5: A full diagnosis of an old repo — every smell, with no time cut
-│   └── ⬜ O6: A number that got worse is told once — the check-up speaks only then
+│   ├── ⬜ O6: A number that got worse is told once — the check-up speaks only then
+│   └── ⬜ O7: No script to write — broom answers what a session would count by hand
 ├── Measures
 │   ├── ⬜ M1: Fix rate — how much of what broom blocks gets fixed
 │   └── ⬜ M2: Check time — the seconds a commit check takes
@@ -119,6 +120,20 @@ The check-up speaks when a counter grew, and stays quiet otherwise.
 **Checks**: [F11.1: Counters](../features/F11-checkup.md#f111-counters)
 
 **Acceptance**: A test adds a skipped test to a repo. The next session start tells Claude once, and the one after says nothing.
+
+**Status**: ⬜
+
+---
+
+#### O7: No script to write
+
+A session with broom installed gets a repo's numbers from broom.
+
+**Want**: no script to write.
+
+**Checks**: [F10.4: Numbers on request](../features/F10-diagnosis.md#f104-numbers-on-request) · [F10.5: Claude knows what to ask](../features/F10-diagnosis.md#f105-claude-knows-what-to-ask)
+
+**Acceptance**: A fresh session is asked ten questions about a repo: its size, its longest functions, its skipped tests, its untested files and each rot counter among them. It answers all ten with broom commands and writes no script.
 
 **Status**: ⬜
 

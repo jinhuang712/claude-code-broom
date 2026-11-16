@@ -78,7 +78,9 @@ Features
 ├── ⬜ F10: Diagnosis — a repo's numbers before and after a refactor
 │   ├── 🚧 F10.1: Whole-repo diagnosis — `broom smells` ranks, and the full report is not built
 │   ├── ⬜ F10.2: Hotspots by churn — the files that are both bad and often changed
-│   └── 🚧 F10.3: Before and after — `--base` lists what got worse, and not what got better
+│   ├── 🚧 F10.3: Before and after — `--base` lists what got worse, and not what got better
+│   ├── ⬜ F10.4: Numbers on request — what a session would otherwise script
+│   └── ⬜ F10.5: Claude knows what to ask — broom before a script
 └── ⬜ F11: Check-up — rot across the whole repo, told when it grows
     ├── ⬜ F11.1: Counters — suppressions, skipped tests and old TODOs
     ├── ⬜ F11.2: Test coverage — code the tests never reach

@@ -62,6 +62,12 @@ A refactor of a repo that was never held to a bar starts blind: where the smells
 
 ---
 
+#### Every session writes its own script to count things
+
+To learn how long the files are, which tests are skipped or what nothing uses, a session writes a throwaway script. The next session writes it again, a little differently, and the two answers don't match. A review of broom itself wrote one such script to count suppressions, skipped tests, TODOs and churn.
+
+---
+
 ## The idea
 
 One plugin does three things:
@@ -76,7 +82,7 @@ Around these three it holds one bar for code smells. Each change is measured aga
 
 ## What we want
 
-8 wants:
+9 wants:
 
 - **Clean work without asking**: Claude's work comes out formatted, lint-clean and type-correct by the project's own rules.
 - **Tooling in one conversation**: A repo with no tooling gets working tooling in one short conversation.
@@ -86,6 +92,7 @@ Around these three it holds one bar for code smells. Each change is measured aga
 - **Clean as you go**: A smell is cleaned when it appears, before many of them become rot.
 - **A tool for refactoring**: A whole repo gets a full diagnosis, with the data a refactor is planned from and judged by.
 - **Nothing passes silently**: A finding is fixed, or it leaves a reason the user can see.
+- **No script to write**: A session with broom installed asks broom for a repo's numbers, from line counts to tests to rot.
 
 ---
 
