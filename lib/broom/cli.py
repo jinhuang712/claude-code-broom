@@ -371,6 +371,23 @@ def add_issue_parsers(sub: argparse._SubParsersAction) -> None:
     ih.set_defaults(fn=cmd_install_hook)
 
 
+def cmd_stats(args: argparse.Namespace) -> int:
+    """Print `broom stats` for the repo, narrowed to the paths given."""
+    from .statsview import run
+
+    return run(repo_or_exit(), args)
+
+
+def add_stats_parser(sub: argparse._SubParsersAction) -> None:
+    """The `stats` command: counts of size, tests, rot and history."""
+    s = sub.add_parser("stats", help="size, tests, rot and history of the repo or some paths, as counts")
+    s.add_argument("paths", nargs="*", help="limit to these files or directories (default: the repo)")
+    s.add_argument("--top", type=int, default=10, help="how long each list is (default: 10)")
+    s.add_argument("--days", type=int, default=90, help="how far back history looks (default: 90)")
+    s.add_argument("--json", action="store_true", help="the same as JSON")
+    s.set_defaults(fn=cmd_stats)
+
+
 def add_internal_parsers(sub: argparse._SubParsersAction) -> None:
     """Commands for Claude Code and git, left out of --help."""
     h = sub.add_parser("hook")
@@ -386,8 +403,8 @@ def main(argv: List[str]) -> int:
     p = argparse.ArgumentParser(prog="broom", description="Format, lint and type-check with each project's own tools.")
     p.add_argument("--version", action="version", version=f"broom {__version__}")
     sub = p.add_subparsers(dest="cmd", required=True,
-                           metavar="{sweep,smells,fixes,fmt,doctor,setup,init,known,report,install-hook}")
-    for add in (add_sweep_parsers, add_setup_parsers, add_issue_parsers, add_internal_parsers):
+                           metavar="{sweep,smells,fixes,fmt,doctor,setup,init,known,report,stats,install-hook}")
+    for add in (add_sweep_parsers, add_setup_parsers, add_issue_parsers, add_stats_parser, add_internal_parsers):
         add(sub)
     args = p.parse_args(argv)
     if args.cmd == "sweep" and args.fix and not args.all:
