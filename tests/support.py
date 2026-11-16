@@ -104,6 +104,10 @@ class BroomCase(unittest.TestCase):
         rows = mock.patch("broom.rowcache.ROWS", self.tmp / "rows")
         rows.start()
         self.addCleanup(rows.stop)
+        # The ledger in this process goes where the hooks' does, under the test's own data directory.
+        ledger = mock.patch("broom.ledger.LEDGER", self.tmp / "data" / "ledger.jsonl")
+        ledger.start()
+        self.addCleanup(ledger.stop)
 
     def tearDown(self) -> None:
         shutil.rmtree(self.tmp, ignore_errors=True)

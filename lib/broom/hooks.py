@@ -23,14 +23,13 @@ import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from .commitgate import MAX_BLOCKS, checked, sticky
+from . import ledger
+from .commitgate import MAX_BLOCKS, checked, entries_of, sticky
 from .config import excluded, setting
 from .doctor import describe, diagnose_cached, new_gaps
 from .fmt import format_files
-from .gate import (
-    baseline_add_entries, issue_entry, issue_key, new_notes,
-    note_text, render, setup_hint, verdict,
-)
+from .findings import Issue
+from .gate import baseline_add_entries, baseline_keys, issue_key, new_notes, note_text, render, setup_hint, verdict
 from .gitutil import git_changed_files, git_root
 from .hotspots import cached_summary, session_note, summary
 from .state import append_line, emit, load_json, prune_sessions, save_json, session_dir, short_hash
@@ -98,13 +97,22 @@ def read_lines(path: Path) -> List[str]:
 
 def end_turn(d: Path, root: Optional[Path]) -> None:
     """Forget the turn's records; the working tree as it is now is where the next turn's changes start."""
-    for name in ("edits.txt", "scan.txt", "gate.json", DEFERRED):
+    for name in ("edits.txt", "scan.txt", "gate.json", DEFERRED, ledger.THROUGH):
         try:
             (d / name).unlink()
         except OSError:
             pass
     if root:
         snapshot(d, root)
+
+
+def finish(d: Path, root: Optional[Path], tail: str = "") -> None:
+    """End the turn with one message for the user at most: what the turn let through, then `tail`, what else there
+    is to say. A turn that let nothing through says only the tail, with a `broom:` before it."""
+    summary = ledger.through_line(d)
+    end_turn(d, root)
+    if summary or tail:
+        emit({"systemMessage": f"{summary}; {tail}" if summary and tail else summary or f"broom: {tail}"})
 
 
 def turn_files(data: dict, d: Path, root: Optional[Path]) -> Tuple[List[Path], str]:
@@ -121,6 +129,32 @@ def turn_files(data: dict, d: Path, root: Optional[Path]) -> Tuple[List[Path], s
     return files, mark
 
 
+def stop_again(d: Path, root: Optional[Path], gate: dict) -> None:
+    """Claude stopped again without editing: what is left is known, and the turn ends. A severe finding went
+    through too, though it isn't known: the commit still stops on it."""
+    pending = gate.get("pending") or {}
+    baseline_add_entries(pending if isinstance(pending, dict) else {k: {"t": time.time()} for k in pending})
+    blocked, kept = gate.get("blocked") or {}, set(gate.get("sticky") or [])
+    ledger.let_through({k: e for k, e in blocked.items() if k not in kept}, "stop-again", d)
+    ledger.let_through({k: e for k, e in blocked.items() if k in kept}, "turn-ended", d)
+    finish(d, root, f"{gate.get('count', 0)} issue(s) left unfixed")
+
+
+def block_turn(d: Path, blocking: List[Issue], notes: List[str], files: List[Path], progress: dict) -> None:
+    """Block the turn's end, and note in gate.json what Claude was shown: stopping again records what is left as
+    known; type errors and severe smells stay out, so a commit still stops on them."""
+    found = entries_of(blocking)
+    severe = [issue_key(i) for i in blocking if sticky(i)]
+    ledger.blocked(found)
+    save_json(d / "gate.json", {"verdict": verdict(blocking), "count": len(blocking), **progress,
+                                "pending": {k: e for k, e in found.items() if k not in severe},
+                                "blocked": found, "sticky": severe})
+    head = (f"[broom] {len(blocking)} issue(s) in this turn's changes. Fix them before finishing. If one is "
+            "pre-existing or a false positive, say so and stop again: broom doesn't block twice without a new edit.")
+    shown = new_notes(d / "notes.json", notes, files[0])
+    emit({"decision": "block", "reason": render(head, blocking, shown, set(files))})
+
+
 def hook_stop(data: dict) -> None:
     """The turn's end, or with an agent_id a subagent's (SubagentStop), whose block goes to the subagent."""
     cwd = Path(data.get("cwd") or os.getcwd()).resolve()
@@ -133,40 +167,27 @@ def hook_stop(data: dict) -> None:
     root = None if data.get("agent_id") else git_root(cwd)
     files, mark = turn_files(data, d, root)
     if not files:
-        end_turn(d, root)
+        finish(d, root)
         return
-
     gate = load_json(d / "gate.json", {})
     if gate.get("verdict") and gate.get("edits_at") == mark:
-        # Claude stopped again without editing: what is left is known, and the turn ends.
-        pending = gate.get("pending") or {}
-        baseline_add_entries(pending if isinstance(pending, dict) else {k: {"t": time.time()} for k in pending})
-        end_turn(d, root)
-        emit({"systemMessage": f"broom: {gate.get('count', 0)} issue(s) left unfixed"})
+        stop_again(d, root, gate)
         return
-
     blocking, hints, notes = checked(files, turn_base(d, root))
     blocking += [s.issue() for s in hints]  # at a turn's end a hint stops Claude once: it cleans up now
+    if gate.get("blocked"):
+        ledger.fixes(gate["blocked"], {issue_key(i) for i in blocking} | baseline_keys(), files, notes)
     if not blocking:
-        end_turn(d, root)
-        fresh = new_notes(d / "notes.json", notes)
-        if fresh:
-            hint = " (run /broom:setup)" if setup_hint(fresh) else ""
-            emit({"systemMessage": "broom: " + "; ".join(note_text(n) for n in fresh) + hint})
+        fresh = new_notes(d / "notes.json", notes, files[0])
+        tail = "; ".join(note_text(n) for n in fresh) + (" (run /broom:setup)" if setup_hint(fresh) else "")
+        finish(d, root, tail if fresh else "")
         return
     blocks = int(gate.get("blocks", 0)) + 1
     if blocks > MAX_BLOCKS:
-        end_turn(d, root)
-        emit({"systemMessage": f"broom: gave up after {MAX_BLOCKS} rounds, {len(blocking)} issue(s) left"})
+        ledger.let_through(entries_of(blocking), "gave-up", d)
+        finish(d, root, f"gave up after {MAX_BLOCKS} rounds, {len(blocking)} issue(s) left")
         return
-    # Stopping again records what is left as known; type errors and severe smells stay out, so a commit still
-    # stops on them.
-    pending = {issue_key(i): issue_entry(i) for i in blocking if not sticky(i)}
-    save_json(d / "gate.json", {"verdict": verdict(blocking), "edits_at": mark, "blocks": blocks,
-                                "count": len(blocking), "pending": pending})
-    head = (f"[broom] {len(blocking)} issue(s) in this turn's changes. Fix them before finishing. If one is "
-            "pre-existing or a false positive, say so and stop again: broom doesn't block twice without a new edit.")
-    emit({"decision": "block", "reason": render(head, blocking, new_notes(d / "notes.json", notes), set(files))})
+    block_turn(d, blocking, notes, files, {"edits_at": mark, "blocks": blocks})
 
 
 def hook_prompt(data: dict) -> None:
@@ -176,7 +197,10 @@ def hook_prompt(data: dict) -> None:
     cwd = Path(data.get("cwd") or os.getcwd()).resolve()
     root = git_root(cwd)
     d = turn_dir(data)
-    if root and setting("check_on", cwd) == "stop" and not waiting(d) and not (d / "gate.json").exists():
+    if waiting(d) or (d / "gate.json").exists():
+        return
+    ledger.forget_through(d)  # what the turn before let through was never shown, as no stop hook ended that turn
+    if root and setting("check_on", cwd) == "stop":
         snapshot(d, root)
 
 

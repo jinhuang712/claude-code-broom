@@ -8,6 +8,7 @@ from functools import partial
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
+from . import ledger
 from .findings import Findings, Issue
 from .langlint import check_go, check_python, check_rust, check_swift_build, check_swiftlint
 from .state import DATA_ROOT, load_json, update_json
@@ -129,12 +130,16 @@ def run_checks(files: List[Path], slow_path: Optional[Path] = None, *, whole: bo
                         for k, _ in every if k in slow]
     issues: List[Issue] = []
     ran_out: Dict[str, float] = {}
+    took: Dict[str, float] = {}
     with ThreadPoolExecutor(max_workers=4) as pool:
         for key, ((found, msgs), seconds) in zip([k for k, _ in todo], pool.map(lambda kv: timed(kv[1]), todo)):
             issues += found
             notes += msgs
+            took[key] = seconds
             if seconds >= SLOW_SECONDS and any(m.startswith("timeout:") for m in msgs):
                 ran_out[key] = time.time()
     if slow_path and ran_out:
         update_json(slow_path, {}, lambda data: data.update(ran_out))
+    if slow_path:  # for a hook: the ledger notes how long each check took
+        ledger.timed(took)
     return issues, notes

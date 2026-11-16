@@ -16,8 +16,9 @@ import shlex
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
+from . import ledger
 from .checks import SLOW_PATH, run_checks
 from .findings import Issue
 from .config import excluded, setting
@@ -117,32 +118,49 @@ def block_head(count: int, hard: int, repo: Path, cwd: Path) -> str:
             f"`{accept}`, then commit again.")
 
 
+def entries_of(issues: Iterable[Issue]) -> Dict[str, dict]:
+    return {issue_key(i): issue_entry(i) for i in issues}
+
+
+def skip_context(sd: Path, notes: List[str], repo: Path) -> List[str]:
+    """What Claude is told about the tools that didn't run, once per session."""
+    fresh = new_notes(sd / "notes.json", notes, repo)
+    if not fresh:
+        return []
+    hint = setup_hint(fresh)
+    return ["broom skipped: " + "; ".join(note_text(n) for n in fresh)] + ([hint] if hint else [])
+
+
 def gate_files(repo: Path, files: List[Path], sd: Path, cwd: Path, state: dict) -> Tuple[Optional[str], List[str]]:
     """Check what a commit takes from `repo`: the denial when it must stop (else None), and lines of context.
-    `state` holds each repo's last blocked commit, for the retry rule and `broom known --accept`."""
+    `state` holds each repo's last blocked commit, for the retry rule, `broom known --accept` and the ledger: what
+    it found, which hook and which session saw it."""
     files = sorted(f for f in files if lang_of(f))
     blocking, hints, notes = checked(files)
     context = [hint_text(hints)] if hints else []
+    ledger.hinted(entries_of(s.issue() for s in hints))
     key = str(repo)
     prior = state.get(key, {})
+    found = entries_of(blocking)
+    if prior.get("pending"):
+        ledger.fixes(prior["pending"], set(found) | baseline_keys(), files, notes)
     hard = sum(1 for i in blocking if sticky(i))
     if not blocking:
         state.pop(key, None)
-        fresh = new_notes(sd / "notes.json", notes)
-        if fresh:
-            context.append("broom skipped: " + "; ".join(note_text(n) for n in fresh))
-            context += [setup_hint(fresh)] if setup_hint(fresh) else []
-        return None, context
-    if not hard and (prior.get("verdict") == verdict(blocking) or int(prior.get("denials", 0)) >= MAX_BLOCKS):
+        return None, context + skip_context(sd, notes, repo)
+    now = verdict(blocking)
+    if not hard and (prior.get("verdict") == now or int(prior.get("denials", 0)) >= MAX_BLOCKS):
         # Claude saw these lint findings and committed again unchanged: they are known, the commit goes ahead.
         baseline_add(blocking)
+        ledger.let_through(found, "retry" if prior.get("verdict") == now else "denials", sd)
         state.pop(key, None)
         return None, context + [f"broom let the commit through with {len(blocking)} known issue(s)"]
     # Type errors and severe smells never pass on a retry alone: fixed, or accepted with a reason on record.
-    state[key] = {"verdict": verdict(blocking), "denials": int(prior.get("denials", 0)) + 1,
-                  "pending": {issue_key(i): issue_entry(i) for i in blocking}}
+    ledger.blocked(found)
+    state[key] = {"verdict": now, "denials": int(prior.get("denials", 0)) + 1, "pending": found,
+                  "where": ledger.HOOK.where, "turn": str(sd)}
     head = block_head(len(blocking), hard, repo, cwd)
-    return render(head, blocking, new_notes(sd / "notes.json", notes), set(files)), context
+    return render(head, blocking, new_notes(sd / "notes.json", notes, repo), set(files)), context
 
 
 def hook_pre_commit() -> int:

@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from . import __version__
+from . import __version__, ledger
 from .checks import run_checks
 from .config import SETTINGS, excluded, setting, setting_source
 from .fmt import format_files
@@ -252,11 +252,13 @@ def cmd_hook(args: argparse.Namespace) -> int:
     CLOCK.start(seconds)
     give_up_after(seconds + 3, args.event)
     watch(args.event, os.getcwd())
+    ledger.begin(args.event)
     if args.event == "pre-commit":
         try:
             return hook_pre_commit()
         except Exception as e:  # a broken check must never stop a commit
             print(f"broom pre-commit: {e}", file=sys.stderr)
+            ledger.errored(e)
             return 0
     data = read_hook_input()
     handlers = {"commit": hook_commit, "edit": hook_edit, "prompt": hook_prompt, "stop": hook_stop,
@@ -265,6 +267,7 @@ def cmd_hook(args: argparse.Namespace) -> int:
         handlers[args.event](data)
     except Exception as e:  # a broken check must never trap Claude or block its edits
         print(f"broom hook {args.event}: {e}", file=sys.stderr)
+        ledger.errored(e)
     return 0
 
 

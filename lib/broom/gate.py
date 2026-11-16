@@ -14,6 +14,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
+from . import ledger
 from .findings import Issue
 from .config import excluded
 from .gitutil import ChangedLines
@@ -105,10 +106,13 @@ def accept_allowed() -> bool:
 def accept_blocked(repo: Path, why: str) -> int:
     """Record the issues of the last commit broom blocked in `repo` as known, with the reason. Returns how many."""
     state = load_json(COMMITS, {})
-    pending = (state.get(str(repo)) or {}).get("pending") or {}
+    prior = state.get(str(repo)) or {}
+    pending = prior.get("pending") or {}
     if pending:
         now = time.time()
         baseline_add_entries({k: {**v, "t": now, "why": why} for k, v in pending.items()})
+        turn = Path(prior["turn"]) if prior.get("turn") else None
+        ledger.let_through(pending, "accept", turn, why=why, where=prior.get("where") or "commit")
         state.pop(str(repo), None)
         save_commits(state, [repo])
     return len(pending)
@@ -211,8 +215,9 @@ def render(head: str, issues: List[Issue], notes: List[str], files: Set[Path]) -
     return "\n".join(out)
 
 
-def new_notes(state: Path, notes: List[str]) -> List[str]:
-    """Notes not shown before in this session, so a missing tool is mentioned once, not every time."""
+def new_notes(state: Path, notes: List[str], home: Path) -> List[str]:
+    """Notes not shown before in this session, so a missing tool is mentioned once, not every time. Each fresh
+    timeout or missing-tool note goes in the ledger, with `home`, the directory the hook ran in."""
     fresh: List[str] = []
 
     def add(seen_before: list) -> list:
@@ -220,4 +225,5 @@ def new_notes(state: Path, notes: List[str]) -> List[str]:
         return sorted(set(seen_before) | set(fresh))
 
     update_json(state, [], add)
+    ledger.skipped(fresh, home)
     return fresh
