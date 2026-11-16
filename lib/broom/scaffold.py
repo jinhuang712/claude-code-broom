@@ -43,22 +43,27 @@ class Scaffold:
         self.actions: List[str] = []
 
     def has(self, names: Iterable[str]) -> bool:
+        """Whether any of `names` exists at the project root, so a config that is already there is never overwritten."""
         return any((self.root / n).exists() for n in names)
 
     def write(self, name: str, text: str) -> None:
+        """Write `text` to `name` at the project root and log it as added; a dry run only logs "would add"."""
         self.actions.append(f"{'would add' if self.dry_run else 'added'} {name}")
         if not self.dry_run:
             (self.root / name).write_text(text)
 
     def go(self) -> None:
+        """Add the default golangci config when the project has none."""
         if not self.has(GOLANGCI_CFG):
             self.write(".golangci.yml", (DEFAULTS / "golangci.yml").read_text() + GOLANGCI_FORMATTERS)
 
     def oxlint(self) -> None:
+        """Add the default oxlint config when the project has no oxlint, eslint or biome config."""
         if not (self.has(OXLINT_CFG) or self.has(ESLINT_CFG) or self.has(BIOME_CFG)):
             self.write(".oxlintrc.json", (DEFAULTS / "oxlintrc.json").read_text())
 
     def oxfmt(self) -> None:
+        """Add an oxfmt config, running `oxfmt --init` when oxfmt is installed, unless a formatter config is there."""
         # oxfmt formats CSS, SCSS and Less too. CSS needs no lint config: broom's stylelint defaults apply without one.
         if self.has(BIOME_CFG) or self.has(OXFMT_CFG) or self.has(PRETTIER_CFG) or pkg_has_key(self.root, "prettier"):
             return
@@ -71,6 +76,7 @@ class Scaffold:
             self.actions.append("added .oxfmtrc.json (oxfmt --init)")
 
     def ruff(self) -> None:
+        """Add broom's ruff settings: a ruff.toml, or a note to add them to an existing pyproject.toml."""
         if ruff_configured(self.root / "_.py", self.root):
             return
         if (self.root / "pyproject.toml").exists():
@@ -80,6 +86,7 @@ class Scaffold:
             self.write("ruff.toml", RUFF_DEFAULT)
 
     def swift(self) -> None:
+        """Add the default swift-format config when the project has no swift-format or SwiftFormat config."""
         # Swift needs no lint config either: broom's SwiftLint defaults apply without one.
         if not self.has((SWIFT_FORMAT_CFG, SWIFTFORMAT_CFG)):
             self.write(SWIFT_FORMAT_CFG, SWIFT_FORMAT_DEFAULT)

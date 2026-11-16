@@ -89,6 +89,7 @@ def _vet(module: Path, files: List[Path]) -> Findings:
 
 
 def check_go(module: Path, files: List[Path], stop: Path, *, whole: bool = False) -> Findings:
+    """Lint a Go module with golangci-lint, and vet its changed files too unless `whole`, which lints it all."""
     issues, notes = _golangci(module, files, stop, whole=whole)
     if whole:  # the whole module was just linted, typecheck included
         return issues, notes
@@ -117,6 +118,7 @@ def clippy_issues(crate: Path, out: str, workspace: Optional[Path], stop: Path) 
 
 
 def check_rust(crate: Path, stop: Path) -> Findings:
+    """Run cargo clippy over a Rust crate and return its issues; a missing cargo or a timeout is only a note."""
     cargo = shutil.which("cargo")
     if not cargo:
         return [], ["missing:cargo"]
@@ -138,6 +140,7 @@ def ruff_issues(root: Path, out: str) -> List[Issue]:
 
 
 def check_python(root: Path, files: List[Path], *, whole: bool = False) -> Findings:
+    """Run ruff over `files` under `root` and return its issues; a missing ruff or a timeout is only a note."""
     ruff = shutil.which("ruff")
     if not ruff:
         return [], ["missing:ruff (brew install ruff)"]
@@ -157,6 +160,7 @@ SWIFT_VENDORED = {"Pods", "Carthage", ".build", "DerivedData"}
 
 
 def swift_vendored(f: Path, root: Path) -> bool:
+    """Whether file `f` lies under a vendored or build folder (Pods, Carthage, .build, DerivedData) of `root`."""
     try:
         parts = f.relative_to(root).parts
     except ValueError:
@@ -165,6 +169,7 @@ def swift_vendored(f: Path, root: Path) -> bool:
 
 
 def check_swiftlint(cfg_dir: Path, files: List[Path], *, defaults: bool, whole: bool = False) -> Findings:
+    """Run SwiftLint over `files`: with broom's default config when `defaults`, else the project's in `cfg_dir`."""
     exe = shutil.which("swiftlint")
     if not exe:
         return [], ["missing:swiftlint (brew install swiftlint)"]
@@ -214,6 +219,7 @@ def swift_build(swift: str, package: Path, args: List[str], timeout: float) -> T
 
 
 def swift_errors(package: Path, out: str) -> List[Issue]:
+    """The build errors in the Swift compiler's `out` as hard issues (they block) of `package`."""
     issues = []
     for row in out.splitlines():
         m = SWIFT_ERROR.match(row) or SWIFT_BUILD_ERROR.match(row)

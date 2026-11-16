@@ -28,11 +28,13 @@ class Clock:
         self.env: Dict[str, str] = {}
 
     def start(self, seconds: float) -> None:
+        """Start the hook's time budget of `seconds`, and the thread caps for the commands it starts."""
         self.end = time.monotonic() + seconds
         threads = str(max(2, (os.cpu_count() or 4) // 4))
         self.env = {name: threads for name in THREAD_VARS if not os.environ.get(name)}  # the person's own win
 
     def left(self) -> Optional[float]:
+        """Seconds left in the hook's budget, never below zero; None outside a hook, where no budget is started."""
         return None if self.end is None else max(0.0, self.end - time.monotonic())
 
 
@@ -55,11 +57,13 @@ NO_FSMONITOR = {"GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "core.fsmonitor", "
 
 
 def command_env(env: Optional[Dict[str, str]]) -> Dict[str, str]:
+    """The environment for a command: the process's own, plus broom's quiet settings, thread caps and `env`."""
     quiet = {} if "GIT_CONFIG_COUNT" in os.environ else NO_FSMONITOR  # the person's own config count wins
     return {**os.environ, **QUIET_ENV, **quiet, **CLOCK.env, **(env or {})}
 
 
 def reap(p: "subprocess.Popen[bytes]") -> None:
+    """Wait up to 2 seconds for process `p` after a kill; if it still hasn't exited, give up without an error."""
     try:
         p.wait(timeout=2)
     except subprocess.TimeoutExpired:
@@ -111,6 +115,7 @@ def run(cmd: List[str], cwd: Path, timeout: float = 90,
 
 
 def git(args: List[str], cwd: Path) -> Optional[str]:
+    """The stdout of `git args` run in `cwd` as text, or None when git fails or times out."""
     rc, out, _ = run(["git", *args], cwd, timeout=15)
     return out if rc == 0 else None
 
@@ -187,6 +192,7 @@ class ChangedLines:
         self._renames: Dict[Path, Dict[str, str]] = {}
 
     def old_path(self, f: Path, root: Path) -> Optional[Path]:
+        """The path `f` had before a rename in the diff against the base, or None when it was not renamed."""
         if root not in self._renames:
             self._renames[root] = renamed(root, (["--cached"] if self.cached else []) + [self.base])
         try:
@@ -196,6 +202,7 @@ class ChangedLines:
         return root / old if old else None
 
     def get(self, f: Path) -> Optional[Set[int]]:
+        """The line numbers of `f` changed since the base, cached per file; None when git can't say (e.g. untracked)."""
         if f not in self._cache:
             self._cache[f] = self._compute(f)
         return self._cache[f]

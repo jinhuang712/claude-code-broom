@@ -229,6 +229,7 @@ def cache_key(repo: Path, projects: Dict[str, List[Path]]) -> str:
 
 
 def diagnose_cached(repo: Path) -> dict:
+    """The diagnosis of `repo`, reused from disk while its cache key is unchanged; otherwise recomputed and saved."""
     projects = scan(repo)
     key = cache_key(repo, projects)
     path = DATA_ROOT / "doctor" / f"{short_hash(str(repo))}.json"
@@ -241,14 +242,17 @@ def diagnose_cached(repo: Path) -> dict:
 
 
 def gaps(result: dict) -> List[dict]:
+    """The items in `result` that are not ok: the gaps that setup and the hooks act on."""
     return [i for i in result["items"] if i["status"] != "ok"]
 
 
 def gaps_hash(result: dict) -> str:
+    """A short id of the gaps in `result` (tool, status, project), so a change in the gaps gives a new id."""
     return short_hash(json.dumps(sorted((i["tool"], i["status"], i["project"]) for i in gaps(result))))
 
 
 def describe(i: dict) -> str:
+    """A one-line description of diagnosis item `i` for a person: what is off, and where."""
     where = f" in {i['project']}" if i["project"] not in ("", ".") else ""
     if i["status"] == "off":
         return f"{LANG_NAMES[i['lang']]} formatting is off{where} (no config)"
@@ -265,6 +269,7 @@ MARKS = {"ok": "✓", "missing": "✗", "broken": "✗", "off": "○", "conflict
 
 
 def render_text(result: dict) -> str:
+    """The `broom doctor` report as text: the repo, its languages, one line per item, then the fixes to run."""
     repo = result["repo"]
     home = str(Path.home())
     out = [f"broom doctor: {'~' + repo[len(home):] if repo.startswith(home) else repo}"]
@@ -317,6 +322,7 @@ def reset_setup() -> int:
 
 
 def answered_kinds() -> set:
+    """The gap kinds the person has already answered in any repo, from the saved setup state; empty when none."""
     return set(load_json(SETUP_STATE, {}).get(ANSWERED) or [])
 
 
