@@ -71,7 +71,7 @@ Status: ✅ built · ⬜ planned
 
 **Called by**: a person and the `/broom:setup` skill.
 
-**Prints**: stdout gets one line per item with its status, a `To fix:` list, a `To turn formatting on:` list, and `All set.` when healthy. stderr gets `broom: not inside a git repository`.
+**Prints**: stdout gets one line per item with its status, git's pre-commit hook among them, a `To fix:` list, a `To turn formatting on:` list, and `All set.` when healthy. stderr gets `broom: not inside a git repository`.
 
 **Fails**: exit 1 when an item is not ok, and outside a repo.
 
@@ -133,14 +133,14 @@ Status: ✅ built · ⬜ planned
 | Flag | Means | Default |
 |---|---|---|
 | none | list the known issues under `paths` | the repo |
-| `--accept WHY` | accept the last blocked commit's findings with the reason | off |
+| `--accept WHY` | accept what the last blocked commit or turn end showed, with the reason | off |
 | `--clear` | remove the known issues under `paths` | off |
 
 **Called by**: a person, and Claude when a block message offers `--accept`.
 
-**Prints**: stdout gets one line per known issue with its location, tool, rule, message, date and reason. Accept prints `broom: accepted N issue(s) as known (WHY); commit again`. stderr gets the refusals.
+**Prints**: stdout gets one line per known issue with its location, tool, rule, message, date and reason. Accept prints `broom: accepted N issue(s) as known (WHY); commit again`, or `stop again` after a turn-end block. stderr gets the refusals.
 
-**Fails**: exit 1 when there is no blocked commit to accept, when WHY is empty, when `BROOM_NO_ACCEPT` is set and outside a repo.
+**Fails**: exit 1 when there is no blocked commit or turn end to accept, when WHY is empty, when `BROOM_NO_ACCEPT` is set and outside a repo.
 
 **Example**: `broom known --accept "predates this change"` prints `broom: accepted 2 issue(s) as known (predates this change); commit again`.
 
@@ -161,7 +161,7 @@ Status: ✅ built · ⬜ planned
 
 **Called by**: a person and Claude.
 
-**Prints**: stdout gets a line of totals with the fix rate, then a table per rule, the skips by tool and the median and longest seconds per check. With nothing recorded it prints `broom: nothing recorded for <repo> in the last N days`. stderr gets `broom: not inside a git repository`.
+**Prints**: stdout gets a line of totals with the fix rate, then a table per rule, the self-waivers by kind, the skips by tool and the median and longest seconds per check. With nothing recorded it prints `broom: nothing recorded for <repo> in the last N days`. stderr gets `broom: not inside a git repository`.
 
 **Fails**: exit 1 outside a repo without `--all`.
 
@@ -268,7 +268,7 @@ An uncaught error exits 1 with a traceback.
 
 - **`broom doctor --json`**: `version` · `repo` · `languages` · `items` · `fix` · `configure` · `fix_global` · `configure_global` · `healthy` · `settings`.
 - **`broom smells --json`**: `repo` · `base` · `total` · `severe` · `hints` · `hotspots` · `smells` · `notes`.
-- **`broom report --json`**: `days` · `repos` · `blocked` · `fixed` · `let_through` · `open` · `how` · `fix_rate` · `rules` · `skips` · `seconds` · `errors`.
+- **`broom report --json`**: `days` · `repos` · `blocked` · `fixed` · `let_through` · `open` · `how` · `fix_rate` · `rules` · `waivers` · `skips` · `seconds` · `errors`.
 
 Each item of `smells` holds `file` · `line` · `smell` · `level` · `text` · `was`. `was` is null for a new smell.
 

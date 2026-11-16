@@ -15,7 +15,8 @@ Issues
 │   └── I6: The Bash parser guesses what git's hook knows
 └── fix
     ├── I3: The cause of the reported Stop hang is unconfirmed
-    └── I4: The tests write into the real data directory
+    ├── I4: The tests write into the real data directory
+    └── I8: Two holes in the record
 ```
 
 ---
@@ -89,3 +90,14 @@ Issues
 - type: docs
 - why: broom locks files and ends process groups in ways only macOS and Linux have. README and INSTALL don't say so.
 - found: a review of the install path, 2026-11-17
+
+---
+
+## I8: Two holes in the record
+
+- type: fix
+- why: A turn-end block replaces a commit block's entry for the same repo, which can drop the earlier block's fix line. A self-waiver is missed when every file's content had already passed and `.broom.json` wasn't edited through Edit or Write.
+- found: the review of 0.19.0, 2026-11-17
+- touches:
+  - [F9.1: Ledger](../features/F9-record.md#f91-ledger)
+  - [F2.8: Self-waivers shown](../features/F2-sweep.md#f28-self-waivers-shown)

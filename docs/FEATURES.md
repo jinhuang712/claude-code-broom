@@ -20,15 +20,14 @@ Features
 │   ├── ✅ F2.1: Commit check — a git commit is formatted, checked and held back
 │   ├── ✅ F2.2: Turn-end check — what a turn changed is checked when Claude stops
 │   ├── ✅ F2.3: Subagent check — a subagent fixes its own work
-│   ├── 🚧 F2.4: git's pre-commit hook — installed by hand, one repo at a time
-│   │   └── ⬜ F2.4.1: Offered at setup
+│   ├── ✅ F2.4: git's pre-commit hook — commits Claude Code never sees
+│   │   └── ✅ F2.4.1: Offered at setup
 │   ├── ✅ F2.5: Known issues — what was let through, and why
-│   │   ├── ✅ F2.5.1: Pass on a retry
-│   │   ├── ✅ F2.5.2: Accept with a reason
-│   │   └── ⬜ F2.5.3: A reason for every pass
+│   │   ├── ✅ F2.5.1: A reason for every pass
+│   │   └── ✅ F2.5.2: A turn can end with a finding open
 │   ├── ✅ F2.6: Sweep on request — a scope in the user's own words
 │   ├── 🚧 F2.7: Time limit — a cold build can be cut off and go unchecked
-│   ├── ⬜ F2.8: Self-waivers shown — a loosened bar never goes unseen
+│   ├── 🚧 F2.8: Self-waivers shown — missed when every file's content had already passed
 │   └── ⬜ F2.9: Messages that say how to fix — the fix beside the finding
 ├── ✅ F3: Formatting — the project's formatter on what changed
 │   ├── ✅ F3.1: When to format — at commit, after every edit, or never

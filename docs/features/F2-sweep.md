@@ -8,9 +8,8 @@ F2: Sweep
 ├── F2.4: git's pre-commit hook — commits Claude Code never sees
 │   └── F2.4.1: Offered at setup
 ├── F2.5: Known issues — what was let through, and why
-│   ├── F2.5.1: Pass on a retry
-│   ├── F2.5.2: Accept with a reason
-│   └── F2.5.3: A reason for every pass
+│   ├── F2.5.1: A reason for every pass
+│   └── F2.5.2: A turn can end with a finding open
 ├── F2.6: Sweep on request — a scope in the user's own words
 ├── F2.7: Time limit — a hook run takes at most 30 seconds
 ├── F2.8: Self-waivers shown — a loosened bar never goes unseen
@@ -39,11 +38,11 @@ A Bash call that isn't a commit costs about 13 ms, or about 60 ms when the comma
 
 ## F2.2: Turn-end check
 
-When Claude stops, broom checks the files the turn changed: files Claude edited, and files changed or committed since the prompt by any means. It blocks the turn's end once.
+When Claude stops, broom checks the files the turn changed: files Claude edited, and files changed or committed since the prompt by any means. It blocks the turn's end once, and stopping again ends the turn with what is left still open.
 
 It applies with `check_on` at `stop`, the default. It waits while background work runs, up to half an hour. A turn in plan mode is not checked. An idle turn end costs one Python start, 30 to 45 ms measured on macOS.
 
-A hint stops the turn here too, once. Stopping again without a new edit ends the turn.
+A hint stops the turn here too, once.
 
 - **Design**: [6. A false positive costs one round](../DESIGNS.md#6-a-false-positive-costs-one-round)
 - **How it works**: [Turn end](../specs/turn-end.md)
@@ -84,38 +83,32 @@ It never replaces another tool's hook and prints the line to add to it instead. 
 
 ### F2.4.1: Offered at setup
 
-`/broom:setup` offers git's hook with the missing tools, in the same question. `broom doctor` says when a repo has none.
+`broom doctor` lists git's hook as a gap in a repo with code that has none, and `/broom:setup` offers it with the missing tools, in the same question. A user who declined once is not asked in the next repo.
 
 ---
 
 ## F2.5: Known issues
 
-A finding broom let through is recorded as known and not raised again for 30 days. `broom known` lists and clears them.
+A finding Claude accepted with a reason is known and not raised again for 30 days. `broom known` lists and clears them.
 
 - **Design**: [6. A false positive costs one round](../DESIGNS.md#6-a-false-positive-costs-one-round)
 - **Commands**: [broom known](../CLI.md#broom-known)
 - **How it works**: [What counts](../specs/what-counts.md)
-- **Why**: [003: A lint result passes on a retry and a type error doesn't](../specs/decisions/003-retry-and-accept.md)
+- **Why**: [003: Every finding passes fixed or accepted with a reason](../specs/decisions/003-reason-for-every-pass.md)
 
 ---
 
-### F2.5.1: Pass on a retry
+### F2.5.1: A reason for every pass
 
-Committing the same lint result again passes. The block message tells Claude to say that a finding is pre-existing or a false positive and to run the same commit again.
+A blocked finding passes fixed, or after `broom known --accept "<why>"`, which puts the reason on record. Running the same commit again blocks again. A finding that is wrong costs one command and one sentence.
 
----
-
-### F2.5.2: Accept with a reason
-
-A type error, a compile error and a smell past the hard limit don't pass on a retry. They pass fixed, or after `broom known --accept "<why>"`, which puts the reason on record. `BROOM_NO_ACCEPT=1` turns accepting off, and the block message then stops offering it.
+`BROOM_NO_ACCEPT=1` turns accepting off, and the block message then stops offering it.
 
 ---
 
-### F2.5.3: A reason for every pass
+### F2.5.2: A turn can end with a finding open
 
-Every finding broom lets through carries a reason. A lint finding passes after Claude says why, in one command, where today the same commit run twice is enough. The reason is kept with the known issue and shown in the turn's summary.
-
-It replaces F2.5.1 once it is built. A false positive still costs one round.
+Stopping again without a new edit ends the turn, since broom never traps one. Nothing becomes known that way: what is left stays open, shows in the turn's summary and still stops the next commit of that file.
 
 ---
 

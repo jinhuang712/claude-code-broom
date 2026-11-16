@@ -92,13 +92,13 @@ A check that can't run isn't Claude's mistake. The cost is that a missing tool l
 
 ## 6. A false positive costs one round
 
-A linter can be wrong, and an issue can predate the change. The same lint result never blocks twice. A type error or a smell past the hard limit passes fixed, or accepted with a reason that stays on record. The cost is that a real lint finding can pass on a second try.
+A linter can be wrong, and an issue can predate the change. Every finding passes fixed, or accepted with one command and a reason that stays on record. A turn's end never blocks twice without a new edit. The cost is one more step for a finding that was wrong, and a turn that can end with a finding still open.
 
 **Ask**: What does Claude do when the finding is wrong, and how many rounds does that take?
 
 - **Stance**: [Never in the way](PHILOSOPHY.md#when-may-a-check-interrupt)
 - **Decisions**:
-  - [003: A lint result passes on a retry and a type error doesn't](specs/decisions/003-retry-and-accept.md)
+  - [003: Every finding passes fixed or accepted with a reason](specs/decisions/003-reason-for-every-pass.md)
   - [016: A smell past the hard limit blocks like a type error](specs/decisions/016-severe-smells.md)
 - **How it works**:
   - [Commit check](specs/commit-check.md)

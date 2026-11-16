@@ -14,13 +14,12 @@
   没人用的代码等会被提示。没被改坏的旧代码不会被提起。
 - **看见**：为 Go、TS/JS、Rust、Python、Swift、CSS（含 SCSS、Less）提供语言服务器，Claude 边改边看到诊断。
 
-它用你项目自己的工具和配置，只看改动的部分，同样的 lint 结果不会拦第二次。
-类型错误要么修好，要么带着记录在案的理由接受。
+它用你项目自己的工具和配置，只看改动的部分。
+被拦下的问题要么修好，要么带着记录在案的理由接受。
 
 ```text
-[broom] Commit blocked: 2 issue(s) in the files being committed, 1 of them type or compile errors, which don't
-pass on a retry. Fix them and commit again. If they predate this change or are false positives, run
-`broom known --accept "<why>"`, then commit again.
+[broom] Commit blocked: 2 issue(s) in the files being committed. Fix them and commit again. If one predates this
+change or is a false positive, run `broom known --accept "<why>"`, then commit again.
 
 oxlint (~/code/app):
   src/api/client.ts:42:5  typescript(no-floating-promises)  Promises must be awaited

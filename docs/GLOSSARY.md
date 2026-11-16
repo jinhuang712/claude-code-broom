@@ -16,8 +16,7 @@ Each term has its meaning, the words that lost to it and its name in the code wh
 | Hint | a finding Claude is told about without a block at commit | — | `level == "hint"` |
 | Block | a finding that stops the commit or the turn's end | denial | `level == "block"` |
 | Severe smell | a smell past its hard limit | — | `Issue.severe` |
-| Sticky finding | a type error or a severe smell, which never passes on a retry alone | — | `sticky` |
-| Known issue | a finding broom let through and no longer raises | baseline · accepted issue | `baseline.json` |
+| Known issue | a finding accepted with a reason, which broom no longer raises | baseline · accepted issue | `baseline.json` |
 | Accept | to record a blocked result as known with a reason | — | `broom known --accept` |
 | Base | the revision a change is measured against | — | `base` |
 | Scratch copy | a temporary copy of the changed files where a tool runs under broom's config | scratch tree | `measure` |
@@ -30,5 +29,6 @@ Each term has its meaning, the words that lost to it and its name in the code wh
 | Session scan | the whole-repo smell scan at session start | — | `session-scan` |
 | Ledger | the record of what broom did with each finding | log | `ledger.jsonl` |
 | Fix | a blocked finding that is gone from a later check that covered it | — | `fix` |
-| Pass | a finding that was let through, with how | waiver | `pass` |
+| Pass | a finding that was let through, with how | — | `pass` |
+| Self-waiver | a change that loosens the bar: a looser `.broom.json`, a new suppression or a `--no-verify` commit | waiver | `waiver` |
 | Turn summary | the one line the user sees when a turn let something through | — | `through_line` |

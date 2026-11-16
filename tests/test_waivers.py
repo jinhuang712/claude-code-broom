@@ -142,6 +142,16 @@ class ConfigTest(LedgerCase):
         self.assertEqual(self.denied(self.commit(r, "git commit -m y")), "")
         self.assertEqual(len(lines("waiver")), 1, "turning a smell back on is no waiver")
 
+    def test_a_finding_that_a_looser_config_hides_is_not_fixed(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        self.huge(r)
+        self.assertTrue(self.denied(self.commit(r, "git commit -m x")))
+        (r / ".broom.json").write_text('{"smells_off": ["dead_code", "function_lines"]}')
+        self.sh(r, "git", "add", "-A")
+        self.assertEqual(self.denied(self.commit(r, "git commit -m x")), "", "the smell is off now")
+        self.assertEqual([x["note"] for x in lines("waiver")], ["smells_off +function_lines"])
+        self.assertEqual(lines("fix"), [], "turned off, not fixed")
+
     def test_editing_the_config_is_noted_at_once_even_when_it_turns_the_check_off(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
         (r / ".broom.json").write_text('{"smells_off": ["dead_code"], "check_on": "off"}')

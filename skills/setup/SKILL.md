@@ -31,7 +31,8 @@ Summarize the gaps in plain words, then ask with AskUserQuestion, in one call, o
    project as devDependencies instead: `fix` (changes `package.json`, best when the team shares the setup); let
    me pick; skip. Offer the devDependency option only when `fix` and `fix_global` differ.
    `stylelint-config-recommended-scss` and `-less` stay devDependencies either way: stylelint only finds them in
-   the project.
+   the project. The list can also hold `broom install-hook`: it adds git's own pre-commit hook to this repo, so
+   commits made outside Claude Code are checked too. It is per repo, so offer it with the tools either way.
 2. **Turn on formatting where it's off?** Show the `configure` commands (`configure_global` if they picked the
    once-for-every-repo install): `broom init <dir>` adds default configs and never overwrites. Options: yes
    (recommended); yes, and reformat the whole repo now (a large diff); no. Configs live in the repo, so this is

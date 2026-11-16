@@ -14,6 +14,8 @@ Untracked files are left out: listing them walks the working tree, about 160 ms 
 
 The scan flags missing configs, collapsed to one fix at the repo root since configs are found by walking up. It flags plugins whose language servers claim the same files as broom's.
 
+In a repo with code it lists git's pre-commit hook as a gap until `broom install-hook` adds it. The gap is answered by kind like the others, so a user who declined once is not asked in the next repo. When another tool's hook is there, the item gives the line to add to it.
+
 ---
 
 ## At session start

@@ -38,11 +38,11 @@ The files are formatted, and what was staged in full is staged again. A partly s
 
 The files are linted and type-checked, their smells are measured, and the result is filtered to what counts. Findings deny the commit with a report of at most 40 lines, grouped by tool.
 
-Committing the same lint result again passes and records the findings as known. After three denials a lint result passes too. A type error or a severe smell doesn't pass on a retry: it passes fixed, or after `broom known --accept "<why>"`, which records the blocked result as known with the reason. `BROOM_NO_ACCEPT` turns accepting off.
+A blocked finding passes fixed, or after `broom known --accept "<why>"`, which records the blocked result as known with the reason. Running the same commit again blocks again. `BROOM_NO_ACCEPT` turns accepting off.
 
 A hint goes into the commit's context without a denial.
 
-- [003: A lint result passes on a retry and a type error doesn't](decisions/003-retry-and-accept.md)
+- [003: Every finding passes fixed or accepted with a reason](decisions/003-reason-for-every-pass.md)
 - [016: A smell past the hard limit blocks like a type error](decisions/016-severe-smells.md)
 
 ---

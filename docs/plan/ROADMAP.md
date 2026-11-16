@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP2: Nothing passes silently](#cp2-nothing-passes-silently). The ledger shipped in 0.18.2, and its first numbers come with use.
+**Current checkpoint**: [CP3: Claude knows how to fix](#cp3-claude-knows-how-to-fix). CP2 shipped in 0.19.0 and waits for its first numbers.
 
 ---
 
@@ -11,7 +11,7 @@ Roadmap
 ├── ✅ CP1: 0.18.1 reaches users — the hook limits and the docs set are released
 ├── 🟨 CP2: Nothing passes silently — every pass leaves a reason the user sees
 │   ├── 🟨 CP2.1: The ledger
-│   └── ⬜ CP2.2: Reasons and self-waivers
+│   └── 🟨 CP2.2: Reasons and self-waivers
 ├── ⬜ CP3: Claude knows how to fix — the bar before the work, the fix beside the finding
 │   ├── ⬜ CP3.1: Messages that say how to fix
 │   ├── ⬜ CP3.2: Limits told before the work
@@ -88,11 +88,13 @@ The three features shipped in 0.18.2 on 2026-11-17. The measures get their first
 
 ### CP2.2: Reasons and self-waivers
 
-**Status**: ⬜
+**Status**: 🟨
+
+The three features shipped in 0.19.0 on 2026-11-17. The two goals are not yet run as written.
 
 **Delivers** (3):
 
-- [F2.5.3: A reason for every pass](../features/F2-sweep.md#f253-a-reason-for-every-pass)
+- [F2.5.1: A reason for every pass](../features/F2-sweep.md#f251-a-reason-for-every-pass)
 - [F2.8: Self-waivers shown](../features/F2-sweep.md#f28-self-waivers-shown)
 - [F2.4.1: Offered at setup](../features/F2-sweep.md#f241-offered-at-setup)
 
@@ -288,8 +290,9 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 **Status**: ⬜
 
-**Delivers** (3):
+**Delivers** (4):
 
+- [I8: Two holes in the record](ISSUES.md#i8-two-holes-in-the-record)
 - [I2: Three paths call the same tools](ISSUES.md#i2-three-paths-call-the-same-tools)
 - [I5: Four rules sit on an alpha plugin API](ISSUES.md#i5-four-rules-sit-on-an-alpha-plugin-api)
 - [I6: The Bash parser guesses what git's hook knows](ISSUES.md#i6-the-bash-parser-guesses-what-gits-hook-knows)

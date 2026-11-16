@@ -35,9 +35,9 @@ A turn in plan mode is not checked.
 
 ## Blocking once
 
-Findings block the turn's end with the same report as a commit. A hint blocks here too, once, so Claude cleans up now.
+Findings block the turn's end with the same report as a commit. A hint blocks here too, once, so Claude cleans up now. The block is also kept as the repo's last blocked result, so `broom known --accept` serves a turn's end as it serves a commit.
 
-Stopping again without a new edit ends the turn and records what is left as known. Type errors and severe smells stay out of that record, so a commit still stops on them. After three blocks the check gives up and says how many findings are left.
+Stopping again without a new edit ends the turn. It records nothing as known: what is left stays open, is written to the record and shows in the turn's summary, and a commit still stops on it. After three blocks the check gives up in the same way.
 
 ---
 

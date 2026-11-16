@@ -6,6 +6,30 @@
 
 ---
 
+## 0.19.0 — 2026-11-17
+
+---
+
+### Sweep
+
+- A finding passes fixed, or accepted with a reason. Before, running the same commit again let a lint finding through, and stopping a turn twice recorded what was left as known, both without a reason. After, a blocked finding blocks again until it is fixed or `broom known --accept "<why>"` is run, at a commit and at a turn's end alike. Stopping again still ends the turn and leaves what is left open.
+- `broom known --accept` also accepts what the last blocked turn end showed, and then says `stop again`.
+
+---
+
+### Record
+
+- A change that loosens the bar is recorded and shown in the turn's line, never blocked: a `.broom.json` that turns a smell off, raises a limit or excludes a path, a new lint suppression, and a `git commit --no-verify`. `broom report` counts them by kind.
+- A finding that a looser `.broom.json` hides doesn't count as fixed.
+
+---
+
+### Setup
+
+- `broom doctor` lists git's pre-commit hook as a gap in a repo with code that has none, with `broom install-hook` as its fix, so `/broom:setup` offers it with the missing tools. `broom doctor` exits 1 for such a repo until the hook is added or the gap is dismissed.
+
+---
+
 ## 0.18.2 — 2026-11-17
 
 ---

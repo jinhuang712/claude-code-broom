@@ -16,11 +16,11 @@ Files the repo's `.broom.json` excludes never count. Files outside any git repo 
 
 ## Known issues
 
-A finding Claude has seen and left is recorded as known and not raised again. Its key is the file, the tool, the rule, the message and the text of the line, so it stays known when lines above it move.
+A finding Claude accepted with a reason is recorded as known and not raised again. Its key is the file, the tool, the rule, the message and the text of the line, so it stays known when lines above it move.
 
 A known issue expires after 30 days. `broom known` lists and clears them, with the reason beside each accepted one.
 
-- [003: A lint result passes on a retry and a type error doesn't](decisions/003-retry-and-accept.md)
+- [003: Every finding passes fixed or accepted with a reason](decisions/003-reason-for-every-pass.md)
 
 ---
 

@@ -89,7 +89,7 @@ A finding is fixed, or it leaves a reason the user can see.
 
 **Want**: nothing passes silently.
 
-**Checks**: [F9.1: Ledger](../features/F9-record.md#f91-ledger) · [F9.2: Turn summary](../features/F9-record.md#f92-turn-summary) · [F2.5.3: A reason for every pass](../features/F2-sweep.md#f253-a-reason-for-every-pass)
+**Checks**: [F9.1: Ledger](../features/F9-record.md#f91-ledger) · [F9.2: Turn summary](../features/F9-record.md#f92-turn-summary) · [F2.5.1: A reason for every pass](../features/F2-sweep.md#f251-a-reason-for-every-pass)
 
 **Acceptance**: A test lets a finding through by each way broom has. Each way leaves a ledger line with a reason, and the turn's summary names it.
 
@@ -271,9 +271,9 @@ An edit or a turn's end with nothing to check costs one Python start.
 
 **Checks**: [6. A false positive costs one round](../DESIGNS.md#6-a-false-positive-costs-one-round)
 
-**Condition**: The same lint result never blocks twice.
+**Condition**: A finding that is wrong passes with one command, and a turn's end never blocks twice without a new edit.
 
-**How**: A test commits the same lint finding twice and expects the second to pass.
+**How**: A test accepts a blocked finding with a reason and commits, and another stops twice and expects the turn to end.
 
 **Status**: ⬜ No test was matched to it in the docs pass of 2026-11-17.
 

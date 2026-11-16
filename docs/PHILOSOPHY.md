@@ -32,7 +32,7 @@ Lint findings count on the lines that changed, and by default so does formatting
 
 **Never in the way.**
 
-Checks run at natural checkpoints, not on every edit. Hooks that have nothing to do exit in milliseconds. A missing tool never blocks a commit, and the same lint result never blocks twice. Type errors don't pass on a retry alone: Claude fixes them, or accepts them with a reason that stays on record.
+Checks run at natural checkpoints, not on every edit. Hooks that have nothing to do exit in milliseconds. A missing tool never blocks a commit. A finding that is wrong costs one command: Claude accepts it with a reason that stays on record. A turn's end never blocks twice without a new edit.
 
 ---
 

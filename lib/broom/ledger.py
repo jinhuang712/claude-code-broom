@@ -47,6 +47,7 @@ class Hook:
     """Which hook this process runs for. `broom hook <event>` sets it once, and every line says where it came from."""
 
     where = ""
+    loosened = False  # this run saw a looser .broom.json: what it hides is not fixed
 
 
 HOOK = Hook()
@@ -56,6 +57,7 @@ def begin(event: str) -> None:
     """Set the hook (`where`) that every line this process writes records. `broom hook <event>` calls it once, before
     the hook's logic runs."""
     HOOK.where = event
+    HOOK.loosened = False
 
 
 # ---------------------------------------------------------------- lines
@@ -187,6 +189,8 @@ def fixes(prior: Dict[str, dict], now: Dict[str, dict], known: Set[str], files: 
     run, a finding whose key changed because its message or its line did and that is still there under the new key
     (a function cut from 120 lines to 110). That last case is told by the group: each finding of a file, tool and
     rule that is new now takes the place of one that is gone."""
+    if HOOK.loosened:
+        return  # a finding the looser config hides is gone and not fixed: every one stays open
     covered = {f.resolve() for f in files}
     skipped = [n for n in notes if n.startswith(SKIP_PREFIXES)]
     gone = {k: e for k, e in prior.items()
@@ -237,6 +241,7 @@ def waived(found: List[dict], turn: Optional[Path]) -> None:
     one is written."""
     if not found:
         return
+    HOOK.loosened = HOOK.loosened or any(w["kind"] == "config" for w in found)
     seen = {r.get("key") for r in read(turn / WAIVED)} if turn is not None else set()
     fresh = {w["key"]: w for w in found if w["key"] not in seen}.values()
     rows = [line("waiver", w["repo"], kind=w["kind"], file=w["file"], note=w["note"], key=w["key"]) for w in fresh]

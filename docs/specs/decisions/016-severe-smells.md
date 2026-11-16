@@ -12,7 +12,7 @@ A hint can be left unfixed. Some sizes are past what a hint should carry.
 
 ## The choice
 
-Past the hard limit a smell is severe: it never passes on a retry alone, only fixed or accepted with a reason.
+Past the hard limit a smell is severe: it blocks the commit, where a smell past the soft limit only hints there.
 
 ---
 

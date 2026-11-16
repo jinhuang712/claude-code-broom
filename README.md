@@ -15,7 +15,7 @@ broom holds Claude's changes to the project's own formatter, linter and type che
 - 👃 **Smells**: A change that makes a function, a file or a type too long, nests too deep or repeats code gets a hint past the soft limit and a block past the hard one.
 - 👀 **Sees**: Language servers for Go, TS/JS, Rust, Python, Swift and CSS give Claude diagnostics as it edits.
 
-Nothing is installed without the user's yes. The same lint result never blocks twice, and a type error passes fixed or accepted with a reason on record.
+Nothing is installed without the user's yes. A finding passes fixed, or accepted with a reason on record.
 
 ---
 
@@ -37,9 +37,8 @@ Start a session in a repo. When a tool or a config is missing, Claude offers `/b
 Then let Claude work. When it commits a change that breaks a rule, the commit is held back with a report:
 
 ```text
-[broom] Commit blocked: 2 issue(s) in the files being committed, 1 of them type or compile errors, which don't
-pass on a retry. Fix them and commit again. If they predate this change or are false positives, run
-`broom known --accept "<why>"`, then commit again.
+[broom] Commit blocked: 2 issue(s) in the files being committed. Fix them and commit again. If one predates this
+change or is a false positive, run `broom known --accept "<why>"`, then commit again.
 
 oxlint (~/code/app):
   src/api/client.ts:42:5  typescript(no-floating-promises)  Promises must be awaited
