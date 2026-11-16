@@ -53,6 +53,7 @@ def code_changes(root: Path) -> Dict[str, List[int]]:
 
 
 def snapshot(d: Path, root: Path) -> None:
+    """Record the repo's HEAD and changed code files in the turn's snapshot in `d`, to compare at the turn's end."""
     data = load_json(d / SNAPSHOT, {})
     data[str(root)] = {"head": (git(["rev-parse", "HEAD"], root) or "").strip(), "files": code_changes(root)}
     save_json(d / SNAPSHOT, data)

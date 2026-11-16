@@ -17,6 +17,7 @@ from .toolchain import DIALECT_DEFAULTS, find_up, in_node_modules, pkg_scripts_m
 
 
 def check_oxlint(cfg_dir: Path, files: List[Path], stop: Path, *, defaults: bool, whole: bool = False) -> Findings:
+    """Run oxlint over `files`: broom's defaults when `defaults` is set, else the project's; no oxlint is a note."""
     exe = resolve_bin("oxlint", cfg_dir, stop)
     if not exe:
         return [], ["missing:oxlint (npm i -g oxlint oxlint-tsgolint)"]
@@ -47,6 +48,7 @@ ESLINT_FATAL = 2  # the exit code when ESLint stops on an option or a config it 
 
 
 def check_eslint(cfg_dir: Path, files: List[Path], stop: Path, *, whole: bool = False) -> Findings:
+    """Run the project's own eslint over `files` from `cfg_dir`; a missing eslint, or a timeout, is only a note."""
     exe = resolve_bin("eslint", cfg_dir, stop, local_only=True)
     if not exe:
         return [], [f"missing:eslint in {cfg_dir} (install the project's dependencies)"]
@@ -68,6 +70,7 @@ def check_eslint(cfg_dir: Path, files: List[Path], stop: Path, *, whole: bool = 
 
 
 def check_biome(cfg_dir: Path, files: List[Path], stop: Path, *, whole: bool = False) -> Findings:
+    """Run the project's biome lint over `files` from `cfg_dir`; a missing biome, or a timeout, is only a note."""
     exe = resolve_bin("biome", cfg_dir, stop)
     if not exe:
         return [], [f"missing:biome in {cfg_dir} (install the project's dependencies)"]
@@ -111,6 +114,7 @@ def ts_projects(tsconfig: Path) -> List[Path]:
 
 
 def check_tsc(config: Path, stop: Path) -> Findings:
+    """Type-check the tsconfig project at `config` with tsc, without emitting; no tsc, or a timeout, is a note."""
     project = config.parent
     exe = resolve_bin("tsc", project, stop)
     if not exe:

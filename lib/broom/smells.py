@@ -63,6 +63,7 @@ class RepoLimits:
         self.measured = {k: (min(self.code[k][0], self.test[k][0]), self.code[k][1]) for k in self.code}
 
     def of(self, rel: str) -> Limits:
+        """The limits that apply to file `rel`: the test limits for a test file, else the code limits."""
         return self.test if TEST_FILE.search(rel) else self.code
 
 
@@ -83,6 +84,7 @@ def noise(r: Raw) -> bool:
 
 
 def compare_sizes(now: List[Raw], before: Optional[List[Raw]], lim: RepoLimits, repo: Path) -> List[Smell]:
+    """Smells for the sized rows `now` past their limit and new or worse than in `before`; None means a first run."""
     was = {(r.rel, r.metric, r.key): r.value for r in before or []}
     out = []
     for r in now:
@@ -107,6 +109,7 @@ GUESSED = {"commented_code": JS_EXTS | GO_EXTS, "swallowed_error": RS_EXTS}
 
 
 def presence_level(metric: str, rel: str) -> str:
+    """The level of a presence smell in file `rel`: a hint for a kind guessed by text, else its normal level."""
     return "hint" if Path(rel).suffix in GUESSED.get(metric, ()) else SMELL_PRESENCE[metric]
 
 
@@ -189,6 +192,7 @@ def base_texts(repo: Path, base: str, rels: List[str], was: Optional[Dict[str, s
 
 
 def generated(path: Path) -> bool:
+    """Whether `path` is generated: "DO NOT EDIT" or "@generated" in its first five lines; False if unreadable."""
     try:
         with path.open(errors="replace") as f:
             return bool(GENERATED.search("".join(f.readline() for _ in range(5))))

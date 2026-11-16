@@ -55,6 +55,7 @@ SWIFTFORMAT_CFG = ".swiftformat"  # SwiftFormat, Nick Lockwood's
 
 
 def lang_of(path: Path) -> Optional[str]:
+    """The language broom checks a file by, from its extension: go, js, rust, py, css or swift; None for any other."""
     ext = path.suffix.lower()
     if ext in GO_EXTS:
         return "go"
@@ -111,11 +112,13 @@ def boundary(path: Path) -> Path:
 
 
 def pkg_has_key(d: Path, key: str) -> bool:
+    """Whether `d` has a package.json with `key` among its top-level keys; False when there is no package.json."""
     pkg = d / "package.json"
     return pkg.is_file() and key in read_jsonc(pkg)
 
 
 def pkg_scripts_mention(d: Path, needle: str) -> bool:
+    """Whether a script in `d`'s package.json has `needle` in its command text; False when there is none."""
     pkg = d / "package.json"
     scripts = read_jsonc(pkg).get("scripts") if pkg.is_file() else None
     return isinstance(scripts, dict) and any(needle in str(v) for v in scripts.values())
@@ -242,6 +245,7 @@ def swift_linter(path: Path, stop: Path) -> Tuple[str, Path]:
 
 
 def ruff_configured(path: Path, stop: Path) -> bool:
+    """Whether ruff is set up for `path`: a ruff config up to `stop`, or a [tool.ruff] table in pyproject.toml."""
     if find_up(path.parent, RUFF_CFG, stop):
         return True
     py = find_up(path.parent, ["pyproject.toml"], stop)
@@ -252,6 +256,7 @@ def ruff_configured(path: Path, stop: Path) -> bool:
 
 
 def rust_edition(path: Path, stop: Path) -> str:
+    """The Rust edition of the crate `path` is in, from its Cargo.toml (or its workspace); 2021 if none."""
     cargo = find_up(path.parent, ["Cargo.toml"], stop)
     while cargo:
         try:

@@ -20,6 +20,7 @@ TIMEOUT = 120
 
 @dataclass
 class Clone:
+    """A duplicated block: where it is (`rel`, `line`), its copy (`other`, `other_line`), its size, and if it is new."""
     rel: str
     line: int
     other: str
@@ -30,6 +31,7 @@ class Clone:
 
 @dataclass
 class Unused:
+    """An unused symbol or file jscpd found: where it is (`rel`, `line`), and what it is, e.g. an export."""
     rel: str
     line: int
     what: str  # "export `name`", "symbol `name`", "import `name`", "this file", ...
@@ -75,6 +77,7 @@ def find_clones(repo: Path, base: Optional[str], min_lines: int, skip_dirs: List
 
 
 def find_unused(repo: Path, skip_dirs: List[str], notes: List[str]) -> List[Unused]:
+    """The dead code jscpd reports for the repo, as Unused rows; a jscpd that can't run adds a note and gives none."""
     found = (run_jscpd(repo, ["--dead-code"], "basta-report.json", skip_dirs, notes) or {}).get("findings", [])
     out = []
     for f in found:
