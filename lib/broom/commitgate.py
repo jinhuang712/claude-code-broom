@@ -119,6 +119,8 @@ def block_head(count: int, hard: int, repo: Path, cwd: Path) -> str:
 
 
 def entries_of(issues: Iterable[Issue]) -> Dict[str, dict]:
+    """Each finding in `issues` by its key (gate.issue_key), with its entry (gate.issue_entry): the form the ledger and
+    the gate's stored `blocked` state take."""
     return {issue_key(i): issue_entry(i) for i in issues}
 
 

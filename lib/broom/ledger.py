@@ -49,6 +49,8 @@ HOOK = Hook()
 
 
 def begin(event: str) -> None:
+    """Set the hook (`where`) that every line this process writes records. `broom hook <event>` calls it once, before
+    the hook's logic runs."""
     HOOK.where = event
 
 
@@ -73,6 +75,8 @@ def repo_of(path: Path) -> str:
 
 
 def line(event: str, repo: str, **fields: object) -> dict:
+    """One ledger row for `event` in `repo`, stamped with the time and the hook; a field that is None or empty is left
+    out."""
     row: dict = {"t": round(time.time(), 3), "repo": repo, "event": event, "where": HOOK.where}
     row.update({k: v for k, v in fields.items() if v not in (None, "")})
     return row
@@ -115,6 +119,8 @@ def trim() -> None:
 
 
 def newest_within(rows: List[str], limit: int) -> List[str]:
+    """The newest raw lines of `rows` that fit in `limit` bytes (newlines included), in their order; the older ones are
+    dropped."""
     size, newest = 0, []
     for raw in reversed(rows):
         size += len(raw.encode()) + 1
@@ -125,6 +131,8 @@ def newest_within(rows: List[str], limit: int) -> List[str]:
 
 
 def line_time(raw: str) -> float:
+    """The `t` (epoch seconds) of one raw ledger line, or 0 when it doesn't parse or has no number there, so `trim`
+    drops it."""
     try:
         t = json.loads(raw).get("t", 0)
         return t if isinstance(t, (int, float)) else 0
@@ -151,10 +159,13 @@ def write(rows: List[dict]) -> None:
 
 
 def blocked(entries: Dict[str, dict]) -> None:
+    """Log a `block` line for each finding in `entries` (key to entry): each one stopped a commit or a turn's end."""
     write([finding("block", k, e) for k, e in entries.items()])
 
 
 def hinted(entries: Dict[str, dict]) -> None:
+    """Log a `hint` line for each finding in `entries` (key to entry): each was given to Claude as context, not as a
+    block."""
     write([finding("hint", k, e) for k, e in entries.items()])
 
 
@@ -188,6 +199,8 @@ def fixes(prior: Dict[str, dict], now: Dict[str, dict], known: Set[str], files: 
 
 
 def group(entry: dict) -> Tuple[object, object, object]:
+    """The (file, tool, rule) of a finding. `fixes` counts a vanished finding as replaced, not fixed, when a new one
+    shares its group."""
     return entry.get("file"), entry.get("tool"), entry.get("rule")
 
 
@@ -225,6 +238,8 @@ TOOLS_OF_RULE = {"duplicate_lines": ("jscpd",), "dead_code": ("jscpd",), "folder
 
 
 def note_tool(note: str) -> str:
+    """The tool a `timeout:` or `missing:` note is about: its first word after the prefix, or dependency-cruiser when
+    the note names it."""
     text = note.split(":", 1)[1]
     first = re.split(r"[\s:]", text)[0]
     return "dependency-cruiser" if first == "the" and "dependency-cruiser" in text else first
@@ -252,6 +267,8 @@ def covers(note: str, entry: dict) -> bool:
 
 
 def note_through(turn: Path, rows: List[dict]) -> None:
+    """Append the pass `rows` to the turn's `through.jsonl`, which `through_line` reads at the turn's end. A turn
+    directory that can't be written is skipped."""
     text = "".join(json.dumps({"rule": r.get("rule", "?"), "how": r.get("how", "?"), "why": r.get("why", "")}) + "\n"
                    for r in rows)
     try:
@@ -262,6 +279,8 @@ def note_through(turn: Path, rows: List[dict]) -> None:
 
 
 def forget_through(turn: Path) -> None:
+    """Delete the turn's `through.jsonl`, so that what the turn before let through, never shown, isn't reported in this
+    one. A missing file is fine."""
     try:
         (turn / THROUGH).unlink()
     except OSError:

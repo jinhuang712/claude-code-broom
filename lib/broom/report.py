@@ -38,6 +38,8 @@ def scope(roots: List[Path]) -> Tuple[Set[str], Dict[str, List[str]]]:
 
 
 def wanted(row: dict, repos: Optional[Set[str]], narrow: Dict[str, List[str]]) -> bool:
+    """Whether a ledger row is in the report's scope: its repo is in `repos` (any repo when None) and, where `narrow`
+    limits that repo to paths, its file is under one of them. A row with no file is always kept."""
     if repos is not None and row.get("repo") not in repos:
         return False
     rels, file = narrow.get(str(row.get("repo"))), str(row.get("file") or "")
@@ -45,6 +47,8 @@ def wanted(row: dict, repos: Optional[Set[str]], narrow: Dict[str, List[str]]) -
 
 
 def window(days: int, repos: Optional[Set[str]], narrow: Dict[str, List[str]]) -> List[dict]:
+    """The ledger rows of the last `days` days that `wanted` keeps, oldest first; a row without a numeric time is
+    skipped."""
     cutoff = time.time() - days * 86400
     rows = [r for r in ledger.read(ledger.LEDGER) if isinstance(r.get("t"), (int, float)) and r["t"] >= cutoff]
     return sorted((r for r in rows if wanted(r, repos, narrow)), key=lambda r: r["t"])
@@ -63,10 +67,14 @@ def ended(rows: Iterable[dict]) -> Dict[Tuple[str, str], dict]:
 
 
 def rate(fixed: int, through: int) -> Optional[float]:
+    """Fixed over fixed plus let through, to three decimals; None when neither happened, which `percent` shows as a
+    dash."""
     return round(fixed / (fixed + through), 3) if fixed + through else None
 
 
 def tally(found: Iterable[dict]) -> dict:
+    """Counts of the findings by how they ended: `blocked` (all of them), `fixed`, `let_through`, `open`, `how` (the
+    let-through ones by `how`) and `fix_rate`."""
     counts = Counter(f["outcome"] for f in found)
     how = Counter(f["how"] or "?" for f in found if f["outcome"] == "let through")
     fixed, through = counts["fixed"], counts["let through"]
@@ -75,6 +83,8 @@ def tally(found: Iterable[dict]) -> dict:
 
 
 def by_rule(found: Dict[Tuple[str, str], dict]) -> List[dict]:
+    """The `tally` of each (rule, tool) pair among the findings, most blocked first and then by rule name. `found` is
+    what `ended` returns."""
     groups: Dict[Tuple[str, str], List[dict]] = defaultdict(list)
     for f in found.values():
         groups[(f["rule"], f["tool"])].append(f)
@@ -83,6 +93,7 @@ def by_rule(found: Dict[Tuple[str, str], dict]) -> List[dict]:
 
 
 def skips(rows: List[dict]) -> Dict[str, Dict[str, int]]:
+    """How many `skip` rows each tool had, per kind of note (`timeout` or `missing`), with the tools sorted by name."""
     out: Dict[str, Counter] = defaultdict(Counter)
     for r in rows:
         if r.get("event") == "skip":
@@ -91,6 +102,8 @@ def skips(rows: List[dict]) -> Dict[str, Dict[str, int]]:
 
 
 def seconds(rows: List[dict]) -> Dict[str, dict]:
+    """Per check, from the `time` rows: the number of runs, the median and the longest seconds; the checks sorted by
+    name."""
     runs: Dict[str, List[float]] = defaultdict(list)
     for r in rows:
         if r.get("event") == "time" and isinstance(r.get("seconds"), (int, float)):
@@ -113,16 +126,21 @@ def report(roots: List[Path], days: int) -> dict:
 
 
 def percent(value: Optional[float]) -> str:
+    """A fix rate as a whole percentage such as `75%`, or `-` when there is none."""
     return "-" if value is None else f"{round(value * 100)}%"
 
 
 def through_text(t: dict) -> str:
+    """The let-through cell of the rule table: the count with its breakdown by `how`, or `-` when nothing got
+    through."""
     if not t["let_through"]:
         return "-"
     return f"{t['let_through']} (" + ", ".join(f"{how} {n}" for how, n in sorted(t["how"].items())) + ")"
 
 
 def rule_rows(rules: List[dict]) -> List[str]:
+    """The rule table as lines of aligned text: a header, then one row per rule, with the number columns
+    right-aligned."""
     head = ("rule", "tool", "blocked", "fixed", "let through", "open", "fix rate")
     table = [head] + [(x["rule"], x["tool"], str(x["blocked"]), str(x["fixed"]), through_text(x), str(x["open"]),
                        percent(x["fix_rate"])) for x in rules]
@@ -132,6 +150,8 @@ def rule_rows(rules: List[dict]) -> List[str]:
 
 
 def render(data: dict) -> str:
+    """The text `broom report` prints for `data` (from `report`): a summary, then each section that has something to
+    show. With nothing recorded it is one line."""
     where = "every repo" if data["repos"] == "all" else ", ".join(display(Path(r)) for r in data["repos"])
     if not (data["blocked"] or data["skips"] or data["seconds"] or data["errors"]):
         return f"broom: nothing recorded for {where} in the last {data['days']} days"

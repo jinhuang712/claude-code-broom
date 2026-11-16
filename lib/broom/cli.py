@@ -184,6 +184,8 @@ def cmd_smells(args: argparse.Namespace) -> int:
 
 
 def cmd_report(args: argparse.Namespace) -> int:
+    """Print the `broom report` for the repos the paths are in (this repo without paths, every repo with `--all`) over
+    `--days`, as JSON with `--json`. Returns 0, or exits with an error outside a git repo unless `--all` is given."""
     from .report import render, report
 
     roots = [] if args.all else [Path(p).resolve() for p in args.paths] or [repo_or_exit()]
