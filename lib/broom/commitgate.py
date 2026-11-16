@@ -27,6 +27,7 @@ from .gate import (
     save_commits, select, setup_hint, verdict,
 )
 from .gitcmd import CommitPlan, GitOp, parse, parse_commit, plan_commit, staged
+from .githook import installed
 from .gitutil import ChangedLines, git, git_root
 from .passed import record, staged_blobs, unpassed, worktree_blobs
 from .smells import Smell, gate_smells, hint_text
@@ -218,8 +219,8 @@ def hook_commit(data: dict) -> None:
     for plan in plans:
         if setting("format_on", plan.repo) != "off":
             context += format_commit(plan)
-        if setting("check_on", plan.repo) == "off":
-            continue
+        if setting("check_on", plan.repo) == "off" or installed(plan.repo):
+            continue  # with git's hook here, the check is its: it sees what the commit really takes
         denial, more = gate_files(plan.repo, list(plan.files), sd, cwd, state)
         context += more
         denials += [denial] if denial else []

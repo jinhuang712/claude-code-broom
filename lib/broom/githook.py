@@ -31,11 +31,24 @@ exit 0
 """
 
 
+def hook_path(repo: Path) -> Path:
+    """Where git looks for `repo`'s pre-commit hook (core.hooksPath included)."""
+    return repo / (git(["rev-parse", "--git-path", "hooks"], repo) or ".git/hooks").strip() / "pre-commit"
+
+
+def installed(repo: Path) -> bool:
+    """Whether `repo` has broom's own git pre-commit hook, which checks what a commit really takes."""
+    try:
+        return MARK in hook_path(repo).read_text(errors="replace")
+    except OSError:
+        return False
+
+
 def install(repo: Path) -> Tuple[bool, Path]:
     """Write the hook where git looks for hooks (core.hooksPath included), over broom's own but never over
     another tool's. Whether it was written, and where it is or would be."""
-    hooks = repo / (git(["rev-parse", "--git-path", "hooks"], repo) or ".git/hooks").strip()
-    path = hooks / "pre-commit"
+    path = hook_path(repo)
+    hooks = path.parent
     if path.exists() and MARK not in path.read_text(errors="replace"):
         return False, path
     hooks.mkdir(parents=True, exist_ok=True)

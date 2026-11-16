@@ -53,6 +53,18 @@ class GateTest(BroomCase):
         out = self.git_commit(r)
         self.assertEqual(out.returncode, 0, out.stderr)
 
+    def test_with_gits_hook_installed_the_check_is_gits_and_sees_what_the_commit_really_takes(self) -> None:
+        r = self.repo({"a.py": "x = 1\n", "b.py": "y = 1\n"})
+        (r / "a.py").write_text(py_function("huge", 120))
+        self.assertIn("huge is 120 lines long", self.denied(self.commit(r, "git add a.py && git commit -m x")),
+                      "without git's hook, the command is read and the files it will stage are guessed")
+        self.install(r)
+        self.assertEqual(self.commit(r, "git add a.py && git commit -m x"), {}, "the hook no longer guesses")
+        self.sh(r, "git", "add", "a.py")
+        out = self.git_commit(r)
+        self.assertEqual(out.returncode, 1, "git's hook, on the staged files, is what stops it")
+        self.assertIn("huge is 120 lines long", out.stderr)
+
     def test_content_that_passed_isnt_checked_again(self) -> None:
         quiet = '{"smells_off": ["dead_code"]'
         r = self.repo({"a.py": "x = 1\n", ".broom.json": quiet + "}"})
