@@ -35,10 +35,12 @@ const boolParams = {
   },
 };
 
+const DEFAULT_MAX_CLASS_LINES = 250;
+
 const classLines = {
   meta: { type: "suggestion", schema: [{ type: "object", properties: { max: { type: "integer" } } }] },
   create(context) {
-    const max = context.options[0]?.max ?? 250;
+    const max = context.options[0]?.max ?? DEFAULT_MAX_CLASS_LINES;
     const check = (node) => {
       const lines = node.loc.end.line - node.loc.start.line + 1;
       if (lines <= max) return;
@@ -76,10 +78,11 @@ const moduleState = {
 // merely mentions a call doesn't compile, and a `Note: foo()` that does is skipped as a label.
 const CODE_MARKS = /[;{}=()]/;
 const LABEL = /^\s*[A-Za-z_$][\w$]*\s*:\s/;
+const MIN_CODE_LENGTH = 3; // a shorter body is too little to be code
 
 function looksLikeCode(text) {
   const body = text.trim();
-  if (body.length < 3 || !CODE_MARKS.test(body) || LABEL.test(body)) return false;
+  if (body.length < MIN_CODE_LENGTH || !CODE_MARKS.test(body) || LABEL.test(body)) return false;
   try {
     new vm.Script(`(function () {\n${body}\n})`); // compiled, never run
     return true;
