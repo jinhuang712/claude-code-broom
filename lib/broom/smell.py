@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Iterable, List, Optional, Tuple
 
 from .clones import Clone
-from .config import DEAD_CODE, SMELL_PRESENCE
+from .config import DEAD_CODE, NOTED, SMELL_PRESENCE
 from .findings import Issue
 
 DESCRIBE = {
@@ -41,8 +41,10 @@ LABELS = {
     "folder_cycle": "import(s) that close a cycle between folders",
     "skipped_test": "skipped or disabled test(s)",
     "untested_file": "new code file(s) with no test file beside it by name",
+    "deprecated_api": "call(s) to a deprecated API",
 }
 LINES_SHOWN = 5
+NOTE_CHARS = 240  # how much of a finding's own words a NOTED smell's text keeps
 
 
 @dataclass
@@ -68,6 +70,7 @@ class Smell:
             return DESCRIBE[DEAD_CODE].format(key=self.key, value=self.value)
         if self.metric in SMELL_PRESENCE:
             where = ", ".join(map(str, self.added[:LINES_SHOWN])) + (" ..." if len(self.added) > LINES_SHOWN else "")
+            where += self.note()
             if self.was is None:
                 return f"{self.value} {LABELS[self.metric]} at line(s) {where}"
             return (f"{self.value - self.was} more {LABELS[self.metric]} ({self.value} in the file, was {self.was}); "
@@ -80,6 +83,12 @@ class Smell:
         if self.touched:
             how += ": you touched it, clean it up in this change"
         return f"{what} ({bar}; {how})"
+
+    def note(self) -> str:
+        """What the tool said of a NOTED smell's first finding, in brackets and cut at NOTE_CHARS; else nothing."""
+        if self.metric not in NOTED:
+            return ""
+        return f" ({self.key[:NOTE_CHARS]}{'...' if len(self.key) > NOTE_CHARS else ''})"
 
     def grew_past_hard(self) -> bool:
         """A sized smell that was already past its hard limit at the base and grew: it can't be accepted with a

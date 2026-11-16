@@ -54,7 +54,10 @@ SMELL_PRESENCE = {
     "folder_cycle": "hint",  # folders that do: the layers of the code going the wrong way
     "skipped_test": "hint",  # a test marked skipped or disabled, with no condition behind it
     "untested_file": "hint",  # a code file of 30 lines or more a change adds, with no test file beside it by name
+    "deprecated_api": "hint",  # a call to something its author marked deprecated
 }
+# Presence smells whose text carries what the tool said of the first finding: a deprecation note names what replaced it.
+NOTED = ("deprecated_api",)
 PLUGIN_ID = "broom@claude-code-broom"
 
 

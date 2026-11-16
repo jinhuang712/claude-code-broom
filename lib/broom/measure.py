@@ -12,7 +12,7 @@ import shutil
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
-from .config import SMELL_PRESENCE
+from .config import NOTED, SMELL_PRESENCE
 from .gitutil import run
 from .jsmeasure import measure_js
 from .reading import TOOL_TIMEOUT, Limits, Raw, Reader, match, number, quoted_name
@@ -95,7 +95,31 @@ RUFF_METRICS = {
     "BLE001": "broad_catch", "E722": "broad_catch",
     **{f"D10{n}": "missing_docs" for n in range(4)},  # module, class, method, function: public names only
     **{f"ARG00{n}": "unused_params" for n in range(1, 6)}, **{f"FIX00{n}": "todo" for n in range(1, 5)},
+    # What the standard library and the common libraries have deprecated, by name: unittest aliases, `typing` aliases,
+    # `mock`, `logging.warn`, numpy's, pandas' and pytest's; not typing's aliases, see typing_alias. ruff can't see a
+    # project's own @deprecated.
+    **{code: "deprecated_api" for code in ("UP005", "UP019", "UP021", "UP023", "UP026", "UP035", "G010", "PT020",
+                                          "NPY001", "NPY003", "NPY201", "PD007")},
 }
+
+
+TYPING_IMPORT = re.compile(r"\s*from\s+typing(_extensions)?\s+import\b")
+
+
+def typing_alias(r: Reader, d: dict) -> bool:
+    """Whether a ruff finding is UP035 on a `from typing import` line: the aliases deprecated since Python 3.9 (List,
+    Dict, Callable, ...). No version has dropped them, and every codebase older than that holds them, so counting
+    them would bury the calls that are going."""
+    row = int((d.get("location") or {}).get("row") or 0)
+    return d.get("code") == "UP035" and bool(TYPING_IMPORT.match(r.line_text(r.rel(d.get("filename", "")), row)))
+
+
+def ruff_name(metric: str, msg: str) -> Optional[str]:
+    """What names a ruff finding across versions: the function of a complexity, what a deprecation says; else None,
+    and the line's text does."""
+    if metric == "complexity":
+        return quoted_name(msg)
+    return msg if metric in NOTED else None
 
 
 def measure_python(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None:
@@ -115,8 +139,8 @@ def measure_python(r: Reader, rels: List[str], lim: Limits, _start: Path) -> Non
     for d in r.json(rc, out, []):
         metric = RUFF_METRICS.get(d.get("code") or "")
         msg = d.get("message", "")
-        if metric:
-            name = quoted_name(msg) if metric == "complexity" else None
+        if metric and not typing_alias(r, d):
+            name = ruff_name(metric, msg)
             value = 1 if metric in SMELL_PRESENCE else number(r"\((\d+) > \d+\)", msg)
             r.add(d.get("filename", ""), int(d["location"]["row"]), metric, value, name)
 

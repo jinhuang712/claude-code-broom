@@ -26,9 +26,10 @@ SCAN_SECONDS = 20  # what the tools that run in the real tree have between them 
 CHURN_DAYS = 90  # how far back a file's changes are counted
 SEVERE_WEIGHT = 3  # a smell past the hard limit weighs this much against a hint in a file's score
 ORDERS = {"churn": lambda f: (f["score"], f["severe"], f["hints"]), "smells": lambda f: (f["severe"], f["hints"])}
-# The tools whose findings make up each of the check-up's two smell counters: a note that names one of them means the
+# The tools whose findings make up each of the check-up's smell counters: a note that names one of them means the
 # count is short of what the code holds.
-COUNTED_BY = {DEAD_CODE: ("jscpd",), "missing_docs": ("ruff", "golangci-lint", "swiftlint")}
+COUNTED_BY = {DEAD_CODE: ("jscpd",), "missing_docs": ("ruff", "golangci-lint", "swiftlint"),
+              "deprecated_api": ("ruff", "golangci-lint", "clippy", "oxlint", "tsgolint")}
 NO_HISTORY = "no commits in the last {days} days, or git log failed: the hotspots are ordered by their smells"
 
 
@@ -137,9 +138,9 @@ def render(data: dict) -> str:
 
 def smell_counts(repo: Path, found: List[Smell], notes: List[str]) -> Dict[str, Optional[Dict[str, int]]]:
     """The check-up's smell counters from a scan of the whole repo (`found` has no base): per file, how many dead-code
-    findings, public declarations with no doc comment and duplicate test blocks it holds. A counter is None when the
-    repo turned its smell off or a tool behind it was missing, failed or cut short: a count that low would read as a
-    fall."""
+    findings, public declarations with no doc comment, calls to deprecated APIs and duplicate test blocks it holds. A
+    counter is None when the repo turned its smell off or a tool behind it was missing, failed or cut short: a count
+    that low would read as a fall."""
     off = repo_config(repo).get("smells_off") or []
     out: Dict[str, Optional[Dict[str, int]]] = {}
     for metric, tools in COUNTED_BY.items():

@@ -21,7 +21,7 @@ from typing import Dict, List, Optional, Set, Tuple
 from .findings import Issue
 from .fixes import fix_lines
 from .clones import Clone, Unused, find_clones, find_unused
-from .config import DEAD_CODE, LIMIT_PAIR, SMELL_LIMITS, SMELL_PRESENCE, repo_config, setting
+from .config import DEAD_CODE, LIMIT_PAIR, NOTED, SMELL_LIMITS, SMELL_PRESENCE, repo_config, setting
 from .gate import issue_key
 from .gitutil import ChangedLines, renamed, run_bytes
 from .maintained import GENERATED, Maintained, generated
@@ -111,6 +111,11 @@ def presence_level(metric: str, rel: str) -> str:
     return "hint" if Path(rel).suffix in GUESSED.get(metric, ()) else SMELL_PRESENCE[metric]
 
 
+def example(metric: str, rows: list) -> str:
+    """The key of an occurrence smell: its metric, or for a NOTED smell what its first finding says."""
+    return rows[0].key if metric in NOTED else metric
+
+
 def compare_occurrences(now: List[Raw], before: Optional[List[Raw]], repo: Path) -> List[Smell]:
     """Per file and smell, the lines the change added, matched by text against the base: a moved line stays old,
     an edited one is new."""
@@ -126,7 +131,7 @@ def compare_occurrences(now: List[Raw], before: Optional[List[Raw]], repo: Path)
     total = Counter((r.rel, r.metric) for r in now)
     was = Counter((r.rel, r.metric) for r in before or [])
     # An edited line that keeps its occurrence is new by text but adds nothing: only a higher count counts.
-    return [Smell(repo, repo / rel, rows[0].line, metric, metric, total[(rel, metric)],
+    return [Smell(repo, repo / rel, rows[0].line, metric, example(metric, rows), total[(rel, metric)],
                   None if before is None else was[(rel, metric)], rows[0].tool, presence_level(metric, rel), 0,
                   [r.line for r in rows])
             for (rel, metric), rows in added.items() if before is None or total[(rel, metric)] > was[(rel, metric)]]
@@ -262,7 +267,7 @@ def real_tree_smells(repo: Path, found: List[Found], base: Optional[str], lim: R
                 out.append(Smell(repo, repo / f.rel, f.line, f.metric, f.key, f.value, None, f.tool, at,
                                  pair[1] if at == "block" else pair[0]))
     for (rel, metric), rows in added.items():
-        out.append(Smell(repo, repo / rel, rows[0].line, metric, metric, len(rows), None, rows[0].tool,
+        out.append(Smell(repo, repo / rel, rows[0].line, metric, example(metric, rows), len(rows), None, rows[0].tool,
                          presence_level(metric, rel), 0, [r.line for r in rows]))
     return out
 

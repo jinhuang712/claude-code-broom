@@ -56,12 +56,14 @@ class Found:
 
 # The linters that need types, by what they find. They run with broom's own config, never the project's.
 GO_TYPED = {"forbidigo": "debug_output", "gochecknoglobals": "globals", "gocritic": "commented_code",
-            "unused": DEAD_CODE}
+            "unused": DEAD_CODE, "staticcheck": "deprecated_api"}  # of staticcheck only SA1019, a deprecated call
 GO_CONFIG = """version: "2"
 linters:
   default: none
-  enable: [forbidigo, gochecknoglobals, gocritic, unused]
+  enable: [forbidigo, gochecknoglobals, gocritic, staticcheck, unused]
   settings:
+    staticcheck:
+      checks: ["-all", "SA1019"]
     forbidigo:
       forbid:
         - pattern: '^(fmt\\.Print(f|ln)?|print|println)$'
@@ -127,17 +129,50 @@ def go_issues(repo: Path, module: Path, issues: List[dict]) -> List[Found]:
     """Turn golangci-lint's `issues` for `module` into Found rows: typed linters, files inside the repo only."""
     found = []
     for i in issues:
-        metric = GO_TYPED.get(i.get("FromLinter", ""))  # `typecheck`, a module that doesn't compile, has none
+        linter, text = i.get("FromLinter", ""), i.get("Text", "")
+        metric = GO_TYPED.get(linter)  # `typecheck`, a module that doesn't compile, has none
         rel = rel_of(repo, module / (i.get("Pos") or {}).get("Filename", ""))
-        if metric and rel:
-            what = re.sub(r" is unused.*$", "", i.get("Text", "")) if metric == DEAD_CODE else ""
-            found.append(Found(rel, int((i.get("Pos") or {}).get("Line", 0)), metric, "golangci-lint", what))
+        if metric and rel and (linter != "staticcheck" or text.startswith("SA1019")):
+            found.append(Found(rel, int((i.get("Pos") or {}).get("Line", 0)), metric, "golangci-lint",
+                               go_key(metric, text)))
     return found
 
 
+def go_key(metric: str, text: str) -> str:
+    """What a golangci-lint finding names: the item dead code is about, or a deprecation as `item is deprecated:
+    note`, the note being what says what replaced it (staticcheck words it `item has been deprecated since Go 1.18
+    [and an alternative ...]: note`); nothing for the rest."""
+    if metric == DEAD_CODE:
+        return re.sub(r" is unused.*$", "", text)
+    if metric != "deprecated_api":
+        return ""
+    m = re.match(r"SA1019: (\S+) has been deprecated[^:]*: (.*)$", text.strip(), re.S)
+    return f"{m[1]} is deprecated: {m[2]}" if m else text.removeprefix("SA1019: ").strip()
+
+
+def js_config(*, typed: bool) -> dict:
+    """The oxlint config for the real tree: import cycles, and where tsgolint gives it types, deprecated calls."""
+    rules = {"import/no-cycle": "warn", **({"typescript/no-deprecated": "warn"} if typed else {})}
+    return {"plugins": ["import", "typescript"] if typed else ["import"],
+            "categories": {c: "off" for c in OXLINT_CATEGORIES}, "rules": rules}
+
+
+def js_row(repo: Path, d: dict) -> Optional[Found]:
+    """The smell one oxlint diagnostic of the real-tree run holds: a cycle or a deprecated call; None for the rest."""
+    rel, code = rel_of(repo, repo / d.get("filename", "")), d.get("code", "")
+    line = int(((d.get("labels") or [{}])[0].get("span") or {}).get("line", 0))
+    if rel and "no-cycle" in code:
+        return Found(rel, line, "import_cycle", "oxlint")
+    if rel and "no-deprecated" in code:
+        return Found(rel, line, "deprecated_api", "oxlint", d.get("message", ""))
+    return None
+
+
 def js_found(repo: Path, rels: List[str], notes: List[str], budget: Budget) -> List[Found]:
-    """Import cycles through the changed TS/JS files: oxlint's `import/no-cycle` follows imports on disk, so the
-    modules the changed files import have to be there. It finds each file's tsconfig itself."""
+    """Import cycles and deprecated calls in the changed TS/JS files, from one oxlint run. `import/no-cycle` follows
+    imports on disk, so the modules the changed files import have to be there; it finds each file's tsconfig itself.
+    `typescript/no-deprecated` needs types, so it runs with `--type-aware` where tsgolint is installed (it makes the
+    run slower, and a timeout loses the cycles too); without it a note says what isn't measured."""
     files = [str(repo / rel) for rel in rels if Path(rel).suffix in JS_EXTS]
     exe = resolve_bin("oxlint", repo, repo)  # jsmeasure says when it is missing
     if not files or not exe:
@@ -146,28 +181,24 @@ def js_found(repo: Path, rels: List[str], notes: List[str], budget: Budget) -> L
     if not timeout:
         notes.append(OUT_OF_TIME.format(tool="oxlint"))
         return []
-    config = {"plugins": ["import"], "categories": {c: "off" for c in OXLINT_CATEGORIES},
-              "rules": {"import/no-cycle": "warn"}}
+    typed = bool(resolve_bin("tsgolint", repo, repo))
+    if not typed:
+        notes.append("oxlint-tsgolint is missing, so deprecated TS/JS APIs aren't measured "
+                     "(npm i -g oxlint-tsgolint)")
     with tempfile.TemporaryDirectory(prefix="broom-realtree-") as tmp:
         cfg = Path(tmp) / "oxlint.json"
-        cfg.write_text(json.dumps(config))
-        rc, out, _ = run([exe, "-c", str(cfg), "-f", "json", "--no-error-on-unmatched-pattern", *files], repo,
-                         timeout=timeout)
+        cfg.write_text(json.dumps(js_config(typed=typed)))
+        rc, out, _ = run([exe, "-c", str(cfg), "-f", "json", "--no-error-on-unmatched-pattern",
+                          *(["--type-aware"] if typed else []), *files], repo, timeout=timeout)
     if rc is None:
-        notes.append("timeout:oxlint measuring import cycles")
+        notes.append("timeout:oxlint measuring import cycles and deprecated calls")
         return []
     try:
         diagnostics = (json.loads(out) if out.strip() else {}).get("diagnostics") or []
     except ValueError:
-        notes.append(f"oxlint failed measuring import cycles: {out.strip()[:120]}")
+        notes.append(f"oxlint failed measuring import cycles and deprecated calls: {out.strip()[:120]}")
         return []
-    found = []
-    for d in diagnostics:
-        rel = rel_of(repo, repo / d.get("filename", ""))
-        if rel and "no-cycle" in d.get("code", ""):
-            line = int(((d.get("labels") or [{}])[0].get("span") or {}).get("line", 0))
-            found.append(Found(rel, line, "import_cycle", "oxlint"))
-    return found
+    return [row for row in (js_row(repo, d) for d in diagnostics) if row]
 
 
 def locate(repo: Path, crate: Path, name: str) -> Optional[str]:

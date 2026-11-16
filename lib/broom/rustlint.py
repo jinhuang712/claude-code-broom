@@ -23,6 +23,7 @@ RUST_LINTS = {
     # It can't tell a deliberate ignore from a swallowed error, so smells.py makes it a hint in Rust.
     "clippy::let_underscore_must_use": "swallowed_error",
     "dead_code": DEAD_CODE, "unused_variables": "unused_params",
+    "deprecated": "deprecated_api",  # a call to an item marked #[deprecated]; the message holds its note
 }
 RUST_FLAGS = [flag for lint in RUST_LINTS if lint.startswith("clippy::") for flag in ("-W", lint)]
 # The limits clippy takes, one threshold per lint, so it gets the soft one and the message says how far past it went.
@@ -86,6 +87,8 @@ def read(metric: str, message: dict, span: dict, source: str, soft: Dict[str, in
     line = int(span["line_start"])
     if metric == DEAD_CODE:
         return highlighted(span), 1
+    if metric == "deprecated_api":
+        return message.get("message", ""), 1
     if metric == "unused_params" and not in_parameters(source, line, int(span["column_start"])):
         return None
     if metric == "nesting":  # the message names no depth, and clippy lints only the outermost block past it
