@@ -156,10 +156,11 @@ def relative(repo: Path, path: Path) -> str:
         return str(path)
 
 
-def report(repo: Path, paths: List[Path], top: int, days: int) -> dict:
+def report(repo: Path, paths: List[Path], top: int, days: int, facts: Optional[List[Facts]] = None) -> dict:
     """The four sections for the code files within `paths` (the repo when empty): `size`, `tests`, `rot` and `history`
-    over the last `days` days, with `files`, the number of files read."""
-    facts = collect(repo, paths)
+    over the last `days` days, with `files`, the number of files read. `facts` are those files read already, when a
+    caller that needs them too has read them."""
+    facts = collect(repo, paths) if facts is None else facts
     shown = [relative(repo, p) for p in paths]
     note = None if facts else "no code files " + (f"under {', '.join(shown)}" if shown else "in the repo")
     return {"repo": str(repo), "paths": shown, "files": len(facts), "days": days,

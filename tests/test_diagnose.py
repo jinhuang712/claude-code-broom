@@ -14,7 +14,7 @@ from support import py_function
 LONG = py_function("huge", 120)  # one smell past the hard limit
 BUSY = py_function("busy", 60).replace("+=", "-=")  # one hint
 TS_BIG = "".join(f"export const v{i} = {i};\n" for i in range(450))  # a file over 400 lines: one hint
-HEADINGS = ["Summary", "Smells by kind", "Smells by language", "Hotspots by churn", "The worst smells",
+HEADINGS = ["Summary", "Smells by kind", "Smells by language", "Hotspots by churn", "The worst smells", "Check-up",
             "Size (non-blank lines)", "Tests", "Rot"]
 
 
@@ -36,7 +36,7 @@ class DiagnoseTest(GitWork):
         r = self.smelly_repo()
         d = self.diagnose(r, "--top", "1")
         self.assertEqual(set(d), {"repo", "paths", "summary", "by_smell", "by_language", "by", "hotspots", "smells",
-                                  "missing_tools", "notes", "stats"})
+                                  "missing_tools", "notes", "stats", "checkup"})
         self.assertEqual((d["repo"], d["paths"]), (str(r), []))
         s = d["summary"]
         self.assertEqual((s["files"], s["smells"], s["severe"], s["hints"]), (3, 3, 1, 2))

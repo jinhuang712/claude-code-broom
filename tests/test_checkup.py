@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import shutil
 import unittest
+from datetime import date
 from pathlib import Path
 
 from gitwork import GitWork, days_ago
@@ -47,6 +48,10 @@ class CheckupCase(GitWork):
     def record(self, r: Path) -> dict:
         return json.loads(checkup.record_path(r).read_text())["counters"]
 
+    def diagnose(self, r: Path, *args: str, env: dict = None) -> dict:
+        done = self.cli(r, "diagnose", "--json", *args, env=env or self.bare)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        return json.loads(done.stdout)["checkup"]
 
 
 class TellingTest(CheckupCase):
@@ -131,11 +136,13 @@ class OffTest(CheckupCase):
         self.assertIn("/broom:clean", note, "the smell note is not the check-up")
         self.assertNotIn("check-up", note)
         self.assertFalse(checkup.record_path(r).exists(), "nothing was counted or kept")
+        self.assertTrue(self.diagnose(r)["off"])
 
     def test_the_smells_setting_at_off_turns_it_off_too(self) -> None:
         r = self.repo({"a.py": suppressed(1), ".broom.json": '{"smells": "off"}'})
         self.assertEqual(self.scan(r, "s1"), "")
         self.assertFalse(checkup.record_path(r).exists())
+        self.assertTrue(self.diagnose(r)["off"])
 
     def test_turning_it_on_again_takes_the_numbers_of_that_day_as_the_baseline_silently(self) -> None:
         r = self.repo({"a.py": suppressed(1), ".broom.json": '{"smells_off": ["checkup"]}'})
@@ -143,6 +150,58 @@ class OffTest(CheckupCase):
         (r / ".broom.json").write_text("{}")
         self.assertEqual(self.scan(r, "s2"), "")
         self.assertEqual(self.record(r)["suppressions"], {"a.py": 1})
+
+
+class DiagnoseTest(CheckupCase):
+    def test_every_counter_is_listed_now_and_at_the_last_check_up_grown_or_not(self) -> None:
+        r = self.repo({"a.py": suppressed(1), "tests/test_x.py": skipped(2)})
+        self.scan(r, "s1")
+        self.commit_all(r, {"b.py": suppressed(2)})
+        d = self.diagnose(r)
+        self.assertEqual((d["off"], d["narrowed"], d["last"]), (False, False, date.today().isoformat()))
+        rows = {c["counter"]: c for c in d["counters"]}
+        self.assertEqual(list(rows), ["suppressions", "skipped_tests", "old_todos", "dead_code", "missing_docs"])
+        self.assertEqual(rows["suppressions"], {"counter": "suppressions", "label": "lint suppressions", "now": 3,
+                                                "was": 1, "grew": True, "files": ["b.py"]})
+        self.assertEqual((rows["skipped_tests"]["now"], rows["skipped_tests"]["was"], rows["skipped_tests"]["grew"]),
+                         (2, 2, False))
+        self.assertEqual((rows["dead_code"]["now"], rows["dead_code"]["was"]), (None, None), "no jscpd: not measured")
+        self.assertEqual(self.record(r)["suppressions"], {"a.py": 1}, "the diagnosis keeps nothing")
+        self.assertIn("lint suppressions 1 -> 3", self.scan(r, "s2"), "so the session still tells it")
+
+    def test_the_report_has_a_check_up_section_with_a_table(self) -> None:
+        r = self.repo({"a.py": suppressed(1)})
+        self.scan(r, "s1")
+        self.commit_all(r, {"b.py": suppressed(2)})
+        out = self.cli(r, "diagnose", env=self.bare).stdout
+        section = out.split("## Check-up\n")[1].split("\n\n## ")[0].splitlines()
+        self.assertEqual(section[0], f"  Last check-up: {date.today().isoformat()}")
+        self.assertRegex(section[1], r"^  counter\s+now\s+at the last check-up\s+change$")
+        self.assertRegex(section[2], r"^  lint suppressions\s+3\s+1\s+grew \(b\.py\)$")
+        self.assertRegex(section[3], r"^  skipped tests\s+0\s+0\s+same$")
+        self.assertRegex(out, r"\n  dead-code findings\s+-\s+-\s+not measured\n")
+        self.assertLess(out.index("## The worst smells"), out.index("## Check-up"))
+        self.assertLess(out.index("## Check-up"), out.index("## Size"))
+
+    def test_without_a_check_up_yet_the_report_says_so(self) -> None:
+        r = self.repo({"a.py": suppressed(1)})
+        out = self.cli(r, "diagnose", env=self.bare).stdout
+        self.assertIn("## Check-up\n  No check-up has run here yet.", out)
+        self.assertIsNone(self.diagnose(r)["last"])
+
+    def test_a_diagnosis_of_some_paths_counts_them_and_has_no_last_check_up_to_set_against(self) -> None:
+        r = self.repo({"a.py": suppressed(1), "b.py": suppressed(2)})
+        self.scan(r, "s1")
+        d = self.diagnose(r, "a.py")
+        self.assertEqual((d["narrowed"], d["last"]), (True, None))
+        self.assertEqual({c["counter"]: (c["now"], c["was"]) for c in d["counters"]}["suppressions"], (1, None))
+        out = self.cli(r, "diagnose", "a.py", env=self.bare).stdout
+        self.assertIn("Counted within the paths given", out)
+
+    def test_a_repo_with_the_check_up_off_says_so(self) -> None:
+        r = self.repo({"a.py": "x = 1\n", ".broom.json": '{"smells_off": ["checkup"]}'})
+        out = self.cli(r, "diagnose", env=self.bare).stdout
+        self.assertIn("## Check-up\n  off in this repo", out)
 
 
 @unittest.skipUnless(HAS_PY and shutil.which("jscpd"), "ruff or jscpd missing")

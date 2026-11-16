@@ -1,6 +1,6 @@
 """`broom diagnose`: the whole repo measured once, with no time cut, as data. It composes what exists: the smells
 (`find_smells` with no base and no budget, so a repo of any size is read in full) ranked as `broom smells` ranks
-them, and the four sections of `broom stats`. The report a person reads is in diagnoseview."""
+them, the four sections of `broom stats` and the check-up's counters. The report a person reads is in diagnoseview."""
 
 from __future__ import annotations
 
@@ -8,10 +8,11 @@ import time
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+from .checkup import section as checkup_section
 from .gate import note_text
-from .hotspots import CHURN_DAYS, churn_order, rank, repo_files, smell_row
+from .hotspots import CHURN_DAYS, churn_order, rank, repo_files, smell_counts, smell_row
 from .smells import Smell, find_smells
-from .stats import report as stats_report
+from .stats import collect, report as stats_report
 from .toolchain import lang_of
 
 
@@ -44,13 +45,14 @@ def by_language(found: List[Smell]) -> List[dict]:
 
 def diagnose(repo: Path, paths: List[Path], top: int, days: int = CHURN_DAYS) -> dict:
     """The diagnosis of the repo, or of `paths`: the smells by kind and by language, the `top` hotspots by churn
-    over the last `days` days, every smell, the tools that were missing and the four `stats` sections. `by` is the
-    order the hotspots really have: by churn needs history."""
+    over the last `days` days, every smell, the tools that were missing, the four `stats` sections and the check-up's
+    counters. `by` is the order the hotspots really have: by churn needs history."""
     started = time.monotonic()
     churn, order, history_notes = churn_order(repo, "churn", days)
     found, notes = measure(repo, paths)
     ordered, files = rank(found, churn, order)
-    stats = stats_report(repo, paths, top, days)
+    facts = collect(repo, paths)  # read once, for the stats sections and the check-up's counters
+    stats = stats_report(repo, paths, top, days, facts)
     severe = sum(s.level == "block" for s in found)
     lines = stats["size"]["total"]
     summary = {"files": stats["files"], "lines": lines["lines"] + lines["test_lines"], "smells": len(found),
@@ -59,4 +61,5 @@ def diagnose(repo: Path, paths: List[Path], top: int, days: int = CHURN_DAYS) ->
             "by_language": by_language(found), "by": order, "hotspots": files[:top],
             "smells": [smell_row(repo, s) for s in ordered],
             "missing_tools": [note_text(n) for n in notes if n.startswith("missing:")],
-            "notes": [note_text(n) for n in notes if not n.startswith("missing:")] + history_notes, "stats": stats}
+            "notes": [note_text(n) for n in notes if not n.startswith("missing:")] + history_notes, "stats": stats,
+            "checkup": checkup_section(repo, facts, smell_counts(repo, found, notes), narrowed=bool(paths))}

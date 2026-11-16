@@ -3,7 +3,9 @@ five counters (lint suppressions, skipped tests, TODO comments older than `OLD_D
 code with no doc comment) per file, and the numbers of the last check-up per repo, in broom's data directory. The
 session scan runs it in the background after the smell scan, and tells Claude, once, of each counter that is higher
 than at the last check-up, with the files that added to it. It never blocks and takes only what is cheap: the one
-pass over the files `broom stats` makes, a bounded `git blame`, and the counts the smell scan already has."""
+pass over the files `broom stats` makes, a bounded `git blame`, and the counts the smell scan already has.
+
+`broom diagnose` lists every counter, grown or not (`section`); it never changes the record."""
 
 from __future__ import annotations
 
@@ -13,7 +15,7 @@ from typing import Dict, List, Optional, Tuple
 
 from .config import CHECKUP, DEAD_CODE, repo_config, setting
 from .gitutil import CLOCK, main_worktree
-from .state import DATA_ROOT, short_hash, update_json
+from .state import DATA_ROOT, load_json, short_hash, update_json
 from .stats import collect
 from .statscan import Facts
 from .statsgit import BLAME_LINES, OLD_DAYS, old_lines
@@ -132,3 +134,27 @@ def check_up_time(repo: Path, data: Optional[dict]) -> Optional[str]:
     if data is None or (left is not None and left < MIN_SECONDS):
         return None
     return check_up(repo, data.get("counts"))
+
+
+# ---------------------------------------------------------------- the diagnosis
+
+
+def row_of(name: str, was: Optional[Counts], now: Optional[Counts]) -> dict:
+    """One counter of the diagnosis: its value now and at the last check-up (None when unknown), whether it grew and
+    the files that added to it."""
+    before, here = total(was), total(now)
+    grew = before is not None and here is not None and here > before
+    files = added_by(was, now)[:FILES_NAMED] if grew and was is not None and now is not None else []
+    return {"counter": name, "label": LABELS[name], "now": here, "was": before, "grew": grew, "files": files}
+
+
+def section(repo: Path, facts: List[Facts], from_smells: Optional[Counted], *, narrowed: bool) -> dict:
+    """The diagnosis's Check-up section: every counter, now and at the last check-up, grown or not. A diagnosis
+    narrowed to some paths counts only those, so it has no last check-up to set against. It never writes the record."""
+    if is_off(repo):
+        return {"off": True, "narrowed": narrowed, "last": None, "counters": []}
+    record = {} if narrowed else load_json(record_path(repo), {})
+    before = record.get("counters") or {}
+    now = counters(repo, facts, from_smells)
+    return {"off": False, "narrowed": narrowed, "last": record.get("at"),
+            "counters": [row_of(name, before.get(name), now.get(name)) for name in LABELS]}

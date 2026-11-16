@@ -62,6 +62,34 @@ def worst_lines(data: dict, top: int) -> List[str]:
     return out + ([f"  ... and {more} more; `--json` lists them all"] if more > 0 else [])
 
 
+def change_of(row: dict) -> str:
+    """How a check-up counter stands against the last check-up, in a word, and the files that added to it."""
+    if row["now"] is None:
+        return "not measured"
+    if row["was"] is None:
+        return ""
+    if row["grew"]:
+        return "grew" + (f" ({', '.join(row['files'])})" if row["files"] else "")
+    return "fell" if row["now"] < row["was"] else "same"
+
+
+def last_line(c: dict) -> str:
+    """Which check-up the numbers are set against, or why there is none."""
+    if c["narrowed"]:
+        return "  Counted within the paths given: the last check-up is of the whole repo, so it isn't set against."
+    return f"  Last check-up: {c['last']}" if c["last"] else "  No check-up has run here yet."
+
+
+def checkup_lines(data: dict) -> List[str]:
+    """The check-up's counters, each with its value now and at the last check-up, whether it grew or not."""
+    c = data["checkup"]
+    if c["off"]:
+        return ["  off in this repo: `smells_off` in .broom.json holds `checkup`, or `smells` is off"]
+    rows = [[r["label"], "-" if r["now"] is None else r["now"], "-" if r["was"] is None else r["was"], change_of(r)]
+            for r in c["counters"]]
+    return [last_line(c), *table(["counter", "now", "at the last check-up", "change"], rows, left=(0, 3))]
+
+
 def stats_sections(stats: dict) -> List[str]:
     """The four sections of `broom stats`, each under a `##` heading."""
     out: List[str] = []
@@ -73,12 +101,13 @@ def stats_sections(stats: dict) -> List[str]:
 
 def render(data: dict, top: int) -> str:
     """The report for `data` (from `diagnose`): the summary, the smells by kind and by language, the hotspots, the
-    `top` worst smells, the four stats sections, and how long it took."""
+    `top` worst smells, the check-up's counters, the four stats sections, and how long it took."""
     narrowed = f", narrowed to {', '.join(data['paths'])}" if data["paths"] else ""
     out = [f"# broom diagnose: {display(Path(data['repo']))}{narrowed}"]
     out += heading("Summary", summary_lines(data)) + heading("Smells by kind", kind_lines(data))
     out += heading("Smells by language", language_lines(data)) + heading("Hotspots by churn", hotspot_lines(data))
-    out += heading("The worst smells", worst_lines(data, top)) + stats_sections(data["stats"])
+    out += heading("The worst smells", worst_lines(data, top)) + heading("Check-up", checkup_lines(data))
+    out += stats_sections(data["stats"])
     return "\n".join(out + ["", f"broom diagnose took {data['summary']['seconds']} s"])
 
 
