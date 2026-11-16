@@ -266,7 +266,7 @@ def cmd_hook(args: argparse.Namespace) -> int:
     if args.event == "pre-commit":
         try:
             return hook_pre_commit()
-        except Exception as e:  # a broken check must never stop a commit
+        except Exception as e:  # noqa: BLE001 - a broken check must never stop a commit
             warn(f"broom pre-commit: {e}")
             ledger.errored(e)
             return 0
@@ -275,7 +275,7 @@ def cmd_hook(args: argparse.Namespace) -> int:
                 "subagent-stop": hook_stop, "session": hook_session, "session-scan": hook_session_scan}
     try:
         handlers[args.event](data)
-    except Exception as e:  # a broken check must never trap Claude or block its edits
+    except Exception as e:  # noqa: BLE001 - a broken check must never trap Claude or block its edits
         warn(f"broom hook {args.event}: {e}")
         ledger.errored(e)
     return 0

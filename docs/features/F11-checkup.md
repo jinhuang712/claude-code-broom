@@ -44,13 +44,20 @@ The list grows: each checkpoint's end looks for kinds broom still misses.
 
 ## F11.1: Counters
 
-3 counters, none of which needs a tool installed:
+5 counters, none of which needs a tool installed beyond the ones the smells already use:
 
 - Lint suppressions in the repo.
 - Skipped tests in the repo.
-- TODO comments older than six months.
+- TODO comments older than 180 days.
+- Dead-code findings in the whole repo.
+- Public code with no doc comment.
 
-Claude is told once when a counter grew since the last check-up, with the files that added to it.
+The first check-up of a repo takes its numbers silently. After that Claude is told once when a counter grew, with the old and the new value and up to three files that added to it, such as `broom check-up: lint suppressions 6 -> 9 (a.py, b.py)`. A counter that fell says nothing.
+
+`smells_off: ["checkup"]` in `.broom.json` turns it off. A repo of more than 5,000 files gets no check-up at session start, and `broom diagnose` lists its counters instead.
+
+- **Commands**: [broom diagnose](../CLI.md#broom-diagnose)
+- **How it works**: [Check-up](../specs/checkup.md)
 
 ---
 
@@ -75,15 +82,23 @@ Tests that repeat one another are listed in the check-up and the diagnosis, with
 
 ## F11.4: Dead code in the whole repo
 
-Files, exports and symbols nothing uses are counted across the repo, not only on the lines a change added. The check-up tells Claude when the count grew, and the diagnosis lists them all.
+Files, exports and symbols nothing uses are counted across the repo, not only on the lines a change added. The check-up tells Claude when the count grew, and `broom diagnose` lists them all.
+
+- **How it works**: [Check-up](../specs/checkup.md)
 
 ---
 
 ## F11.5: Missing comments
 
-Public code with no comment on what it is for is counted: an exported function, type or module without a doc comment. A change that adds one gets a hint.
+`missing_docs` is public code with no comment on what it is for: a module, a class or a function with no doc comment. A change that adds one gets a hint, and the check-up counts them across the repo.
 
-It uses the rule each language's linter already has. A private helper and a test need no comment.
+It uses the rule each language's linter already has: ruff's in Python, revive's in Go and SwiftLint's in Swift. A private helper and a test need no comment.
+
+1 gap:
+
+- TS/JS is not covered, since oxlint has no rule that asks for a doc comment.
+
+- **How it works**: [Check-up](../specs/checkup.md)
 
 ---
 

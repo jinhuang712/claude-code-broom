@@ -38,7 +38,7 @@ Features
 ├── ✅ F4: Smells — one bar for code that is hard to change
 │   ├── ✅ F4.1: Sized smells — a hint past the soft limit, a block past the hard one
 │   ├── ✅ F4.2: Occurrence smells — a change that adds one gets its level
-│   │   ├── ⬜ F4.2.1: Broad catch
+│   │   ├── 🚧 F4.2.1: Broad catch — Python only
 │   │   └── ⬜ F4.2.2: Skipped test
 │   ├── ✅ F4.3: Duplicate code — a new copy anywhere in the repo
 │   ├── ✅ F4.4: Dead code — code a change adds and nothing uses
@@ -80,12 +80,12 @@ Features
 │   ├── 🚧 F10.3: Before and after — a tool that fails silently in the base's checkout is not caught
 │   ├── 🚧 F10.4: Numbers on request — the longest functions and types are not listed
 │   └── ✅ F10.5: Claude knows what to ask — broom before a script
-└── ⬜ F11: Check-up — rot across the whole repo, told when it grows
-    ├── ⬜ F11.1: Counters — suppressions, skipped tests and old TODOs
+└── 🚧 F11: Check-up — coverage, duplicate tests, dependencies and deprecated APIs are not built
+    ├── ✅ F11.1: Counters — numbers that speak only when they grow
     ├── ⬜ F11.2: Test coverage — code the tests never reach
     ├── ⬜ F11.3: Duplicate tests — tests that repeat one another
-    ├── ⬜ F11.4: Dead code in the whole repo — what nothing uses any more
-    ├── ⬜ F11.5: Missing comments — public code with no word on what it is for
+    ├── ✅ F11.4: Dead code in the whole repo — what nothing uses any more
+    ├── 🚧 F11.5: Missing comments — TS/JS is not covered
     ├── ⬜ F11.6: Dependencies — known vulnerabilities and unused packages
     └── ⬜ F11.7: Deprecated APIs — calls a library's author says to stop using
 ```

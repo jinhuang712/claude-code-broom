@@ -51,6 +51,7 @@ It lives in `lib/broom/`.
 - [Record](record.md)
 - [Stats](stats.md)
 - [Diagnosis](diagnosis.md)
+- [Check-up](checkup.md)
 
 ---
 

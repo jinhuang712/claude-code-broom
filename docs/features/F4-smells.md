@@ -78,6 +78,8 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 | `globals` | hint | `PLW0603` | `broom/module-state` | `gochecknoglobals` | a custom rule |
 | `bool_params` | hint | `FBT001` | `broom/bool-params` | `revive` `flag-parameter` | a custom rule |
 | `broad_test_asserts` | hint | `PT011` | `jest/require-to-throw-message` | — | — |
+| `broad_catch` | hint | `BLE001` `E722` | — | — | — |
+| `missing_docs` | hint | `D100` to `D103` | — | `revive` `exported` | `missing_docs` |
 
 8 notes on the table:
 
@@ -100,7 +102,11 @@ The four `broom/` rules need Node. Without it only these smells go unmeasured, a
 
 ### F4.2.1: Broad catch
 
-`broad_catch` is an error handler that catches every error, such as a bare `except Exception`. It hides the error it wasn't written for. A change that adds one gets a hint.
+`broad_catch` is an error handler that catches every error, such as a bare `except` or an `except Exception`. It hides the error it wasn't written for. A change that adds one gets a hint.
+
+1 gap:
+
+- Only Python is covered, since the tools broom runs have no such rule for TS/JS, Go and Swift.
 
 ---
 

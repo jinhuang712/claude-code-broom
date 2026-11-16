@@ -18,15 +18,15 @@ Roadmap
 │   └── ✅ CP3.3: Old smells in touched code
 ├── 🟨 CP4: A refactoring kit — a full diagnosis, the worst places first, the numbers after
 ├── 🟨 CP5: A check-up for rot — numbers that speak when they grow
-│   ├── ⬜ CP5.1: Counters, dead code and comments
+│   ├── 🟨 CP5.1: Counters, dead code and comments
 │   ├── ⬜ CP5.2: Tests: coverage, duplicates and skips
 │   ├── ⬜ CP5.3: Dependencies and deprecated APIs
 │   └── ✅ CP5.4: Rust's missing smells
-├── ⬜ CP6: Lighter — less code, fewer runs, less noise
-│   ├── ⬜ CP6.1: Fewer interruptions
-│   ├── ⬜ CP6.2: Fewer runs and less code
-│   └── ⬜ CP6.3: Docs and setup that say what is so
-└── ⬜ CP7: Waits for a need
+├── ⬜ CP6: Polish and self-test — every goal run in a real session, every rough edge smoothed
+├── ⬜ CP7: Lighter — less code, fewer runs, less noise
+│   ├── ⬜ CP7.1: Fewer interruptions
+│   └── ⬜ CP7.2: Fewer runs and less code
+└── ⬜ CP8: Waits for a need
 ```
 
 ---
@@ -217,7 +217,9 @@ Rot is what gets worse with no one change at fault. The check-up counts it acros
 
 ### CP5.1: Counters, dead code and comments
 
-**Status**: ⬜
+**Status**: 🟨
+
+The four features shipped in 0.21.2 on 2026-11-17, with gaps: missing comments are not told in TS/JS, and a broad catch only in Python.
 
 **Delivers** (4):
 
@@ -283,22 +285,49 @@ The user lifted the hold on Rust's smells on 2026-11-17, and 7 more shipped in 0
 
 ---
 
-## CP6: Lighter
+## CP6: Polish and self-test
+
+**Status**: ⬜
+
+The user asked on 2026-11-17 for a round of polish and self-test once the features are in. broom is used end to end in fresh sessions, on throwaway repos and on real ones, and what that finds is fixed.
+
+**Delivers** (5):
+
+- [F1.5: Protection list](../features/F1-setup.md#f15-protection-list)
+- [I10: No fresh session has used broom end to end](ISSUES.md#i10-no-fresh-session-has-used-broom-end-to-end)
+- [I8: Two holes in the record](ISSUES.md#i8-two-holes-in-the-record)
+- [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)
+- [I7: The docs don't say which systems are supported](ISSUES.md#i7-the-docs-dont-say-which-systems-are-supported)
+
+**Exit criteria** (6):
+
+- **Objectives**
+  - [O2: Tooling in one conversation](GOALS.md#o2-tooling-in-one-conversation)
+  - [O3: Mistakes seen while editing](GOALS.md#o3-mistakes-seen-while-editing)
+  - [O7: No script to write](GOALS.md#o7-no-script-to-write)
+- **Thresholds**
+  - [T2: An idle Python hook costs 50 ms at most](GOALS.md#t2-an-idle-python-hook-costs-50-ms-at-most)
+- **Constraints**
+  - [R2: A false positive costs one round](GOALS.md#r2-a-false-positive-costs-one-round)
+  - [R4: Setup asks at most two questions](GOALS.md#r4-setup-asks-at-most-two-questions)
+
+---
+
+## CP7: Lighter
 
 **Status**: ⬜
 
 The ledger's numbers say which rule is noise and which tool is slow. This checkpoint cuts by them.
 
-**Exit criteria** (3):
+**Exit criteria** (2):
 
 - **Sub-checkpoints**
-  - [CP6.1: Fewer interruptions](#cp61-fewer-interruptions) is met.
-  - [CP6.2: Fewer runs and less code](#cp62-fewer-runs-and-less-code) is met.
-  - [CP6.3: Docs and setup that say what is so](#cp63-docs-and-setup-that-say-what-is-so) is met.
+  - [CP7.1: Fewer interruptions](#cp71-fewer-interruptions) is met.
+  - [CP7.2: Fewer runs and less code](#cp72-fewer-runs-and-less-code) is met.
 
 ---
 
-### CP6.1: Fewer interruptions
+### CP7.1: Fewer interruptions
 
 **Status**: ⬜
 
@@ -313,14 +342,13 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 ---
 
-### CP6.2: Fewer runs and less code
+### CP7.2: Fewer runs and less code
 
 **Status**: ⬜
 
-**Delivers** (5):
+**Delivers** (4):
 
 - [I9: The test suite takes two and a half minutes](ISSUES.md#i9-the-test-suite-takes-two-and-a-half-minutes)
-- [I8: Two holes in the record](ISSUES.md#i8-two-holes-in-the-record)
 - [I2: Three paths call the same tools](ISSUES.md#i2-three-paths-call-the-same-tools)
 - [I5: Four rules sit on an alpha plugin API](ISSUES.md#i5-four-rules-sit-on-an-alpha-plugin-api)
 - [I6: The Bash parser guesses what git's hook knows](ISSUES.md#i6-the-bash-parser-guesses-what-gits-hook-knows)
@@ -334,24 +362,7 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 ---
 
-### CP6.3: Docs and setup that say what is so
-
-**Status**: ⬜
-
-**Delivers** (3):
-
-- [F1.5: Protection list](../features/F1-setup.md#f15-protection-list)
-- [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)
-- [I7: The docs don't say which systems are supported](ISSUES.md#i7-the-docs-dont-say-which-systems-are-supported)
-
-**Exit criteria** (1):
-
-- **Objectives**
-  - [O2: Tooling in one conversation](GOALS.md#o2-tooling-in-one-conversation)
-
----
-
-## CP7: Waits for a need
+## CP8: Waits for a need
 
 **Status**: ⬜
 

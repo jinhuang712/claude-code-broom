@@ -62,4 +62,4 @@ Globs mark code on its way out. New code that repeats it isn't a duplicate, as d
 
 ### F7.2.4: smells_off
 
-A list turns single smells off, such as `["magic_numbers", "debug_output"]`.
+A list turns single smells off, such as `["magic_numbers", "debug_output"]`. The name `checkup` in it turns the check-up off.

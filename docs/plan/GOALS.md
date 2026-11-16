@@ -14,7 +14,7 @@ Goals
 │   ├── ⬜ O3: Mistakes seen while editing — a diagnostic after an edit
 │   ├── ⬜ O4: Nothing passes silently — every pass has a reason the user can see
 │   ├── ✅ O5: A full diagnosis of an old repo — every smell, with no time cut
-│   ├── ⬜ O6: A number that got worse is told once — the check-up speaks only then
+│   ├── ✅ O6: A number that got worse is told once — the check-up speaks only then
 │   └── ⬜ O7: No script to write — broom answers what a session would count by hand
 ├── Measures
 │   ├── ⬜ M1: Fix rate — how much of what broom blocks gets fixed
@@ -121,7 +121,7 @@ The check-up speaks when a counter grew, and stays quiet otherwise.
 
 **Acceptance**: A test adds a skipped test to a repo. The next session start tells Claude once, and the one after says nothing.
 
-**Status**: ⬜
+**Status**: ✅ 2026-11-17, by `tests/test_checkup.py`.
 
 ---
 

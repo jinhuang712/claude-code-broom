@@ -16,7 +16,8 @@ Issues
 │   └── I6: The Bash parser guesses what git's hook knows
 └── fix
     ├── I3: The cause of the reported Stop hang is unconfirmed
-    └── I8: Two holes in the record
+    ├── I8: Two holes in the record
+    └── I10: No fresh session has used broom end to end
 ```
 
 ---
@@ -100,3 +101,15 @@ Issues
 - touches:
   - [F9.1: Ledger](../features/F9-record.md#f91-ledger)
   - [F2.8: Self-waivers shown](../features/F2-sweep.md#f28-self-waivers-shown)
+
+---
+
+## I10: No fresh session has used broom end to end
+
+- type: fix
+- why: Every feature since 0.18.1 is covered by the test suite, which drives the hooks with made-up input. No fresh Claude Code session has yet met the setup offer, the limits card, a block with its fix lines, an accept with a reason, the turn's summary and the check-up in one run, on a throwaway repo and on a real one. The messages may read badly, and the pieces may get in each other's way.
+- found: the user's request for a self-test, 2026-11-17
+- touches:
+  - [F1.3: /broom:setup](../features/F1-setup.md#f13-broomsetup)
+  - [F2.9: Messages that say how to fix](../features/F2-sweep.md#f29-messages-that-say-how-to-fix)
+  - [F9.2: Turn summary](../features/F9-record.md#f92-turn-summary)

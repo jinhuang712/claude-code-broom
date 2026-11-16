@@ -6,6 +6,22 @@
 
 ---
 
+## 0.21.2 — 2026-11-17
+
+---
+
+### Check-up
+
+- At session start broom counts five signs of rot across the repo: lint suppressions, skipped tests, TODO comments older than 180 days, dead code and public code with no doc comment. The first count is taken silently. After that Claude is told once when a number grew, with the files that added to it. `broom diagnose` lists them all.
+
+---
+
+### Smells
+
+- Two new hints: `missing_docs`, for a change that adds public code with no doc comment, in Python, Go and Swift, and `broad_catch`, for a change that adds a handler that catches every error, in Python.
+
+---
+
 ## 0.21.1 — 2026-11-17
 
 ---

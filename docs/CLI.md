@@ -141,7 +141,7 @@ Status: ✅ built · ⬜ planned
 
 **Called by**: a person, Claude and the `/broom:clean` skill.
 
-**Prints**: stdout gets a report that also reads as Markdown: a summary, the smells by kind and by language, the hotspots by churn, the worst smells and the four sections of `broom stats`. The last line says how long it took. stderr gets `broom: not inside a git repository`.
+**Prints**: stdout gets a report that also reads as Markdown: a summary, the smells by kind and by language, the hotspots by churn, the worst smells, the check-up's counters and the four sections of `broom stats`. The last line says how long it took. stderr gets `broom: not inside a git repository`.
 
 **Fails**: exit 1 outside a repo.
 
@@ -359,7 +359,7 @@ An uncaught error exits 1 with a traceback.
 
 - **`broom doctor --json`**: `version` · `repo` · `languages` · `items` · `fix` · `configure` · `fix_global` · `configure_global` · `healthy` · `settings`.
 - **`broom smells --json`**: `repo` · `base` · `total` · `severe` · `hints` · `by` · `hotspots` · `smells` · `notes`.
-- **`broom diagnose --json`**: `repo` · `paths` · `summary` · `by_smell` · `by_language` · `by` · `hotspots` · `smells` · `missing_tools` · `notes` · `stats`.
+- **`broom diagnose --json`**: `repo` · `paths` · `summary` · `by_smell` · `by_language` · `by` · `hotspots` · `smells` · `missing_tools` · `notes` · `checkup` · `stats`.
 - **`broom compare --json`**: the counts per kind, the four lists of smells, the hotspots of the base and the kinds that are not comparable.
 - **`broom stats --json`**: `repo` · `paths` · `files` · `days` · `size` · `tests` · `rot` · `history`. Each section holds a `note` that says what is missing, or null.
 - **`broom fixes --json`**: one key per smell, with its fix line.
