@@ -196,16 +196,6 @@ class DoctorTest(BroomCase):
         self.assertIn("npm i -g oxlint", out["fix_global"])
         self.assertFalse(any("npm i -D" in c for c in out["fix_global"] + out["configure_global"]), out)
 
-    @unittest.skipUnless(HAS_GOPLS, "go tools missing")
-    def test_session_is_quiet_and_fast_when_healthy(self) -> None:
-        r = self.go_repo()
-        env = {**self.env, "CLAUDE_CONFIG_DIR": str(self.config_dir())}
-        self.assertEqual(self.session(r, "a", env), {})
-        start = time.time()
-        self.assertEqual(self.session(r, "b", env), {})
-        self.assertLess(time.time() - start, 1.0, "the cached doctor keeps SessionStart fast")
-        self.assertEqual(self.session(self.repo({"README.md": "hi\n"}), "c", env), {}, "no languages, nothing to say")
-
     @unittest.skipUnless(HAS_TS, "oxlint/tsc missing")
     def test_missing_tools_never_block_a_commit(self) -> None:
         r = self.ts_repo()
@@ -266,3 +256,67 @@ class DoctorTest(BroomCase):
         self.assertEqual(item["status"], "broken")
         self.assertIn("'sometimes' is not one of", item["detail"])
         self.assertIn("colour", item["detail"])
+
+
+class SetupOfferTest(BroomCase):
+    """What setup offers: git's pre-commit hook with the missing tools, and nothing for a repo that has it all."""
+
+    @unittest.skipUnless(HAS_GOPLS, "go tools missing")
+    def test_session_is_quiet_and_fast_when_healthy(self) -> None:
+        r = self.go_repo()
+        env = {**self.env, "CLAUDE_CONFIG_DIR": str(self.config_dir())}
+        self.cli(r, "install-hook", env=env)  # git's hook is a gap like any tool
+        self.assertEqual(self.session(r, "a", env), {})
+        start = time.time()
+        self.assertEqual(self.session(r, "b", env), {})
+        self.assertLess(time.time() - start, 1.0, "the cached doctor keeps SessionStart fast")
+        self.assertEqual(self.session(self.repo({"README.md": "hi\n"}), "c", env), {}, "no languages, nothing to say")
+
+    def hook_items(self, result: dict) -> list:
+        return [i for i in result["items"] if i["role"] == "hook"]
+
+    def py_repo(self) -> Path:
+        return self.repo({"pyproject.toml": "[project]\nname = 'x'\n", "a.py": "x = 1\n"})
+
+    def test_doctor_offers_gits_hook_until_it_is_installed(self) -> None:
+        r = self.py_repo()
+        env = self.fake_path(keep=("ruff", "pyright-langserver"))
+        result = self.doctor(r, env)
+        (hook,) = self.hook_items(result)
+        self.assertEqual((hook["lang"], hook["tool"], hook["status"], hook["fix"]),
+                         ("git", "pre-commit", "missing", "broom install-hook"))
+        self.assertIn("broom install-hook", result["fix"])
+        text = self.cli(r, "doctor", env=env)
+        self.assertIn("pre-commit", text.stdout)
+        self.assertIn("broom install-hook", text.stdout)
+        self.assertIn("pre-commit hook", str(self.session(r, "a", env)), "the session offers it with the rest")
+        self.assertEqual(self.cli(r, "install-hook", env=env).returncode, 0)
+        after = self.doctor(r, env)
+        self.assertEqual(self.hook_items(after), [], "gone once the hook is there")
+        self.assertNotIn("broom install-hook", after["fix"])
+        self.assertNotIn("pre-commit hook", str(self.session(r, "b", env)), "the cached doctor saw it arrive")
+
+    def test_with_another_tools_hook_doctor_says_so_and_gives_the_line_to_add(self) -> None:
+        r = self.py_repo()
+        env = self.fake_path(keep=("ruff", "pyright-langserver"))
+        (r / ".git/hooks/pre-commit").write_text("#!/bin/sh\nexit 0\n")
+        result = self.doctor(r, env)
+        (hook,) = self.hook_items(result)
+        self.assertEqual((hook["status"], hook["fix"]), ("missing", ""), "broom never replaces it")
+        self.assertIn("another tool's hook", hook["detail"])
+        self.assertIn("hook pre-commit || exit 1", hook["detail"])
+        self.assertNotIn("broom install-hook", result["fix"])
+
+    def test_a_repo_without_code_is_not_offered_gits_hook(self) -> None:
+        r = self.repo({"README.md": "hi\n"})
+        self.assertEqual(self.hook_items(self.doctor(r, self.fake_path())), [])
+
+    def test_declining_gits_hook_once_holds_in_every_repo(self) -> None:
+        env = self.fake_path(keep=("ruff", "pyright-langserver"))
+        a, b = self.py_repo(), self.py_repo()
+        self.assertIn("pre-commit hook", str(self.session(a, "s", env)))
+        self.assertEqual(self.cli(a, "setup", "--dismiss", env=env).returncode, 0)
+        self.assertEqual(self.session(b, "s2", env), {}, "the same kinds of gap, git's hook among them")
+        (hook,) = self.hook_items(self.doctor(b, env))
+        self.assertTrue(hook["answered"])
+        self.assertEqual(self.hook_items(self.doctor(a, env))[0]["answered"], True)

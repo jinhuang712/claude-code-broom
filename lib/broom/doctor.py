@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Tuple
 
 from . import __version__
 from .config import DEAD_CODE, LIMIT_PAIR, REPO_FILE, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, repo_file
+from .githook import LINE, hook_path, installed
 from .gitutil import git
 from .needs import LANG_NAMES, LOCKFILES, Diagnosis, Item, settings_files
 from .state import DATA_ROOT, load_json, save_json, short_hash, update_json
@@ -77,7 +78,7 @@ def diagnose(repo: Path, projects: Optional[Dict[str, List[Path]]] = None) -> di
     """Everything `broom doctor` reports for the repo, and the commands that fix it."""
     projects = scan(repo) if projects is None else projects
     unique: Dict[Tuple[str, ...], Item] = {}
-    for i in Diagnosis(repo, projects).findings() + check_repo_file(repo):
+    for i in Diagnosis(repo, projects).findings() + check_repo_file(repo) + check_git_hook(repo, projects):
         # one package's missing tool installed at the root is the same fix for every package
         unique.setdefault((i.lang, i.role, i.tool, i.status, i.project, i.fix), i)
     items = list(unique.values())
@@ -150,6 +151,19 @@ def check_repo_file(repo: Path) -> List[Item]:
     return [Item("broom", "config", REPO_FILE, "ok", ".", ", ".join(shown) or "empty")]
 
 
+def check_git_hook(repo: Path, projects: Dict[str, List[Path]]) -> List[Item]:
+    """git's pre-commit hook, for a repo that has code: a gap until `broom install-hook` adds it, so that the commits
+    Claude Code's hook never sees are checked too. Another tool's hook in its place is never replaced: the item then
+    carries the line to add to it, and no command."""
+    if not projects or installed(repo):
+        return []
+    if hook_path(repo).exists():
+        detail = f"another tool's hook is in place: add this line to it: {LINE}"
+        return [Item("git", "hook", "pre-commit", "missing", ".", detail)]
+    detail = "commits Claude Code's commit hook doesn't see go unchecked"
+    return [Item("git", "hook", "pre-commit", "missing", ".", detail, "broom install-hook")]
+
+
 def _append_new(items: List[str], item: str) -> None:
     if item not in items:
         items.append(item)
@@ -202,7 +216,7 @@ def cache_key(repo: Path, projects: Dict[str, List[Path]]) -> str:
     changes, or Claude Code's settings change."""
     parts: List[object] = [__version__, str(repo), os.environ.get("PATH", "")]
     paths = [Path(d) for d in os.environ.get("PATH", "").split(os.pathsep) if d]
-    paths += settings_files(repo)
+    paths += settings_files(repo) + [hook_path(repo)]
     for dirs in projects.values():
         for p in dirs:
             paths += [p / n for n in CONFIG_NAMES] + [p / "node_modules" / ".bin"]
@@ -242,6 +256,8 @@ def describe(i: dict) -> str:
         return f"plugin {i['tool']} conflicts with broom's {LANG_NAMES[i['lang']]} language server"
     if i["role"] == "deps":
         return f"{i['tool']} is configured{where} but the project's dependencies aren't installed"
+    if i["role"] == "hook":
+        return "broom isn't in git's pre-commit hook, so commits Claude Code's hook doesn't see go unchecked"
     return f"{i['tool']} {i['status']} ({LANG_NAMES[i['lang']]} {i['role']}{where})"
 
 

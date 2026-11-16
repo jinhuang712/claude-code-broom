@@ -22,7 +22,7 @@ from .toolchain import (
 )
 
 LANG_NAMES = {"go": "Go", "js": "TS/JS", "rust": "Rust", "py": "Python", "css": "CSS", "scss": "SCSS",
-              "less": "Less", "swift": "Swift", "broom": "broom"}
+              "less": "Less", "swift": "Swift", "broom": "broom", "git": "git"}
 # Plugins that start a language server for the same files as broom's .lsp.json. Claude Code starts only the
 # first server registered for an extension, so either one silently never runs.
 LSP_PLUGINS = {"gopls-lsp": "go", "gopls": "go", "typescript-lsp": "js", "vtsls": "js", "ts7-lsp": "js",
@@ -39,7 +39,7 @@ Machine = Tuple[str, str, str, str]  # a tool on PATH to probe: (lang, role, too
 @dataclass
 class Item:
     lang: str
-    role: str  # format, lint, types, lsp, plugin or deps
+    role: str  # format, lint, types, lsp, plugin, deps or hook (git's)
     tool: str
     status: str  # ok, missing, broken, off (a config is missing so broom stays hands-off) or conflict
     project: str = ""  # directory for project-local tools and configs; "" for machine-wide ones
