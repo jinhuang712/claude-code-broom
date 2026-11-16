@@ -330,6 +330,15 @@ class ReportTest(LedgerCase):
         every = self.report(r, "--all")
         self.assertEqual((every["repos"], every["blocked"]), ("all", 5), "the other repo's too")
 
+    def test_old_lines_with_a_how_that_no_longer_occurs_are_still_read(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        ledger.write([self.row(r, e, k, **({"how": how} if e == "pass" else {}))
+                      for k, how in (("k1", "retry"), ("k2", "denials"), ("k3", "stop-again")) for e in ("block", "pass")])
+        data = self.report(r)
+        self.assertEqual((data["blocked"], data["let_through"], data["how"]),
+                         (3, 3, {"retry": 1, "denials": 1, "stop-again": 1}))
+        self.assertIn("(denials 1, retry 1, stop-again 1)", self.cli(r, "report").stdout)
+
     def test_a_finding_blocked_three_times_and_then_fixed_counts_once(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
         self.huge(r)

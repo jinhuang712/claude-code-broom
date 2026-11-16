@@ -17,7 +17,7 @@ class Issue:
     rule: str
     msg: str
     hard: bool = False  # compile/type error: counts outside the changed lines and files
-    severe: bool = False  # a code smell past its hard limit: like a hard error, it never passes on a retry alone
+    severe: bool = False  # a code smell past its hard limit: it blocks like a type error
 
 
 Findings = Tuple[List[Issue], List[str]]

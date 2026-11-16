@@ -235,6 +235,8 @@ def waived(found: List[dict], turn: Optional[Path]) -> None:
     """Log a `waiver` line for each self-waiver in `found` (dicts of kind, repo, file, note and key, from waivers.py)
     that the turn hasn't seen yet, and note it in the turn's directory (`turn`) for its summary. Without a turn every
     one is written."""
+    if not found:
+        return
     seen = {r.get("key") for r in read(turn / WAIVED)} if turn is not None else set()
     fresh = {w["key"]: w for w in found if w["key"] not in seen}.values()
     rows = [line("waiver", w["repo"], kind=w["kind"], file=w["file"], note=w["note"], key=w["key"]) for w in fresh]

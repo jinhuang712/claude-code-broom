@@ -151,6 +151,15 @@ class ConfigTest(LedgerCase):
         self.assertEqual(self.stop(r), {}, "no stop hook checks now: on record, and not in a summary")
 
 
+    def test_a_turn_that_only_loosened_the_config_still_says_so(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        (r / ".broom.json").write_text('{"smells_off": ["dead_code", "todo"], "exclude": ["gen/*"]}')
+        self.edit(r, ".broom.json")
+        self.assertEqual(self.stop(r)["systemMessage"], "broom saw 2 self-waivers this turn: "
+                         ".broom.json smells_off +todo, .broom.json exclude +gen/*")
+        self.assertEqual(self.stop(r), {})
+
+
 class SummaryTest(LedgerCase):
     def test_the_summary_line_has_what_was_let_through_then_the_waivers(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
