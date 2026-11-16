@@ -82,9 +82,15 @@ _git_roots: Dict[Path, Optional[Path]] = {}
 
 
 def git_root(d: Path) -> Optional[Path]:
+    """The repo `d` is in: the nearest directory above it with a `.git`, without starting git, which a check asks
+    once per directory of every file it looks at. With GIT_DIR or GIT_WORK_TREE set, git is asked."""
     if d not in _git_roots:
-        out = git(["rev-parse", "--show-toplevel"], d) if d.is_dir() else None
-        _git_roots[d] = Path(out.strip()).resolve() if out else None
+        if os.environ.get("GIT_DIR") or os.environ.get("GIT_WORK_TREE"):
+            out = git(["rev-parse", "--show-toplevel"], d) if d.is_dir() else None
+            _git_roots[d] = Path(out.strip()).resolve() if out else None
+        else:
+            here = d.resolve() if d.is_dir() else None
+            _git_roots[d] = next((p for p in (here, *here.parents) if (p / ".git").exists()), None) if here else None
     return _git_roots[d]
 
 
@@ -126,6 +132,7 @@ class ChangedLines:
         self.base = base
         self.cached = cached
         self._cache: Dict[Path, Optional[Set[int]]] = {}
+        self._repos: Dict[Path, Optional[Tuple[Set[str], Set[str]]]] = {}
         self._renames: Dict[Path, Dict[str, str]] = {}
 
     def old_path(self, f: Path, root: Path) -> Optional[Path]:
@@ -142,12 +149,33 @@ class ChangedLines:
             self._cache[f] = self._compute(f)
         return self._cache[f]
 
+    def _repo(self, root: Path) -> Optional[Tuple[Set[str], Set[str]]]:
+        """The files git tracks in `root` and those that differ from the base, each asked of git once, not once per
+        file; None when the base isn't a revision there."""
+        if root not in self._repos:
+            mode = ["--cached"] if self.cached else []
+            if git(["rev-parse", "--verify", "-q", self.base], root) is None:
+                self._repos[root] = None
+            else:
+                tracked = (git(["ls-files", "-z"], root) or "").split("\0")
+                differ = (git(["diff", "--name-only", "-z", "-M", *mode, self.base], root) or "").split("\0")
+                self._repos[root] = (set(tracked), set(differ))
+        return self._repos[root]
+
     def _compute(self, f: Path) -> Optional[Set[int]]:
         root = git_root(f.parent)
-        if root is None or git(["rev-parse", "--verify", "-q", self.base], root) is None:
+        repo = self._repo(root) if root else None
+        if root is None or repo is None:
             return None
-        if git(["ls-files", "--error-unmatch", str(f)], root) is None:
+        try:
+            rel = (f.parent.resolve() / f.name).relative_to(root).as_posix()
+        except ValueError:
+            return None
+        tracked, differ = repo
+        if rel not in tracked:
             return None  # untracked: all of it is new
+        if rel not in differ:
+            return set()  # tracked and the same as the base: no line is new
         mode = ["--cached"] if self.cached else []
         old = self.old_path(f, root)
         paths = [str(f)] + ([str(old)] if old else [])
