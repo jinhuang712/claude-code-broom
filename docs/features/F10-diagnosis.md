@@ -17,12 +17,14 @@ It measures the whole repo with no time cut, where the checks on a change take 3
 
 ## F10.1: Whole-repo diagnosis
 
-One command measures every code file of a repo and gives the result twice: a report a person reads, and data a script or Claude reads.
+`broom diagnose` measures every code file of a repo, or of the paths given, and gives the result twice: a report a person reads, and with `--json` data a script or Claude reads. `--out FILE` writes it to a file.
 
-The report holds the counts by smell and by language, the hotspot files and the worst smells. It names every tool that was missing, since counts without it read as cleaner than the code is.
+The report holds a summary, the smells by kind and by language, the hotspots by churn, the worst smells and the four sections of `broom stats`. It names every tool that was missing, since counts without it read as cleaner than the code is. Its last line says how long it took.
 
-- **Commands**: [broom smells](../CLI.md#broom-smells)
-- **How it works**: [Cleanup](../specs/cleanup.md)
+It has no time cut and no limit on the number of files. A repo of 5,825 files took 10.4 seconds and one of 18,496 took 49.3, measured on 2026-11-17.
+
+- **Commands**: [broom diagnose](../CLI.md#broom-diagnose)
+- **How it works**: [Diagnosis](../specs/diagnosis.md)
 
 **Stories** (1):
 
@@ -32,17 +34,27 @@ The report holds the counts by smell and by language, the hotspot files and the 
 
 ## F10.2: Hotspots by churn
 
-Files are ranked by their smells and by how often they changed in the last 90 days. A bad file that changes every week costs more than a bad file nobody touches, so it comes first.
+Files are ranked by their smells and by how often they changed in the last 90 days. A bad file that changes every week costs more than a bad file nobody touches, so it comes first. Each row shows the file's smells past the hard limit, its hints, its changes and its score.
 
-`/broom:clean` uses this ranking to propose its batches.
+`broom smells` and `broom diagnose` rank this way, and so do the worst files the session note names. `broom smells --by smells` gives the order by smells alone. With no history the order falls back to that one, and a note says so.
+
+- **Commands**: [broom smells](../CLI.md#broom-smells)
+- **How it works**: [Diagnosis](../specs/diagnosis.md)
 
 ---
 
 ## F10.3: Before and after
 
-One command compares two revisions and says what the work between them did to the smells: how many went away, how many are new and how each hotspot moved.
+`broom compare BASE` measures the repo as it is and as it was at a revision, and says what the work between them did to the smells: per kind the count before and after, the smells that are gone, new, smaller and bigger, and how each hotspot of the base moved. It ends with one line to quote, such as `since v1.2.0: 41 smells -> 12 (-29); past the hard limit 9 -> 0`.
 
-- **Commands**: [broom smells](../CLI.md#broom-smells)
+The base is measured in a temporary checkout, which is removed afterwards. A tool that can't run there makes its kinds of smell not comparable, and the report names them.
+
+1 gap:
+
+- A tool that fails in the temporary checkout without saying so is not caught, so its smells read as gone.
+
+- **Commands**: [broom compare](../CLI.md#broom-compare)
+- **How it works**: [Diagnosis](../specs/diagnosis.md)
 
 ---
 
@@ -72,4 +84,4 @@ Paths on the command line narrow all four to a file or a folder. A question it c
 
 ## F10.5: Claude knows what to ask
 
-At the start of a session Claude is told in a line which broom command answers a question about the repo, so it asks broom before it writes a script. The line is the end of the limits card. The skills name the command for each kind of question.
+At the start of a session Claude is told in a line which broom command answers a question about the repo, so it asks broom before it writes a script. The line is the end of the limits card. `/broom:clean` names the commands for a cleanup: the diagnosis first, the comparison at the end.

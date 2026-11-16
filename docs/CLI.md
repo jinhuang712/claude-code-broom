@@ -111,6 +111,7 @@ Status: ✅ built · ⬜ planned
 | `paths` | limit to these | the repo |
 | `--base REV` | only what the changes since REV made worse | off |
 | `--top N` | how many hotspot files and smells to list | 10 |
+| `--by` | `churn` ranks hotspots by smells and changes, `smells` by smells alone | `churn` |
 | `--json` | print JSON | off |
 | `--dismiss` | quiet the session note until the severe count grows | off |
 
@@ -121,6 +122,52 @@ Status: ✅ built · ⬜ planned
 **Fails**: exit 1 outside a repo and for an unknown REV. It exits 0 whether or not smells are found.
 
 **Example**: `broom smells src --top 3` prints `[broom] 12 code smell(s) in ~/code/app` and three files.
+
+---
+
+### broom diagnose
+
+**Status**: ✅
+
+`broom diagnose [paths...] [--top N] [--days N] [--json] [--out FILE]` measures a whole repo with no time cut.
+
+| Flag | Means | Default |
+|---|---|---|
+| `paths` | limit to these files or directories | the repo |
+| `--top N` | how long each list is | 10 |
+| `--days N` | how far back changes are counted | 90 |
+| `--json` | print JSON, with every smell | off |
+| `--out FILE` | write the report to a file and say where | off |
+
+**Called by**: a person, Claude and the `/broom:clean` skill.
+
+**Prints**: stdout gets a report that also reads as Markdown: a summary, the smells by kind and by language, the hotspots by churn, the worst smells and the four sections of `broom stats`. The last line says how long it took. stderr gets `broom: not inside a git repository`.
+
+**Fails**: exit 1 outside a repo.
+
+**Example**: `broom diagnose --out diagnosis.md` prints the path it wrote.
+
+---
+
+### broom compare
+
+**Status**: ✅
+
+`broom compare BASE [--top N] [--json]` says what the work since a revision did to the smells.
+
+| Flag | Means | Default |
+|---|---|---|
+| `BASE` | the revision to compare with, such as `v1.2.0` or `main~20` | — |
+| `--top N` | how many hotspots and how long each list is | 10 |
+| `--json` | print JSON, with every smell of each list | off |
+
+**Called by**: a person, Claude and the `/broom:clean` skill.
+
+**Prints**: stdout gets the count per kind before and after, the smells that are gone, new, smaller and bigger, how each hotspot of the base moved, and one line to quote. stderr gets `broom: unknown revision '<REV>'` or `broom: not inside a git repository`.
+
+**Fails**: exit 1 for an unknown revision and outside a repo.
+
+**Example**: `broom compare v1.2.0` ends with `since v1.2.0: 41 smells -> 12 (-29); past the hard limit 9 -> 0`.
 
 ---
 
@@ -308,10 +355,12 @@ An uncaught error exits 1 with a traceback.
 
 ## Output formats
 
-5 commands print JSON a script relies on:
+7 commands print JSON a script relies on:
 
 - **`broom doctor --json`**: `version` · `repo` · `languages` · `items` · `fix` · `configure` · `fix_global` · `configure_global` · `healthy` · `settings`.
-- **`broom smells --json`**: `repo` · `base` · `total` · `severe` · `hints` · `hotspots` · `smells` · `notes`.
+- **`broom smells --json`**: `repo` · `base` · `total` · `severe` · `hints` · `by` · `hotspots` · `smells` · `notes`.
+- **`broom diagnose --json`**: `repo` · `paths` · `summary` · `by_smell` · `by_language` · `by` · `hotspots` · `smells` · `missing_tools` · `notes` · `stats`.
+- **`broom compare --json`**: the counts per kind, the four lists of smells, the hotspots of the base and the kinds that are not comparable.
 - **`broom stats --json`**: `repo` · `paths` · `files` · `days` · `size` · `tests` · `rot` · `history`. Each section holds a `note` that says what is missing, or null.
 - **`broom fixes --json`**: one key per smell, with its fix line.
 - **`broom report --json`**: `days` · `repos` · `blocked` · `fixed` · `let_through` · `open` · `how` · `fix_rate` · `rules` · `waivers` · `skips` · `seconds` · `errors`.

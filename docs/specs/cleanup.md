@@ -6,7 +6,7 @@ This part ranks the smells already in a repo and tells Claude when there are sev
 
 ## Ranking
 
-`broom smells` measures the repo or some paths with no base, so nothing in it is "new". It ranks the hotspot files, most smells past the hard limit first, and the worst smells, furthest past their limit first.
+`broom smells` measures the repo or some paths with no base, so nothing in it is "new". It ranks the hotspot files by their smells and by how often they changed, and the worst smells, furthest past their limit first.
 
 With `--base REV` it lists only what the changes since that revision made worse, with each smell's size or count at the revision.
 

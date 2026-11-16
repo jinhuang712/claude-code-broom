@@ -10,12 +10,15 @@ argument-hint: "[area or kind of smell, in your words]"
 broom smells [paths] --top 10
 ```
 
-It lists the hotspot files (most smells past the hard limit first) and the worst smells (furthest past their
+It lists the hotspot files (ranked by their smells and by how often they change) and the worst smells (furthest past their
 limit first), `--top` of each, and says how many more there are. Add `--json` to read it as data. With no paths it
 covers the repo; with paths, only those.
 
 Pick the scope with the user: an area (`src/layout`), a file, or a kind of smell ("the long functions", "dead
 code"). When the request already names it, use that.
+
+For a whole repo nobody has measured yet, start with `broom diagnose --out <file>`: it measures everything with
+no time cut and gives the numbers a refactor is planned from. Note the revision you start at.
 
 ## 2. Plan
 
@@ -42,6 +45,10 @@ Run `broom smells` on the same scope again: the batch's smells are gone and noth
 the batch on its own (broom checks the commit as usual), then go on to the next batch.
 
 ## 5. Stop
+
+When the cleanup ends, run `broom compare <the revision you started at>` and give the user its last line: what
+the work did to the smells, in numbers.
+
 
 Stop when the scope is clean, the user says so, or after the batches they agreed to. Report what is left with the
 counts from `broom smells`.

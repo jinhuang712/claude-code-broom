@@ -6,6 +6,18 @@
 
 ---
 
+## 0.20.1 — 2026-11-17
+
+---
+
+### Diagnosis
+
+- `broom diagnose` measures a whole repo with no time cut and no file limit, and gives a report to read and, with `--json`, data: the smells by kind and by language, the hotspots, the worst smells, the tools that were missing and the counts of `broom stats`.
+- Hotspots are ranked by their smells and by how often they changed in the last 90 days, so a bad file that changes every week comes before a bad file nobody touches. `broom smells --by smells` keeps the order by smells alone.
+- `broom compare BASE` says what the work since a revision did to the smells: what is gone, new, smaller and bigger, and one line to quote.
+
+---
+
 ## 0.20.0 — 2026-11-17
 
 ---

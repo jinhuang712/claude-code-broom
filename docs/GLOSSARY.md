@@ -22,7 +22,8 @@ Each term has its meaning, the words that lost to it and its name in the code wh
 | Base | the revision a change is measured against | — | `base` |
 | Scratch copy | a temporary copy of the changed files where a tool runs under broom's config | scratch tree | `measure` |
 | Real tree | the project's own checkout, where imports resolve | — | `realtree` |
-| Hotspot | a file ranked by its smells past the hard limit | — | `hotspots` |
+| Hotspot | a file ranked by its smells and by how often it changes | — | `hotspots` |
+| Churn | the commits that touched a file in the last 90 days | — | `changes` |
 | Turn | the work between one prompt and the moment Claude stops | — | `turns` |
 | Legacy | code a repo marks as on its way out, which new code may repeat | — | `legacy` |
 | Note | a line that says what a check skipped | — | `notes` |

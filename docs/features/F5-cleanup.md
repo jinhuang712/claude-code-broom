@@ -13,7 +13,7 @@ Cleanup goes after the smells already in a repo, which the checks on a change ne
 
 ## F5.1: Ranking
 
-`broom smells` lists the hotspot files, most smells past the hard limit first, and the worst smells, furthest past their limit first. It covers the whole repo or some paths, and says how many more there are.
+`broom smells` lists the hotspot files, ranked by their smells and by how often they change, and the worst smells, furthest past their limit first. It covers the whole repo or some paths, and says how many more there are.
 
 With `--base REV` it lists only what the changes since that revision made worse. Missing tools are named in the first line, where counts without them read as cleaner than the code is.
 

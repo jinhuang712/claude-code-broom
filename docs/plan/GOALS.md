@@ -13,7 +13,7 @@ Goals
 │   ├── ⬜ O2: Tooling in one conversation — a bare repo ends with no gap
 │   ├── ⬜ O3: Mistakes seen while editing — a diagnostic after an edit
 │   ├── ⬜ O4: Nothing passes silently — every pass has a reason the user can see
-│   ├── ⬜ O5: A full diagnosis of an old repo — every smell, with no time cut
+│   ├── ✅ O5: A full diagnosis of an old repo — every smell, with no time cut
 │   ├── ⬜ O6: A number that got worse is told once — the check-up speaks only then
 │   └── ⬜ O7: No script to write — broom answers what a session would count by hand
 ├── Measures
@@ -107,7 +107,7 @@ One command measures a whole repo with no time cut.
 
 **Acceptance**: On a repo of more than 5,000 code files, the diagnosis ends without a `timeout:` note and names every missing tool.
 
-**Status**: ⬜
+**Status**: ✅ 2026-11-17, by `tests/test_diagnose.py` on 5,100 files and by runs on two open-source repos of 5,825 and 18,496 files.
 
 ---
 

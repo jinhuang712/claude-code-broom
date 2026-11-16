@@ -178,7 +178,7 @@ The feature shipped in 0.20.0 on 2026-11-17.
 
 **Status**: 🟨
 
-`broom stats` shipped in 0.19.2 on 2026-11-17. The full diagnosis, the churn hotspots and the before-and-after are next.
+`broom stats` shipped in 0.19.2 and the diagnosis, the churn hotspots and the comparison in 0.20.1, on 2026-11-17. The tests' data directory is next.
 
 A refactor starts from numbers: what is in the repo, where it hurts most and whether the work paid off.
 
@@ -194,7 +194,7 @@ A refactor starts from numbers: what is in the repo, where it hurts most and whe
 **Exit criteria** (2):
 
 - **Objectives**
-  - [O5: A full diagnosis of an old repo](GOALS.md#o5-a-full-diagnosis-of-an-old-repo)
+  - [O5: A full diagnosis of an old repo](GOALS.md#o5-a-full-diagnosis-of-an-old-repo): ✅ 2026-11-17
   - [O7: No script to write](GOALS.md#o7-no-script-to-write)
 
 ---

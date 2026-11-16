@@ -50,6 +50,7 @@ It lives in `lib/broom/`.
 - [Cleanup](cleanup.md)
 - [Record](record.md)
 - [Stats](stats.md)
+- [Diagnosis](diagnosis.md)
 
 ---
 
