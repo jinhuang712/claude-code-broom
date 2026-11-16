@@ -185,8 +185,9 @@ def measure_go(r: Reader, _rels: List[str], lim: Limits, _start: Path) -> None:
     cfg = r.root.parent / f"{r.root.name}-golangci.yml"
     cfg.write_text(golangci_config(lim))
     env = {"GOLANGCI_LINT_CACHE": str(r.root.parent / f"{r.root.name}-gocache")}
-    rc, out, _ = run([exe, "run", "-c", str(cfg), "--output.json.path", "stdout", "--output.text.path", "stderr",
-                      "--show-stats=false", "./..."], r.root, timeout=TOOL_TIMEOUT, env=env)
+    rc, out, _ = run([exe, "run", "--allow-parallel-runners", "-c", str(cfg), "--output.json.path", "stdout",
+                      "--output.text.path", "stderr", "--show-stats=false", "./..."], r.root, timeout=TOOL_TIMEOUT,
+                     env=env)
     for d in (r.json(rc, out, {}) or {}).get("Issues") or []:
         read = golangci_read(d.get("FromLinter", ""), d.get("Text", ""))
         if read:

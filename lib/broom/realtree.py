@@ -105,7 +105,7 @@ def go_found(repo: Path, rels: List[str], notes: List[str], budget: Budget) -> L
                 notes.append(OUT_OF_TIME.format(tool="golangci-lint"))
                 break
             pkgs = sorted({"./" + os.path.relpath(f.parent, module) for f in files})
-            rc, out, err = run([exe, "run", "-c", str(cfg), "--output.json.path", "stdout",
+            rc, out, err = run([exe, "run", "--allow-parallel-runners", "-c", str(cfg), "--output.json.path", "stdout",
                                 "--output.text.path", "stderr", "--show-stats=false", *pkgs], module,
                                timeout=timeout, env={"GOLANGCI_LINT_CACHE": str(golangci_cache(module))})
             if rc is None:
