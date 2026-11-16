@@ -104,7 +104,7 @@ Claude Code 的提交钩子，`broom install-hook` 会为它们加上 git 自己
 
 ## 文档（英文）
 
-[Philosophy](PHILOSOPHY.md) · [Goals](GOALS.md) · [Proposal](PROPOSAL.md) · [Design](DESIGN.md) ·
+[Philosophy](PHILOSOPHY.md) · [Goals](plan/GOALS.md) · [Proposal](PROPOSAL.md) · [Designs](DESIGNS.md) ·
 [Features](FEATURES.md) · [Changelog](../CHANGELOG.md)
 
 ## 许可证
