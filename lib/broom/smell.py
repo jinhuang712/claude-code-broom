@@ -34,6 +34,8 @@ LABELS = {
     "globals": "global statement(s) or module variable(s) assigned in a function",
     "bool_params": "boolean flag parameter(s)",
     "broad_test_asserts": "too broad test assertion(s)",
+    "broad_catch": "handler(s) that catch every error",
+    "missing_docs": "public module(s), class(es) or function(s) with no doc comment",
     "import_cycle": "import(s) that close a cycle between modules",
     "folder_cycle": "import(s) that close a cycle between folders",
 }

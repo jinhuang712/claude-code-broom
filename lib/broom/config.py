@@ -46,6 +46,8 @@ SMELL_PRESENCE = {
     "globals": "hint",
     "bool_params": "hint",
     "broad_test_asserts": "hint",
+    "broad_catch": "hint",  # an error handler that catches every error
+    "missing_docs": "hint",  # public code with no doc comment
     "import_cycle": "hint",  # modules that import one another in a ring
     "folder_cycle": "hint",  # folders that do: the layers of the code going the wrong way
 }

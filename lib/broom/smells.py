@@ -69,10 +69,15 @@ class RepoLimits:
 # ---------------------------------------------------------------- comparing versions
 
 
+# What a test file doesn't owe: complexity counts every assertion's `if`, magic numbers are the fixtures, and a test
+# or a helper beside it needs no doc comment.
+TEST_NOISE = ("complexity", "magic_numbers", "missing_docs")
+
+
 def noise(r: Raw) -> bool:
-    """Findings that measure the tool, not the code: in tests, complexity counts every assertion's `if` and magic
-    numbers are the fixtures; a test framework's describe/it callbacks are containers, long by nature."""
-    if r.metric in ("complexity", "magic_numbers") and TEST_FILE.search(r.rel):
+    """Findings that measure the tool, not the code: in tests, what `TEST_NOISE` names; a test framework's
+    describe/it callbacks are containers, long by nature."""
+    if r.metric in TEST_NOISE and TEST_FILE.search(r.rel):
         return True
     return r.metric in ("function_lines", "complexity") and bool(TEST_BLOCK.match(r.key))
 

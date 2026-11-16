@@ -91,6 +91,8 @@ RUFF_METRICS = {
     "PGH003": "suppression", "PGH004": "suppression", "S110": "swallowed_error", "ERA001": "commented_code",
     "PLR2004": "magic_numbers", "T201": "debug_output", "T203": "debug_output", "ANN401": "type_escape",
     "PLW0603": "globals", "FBT001": "bool_params", "PT011": "broad_test_asserts",
+    "BLE001": "broad_catch", "E722": "broad_catch",
+    **{f"D10{n}": "missing_docs" for n in range(4)},  # module, class, method, function: public names only
     **{f"ARG00{n}": "unused_params" for n in range(1, 6)}, **{f"FIX00{n}": "todo" for n in range(1, 5)},
 }
 
@@ -130,7 +132,8 @@ def golangci_config(lim: Limits) -> str:
     """Linters that read syntax alone: the scratch tree holds only the changed files, so imports don't resolve,
     and one linter that needs types (goconst, forbidigo, gochecknoglobals) would stop them all."""
     revive = [f"{{name: argument-limit, arguments: [{lim['params'][0]}]}}", "{name: unused-parameter}",
-              "{name: empty-block}", "{name: flag-parameter}", "{name: unchecked-type-assertion}"]
+              "{name: empty-block}", "{name: flag-parameter}", "{name: unchecked-type-assertion}",
+              "{name: exported}"]
     return "\n".join([
         'version: "2"',
         "linters:",
@@ -158,6 +161,7 @@ GOLANGCI_READS: List[Tuple[str, str, str, Optional[str], Optional[str]]] = [
     ("revive", "unused-parameter", "unused_params", None, None),
     ("revive", "empty-block", "swallowed_error", None, None),
     ("revive", "flag-parameter", "bool_params", None, None),
+    ("revive", "exported: exported ", "missing_docs", None, None),  # not "comment on exported ... form" or stutter
     ("revive", "unchecked-type-assertion", "type_escape", None, None),
     ("mnd", "", "magic_numbers", None, None),
     ("nolintlint", "", "suppression", None, None),
@@ -201,6 +205,7 @@ SWIFTLINT_METRICS = {
     **SWIFTLINT_SIZES, "blanket_disable_command": "suppression", "no_empty_block": "swallowed_error",
     "unused_parameter": "unused_params", "no_magic_numbers": "magic_numbers", "todo": "todo",
     "force_cast": "type_escape", "force_unwrapping": "type_escape", "force_try": "type_escape",
+    "missing_docs": "missing_docs",
 }
 
 
