@@ -12,7 +12,6 @@ from __future__ import annotations
 import os
 import re
 import shlex
-import sys
 import time
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -31,7 +30,7 @@ from .githook import installed
 from .gitutil import ChangedLines, git, git_root
 from .passed import record, staged_blobs, unpassed, worktree_blobs
 from .smells import Smell, gate_smells, hint_text
-from .state import DATA_ROOT, emit, load_json, session_dir
+from .state import DATA_ROOT, emit, load_json, session_dir, warn
 from .toolchain import lang_of
 
 
@@ -183,7 +182,7 @@ def hook_pre_commit() -> int:
     denial, context = gate_files(repo, files, session_dir("git-pre-commit"), repo, state)
     save_commits(state, [repo])
     for line in context + ([denial] if denial else []):
-        print(line, file=sys.stderr)
+        warn(line)
     return 1 if denial else 0
 
 

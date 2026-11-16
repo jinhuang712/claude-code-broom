@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import sys
 import threading
 import time
 from pathlib import Path
@@ -25,7 +24,7 @@ from .hooktrace import watch
 from .gitutil import CLOCK, HOOK_SECONDS, changed_since, ChangedLines, git, git_changed_files, git_root
 from .scaffold import add_default_configs
 from .smells import find_smells
-from .state import read_hook_input
+from .state import read_hook_input, say, warn
 from .toolchain import lang_of
 
 
@@ -67,23 +66,23 @@ def sweep_smells(root: Path, code: List[Path], args: argparse.Namespace) -> int:
     found, notes = find_smells(root, code, None if args.all else (args.base or "HEAD"))
     if found or notes:
         what = "in the repo" if args.all else "the changes made worse"
-        print(render(f"\n[broom] {len(found)} code smell(s) {what}.", [s.issue() for s in found], notes, set()))
+        say(render(f"\n[broom] {len(found)} code smell(s) {what}.", [s.issue() for s in found], notes, set()))
     return len(found)
 
 
 def cmd_sweep(args: argparse.Namespace) -> int:
     files, changed, root = scope_files(args)
     if not files:
-        print("broom: nothing to sweep in that scope")
+        say("broom: nothing to sweep in that scope")
         return 0
     # Formatting a whole repo makes a huge diff: that takes an explicit --fix, which then means every line.
     if not args.check and (args.fix or not args.all):
         scope = "file" if args.all else (args.scope or setting("format_scope", Path.cwd()))
         fallbacks: List[str] = []
         for p, tool in format_files(files, scope=scope, changed=changed, notes=fallbacks):
-            print(f"formatted {display(p)} ({tool})")
+            say(f"formatted {display(p)} ({tool})")
         for n in fallbacks:
-            print(f"note: {n}")
+            say(f"note: {n}")
     code = [f for f in files if lang_of(f)]
     issues, notes = run_checks(code, whole=args.all)
     every = select(issues, set(code), set(), changed, whole=args.all)
@@ -92,11 +91,11 @@ def cmd_sweep(args: argparse.Namespace) -> int:
     hidden = len(every) - len(found)
     scope = "in the repo" if args.all else "in the changed lines"
     if found or notes:
-        print(render(f"[broom] {len(found)} issue(s) {scope}.", found, notes, set() if args.all else set(code)))
+        say(render(f"[broom] {len(found)} issue(s) {scope}.", found, notes, set() if args.all else set(code)))
     else:
-        print(f"broom: clean ({len(code)} file(s))")
+        say(f"broom: clean ({len(code)} file(s))")
     if hidden:
-        print(f"\n{hidden} known issue(s) hidden: `broom known` lists them, `--include-known` shows them here")
+        say(f"\n{hidden} known issue(s) hidden: `broom known` lists them, `--include-known` shows them here")
     smells = sweep_smells(root, code, args) if root else 0
     return 1 if found or smells else 0
 
@@ -111,11 +110,11 @@ def cmd_fmt(args: argparse.Namespace) -> int:
     files = [f for f in dict.fromkeys(files) if not excluded(f)]
     changed = format_files(files, scope=args.scope or setting("format_scope", Path.cwd()), notes=fallbacks)
     for p, tool in changed:
-        print(f"formatted {display(p)} ({tool})")
+        say(f"formatted {display(p)} ({tool})")
     for n in fallbacks:
-        print(f"note: {n}")
+        say(f"note: {n}")
     if not changed:
-        print("broom: nothing to format")
+        say("broom: nothing to format")
     return 0
 
 
@@ -139,7 +138,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         for i in result["items"]:  # answered in some repo already: setup doesn't raise it again
             i["answered"] = i["status"] != "ok" and gap_kind(i) in known
         result["settings"] = {name: dict(zip(("value", "source"), setting_source(name, repo))) for name in SETTINGS}
-    print(json.dumps(result, indent=1) if args.json else render_text(result))
+    say(json.dumps(result, indent=1) if args.json else render_text(result))
     return 0 if result["healthy"] else 1
 
 
@@ -147,13 +146,13 @@ def cmd_setup(args: argparse.Namespace) -> int:
     from .doctor import gaps, record_setup, reset_setup
 
     if args.reset:
-        print(f"broom: forgot {reset_setup()} setup answer(s); setup will ask about every gap again")
+        say(f"broom: forgot {reset_setup()} setup answer(s); setup will ask about every gap again")
         return 0
     status = "dismissed" if args.dismiss else "done"
     result = record_setup(repo_or_exit(), status)
     left = len(gaps(result))
-    print(f"broom: setup {status}" + (f"; {left} gap(s) left as they are, and broom won't ask about these kinds of "
-                                       "gap again in any repo (`broom setup --reset` to undo)" if left else ""))
+    say(f"broom: setup {status}" + (f"; {left} gap(s) left as they are, and broom won't ask about these kinds of "
+                                     "gap again in any repo (`broom setup --reset` to undo)" if left else ""))
     return 0
 
 
@@ -165,7 +164,7 @@ def cmd_init(args: argparse.Namespace) -> int:
     root = Path(args.dir).resolve() if args.dir else (git_root(here) or here)
     # Configs are found by walking up: at a monorepo root they cover every package below.
     actions = add_default_configs(root, scan(root), dry_run=args.dry_run)
-    print("\n".join(actions) if actions else f"broom: {display(root)} already has its configs")
+    say("\n".join(actions) if actions else f"broom: {display(root)} already has its configs")
     return 0
 
 
@@ -177,10 +176,10 @@ def cmd_smells(args: argparse.Namespace) -> int:
 
     repo = repo_or_exit()
     if args.dismiss:
-        print(dismiss(repo))
+        say(dismiss(repo))
         return 0
     data = report(repo, [Path(p).resolve() for p in args.paths], args.top, args.base)
-    print(json.dumps(data, indent=1) if args.json else render(data))
+    say(json.dumps(data, indent=1) if args.json else render(data))
     return 0
 
 
@@ -197,26 +196,26 @@ def cmd_known(args: argparse.Namespace) -> int:
             raise SystemExit("broom: not inside a git repository")
         n, where = accept_blocked(repo, why)
         if not n:
-            print(f"broom: no blocked commit or turn end to accept in {display(repo)}")
+            say(f"broom: no blocked commit or turn end to accept in {display(repo)}")
             return 1
         again = "stop again" if where.endswith("stop") else "commit again"
-        print(f"broom: accepted {n} issue(s) as known ({why}); {again}")
+        say(f"broom: accepted {n} issue(s) as known ({why}); {again}")
         return 0
     entries = baseline_under(roots)
     if args.clear:
         baseline_remove(list(entries))
-        print(f"broom: cleared {len(entries)} known issue(s)")
+        say(f"broom: cleared {len(entries)} known issue(s)")
         return 0
     if not entries:
-        print("broom: no known issues here")
+        say("broom: no known issues here")
         return 0
-    print(f"broom: {len(entries)} known issue(s), not raised again:")
+    say(f"broom: {len(entries)} known issue(s), not raised again:")
     for e in sorted(entries.values(), key=lambda v: (str(v.get("file")), v.get("line", 0))):
         when = time.strftime("%Y-%m-%d", time.localtime(e.get("t", 0)))
         where = f"{display(Path(str(e.get('file', '?'))))}:{e.get('line', '?')}"
         why = f"  ({e['why']})" if e.get("why") else ""
         msg = e.get("msg", "(recorded by broom 0.2)")
-        print(f"  {where}  {e.get('tool', '?')} {e.get('rule', '')}  {msg}  [{when}]{why}")
+        say(f"  {where}  {e.get('tool', '?')} {e.get('rule', '')}  {msg}  [{when}]{why}")
     return 0
 
 
@@ -228,9 +227,9 @@ def cmd_install_hook(_args: argparse.Namespace) -> int:
 
     written, path = install(repo_or_exit())
     if not written:
-        print(f"broom: {display(path)} is another tool's hook; add this line to it instead:\n  {LINE}")
+        say(f"broom: {display(path)} is another tool's hook; add this line to it instead:\n  {LINE}")
         return 1
-    print(f"broom: added {display(path)}: commits Claude Code's commit hook doesn't see are checked too")
+    say(f"broom: added {display(path)}: commits Claude Code's commit hook doesn't see are checked too")
     return 0
 
 
@@ -238,7 +237,7 @@ def give_up_after(seconds: float, event: str) -> None:
     """The last resort for what no command's timeout reaches (broom's own reading of files on a huge repo): end
     the hook without a verdict, which lets the commit, the edit or the stop through, before Claude Code does."""
     def give_up() -> None:
-        print(f"broom hook {event}: gave up after {seconds:.0f} s", file=sys.stderr, flush=True)
+        warn(f"broom hook {event}: gave up after {seconds:.0f} s")
         os._exit(0)
 
     timer = threading.Timer(seconds, give_up)
@@ -259,7 +258,7 @@ def cmd_hook(args: argparse.Namespace) -> int:
         try:
             return hook_pre_commit()
         except Exception as e:  # a broken check must never stop a commit
-            print(f"broom pre-commit: {e}", file=sys.stderr)
+            warn(f"broom pre-commit: {e}")
             ledger.errored(e)
             return 0
     data = read_hook_input()
@@ -268,7 +267,7 @@ def cmd_hook(args: argparse.Namespace) -> int:
     try:
         handlers[args.event](data)
     except Exception as e:  # a broken check must never trap Claude or block its edits
-        print(f"broom hook {args.event}: {e}", file=sys.stderr)
+        warn(f"broom hook {args.event}: {e}")
         ledger.errored(e)
     return 0
 
@@ -280,9 +279,9 @@ def cmd_lsp(_args: argparse.Namespace) -> int:
 
     cmd, why = typescript_server(Path.cwd().resolve())
     if cmd is None:
-        print(f"broom: no TypeScript language server here: {why}. Run broom doctor.", file=sys.stderr)
+        warn(f"broom: no TypeScript language server here: {why}. Run broom doctor.")
         return 1
-    print(f"broom: TypeScript language server: {why}", file=sys.stderr)
+    warn(f"broom: TypeScript language server: {why}")
     os.execvp(cmd[0], cmd)
     return 1  # not reached
 

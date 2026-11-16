@@ -19,7 +19,7 @@ from .findings import Issue
 from .config import excluded
 from .fixes import how_to_fix
 from .gitutil import ChangedLines
-from .state import DATA_ROOT, load_json, short_hash, update_json
+from .state import DATA_ROOT, load_json, say, short_hash, update_json
 
 BASELINE = DATA_ROOT / "baseline.json"
 COMMITS = DATA_ROOT / "commits.json"  # per repo: what the last commit or turn end blocked, by which hook
@@ -131,7 +131,7 @@ def accept_blocked(repo: Path, why: str) -> Tuple[int, str]:
     if left and not pending:
         raise SystemExit(refusal(repo, left))
     if left:
-        print(refusal(repo, left))
+        say(refusal(repo, left))
     if pending:
         now = time.time()
         baseline_add_entries({k: {**v, "t": now, "why": why} for k, v in pending.items()})

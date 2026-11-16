@@ -67,6 +67,17 @@ def emit(obj: dict) -> None:
     sys.stdout.flush()
 
 
+def say(text: str = "") -> None:
+    """Write `text` and a newline to stdout, as print does."""
+    sys.stdout.write(f"{text}\n")
+
+
+def warn(text: str) -> None:
+    """Write `text` and a newline to stderr and flush it, so a hook that exits at once still shows it."""
+    sys.stderr.write(f"{text}\n")
+    sys.stderr.flush()
+
+
 def parse_jsonc(text: str) -> dict:
     """The JSON object in `text`, which may hold comments and trailing commas; {} when it isn't one."""
     try:
