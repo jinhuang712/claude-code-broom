@@ -48,17 +48,25 @@ One command compares two revisions and says what the work between them did to th
 
 ## F10.4: Numbers on request
 
-One command answers the questions a session would otherwise write a script for, as a table for a person and as data for Claude. It needs no tool installed for the counts that are plain counting.
+`broom stats` answers the questions a session would otherwise write a script for, as tables for a person and as data for Claude. It needs git and no other tool, and takes a fraction of a second on a small repo.
 
-5 kinds of question:
+4 kinds of question:
 
-- **Size**: lines of code by language and by folder, and the longest files, functions and types.
-- **Tests**: how many there are, which are skipped, which repeat one another and which code files have none.
-- **Rot**: every counter of the check-up, with its value now and at the last check-up.
-- **History**: how often each file changed, and which files change together.
-- **One file or folder**: all of the above for a path the user names.
+- **Size**: lines of code by language and by folder, with tests counted apart, and the longest files.
+- **Tests**: how many test files and test cases there are, which are skipped, and which code files have no test file by name.
+- **Rot**: the lint suppressions by kind, the TODO comments with how many are older than 180 days, and the skipped tests.
+- **History**: the files that changed most in the last 90 days, and the pairs of files that changed together.
 
-A question broom can't answer is said so, with what is missing.
+Paths on the command line narrow all four to a file or a folder. A question it can't answer is said so, with what is missing.
+
+3 gaps:
+
+- The longest functions and types are not listed. `broom smells` lists those past a limit.
+- A code file is paired with its test by file name, which misses a test named otherwise.
+- Rust and CSS take no part in the pairing.
+
+- **Commands**: [broom stats](../CLI.md#broom-stats)
+- **How it works**: [Stats](../specs/stats.md)
 
 ---
 

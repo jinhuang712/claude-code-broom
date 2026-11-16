@@ -6,6 +6,17 @@
 
 ---
 
+## 0.19.2 — 2026-11-17
+
+---
+
+### Diagnosis
+
+- `broom stats` counts what a session would otherwise write a script to count: lines of code by language and folder, the longest files, the tests with the skipped ones and the code files that have none, the lint suppressions and the TODO comments with their age, and the files that changed most and changed together. It needs git and no other tool.
+- The session card names it, so Claude asks broom before it writes a script.
+
+---
+
 ## 0.19.1 — 2026-11-17
 
 ---

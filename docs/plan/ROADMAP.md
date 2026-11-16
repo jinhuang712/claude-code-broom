@@ -16,7 +16,7 @@ Roadmap
 │   ├── 🟨 CP3.1: Messages that say how to fix
 │   ├── 🟨 CP3.2: Limits told before the work
 │   └── ⬜ CP3.3: Old smells in touched code
-├── ⬜ CP4: A refactoring kit — a full diagnosis, the worst places first, the numbers after
+├── 🟨 CP4: A refactoring kit — a full diagnosis, the worst places first, the numbers after
 ├── ⬜ CP5: A check-up for rot — numbers that speak when they grow
 │   ├── ⬜ CP5.1: Counters, dead code and comments
 │   ├── ⬜ CP5.2: Tests: coverage, duplicates and skips
@@ -173,7 +173,9 @@ The feature shipped in 0.19.1 on 2026-11-17. The fix rate after it comes with us
 
 ## CP4: A refactoring kit
 
-**Status**: ⬜
+**Status**: 🟨
+
+`broom stats` shipped in 0.19.2 on 2026-11-17. The full diagnosis, the churn hotspots and the before-and-after are next.
 
 A refactor starts from numbers: what is in the repo, where it hurts most and whether the work paid off.
 

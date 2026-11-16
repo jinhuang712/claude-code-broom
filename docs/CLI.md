@@ -190,6 +190,29 @@ Status: ✅ built · ⬜ planned
 
 ---
 
+### broom stats
+
+**Status**: ✅
+
+`broom stats [paths...] [--top N] [--days N] [--json]` counts the size, the tests, the rot and the history of a repo.
+
+| Flag | Means | Default |
+|---|---|---|
+| `paths` | limit to these files or directories | the repo |
+| `--top N` | how long each list is | 10 |
+| `--days N` | how far back history looks | 90 |
+| `--json` | print JSON | off |
+
+**Called by**: a person and Claude.
+
+**Prints**: stdout gets four sections of aligned tables: `Size`, `Tests`, `Rot` and `History`. stderr gets `broom: not inside a git repository`.
+
+**Fails**: exit 1 outside a repo.
+
+**Example**: `broom stats lib --top 3` prints the lines by language and the three longest files under `lib`, then the other sections.
+
+---
+
 ### broom install-hook
 
 **Status**: ✅
@@ -285,10 +308,11 @@ An uncaught error exits 1 with a traceback.
 
 ## Output formats
 
-4 commands print JSON a script relies on:
+5 commands print JSON a script relies on:
 
 - **`broom doctor --json`**: `version` · `repo` · `languages` · `items` · `fix` · `configure` · `fix_global` · `configure_global` · `healthy` · `settings`.
 - **`broom smells --json`**: `repo` · `base` · `total` · `severe` · `hints` · `hotspots` · `smells` · `notes`.
+- **`broom stats --json`**: `repo` · `paths` · `files` · `days` · `size` · `tests` · `rot` · `history`. Each section holds a `note` that says what is missing, or null.
 - **`broom fixes --json`**: one key per smell, with its fix line.
 - **`broom report --json`**: `days` · `repos` · `blocked` · `fixed` · `let_through` · `open` · `how` · `fix_rate` · `rules` · `waivers` · `skips` · `seconds` · `errors`.
 

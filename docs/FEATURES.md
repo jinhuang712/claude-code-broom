@@ -74,12 +74,12 @@ Features
 │   ├── 🚧 F9.2: Turn summary — not shown with `check_on` at `commit`
 │   ├── ✅ F9.3: Report — the record of a repo over a period
 │   └── ⬜ F9.4: Tiers by fix rate — a rule nobody fixes stops interrupting
-├── ⬜ F10: Diagnosis — a repo's numbers before and after a refactor
+├── 🚧 F10: Diagnosis — the full report, churn hotspots and before-and-after are not built
 │   ├── 🚧 F10.1: Whole-repo diagnosis — `broom smells` ranks, and the full report is not built
 │   ├── ⬜ F10.2: Hotspots by churn — the files that are both bad and often changed
 │   ├── 🚧 F10.3: Before and after — `--base` lists what got worse, and not what got better
-│   ├── ⬜ F10.4: Numbers on request — what a session would otherwise script
-│   └── 🚧 F10.5: Claude knows what to ask — the session card names three commands, and the skills don't yet
+│   ├── 🚧 F10.4: Numbers on request — the longest functions and types are not listed
+│   └── 🚧 F10.5: Claude knows what to ask — the session card names the commands, and the skills don't yet
 └── ⬜ F11: Check-up — rot across the whole repo, told when it grows
     ├── ⬜ F11.1: Counters — suppressions, skipped tests and old TODOs
     ├── ⬜ F11.2: Test coverage — code the tests never reach

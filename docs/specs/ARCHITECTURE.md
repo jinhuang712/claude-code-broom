@@ -49,6 +49,7 @@ It lives in `lib/broom/`.
 - [Settings](settings.md)
 - [Cleanup](cleanup.md)
 - [Record](record.md)
+- [Stats](stats.md)
 
 ---
 
