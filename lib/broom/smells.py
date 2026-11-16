@@ -26,8 +26,9 @@ from .config import DEAD_CODE, LIMIT_PAIR, SMELL_LIMITS, SMELL_PRESENCE, repo_co
 from .gate import issue_key
 from .gitutil import ChangedLines, renamed
 from .maintained import Maintained
-from .measure import SMELL_EXTS, Limits, Raw, code_lines, measure
+from .measure import SMELL_EXTS, Limits, Raw, code_lines
 from .realtree import Budget, Found, find_in_real_tree
+from .rowcache import RowCache
 from .toolchain import GO_EXTS, JS_EXTS
 
 GENERATED = re.compile(r"DO NOT EDIT|@generated")
@@ -348,10 +349,11 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str],
     lim = RepoLimits(repo)
     off = tuple(repo_config(repo).get("smells_off") or ())
     old_text = base_texts(repo, base, list(now_text), renamed(repo, [base])) if base else None
+    rows = RowCache(repo, lim.measured)
     with tempfile.TemporaryDirectory(prefix="broom-smells-") as tmp, ThreadPoolExecutor(5) as pool:
         real = pool.submit(find_in_real_tree, repo, list(now_text), lim.measured["params"][0], notes, Budget(budget))
-        now = pool.submit(measure, Path(tmp) / "now", now_text, lim.measured, repo, notes)
-        before = pool.submit(measure, Path(tmp) / "before", old_text, lim.measured, repo, []) if old_text else None
+        now = pool.submit(rows.measure, Path(tmp) / "now", now_text, notes)
+        before = pool.submit(rows.measure, Path(tmp) / "before", old_text, []) if old_text else None
         clones = None if "duplicate_lines" in off else pool.submit(
             find_clones, repo, base, lim.measured["duplicate_lines"][0] + 1, keep.clone_skips(), notes)
         unused = None if DEAD_CODE in off else pool.submit(find_unused, repo, keep.dead_code_skips(), notes)
@@ -363,6 +365,7 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str],
         found += clone_smells(keep, clones.result() if clones else [], set(now_text), base, lim)
         found += unused_smells(repo, unused.result() if unused else [], set(now_text), base)
         found += real_tree_smells(repo, real.result(), base, lim, off)
+    rows.save()
     for s in found:
         s.compared = base is not None
     return sorted(found, key=lambda s: (s.level != "block", str(s.file), s.line)), list(dict.fromkeys(notes))

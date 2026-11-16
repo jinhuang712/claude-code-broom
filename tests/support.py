@@ -12,6 +12,7 @@ import tempfile
 import unittest
 import uuid
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 BROOM = ROOT / "bin" / "broom"
@@ -98,6 +99,11 @@ class BroomCase(unittest.TestCase):
         # An empty Claude config, so the real user settings (broom's options, enabled plugins) never leak in.
         self.env = {**env, **GIT_ENV, "CLAUDE_PLUGIN_DATA": str(self.tmp / "data"),
                     "CLAUDE_CONFIG_DIR": str(self.config_dir())}
+        # What a measurement found is kept by content: one test's must not stand in for another's, which may run
+        # the same text with a tool broken on purpose.
+        rows = mock.patch("broom.rowcache.ROWS", self.tmp / "rows")
+        rows.start()
+        self.addCleanup(rows.stop)
 
     def tearDown(self) -> None:
         shutil.rmtree(self.tmp, ignore_errors=True)

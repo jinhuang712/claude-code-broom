@@ -1,0 +1,68 @@
+"""What the smell measurers found in a file's content, kept by that content for a day, so a file is measured once
+however often it is checked: the base of a change doesn't change from one try to the next, and a file the stop
+gate checks again, still blocked, is the same text. Only a measurement that finished whole is kept: with a tool
+missing or timed out, the rows are a part."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import threading
+import time
+from pathlib import Path
+from typing import Callable, Dict, List, Optional
+
+from . import __version__
+from .measure import Limits, Raw, measure
+from .state import DATA_ROOT, load_json, save_json, short_hash
+from .toolchain import resolve_bin
+
+ROWS = DATA_ROOT / "rows"
+KEEP_SECONDS = 86400
+MAX_ENTRIES = 20000
+MEASURE_TOOLS = ("ruff", "oxlint", "node", "golangci-lint", "swiftlint")  # what the rows depend on
+Measure = Callable[[Path, Dict[str, str], Limits, Path, List[str]], List[Raw]]
+
+
+class RowCache:
+    def __init__(self, repo: Path, limits: Limits, measuring: Optional[Measure] = None) -> None:
+        self.repo, self.limits, self.measuring = repo, limits, measuring or measure
+        self.path = ROWS / f"{short_hash(str(repo))}.json"
+        self.lock = threading.Lock()
+        cutoff = time.time() - KEEP_SECONDS
+        self.entries: Dict[str, list] = {k: v for k, v in load_json(self.path, {}).items() if v[0] >= cutoff}
+        self.changed = False
+        # Where each tool is, so one that is gone or upgraded (a new path) gets its measurements made again, and a
+        # missing one is said so, not hidden behind rows it measured before.
+        tools = ",".join(resolve_bin(t, repo, repo) or "-" for t in MEASURE_TOOLS)
+        self.bar = f"{__version__}\0{json.dumps(limits, sort_keys=True)}\0{tools}\0"
+
+    def key(self, rel: str, text: str) -> str:
+        return hashlib.sha1(f"{self.bar}{rel}\0{text}".encode()).hexdigest()
+
+    def measure(self, root: Path, texts: Dict[str, str], notes: List[str]) -> List[Raw]:
+        """The rows for `texts`, measuring only the files whose content hasn't been measured under these limits."""
+        keys = {rel: self.key(rel, text) for rel, text in texts.items()}
+        with self.lock:
+            known = {rel: self.entries[k][1] for rel, k in keys.items() if k in self.entries}
+        rows = [Raw(*row) for found in known.values() for row in found]
+        todo = {rel: text for rel, text in texts.items() if rel not in known}
+        if not todo:
+            return rows
+        local: List[str] = []
+        fresh = self.measuring(root, todo, self.limits, self.repo, local)
+        notes += local
+        if not local:
+            with self.lock:
+                for rel in todo:
+                    self.entries[keys[rel]] = [time.time(), [[r.rel, r.line, r.metric, r.key, r.value, r.tool]
+                                                              for r in fresh if r.rel == rel]]
+                self.changed = True
+        return rows + fresh
+
+    def save(self) -> None:
+        if not self.changed:
+            return
+        with self.lock:
+            newest = sorted(self.entries.items(), key=lambda kv: kv[1][0], reverse=True)[:MAX_ENTRIES]
+            save_json(self.path, dict(newest))
