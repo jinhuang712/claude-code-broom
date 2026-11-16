@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import __version__
-from .config import DEAD_CODE, LIMIT_PAIR, REPO_FILE, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, repo_file
+from .config import CHECKUP, DEAD_CODE, LIMIT_PAIR, REPO_FILE, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, repo_file
 from .githook import LINE, hook_path, installed
 from .gitutil import git
 from .needs import LANG_NAMES, LOCKFILES, Diagnosis, Item, settings_files
@@ -134,7 +134,7 @@ def check_repo_file(repo: Path) -> List[Item]:
                  if k in data and not isinstance(data[k], list)]
     problems += limit_problems(data.get("limits")) + limit_problems(data.get("test_limits"), "test_limits")
     off = data.get("smells_off", [])
-    names = set(SMELL_LIMITS) | set(SMELL_PRESENCE) | {DEAD_CODE}
+    names = set(SMELL_LIMITS) | set(SMELL_PRESENCE) | {DEAD_CODE, CHECKUP}
     if not isinstance(off, list) or not all(n in names for n in off):
         problems.append(f"smells_off must list smell names from: {', '.join(sorted(names))}")
     if problems:

@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from .config import drop_excluded, setting
+from .config import DEAD_CODE, drop_excluded, repo_config, setting
 from .gate import display, note_text
 from .gitutil import changed_since, git
 from .smells import Smell, find_smells
@@ -25,6 +25,9 @@ SCAN_SECONDS = 20  # what the tools that run in the real tree have between them 
 CHURN_DAYS = 90  # how far back a file's changes are counted
 SEVERE_WEIGHT = 3  # a smell past the hard limit weighs this much against a hint in a file's score
 ORDERS = {"churn": lambda f: (f["score"], f["severe"], f["hints"]), "smells": lambda f: (f["severe"], f["hints"])}
+# The tools whose findings make up each of the check-up's two smell counters: a note that names one of them means the
+# count is short of what the code holds.
+COUNTED_BY = {DEAD_CODE: ("jscpd",), "missing_docs": ("ruff", "golangci-lint", "swiftlint")}
 NO_HISTORY = "no commits in the last {days} days, or git log failed: the hotspots are ordered by their smells"
 
 
@@ -131,6 +134,23 @@ def render(data: dict) -> str:
     return "\n".join(rows + [f"note: {note_text(n)}" for n in data["notes"] if not n.startswith("missing:")])
 
 
+def smell_counts(repo: Path, found: List[Smell], notes: List[str]) -> Dict[str, Optional[Dict[str, int]]]:
+    """The check-up's smell counters from a scan of the whole repo (`found` has no base): per file, how many dead-code
+    findings and how many public declarations with no doc comment it holds. A counter is None when the repo turned
+    its smell off or a tool behind it was missing, failed or cut short: a count that low would read as a fall."""
+    off = repo_config(repo).get("smells_off") or []
+    out: Dict[str, Optional[Dict[str, int]]] = {}
+    for metric, tools in COUNTED_BY.items():
+        per_file: Dict[str, int] = {}
+        for s in found:
+            if s.metric == metric:
+                rel = str(s.file.relative_to(repo))
+                per_file[rel] = per_file.get(rel, 0) + s.value
+        short = any(tool in note for note in notes for tool in tools)
+        out[metric] = None if metric in off or short else per_file
+    return out
+
+
 def head_of(repo: Path) -> str:
     return (git(["rev-parse", "HEAD"], repo) or "").strip()
 
@@ -159,7 +179,8 @@ def summary(repo: Path) -> Optional[dict]:
     _, hot = rank(found, churn, order)
     data = {"head": head, "total": len(found), "severe": sum(s.level == "block" for s in found),
             "hotspots": [f["file"] for f in hot[:FILES_IN_NOTE]],
-            "partial": any(n.startswith("timeout:") for n in notes)}  # the time ran out: the counts are a floor
+            "partial": any(n.startswith("timeout:") for n in notes),  # the time ran out: the counts are a floor
+            "counts": smell_counts(repo, found, notes)}
     save_json(CACHE / f"{short_hash(str(repo))}.json", data)
     return data
 

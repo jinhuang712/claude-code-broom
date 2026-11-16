@@ -33,6 +33,8 @@ SMELL_LIMITS = {
 }
 # Code nothing uses, found across the repo (JS/TS/Python): a hint only, as dynamic loading looks unused too.
 DEAD_CODE = "dead_code"
+# The check-up (see checkup) is no smell, but `smells_off` turns it off by this name.
+CHECKUP = "checkup"
 # Smells that count by occurrence, not by size: a change that adds one gets this level.
 SMELL_PRESENCE = {
     "suppression": "block",  # a lint suppression without a reason or a rule

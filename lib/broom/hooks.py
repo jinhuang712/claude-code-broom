@@ -25,6 +25,7 @@ from typing import Dict, List, Optional, Tuple
 
 from . import ledger, waivers
 from .card import limits_card
+from .checkup import check_up_time
 from .commitgate import checked, entries_of, issues_by_repo, way_out
 from .config import REPO_FILE, excluded, setting
 from .doctor import describe, diagnose_cached, new_gaps
@@ -271,18 +272,31 @@ def hook_session(data: dict) -> None:
     emit({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "\n\n".join(notes)}})
 
 
-def hook_session_scan(data: dict) -> None:
-    """The scan behind the smell note, in the background (an async hook) when HEAD has none cached; the note
-    reaches Claude with its next turn."""
-    repo = git_root(Path(data.get("cwd") or os.getcwd()).resolve())
-    cached = cached_summary(repo) if repo else None
-    if repo is None or setting("smells", repo) == "off" or (cached is not None and not cached.get("partial")):
-        return  # with a whole cached scan, the session hook has already said what there is to say
-    sd = session_dir(data.get("session_id") or "cli")
-    note = session_note(repo, summary(repo))
+def scan_note(repo: Path, sd: Path, data: Optional[dict]) -> Optional[str]:
+    """The smell note from a scan's summary, unless this session was told it already."""
+    note = session_note(repo, data)
     if note and str(repo) not in read_lines(sd / "smells-noted.txt"):
         append_line(sd / "smells-noted.txt", str(repo))
-        emit({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": note}})
+        return note
+    return None
+
+
+def hook_session_scan(data: dict) -> None:
+    """The scan behind the smell note, in the background (an async hook) when HEAD has none cached; then the check-up
+    (see checkup), which counts what the scan counted and the files' rot. What either has to say reaches Claude with
+    its next turn."""
+    repo = git_root(Path(data.get("cwd") or os.getcwd()).resolve())
+    if repo is None or setting("smells", repo) == "off":
+        return
+    cached = cached_summary(repo)
+    whole = cached is not None and not cached.get("partial")
+    found = cached if whole else summary(repo)
+    # With a whole cached scan, the session hook has already said what there is to say about the smells.
+    notes = [None if whole else scan_note(repo, session_dir(data.get("session_id") or "cli"), found),
+             check_up_time(repo, found)]
+    told = [n for n in notes if n]
+    if told:
+        emit({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "\n\n".join(told)}})
 
 
 SETUP_NOTE_GAPS = 6  # how many gaps the session note names before "and N more"
