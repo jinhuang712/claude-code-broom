@@ -29,11 +29,13 @@ def module_names(files: List[str]) -> Dict[str, Optional[str]]:
 
 
 def is_type_checking(test: ast.expr) -> bool:
+    """Whether an `if` test is TYPE_CHECKING, bare or as typing.TYPE_CHECKING: an import only type checkers run."""
     return (isinstance(test, ast.Name) and test.id == "TYPE_CHECKING") or (
         isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING")
 
 
 def module_level_imports(body: List[ast.stmt]) -> Iterator[ast.stmt]:
+    """The imports that run when the module loads: top level, or in if, try and with blocks, not in functions."""
     for node in body:
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             yield node
@@ -66,6 +68,7 @@ class ImportGraph:
         self._edges: Dict[str, List[Edge]] = {}
 
     def edges(self, rel: str) -> List[Edge]:
+        """The import edges out of file `rel`, read once and cached."""
         if rel not in self._edges:
             self._edges[rel] = self._read(rel)
         return self._edges[rel]
@@ -82,6 +85,7 @@ class ImportGraph:
         return out
 
     def reaches(self, start: str, goal: str) -> bool:
+        """Whether module `goal` can be reached from module `start` by following the imports, for cycle checks."""
         seen: Set[str] = set()
         todo = [start]
         while todo:

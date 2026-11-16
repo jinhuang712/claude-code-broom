@@ -45,6 +45,7 @@ class Budget:
 
 @dataclass
 class Found:
+    """A smell found in the real tree: where it is (`rel`, `line`), its metric and tool, and its key and value."""
     rel: str  # relative to the repo
     line: int
     metric: str
@@ -73,6 +74,7 @@ issues: {max-issues-per-linter: 0, max-same-issues: 0, uniq-by-line: false}
 
 
 def rel_of(repo: Path, path: Path) -> Optional[str]:
+    """`path` relative to `repo` as a POSIX path, or None when it lies outside the repo."""
     try:
         return path.resolve().relative_to(repo.resolve()).as_posix()
     except ValueError:
@@ -91,6 +93,7 @@ def go_modules(repo: Path, rels: List[str]) -> Dict[Path, List[Path]]:
 
 
 def go_found(repo: Path, rels: List[str], notes: List[str], budget: Budget) -> List[Found]:
+    """Lint the Go modules of the files in `rels` with golangci-lint's typed linters; a spent budget adds a note."""
     exe = shutil.which("golangci-lint")  # the lint check says when it is missing
     modules = go_modules(repo, rels)
     if not exe or not modules:
@@ -121,6 +124,7 @@ def go_found(repo: Path, rels: List[str], notes: List[str], budget: Budget) -> L
 
 
 def go_issues(repo: Path, module: Path, issues: List[dict]) -> List[Found]:
+    """Turn golangci-lint's `issues` for `module` into Found rows: typed linters, files inside the repo only."""
     found = []
     for i in issues:
         metric = GO_TYPED.get(i.get("FromLinter", ""))  # `typecheck`, a module that doesn't compile, has none

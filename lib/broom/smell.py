@@ -44,6 +44,7 @@ LINES_SHOWN = 5
 
 @dataclass
 class Smell:
+    """One smell: its file, line, metric and value, the limit it passed, and whether it is a hint or a block."""
     repo: Path
     file: Path
     line: int
@@ -59,6 +60,7 @@ class Smell:
     touched: bool = False  # an old smell the change didn't make worse, in a unit it touched
 
     def text(self) -> str:
+        """The message for this smell: what it is, its limit, and how it compares with the base (new, or was N)."""
         if self.metric == DEAD_CODE:
             return DESCRIBE[DEAD_CODE].format(key=self.key, value=self.value)
         if self.metric in SMELL_PRESENCE:
@@ -83,6 +85,7 @@ class Smell:
                 and self.was > self.limit and self.value > self.was)
 
     def issue(self) -> Issue:
+        """The smell as a gate finding: severe when it blocks, and marked grown when it grew past the hard limit."""
         return Issue("smells", self.repo, self.file, self.line, 0, self.metric, self.text(),
                      severe=self.level == "block", grown_from=self.was if self.grew_past_hard() else None)
 
@@ -91,6 +94,7 @@ LEVELS = ("", "hint", "block")
 
 
 def level(value: int, limit: Tuple[int, int]) -> str:
+    """The level of `value` against `limit` (soft, hard): "block" past the hard, "hint" past the soft, else ""."""
     soft, hard = limit
     if value > hard:
         return "block"

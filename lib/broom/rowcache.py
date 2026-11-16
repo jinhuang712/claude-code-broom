@@ -25,6 +25,7 @@ Measure = Callable[[Path, Dict[str, str], Limits, Path, List[str]], List[Raw]]
 
 
 class RowCache:
+    """The measured rows of one repo, kept on disk and reused for files whose text and tools are unchanged."""
     def __init__(self, repo: Path, limits: Limits, measuring: Optional[Measure] = None) -> None:
         self.repo, self.limits, self.measuring = repo, limits, measuring or measure
         self.path = ROWS / f"{short_hash(str(repo))}.json"
@@ -38,6 +39,7 @@ class RowCache:
         self.bar = f"{__version__}\0{json.dumps(limits, sort_keys=True)}\0{tools}\0"
 
     def key(self, rel: str, text: str) -> str:
+        """A cache key for `rel` at this text, also covering broom's version, the limits and the tools' paths."""
         return hashlib.sha1(f"{self.bar}{rel}\0{text}".encode()).hexdigest()
 
     def measure(self, root: Path, texts: Dict[str, str], notes: List[str]) -> List[Raw]:

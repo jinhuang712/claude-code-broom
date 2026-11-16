@@ -19,6 +19,7 @@ KEEP_SECONDS = 86400
 
 
 def rel_paths(repo: Path, files: List[Path]) -> List[str]:
+    """`files` as POSIX paths relative to `repo`; each file must lie under the repo."""
     return [f.resolve().relative_to(repo).as_posix() for f in files]
 
 
