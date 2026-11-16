@@ -12,7 +12,7 @@ import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from .config import DEAD_CODE
 from .findings import failure
@@ -20,6 +20,7 @@ from .gitutil import run
 from .jsmeasure import OXLINT_CATEGORIES
 from .langlint import golangci_cache
 from .pycycles import import_cycles
+from .state import DATA_ROOT, prune_dirs, short_hash
 from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS, find_up, resolve_bin
 
 TOOL_TIMEOUT = 150
@@ -214,6 +215,26 @@ def rust_messages(repo: Path, crate: Path, out: str) -> List[Found]:
     return found
 
 
+CLIPPY_DIRS = DATA_ROOT / "clippy"
+
+
+def clippy_dirs(crate: Path, params: int) -> Tuple[Path, Path]:
+    """Where broom's clippy run keeps its config and its build output, the same each time. cargo counts a different
+    CLIPPY_CONF_DIR (a fresh temporary directory per run was one) and different clippy arguments as a reason to check
+    the crate again, so the project's own clippy run and this one would each throw away the other's work. With a
+    stable config path and a target directory of its own, both stay fresh. Unused for 30 days, they go."""
+    conf = CLIPPY_DIRS / "conf" / str(params)
+    conf.mkdir(parents=True, exist_ok=True)
+    text = RUST_CONFIG.format(params=params)
+    if not (conf / "clippy.toml").exists() or (conf / "clippy.toml").read_text() != text:
+        (conf / "clippy.toml").write_text(text)
+    target = CLIPPY_DIRS / "target" / short_hash(str(crate))
+    target.mkdir(parents=True, exist_ok=True)
+    os.utime(target)
+    prune_dirs(CLIPPY_DIRS / "target", 30)
+    return conf, target
+
+
 def rust_found(repo: Path, rels: List[str], params: int, notes: List[str], budget: Budget) -> List[Found]:
     """clippy's structural and presence lints in the crates the changed Rust files belong to. A crate is checked
     whole; smells.py keeps what is on the lines the change added."""
@@ -223,19 +244,18 @@ def rust_found(repo: Path, rels: List[str], params: int, notes: List[str], budge
     if not cargo or not crates:
         return []
     found: List[Found] = []
-    with tempfile.TemporaryDirectory(prefix="broom-realtree-") as tmp:
-        (Path(tmp) / "clippy.toml").write_text(RUST_CONFIG.format(params=params))
-        for crate in crates:
-            timeout = budget.timeout()
-            if not timeout:
-                notes.append(OUT_OF_TIME.format(tool="clippy"))
-                break
-            rc, out, _ = run([cargo, "clippy", "--message-format=json", "--quiet", "--", *RUST_FLAGS], crate,
-                             timeout=timeout, env={"CLIPPY_CONF_DIR": tmp})
-            if rc is None:
-                notes.append(f"timeout:cargo clippy measuring smells in {crate} (cold build?)")
-                continue
-            found += rust_messages(repo, crate, out)
+    for crate in crates:
+        timeout = budget.timeout()
+        if not timeout:
+            notes.append(OUT_OF_TIME.format(tool="clippy"))
+            break
+        conf, target = clippy_dirs(crate, params)
+        rc, out, _ = run([cargo, "clippy", "--message-format=json", "--quiet", "--", *RUST_FLAGS], crate,
+                         timeout=timeout, env={"CLIPPY_CONF_DIR": str(conf), "CARGO_TARGET_DIR": str(target)})
+        if rc is None:
+            notes.append(f"timeout:cargo clippy measuring smells in {crate} (cold build?)")
+            continue
+        found += rust_messages(repo, crate, out)
     return found
 
 

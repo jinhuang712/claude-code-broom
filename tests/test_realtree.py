@@ -7,7 +7,7 @@ import unittest
 
 from support import HAS_GO, BroomCase
 
-from broom.realtree import TOOL_TIMEOUT, Budget, find_in_real_tree
+from broom.realtree import TOOL_TIMEOUT, Budget, clippy_dirs, find_in_real_tree
 from broom.smells import find_smells
 
 GO_MOD = "module example.com/x\n\ngo 1.22\n"
@@ -123,6 +123,15 @@ class RealTreeTest(BroomCase):
         r = self.repo(cycle)
         (r / "pkg/a.py").write_text(cycle["pkg/a.py"] + "Z = 2\n")
         self.assertNotIn("import_cycle", [m for _, m in self.metrics(r, "pkg/a.py")])
+
+    def test_clippys_config_and_build_output_stay_where_they_were(self) -> None:
+        # cargo checks a crate again when CLIPPY_CONF_DIR changes, so the path must be the same on every run.
+        crate = self.tmp / "crate"
+        conf, target = clippy_dirs(crate, 5)
+        self.assertEqual(clippy_dirs(crate, 5), (conf, target))
+        self.assertIn("too-many-arguments-threshold = 5", (conf / "clippy.toml").read_text())
+        self.assertNotEqual(clippy_dirs(crate, 6)[0], conf, "another limit, another config, and no rewrite of this one")
+        self.assertNotEqual(clippy_dirs(self.tmp / "other", 5)[1], target, "each crate has its own build output")
 
     def test_a_budget_caps_what_the_next_tool_may_take_and_ends_at_zero(self) -> None:
         self.assertEqual(Budget().timeout(), TOOL_TIMEOUT, "no budget leaves each tool its own timeout")
