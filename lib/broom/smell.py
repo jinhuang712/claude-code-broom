@@ -70,11 +70,19 @@ class Smell:
         if not self.compared:
             return f"{what} ({bar})"
         how = "new" if self.was is None else f"was {self.was}"
+        if self.touched:
+            how += ": you touched it, clean it up in this change"
         return f"{what} ({bar}; {how})"
+
+    def grew_past_hard(self) -> bool:
+        """A sized smell that was already past its hard limit at the base and grew: it can't be accepted with a
+        reason, only fixed. One that crossed the hard limit with this change can."""
+        return (self.level == "block" and self.metric not in SMELL_PRESENCE and self.was is not None
+                and self.was > self.limit and self.value > self.was)
 
     def issue(self) -> Issue:
         return Issue("smells", self.repo, self.file, self.line, 0, self.metric, self.text(),
-                     severe=self.level == "block")
+                     severe=self.level == "block", grown_from=self.was if self.grew_past_hard() else None)
 
 
 LEVELS = ("", "hint", "block")

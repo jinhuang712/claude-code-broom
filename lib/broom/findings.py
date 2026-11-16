@@ -18,6 +18,7 @@ class Issue:
     msg: str
     hard: bool = False  # compile/type error: counts outside the changed lines and files
     severe: bool = False  # a code smell past its hard limit: it blocks like a type error
+    grown_from: Optional[int] = None  # a severe smell that was past the hard limit and grew: its old size; no accepting
 
 
 Findings = Tuple[List[Issue], List[str]]

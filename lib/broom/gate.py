@@ -47,7 +47,11 @@ def issue_key(i: Issue) -> str:
 
 
 def issue_entry(i: Issue) -> Dict[str, object]:
-    return {"t": time.time(), "file": str(i.file), "line": i.line, "tool": i.tool, "rule": i.rule, "msg": i.msg}
+    entry: Dict[str, object] = {"t": time.time(), "file": str(i.file), "line": i.line, "tool": i.tool,
+                                "rule": i.rule, "msg": i.msg}
+    if i.grown_from is not None:
+        entry["grown_from"] = i.grown_from  # `broom known --accept` leaves it out
+    return entry
 
 
 def verdict(issues: List[Issue]) -> str:
@@ -102,19 +106,41 @@ def accept_allowed() -> bool:
     return os.environ.get("BROOM_NO_ACCEPT", "") in ("", "0")
 
 
+def refusal(repo: Path, left: Dict[str, dict]) -> str:
+    """Why `broom known --accept` left these pending issues, each a smell that was past its hard limit and grew, out:
+    what to bring each back to."""
+    rows = sorted(left.values(), key=lambda e: (str(e.get("file")), e.get("line") or 0))
+    if len(rows) == 1:
+        return (f"broom: 1 can't be accepted: it was already past the hard limit and grew; bring it back to "
+                f"{rows[0]['grown_from']} or fewer, or extract what you added")
+    sizes = " and ".join(f"{e['grown_from']} ({rel(Path(str(e.get('file'))), repo)}:{e.get('line')})" for e in rows)
+    return (f"broom: {len(rows)} can't be accepted: they were already past the hard limit and grew; bring them back "
+            f"to {sizes} or fewer, or extract what you added")
+
+
 def accept_blocked(repo: Path, why: str) -> Tuple[int, str]:
     """Record the issues of the last commit or turn end broom blocked in `repo` as known, with the reason. Returns how
-    many, and the hook that blocked them (`commit` when none is recorded)."""
+    many, and the hook that blocked them (`commit` when none is recorded). A smell that was past its hard limit and
+    grew can't be accepted: it stays pending, and a line says so; with nothing else to accept the command exits."""
     state = load_json(COMMITS, {})
     prior = state.get(str(repo)) or {}
     pending = prior.get("pending") or {}
     where = prior.get("where") or "commit"
+    left = {k: v for k, v in pending.items() if v.get("grown_from") is not None}
+    pending = {k: v for k, v in pending.items() if k not in left}
+    if left and not pending:
+        raise SystemExit(refusal(repo, left))
+    if left:
+        print(refusal(repo, left))
     if pending:
         now = time.time()
         baseline_add_entries({k: {**v, "t": now, "why": why} for k, v in pending.items()})
         turn = Path(prior["turn"]) if prior.get("turn") else None
         ledger.let_through(pending, "accept", turn, why=why, where=where)
-        state.pop(str(repo), None)
+        if left:
+            state[str(repo)] = {**prior, "pending": left}
+        else:
+            state.pop(str(repo), None)
         save_commits(state, [repo])
     return len(pending), where
 
@@ -197,6 +223,8 @@ def listing(issues: List[Issue], files: Set[Path]) -> List[Tuple[Issue, List[str
         for n, i in enumerate(sorted(items, key=lambda x: (str(x.file), x.line, x.col))):
             where = f"{rel(i.file, root)}:{i.line}:{i.col}" if i.line else rel(i.file, root)
             tag = "" if i.file in files or not files else "  [not in the changed files]"
+            if i.grown_from is not None:
+                tag += f"  [can't be accepted: was {i.grown_from}, already past the hard limit]"
             head = [f"\n{tool} ({display(root)}):"] if n == 0 else []
             out.append((i, head + [f"  {where}  {i.rule}  {i.msg}{tag}"]))
     return out

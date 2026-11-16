@@ -6,7 +6,7 @@ They are measured against broom's own limits, apart from the project's lint conf
 repo; `.broom.json` can move it. Only what a change made worse counts: each file is measured as it is and as it
 was at the base revision. A sized smell counts when the change pushed it past a limit, or grew it while past
 the hard one; an occurrence counts when the change added it. Legacy code a change leaves as it was never comes
-up.
+up, except that an old sized smell in a function or file the change touches is a hint (see touched).
 """
 
 from __future__ import annotations
@@ -29,6 +29,7 @@ from .measure import SMELL_EXTS, Limits, Raw, code_lines
 from .realtree import Budget, Found, find_in_real_tree
 from .rowcache import RowCache
 from .smell import Smell, level, made_worse
+from .touched import old_smells, touched
 from .toolchain import GO_EXTS, JS_EXTS
 
 GENERATED = re.compile(r"DO NOT EDIT|@generated")
@@ -124,11 +125,16 @@ def compare_occurrences(now: List[Raw], before: Optional[List[Raw]], repo: Path)
             for (rel, metric), rows in added.items() if before is None or total[(rel, metric)] > was[(rel, metric)]]
 
 
+def counted(now: List[Raw], off: Tuple[str, ...]) -> List[Raw]:
+    """The rows that count: of a smell the repo hasn't turned off, and not the tool's noise."""
+    return [r for r in now if r.metric not in off and not noise(r)]
+
+
 def compare(now: List[Raw], before: Optional[List[Raw]], lim: RepoLimits, repo: Path,
             off: Tuple[str, ...] = ()) -> List[Smell]:
     """`before` is None to report every finding (a whole-repo sweep), else the base version's findings. `off`
     names smells the repo turned off."""
-    kept = [r for r in now if r.metric not in off and not noise(r)]
+    kept = counted(now, off)
     sizes = [r for r in kept if r.metric not in SMELL_PRESENCE]
     found = (compare_sizes(sizes, before, lim, repo)
              + compare_occurrences([r for r in kept if r.metric in SMELL_PRESENCE],
@@ -280,7 +286,10 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str],
             old_rows = before.result()
         else:
             old_rows = [] if base else None
-        found = compare(drop_import_growth(now.result(), now_text, old_text), old_rows, lim, repo, off)
+        rows_now = drop_import_growth(now.result(), now_text, old_text)
+        found = compare(rows_now, old_rows, lim, repo, off)
+        if base:  # the old smells in what the change touches
+            found += touched(old_smells(counted(rows_now, off), old_rows, lim.of, repo), base, now_text)
         found += clone_smells(keep, clones.result() if clones else [], set(now_text), base, lim)
         found += unused_smells(repo, unused.result() if unused else [], set(now_text), base)
         found += real_tree_smells(repo, real.result(), base, lim, off)
@@ -298,7 +307,8 @@ def gate_smells(repo: Path, files: List[Path], known: set, base: str = "HEAD"
     found, notes = find_smells(repo, files, base)
     blocks = [s.issue() for s in found if s.level == "block"]
     hints = [s for s in found if s.level == "hint" and issue_key(s.issue()) not in known]
-    return [i for i in blocks if issue_key(i) not in known], hints, notes
+    # A smell that grew past the hard limit stays a block whatever was accepted: accepting it is refused.
+    return [i for i in blocks if i.grown_from is not None or issue_key(i) not in known], hints, notes
 
 
 def hint_text(hints: List[Smell]) -> str:
@@ -308,5 +318,6 @@ def hint_text(hints: List[Smell]) -> str:
     more = f"; and {len(hints) - HINTS_SHOWN} more" if len(hints) > HINTS_SHOWN else ""
     kinds = list(dict.fromkeys(s.metric for s in hints[:HINTS_SHOWN]))[:HINT_KINDS]
     fix = fix_lines(kinds)
-    return (f"broom: {len(hints)} code smell(s) this change made worse; clean them up now: {shown}{more}"
+    made = "made worse or touched" if any(s.touched for s in hints) else "made worse"
+    return (f"broom: {len(hints)} code smell(s) this change {made}; clean them up now: {shown}{more}"
             + ("\nHow to fix:\n" + "\n".join(fix) if fix else ""))
