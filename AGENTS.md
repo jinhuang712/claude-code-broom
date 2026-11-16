@@ -59,7 +59,7 @@ The other docs are read when the work needs them.
 
 The handbook is [CONTRIBUTING.md](docs/CONTRIBUTING.md): how to set up, run the checks and land a change.
 
-18 rules:
+19 rules:
 
 - [MUST] follow these rules strictly unless the user rejects one.
 - [MUST] read every doc you work on in full.
@@ -69,6 +69,7 @@ The handbook is [CONTRIBUTING.md](docs/CONTRIBUTING.md): how to set up, run the 
 - [MUST] look at each checkpoint's end for kinds of rot broom still misses, then add each to FEATURES or to TODO.
 - [MUST] push and tag when a checkpoint or a sub-checkpoint ends and the checks pass, then tell the user.
 - [MUST] bump Z for a release, and Y when a whole checkpoint ends.
+- [MUST] update the installed plugin after a release, then tell the user to reload.
 - [MUST] keep this repo at zero findings by broom's own measure.
 - [MUST] turn a script written to count or check something in a repo into a broom command, or into a TODO item.
 - [MUST] measure this repo with broom when a stage ends, and record the gain against the baseline in `report/ratchet/`.
