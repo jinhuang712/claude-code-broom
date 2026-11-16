@@ -155,14 +155,14 @@ class DoctorTest(BroomCase):
         self.assertEqual(self.session(r, "a", env), {}, "once per session")
         self.assertIn("hookSpecificOutput", self.session(r, "b", env), "a new session hears it again")
         self.assertEqual(self.cli(r, "setup", "--dismiss", env=env).returncode, 0)
-        self.assertEqual(self.session(r, "c", env), {}, "dismissed")
+        self.assertEqual(self.noted(self.session(r, "c", env)), "", "dismissed")
 
     def test_session_asks_again_when_the_gaps_change(self) -> None:
         r = self.repo({"pyproject.toml": "[project]\nname = 'x'\n", "a.py": "x = 1\n"})
         env = self.fake_path(keep=("ruff", "pyright-langserver"))
         self.assertIn("formatting is off", str(self.session(r, "a", env)))
         self.cli(r, "setup", "--done", env=env)
-        self.assertEqual(self.session(r, "b", env), {})
+        self.assertEqual(self.noted(self.session(r, "b", env)), "")
         (r / "go.mod").write_text("module example.com/m\n\ngo 1.26\n")
         self.assertIn("golangci-lint missing", str(self.session(r, "c", env)))
 
@@ -171,7 +171,7 @@ class DoctorTest(BroomCase):
         a, b = self.go_repo(), self.go_repo()
         self.assertIn("golangci-lint missing", str(self.session(a, "s", env)))
         self.cli(a, "setup", "--dismiss", env=env)
-        self.assertEqual(self.session(b, "s2", env), {}, "the same kinds of gap, answered in another repo")
+        self.assertEqual(self.noted(self.session(b, "s2", env)), "", "the same kinds of gap, answered in another repo")
         items = self.doctor(b, env)["items"]
         self.assertTrue(all(i["answered"] for i in items if i["status"] != "ok"), items)
         py = self.repo({"go.mod": "module example.com/m\n\ngo 1.26\n", "pyproject.toml": "[project]\nname = 'x'\n"})
@@ -266,9 +266,9 @@ class SetupOfferTest(BroomCase):
         r = self.go_repo()
         env = {**self.env, "CLAUDE_CONFIG_DIR": str(self.config_dir())}
         self.cli(r, "install-hook", env=env)  # git's hook is a gap like any tool
-        self.assertEqual(self.session(r, "a", env), {})
+        self.assertEqual(self.noted(self.session(r, "a", env)), "")
         start = time.time()
-        self.assertEqual(self.session(r, "b", env), {})
+        self.assertEqual(self.noted(self.session(r, "b", env)), "")
         self.assertLess(time.time() - start, 1.0, "the cached doctor keeps SessionStart fast")
         self.assertEqual(self.session(self.repo({"README.md": "hi\n"}), "c", env), {}, "no languages, nothing to say")
 
@@ -316,7 +316,7 @@ class SetupOfferTest(BroomCase):
         a, b = self.py_repo(), self.py_repo()
         self.assertIn("pre-commit hook", str(self.session(a, "s", env)))
         self.assertEqual(self.cli(a, "setup", "--dismiss", env=env).returncode, 0)
-        self.assertEqual(self.session(b, "s2", env), {}, "the same kinds of gap, git's hook among them")
+        self.assertEqual(self.noted(self.session(b, "s2", env)), "", "the same kinds of gap, git's hook among them")
         (hook,) = self.hook_items(self.doctor(b, env))
         self.assertTrue(hook["answered"])
         self.assertEqual(self.hook_items(self.doctor(a, env))[0]["answered"], True)

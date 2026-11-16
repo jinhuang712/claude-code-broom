@@ -7,8 +7,8 @@
 - stop (Stop, and SubagentStop for a subagent): lint and type-check what the turn changed when check_on=stop, the
   default: it catches what Claude writes even when the user commits by hand, which the commit hook never sees.
   A turn that ends while background work runs waits for a later one.
-- session (SessionStart): when the repo is missing tools or configs broom needs, ask Claude to offer the user
-  /broom:setup. Hooks can't ask the user anything themselves; Claude does, with the user's consent. The smell
+- session (SessionStart): tell Claude the limits card (see card), and when the repo is missing tools or configs
+  broom needs, ask Claude to offer the user /broom:setup. Hooks can't ask the user anything themselves; Claude does, with the user's consent. The smell
   note comes from a scan of HEAD, cached; session-scan, an async hook, runs the scan when there is none.
 
 A turn's end blocks like a commit, once: accept what is left with `broom known --accept "<why>"` and stop again.
@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import ledger, waivers
+from .card import limits_card
 from .commitgate import checked, entries_of, issues_by_repo, way_out
 from .config import REPO_FILE, excluded, setting
 from .doctor import describe, diagnose_cached, new_gaps
@@ -252,15 +253,16 @@ def hook_prompt(data: dict) -> None:
 
 def hook_session(data: dict) -> None:
     """Notes for Claude's first turn, which waits for this hook: so only what is quick, the cached doctor and the
-    smell counts of a scan that already ran."""
+    smell counts of a scan that already ran. The limits card comes first, then the offer of setup, then the smells."""
     repo = git_root(Path(data.get("cwd") or os.getcwd()).resolve())
     if repo is None:
         return
     sd = session_dir(data.get("session_id") or "cli")
     if str(repo) in read_lines(sd / "nudged.txt"):
         return  # once per session: a compaction or /clear doesn't repeat it
+    diagnosis = diagnose_cached(repo)
     smells = session_note(repo, cached_summary(repo))
-    notes = [n for n in (setup_note(repo), smells) if n]
+    notes = [n for n in (limits_card(repo, diagnosis), setup_note(repo, diagnosis), smells) if n]
     if smells:
         append_line(sd / "smells-noted.txt", str(repo))
     if not notes:
@@ -286,8 +288,9 @@ def hook_session_scan(data: dict) -> None:
 SETUP_NOTE_GAPS = 6  # how many gaps the session note names before "and N more"
 
 
-def setup_note(repo: Path) -> Optional[str]:
-    found = new_gaps(repo, diagnose_cached(repo))  # gaps the user already answered, in any repo, stay quiet
+def setup_note(repo: Path, diagnosis: dict) -> Optional[str]:
+    """The note offering /broom:setup for the gaps in `diagnosis` that the user hasn't answered, or None."""
+    found = new_gaps(repo, diagnosis)  # gaps the user already answered, in any repo, stay quiet
     if not found:
         return None
     more = f"; and {len(found) - SETUP_NOTE_GAPS} more" if len(found) > SETUP_NOTE_GAPS else ""

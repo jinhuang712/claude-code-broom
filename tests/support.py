@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROOT / "lib"))
 
 from broom.toolchain import swift_format_cmd  # noqa: E402
 
+CARD = "broom's bar in this repo"  # how the limits card, told at session start, begins
 GIT_ENV = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
 HAS_GO = all(shutil.which(t) for t in ("go", "gofmt", "golangci-lint"))
 HAS_TS = all(shutil.which(t) for t in ("oxlint", "tsc"))
@@ -171,6 +172,11 @@ class BroomCase(unittest.TestCase):
                            input=json.dumps({"session_id": session_id, "cwd": str(repo), "source": "startup"}))
         self.assertEqual(r.stderr.strip(), "", "hook raised")
         return json.loads(r.stdout) if r.stdout.strip() else {}
+
+    def noted(self, out: dict) -> str:
+        """What a session hook told Claude besides the limits card, which every repo with code gets once a session."""
+        text = out.get("hookSpecificOutput", {}).get("additionalContext", "")
+        return "\n\n".join(x for x in text.split("\n\n") if not x.startswith(CARD))
 
     def doctor(self, repo: Path, env: dict) -> dict:
         return json.loads(self.cli(repo, "doctor", "--json", env=env).stdout)
