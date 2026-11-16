@@ -20,7 +20,7 @@ CACHE = DATA_ROOT / "hotspots"
 DISMISSED = DATA_ROOT / "smells-dismissed.json"
 FILES_IN_NOTE = 3
 NOTE_MAX_FILES = 5000  # past this, a session start doesn't scan: `broom smells` still does
-SCAN_SECONDS = 60  # what the tools that run in the real tree have between them in that scan
+SCAN_SECONDS = 20  # what the tools that run in the real tree have between them in that scan
 
 
 def repo_files(repo: Path, paths: List[Path], base: Optional[str] = None) -> List[Path]:
@@ -101,15 +101,16 @@ def summary(repo: Path) -> Optional[dict]:
     if not head:
         return None
     cached = cached_summary(repo)
-    if cached:
+    if cached and not cached.get("partial"):
         return cached
     files = repo_files(repo, [])
     if len(files) > NOTE_MAX_FILES:
         return None
-    found, _ = find_smells(repo, files, None, budget=SCAN_SECONDS)
+    found, notes = find_smells(repo, files, None, budget=SCAN_SECONDS)
     _, hot = rank(found)
     data = {"head": head, "total": len(found), "severe": sum(s.level == "block" for s in found),
-            "hotspots": [f["file"] for f in hot[:FILES_IN_NOTE]]}
+            "hotspots": [f["file"] for f in hot[:FILES_IN_NOTE]],
+            "partial": any(n.startswith("timeout:") for n in notes)}  # the time ran out: the counts are a floor
     save_json(CACHE / f"{short_hash(str(repo))}.json", data)
     return data
 
@@ -121,7 +122,8 @@ def session_note(repo: Path, data: Optional[dict]) -> Optional[str]:
         return None
     if not data or not data["severe"] or data["severe"] <= load_json(DISMISSED, {}).get(str(repo), -1):
         return None
-    return (f"broom found {data['severe']} code smell(s) past the hard limit in this repo ({data['total']} in all; "
+    floor = "at least " if data.get("partial") else ""  # a scan that ran out of time counted only what it reached
+    return (f"broom found {floor}{data['severe']} code smell(s) past the hard limit in this repo ({data['total']} in all; "
             f"worst files: {', '.join(data['hotspots'])}). Don't interrupt the user's task for this: at a natural "
             "point, tell them and offer /broom:clean, which ranks the smells and cleans up worst first. Don't clean "
             "up without their go-ahead. If they say not now, run `broom smells --dismiss`: broom then stays quiet "

@@ -23,7 +23,7 @@ from .pycycles import import_cycles
 from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS, find_up, resolve_bin
 
 TOOL_TIMEOUT = 150
-OUT_OF_TIME = "the time budget of this scan ran out before {tool} measured smells"
+OUT_OF_TIME = "timeout:the time of this scan ran out before {tool} measured smells"
 
 
 class Budget:

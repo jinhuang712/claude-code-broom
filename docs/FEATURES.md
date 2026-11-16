@@ -5,13 +5,21 @@
 | Hook | Fires on | Does | Cost when idle |
 |---|---|---|---|
 | SessionStart | new, resumed and cleared sessions | Runs a cached doctor; if the repo has gaps, asks Claude to offer `/broom:setup`. If a cached scan of HEAD has smells past the hard limit, asks Claude to raise them and offer `/broom:clean` at a natural point. Once per session | 0.1–0.25 s, measured on a 2,376-file repo |
-| SessionStart, async | the same | Scans HEAD for smells when no scan is cached, in the background; the note reaches Claude with its next turn | nothing Claude waits for; the scan took 13–36 s on that repo |
+| SessionStart, async | the same | Scans HEAD for smells when no scan is cached, in the background; the note reaches Claude with its next turn | nothing Claude waits for; the scan took 13–36 s on that repo, 20.7 s cold and 4.0 s warm on a 3,184-file one |
 | UserPromptSubmit, async | each prompt | Notes the working tree's changed code files and HEAD, for the stop check (`check_on=stop`) | nothing Claude waits for; 0.2 s on that repo |
 | PreToolUse | every Bash call; acts on `git commit` | Formats the commit's files, lints and type-checks them, blocks the commit while issues remain | ~13 ms (a shell start); ~60 ms when the command mentions git and commit without committing |
 | PostToolUse | Edit, Write, MultiEdit, Serena's edit tools | Formats per edit (`format_on=edit`); records files for the stop check (`check_on=stop`), a subagent's under its own id | one Python start: 30–45 ms measured on macOS |
 | Stop | each turn end | Checks what the turn changed (`check_on=stop`): files Claude edited, and files changed or committed since the prompt by any means, measured against the prompt's HEAD. Waits while background work runs, up to half an hour | one Python start: 30–45 ms measured on macOS |
 | SubagentStop | each subagent's end | Checks the files that subagent edited; a block goes to the subagent, which fixes its own | the same |
 | git pre-commit (optional) | every commit, once `broom install-hook` adds it | Checks the staged files like the PreToolUse hook, without formatting: for commits that hook doesn't see, a wrapper script's or a person's | content that passed already goes through at once |
+
+One run of any hook, async ones too, takes at most 30 seconds: `hooks.json` gives each hook that `timeout`. The
+commands a run starts share 25 seconds (`BROOM_HOOK_SECONDS` sets it, for tests), so a tool is cut off with everything
+it started, not left compiling in the background; the check then goes ahead without it and says so in a note. A
+commit or a stop that a tool kept from finishing is never blocked for it, and the content isn't recorded as passed.
+At 28 seconds the hook gives up and lets the commit, the edit or the stop through, for what no command's timeout
+reaches. A scan at session start that ran out of time keeps what it counted as a floor ("at least N") and runs
+again at the next session start, the tools' own caches having warmed meanwhile.
 
 Files outside any git repo, such as drafts in a temp directory, are no project's code: the hooks neither record
 nor format them.
@@ -141,9 +149,9 @@ These count by occurrence: a change that adds one gets the smell's level.
   scratch copy of the changed files: Go's typed linters and import cycles. With no copy of the base to
   compare with, a finding counts when it is on a line the change added, a new file included. Only linters that
   read syntax alone run in the scratch copy, so Go's repeated literals stay unmeasured.
-  The scan at session start, which covers the whole repo, gives these tools 60 seconds between them: the quick
+  The scan at session start, which covers the whole repo, gives these tools 20 seconds between them: the quick
   ones go first, clippy last, and a tool the time runs out before is skipped with a note. A commit's check has no
-  such limit, and each tool keeps its own timeout.
+  such limit of its own, but shares the hook's 25 seconds with everything else it runs.
 - `broom/bool-params`, `broom/class-lines`, `broom/module-state` and `broom/commented-code` are rules of broom's own
   (`defaults/oxlint-rules.mjs`), loaded as an oxlint JS plugin, an alpha feature, in a second oxlint pass. They need
   Node: without it, or with an oxlint that can't load plugins, only these smells go unmeasured, and a note says so.

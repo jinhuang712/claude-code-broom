@@ -21,7 +21,8 @@
               "hook",
               "session-scan"
             ],
-            "async": true
+            "async": true,
+            "timeout": 30
           }
         ]
       }
@@ -36,7 +37,8 @@
               "hook",
               "prompt"
             ],
-            "async": true
+            "async": true,
+            "timeout": 30
           }
         ]
       }
@@ -48,7 +50,7 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/commit.sh\"",
-            "timeout": 300
+            "timeout": 30
           }
         ]
       }
@@ -79,7 +81,7 @@
               "hook",
               "stop"
             ],
-            "timeout": 300
+            "timeout": 30
           }
         ]
       }
@@ -94,7 +96,7 @@
               "hook",
               "subagent-stop"
             ],
-            "timeout": 300
+            "timeout": 30
           }
         ]
       }

@@ -104,7 +104,7 @@ def check_rust(crate: Path, stop: Path) -> Findings:
         return [], ["missing:cargo"]
     rc, out, err = run([cargo, "clippy", "--message-format=short", "--quiet"], crate, timeout=120)
     if rc is None:
-        return [], [f"timeout:cargo clippy in {crate} (cold build? it is skipped for the rest of this session)"]
+        return [], [f"timeout:cargo clippy in {crate} (a cold build?)"]
     workspace = find_up(crate.parent, ["Cargo.toml"], stop)
     issues = []
     for row in (err + out).splitlines():
@@ -227,8 +227,7 @@ def check_swift_build(package: Path) -> Findings:
         rc, out, err = swift_build(swift, package, [], max(deadline - time.monotonic(), 10))
         issues = swift_errors(package, out + err) if rc is not None else []
     if rc is None:
-        return [], [*notes, f"timeout:swift build in {package} (cold build? it is skipped for the rest of this "
-                            "session)"]
+        return [], [*notes, f"timeout:swift build in {package} (a cold build?)"]
     if rc != 0 and not issues:  # dependency resolution, the manifest's toolchain, a link step: not a line of code
         notes.append(f"swift build failed in {package}: {failure(out, err)}")
     return issues, notes

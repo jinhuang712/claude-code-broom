@@ -206,8 +206,9 @@ def hook_session_scan(data: dict) -> None:
     """The scan behind the smell note, in the background (an async hook) when HEAD has none cached; the note
     reaches Claude with its next turn."""
     repo = git_root(Path(data.get("cwd") or os.getcwd()).resolve())
-    if repo is None or setting("smells", repo) == "off" or cached_summary(repo) is not None:
-        return  # with a cached scan, the session hook has already said what there is to say
+    cached = cached_summary(repo) if repo else None
+    if repo is None or setting("smells", repo) == "off" or (cached is not None and not cached.get("partial")):
+        return  # with a whole cached scan, the session hook has already said what there is to say
     sd = session_dir(data.get("session_id") or "cli")
     note = session_note(repo, summary(repo))
     if note and str(repo) not in read_lines(sd / "smells-noted.txt"):

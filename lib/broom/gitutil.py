@@ -5,21 +5,64 @@ from __future__ import annotations
 
 import os
 import re
+import signal
 import subprocess
+import time
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
+HOOK_SECONDS = 25  # all one hook run may take; Claude Code ends a hook at 30 (hooks.json), and waits for it until then
+
+
+class Clock:
+    """What is left of the time one hook run may take, for every command it runs between them. Outside a hook
+    (`broom sweep`, `broom smells`) it is never started, and each command keeps its own timeout."""
+
+    def __init__(self) -> None:
+        self.end: Optional[float] = None
+
+    def start(self, seconds: float) -> None:
+        self.end = time.monotonic() + seconds
+
+    def left(self) -> Optional[float]:
+        return None if self.end is None else max(0.0, self.end - time.monotonic())
+
+
+CLOCK = Clock()
+
+
+def kill_group(p: "subprocess.Popen[str]") -> None:
+    """End a command and what it started: a linter's own compiler keeps the CPU busy after the linter is gone."""
+    try:
+        os.killpg(p.pid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        p.kill()
+
+
 def run(cmd: List[str], cwd: Path, timeout: float = 90,
         env: Optional[Dict[str, str]] = None) -> Tuple[Optional[int], str, str]:
-    """Run a command; the return code is None when it timed out. `env` adds to the environment."""
+    """Run a command; the return code is None when it timed out, or when the hook's time (CLOCK) was used up
+    before or while it ran. `env` adds to the environment."""
+    left = CLOCK.left()
+    if left is not None:
+        if left <= 0:
+            return None, "", ""
+        timeout = min(timeout, left)
     try:
-        p = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True, timeout=timeout,
-                           env={**os.environ, **env} if env else None)
-        return p.returncode, p.stdout or "", p.stderr or ""
-    except subprocess.TimeoutExpired:
-        return None, "", ""
+        p = subprocess.Popen(cmd, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                             env={**os.environ, **env} if env else None, start_new_session=True)
     except OSError as e:
         return -1, "", str(e)
+    try:
+        out, err = p.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        kill_group(p)
+        p.communicate()
+        return None, "", ""
+    except BaseException:  # Ctrl-C or the like: its own session no longer gets the signal from the terminal
+        kill_group(p)
+        raise
+    return p.returncode, out or "", err or ""
 
 
 def git(args: List[str], cwd: Path) -> Optional[str]:

@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -19,7 +20,7 @@ from .gate import (
     accept_allowed, accept_blocked, baseline_keys, baseline_remove, baseline_under, display, issue_key, render, select,
 )
 from .gitcmd import staged
-from .gitutil import changed_since, ChangedLines, git, git_changed_files, git_root
+from .gitutil import CLOCK, HOOK_SECONDS, changed_since, ChangedLines, git, git_changed_files, git_root
 from .scaffold import add_default_configs
 from .smells import find_smells
 from .state import read_hook_input
@@ -230,10 +231,25 @@ def cmd_install_hook(_args: argparse.Namespace) -> int:
     return 0
 
 
+def give_up_after(seconds: float, event: str) -> None:
+    """The last resort for what no command's timeout reaches (broom's own reading of files on a huge repo): end
+    the hook without a verdict, which lets the commit, the edit or the stop through, before Claude Code does."""
+    def give_up() -> None:
+        print(f"broom hook {event}: gave up after {seconds:.0f} s", file=sys.stderr, flush=True)
+        os._exit(0)
+
+    timer = threading.Timer(seconds, give_up)
+    timer.daemon = True
+    timer.start()
+
+
 def cmd_hook(args: argparse.Namespace) -> int:
     from .commitgate import hook_commit, hook_pre_commit
     from .hooks import hook_edit, hook_prompt, hook_session, hook_session_scan, hook_stop
 
+    seconds = float(os.environ.get("BROOM_HOOK_SECONDS") or HOOK_SECONDS)  # the variable is for tests
+    CLOCK.start(seconds)
+    give_up_after(seconds + 3, args.event)
     if args.event == "pre-commit":
         try:
             return hook_pre_commit()

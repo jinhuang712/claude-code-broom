@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from pathlib import Path
@@ -15,6 +16,7 @@ from .weblint import check_biome, check_eslint, check_oxlint, check_stylelint, c
 
 
 Check = Tuple[str, Callable[[], Findings]]  # (key, check); the key lets a check that timed out be skipped later
+SLOW_SECONDS = 10  # how long a check that timed out must have run to count as slow
 
 
 class Plan:
@@ -100,17 +102,23 @@ def plan(files: List[Path], *, whole: bool = False) -> List[Check]:
     return grouped.checks(whole=whole)
 
 
+def timed(check: Callable[[], Findings]) -> Tuple[Findings, float]:
+    start = time.monotonic()
+    return check(), time.monotonic() - start
+
+
 def run_checks(files: List[Path], slow_path: Optional[Path] = None, *, whole: bool = False) -> Findings:
-    """Run every check in parallel; a check that times out is recorded in `slow_path` and skipped after."""
+    """Run every check in parallel; one that timed out after running for SLOW_SECONDS is recorded in `slow_path`
+    and skipped after. One cut short because the hook's time ran out before it got far is only late: it runs again."""
     slow = set(load_json(slow_path, [])) if slow_path else set()
     todo = [(k, fn) for k, fn in plan(files, whole=whole) if k not in slow]
     issues: List[Issue] = []
     notes: List[str] = []
     with ThreadPoolExecutor(max_workers=4) as pool:
-        for key, (found, msgs) in zip([k for k, _ in todo], pool.map(lambda kv: kv[1](), todo)):
+        for key, ((found, msgs), seconds) in zip([k for k, _ in todo], pool.map(lambda kv: timed(kv[1]), todo)):
             issues += found
             notes += msgs
-            if any(m.startswith("timeout:") for m in msgs):
+            if seconds >= SLOW_SECONDS and any(m.startswith("timeout:") for m in msgs):
                 slow.add(key)
     if slow_path:
         save_json(slow_path, sorted(slow))
