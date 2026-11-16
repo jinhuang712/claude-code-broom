@@ -47,9 +47,10 @@ def checkout(repo: Path, sha: str) -> Iterator[Path]:
             raise SystemExit(f"broom: can't check out {sha[:10]} to measure it: {err.strip() or 'git timed out'}")
         yield tree
     finally:
-        run(["git", "worktree", "remove", "--force", str(tree)], repo, timeout=CHECKOUT_SECONDS)
+        rc, _, _ = run(["git", "worktree", "remove", "--force", str(tree)], repo, timeout=CHECKOUT_SECONDS)
         shutil.rmtree(tmp, ignore_errors=True)
-        run(["git", "worktree", "prune"], repo)
+        if rc != 0:  # a checkout that failed half way: git may still list it, and pruning drops what has no directory
+            run(["git", "worktree", "prune"], repo)
         forget(tree)
 
 
