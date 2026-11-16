@@ -89,23 +89,20 @@ class HangTests(BroomCase):
 
 class TraceTests(BroomCase):
     def test_a_hook_still_running_leaves_where_it_was_and_what_it_had_started(self) -> None:
-        log = self.tmp / "trace.log"
         child = subprocess.Popen(["sleep", "5"])
         self.addCleanup(lambda: (child.kill(), child.wait()))
-        with mock.patch.object(hooktrace, "LOG", log), mock.patch.object(hooktrace, "SLOW_AFTER", 0.2):
+        with mock.patch.object(hooktrace, "SLOW_AFTER", 0.2):
             hooktrace.watch("stop", str(self.tmp))
             time.sleep(1.2)
-        text = log.read_text()
+        text = hooktrace.LOG.read_text()
         self.assertIn("hook stop", text)
         self.assertIn("still running", text)
         self.assertIn("Thread", text, "where each thread is")
         self.assertIn("sleep 5", text, "the process it had started")
 
     def test_a_hook_that_ends_in_time_writes_nothing(self) -> None:
-        log = self.tmp / "trace.log"
-        with mock.patch.object(hooktrace, "LOG", log):  # SLOW_AFTER is 20 s: the test is over long before
-            hooktrace.watch("stop", str(self.tmp))
-        self.assertFalse(log.exists())
+        hooktrace.watch("stop", str(self.tmp))  # SLOW_AFTER is 20 s: the test is over long before
+        self.assertFalse(hooktrace.LOG.exists())
 
     def test_descendants_are_the_processes_below_one_however_far(self) -> None:
         rows = ["10 1 01:00 hook", "11 10 00:30 tsc", "12 11 00:20 tsserver", "13 1 05:00 other", "14 13 00:01 node"]

@@ -8,7 +8,7 @@ from unittest import mock
 
 from support import BroomCase
 
-from broom import commitgate, passed
+from broom import commitgate
 from broom.findings import Issue
 from broom.smells import Smell
 
@@ -22,15 +22,9 @@ class PassedTests(BroomCase):
         super().setUp()
         self.repo_dir = self.repo({"a.py": "x = 1\n", "b.py": "y = 2\n", "c.py": "z = 3\n"})
         self.files = [(self.repo_dir / n).resolve() for n in ("a.py", "b.py", "c.py")]
-        self.patches = [mock.patch.object(passed, "PASSED", self.tmp / "passed.json"),
-                        mock.patch.object(commitgate, "baseline_keys", return_value=set())]
-        for p in self.patches:
-            p.start()
-
-    def tearDown(self) -> None:
-        for p in self.patches:
-            p.stop()
-        super().tearDown()
+        patch = mock.patch.object(commitgate, "baseline_keys", return_value=set())
+        patch.start()
+        self.addCleanup(patch.stop)
 
     def check(self, hints=(), blocking=(), notes=()) -> list:
         """Run `checked` with fake tools; the files the checks were asked about."""

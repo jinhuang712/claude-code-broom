@@ -70,12 +70,12 @@ class StateTests(BroomCase):
         self.assertEqual(load_json(path, None), ["a", "x"])
 
     def test_saving_one_repos_commit_state_leaves_the_others_as_they_are(self) -> None:
-        path = self.tmp / "commits.json"
+        path = gate.COMMITS
+        path.parent.mkdir(parents=True)
         # Another hook wrote /c after this run read the file; this run knows of /a and /b, and /b is settled.
         path.write_text(json.dumps({"/a": {"pending": {"k": 1}}, "/b": {"pending": {"j": 1}},
                                     "/c": {"pending": {"z": 1}}}))
-        with mock.patch.object(gate, "COMMITS", path):
-            save_commits({"/a": {"pending": {"k": 2}}}, [Path("/a"), Path("/b")])
+        save_commits({"/a": {"pending": {"k": 2}}}, [Path("/a"), Path("/b")])
         self.assertEqual(load_json(path, None), {"/a": {"pending": {"k": 2}}, "/c": {"pending": {"z": 1}}})
 
 

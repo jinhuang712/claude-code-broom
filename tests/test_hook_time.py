@@ -112,8 +112,7 @@ class HookTimeTests(BroomCase):
             scans.append(1)
             return [], (["timeout:ruff measuring smells"] if len(scans) == 1 else [])
 
-        with mock.patch.object(hotspots, "CACHE", self.tmp / "cache"), \
-                mock.patch.object(hotspots, "find_smells", scan):
+        with mock.patch.object(hotspots, "find_smells", scan):
             first = hotspots.summary(repo)
             self.assertTrue(first["partial"])
             self.assertEqual(hotspots.summary(repo)["partial"], False)  # not served from the partial one
@@ -123,9 +122,8 @@ class HookTimeTests(BroomCase):
 
     def test_the_note_of_a_partial_scan_says_it_is_a_floor(self) -> None:
         data = {"head": "h", "total": 9, "severe": 4, "hotspots": ["a.py"], "partial": True}
-        with mock.patch.object(hotspots, "DISMISSED", self.tmp / "none.json"):
-            self.assertIn("at least 4 code smell", hotspots.session_note(self.tmp, data))
-            self.assertNotIn("at least", hotspots.session_note(self.tmp, {**data, "partial": False}))
+        self.assertIn("at least 4 code smell", hotspots.session_note(self.tmp, data))
+        self.assertNotIn("at least", hotspots.session_note(self.tmp, {**data, "partial": False}))
 
 
 if __name__ == "__main__":
