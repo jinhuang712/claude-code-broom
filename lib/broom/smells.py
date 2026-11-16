@@ -29,7 +29,7 @@ from .measure import SMELL_EXTS, Limits, Raw, code_lines
 from .realtree import Budget, Found, find_in_real_tree
 from .rowcache import RowCache
 from .smell import Smell, level, made_worse
-from .touched import old_smells, touched
+from .touched import old_smells, touched, touches
 from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS
 
 GENERATED = re.compile(r"DO NOT EDIT|@generated")
@@ -227,16 +227,31 @@ def unused_smells(repo: Path, unused: List[Unused], scope: set, base: Optional[s
     return out
 
 
+def touched_function(repo: Path, f: Found, lines: Set[int], lim: RepoLimits) -> List[Smell]:
+    """A long function in the real tree whose first line the change didn't add, as the touched hint when a changed
+    line lies in it (the length is what its row says, which only a function's length does). No copy of the base says
+    what it was, so the size now stands in for it."""
+    pair = lim.of(f.rel).get(f.metric) if f.metric == "function_lines" else None
+    if not pair or not level(f.value, pair):
+        return []
+    s = Smell(repo, repo / f.rel, f.line, f.metric, f.key, f.value, f.value, f.tool, "hint", pair[0], touched=True)
+    return [s] if touches(s, lines, "") else []
+
+
 def real_tree_smells(repo: Path, found: List[Found], base: Optional[str], lim: RepoLimits,
                      off: Tuple[str, ...]) -> List[Smell]:
     """What the tools run in the real tree found on lines the change added, a new file included (all of it when
-    `base` is None): without a copy of the base, that is what makes a smell the change's own."""
+    `base` is None): without a copy of the base, that is what makes a smell the change's own. A long function the
+    change only edited the inside of is the old smell of a function it touched."""
     changed = ChangedLines(base) if base else None
     added: Dict[Tuple[str, str], List[Found]] = {}
     out = []
     for f in found:
         lines = changed.get(repo / f.rel) if changed else None
-        if f.metric in off or not (lines is None or f.line in lines):
+        if f.metric in off:
+            continue
+        if not (lines is None or f.line in lines):
+            out += touched_function(repo, f, lines, lim)
             continue
         if f.metric in SMELL_PRESENCE:
             added.setdefault((f.rel, f.metric), []).append(f)
