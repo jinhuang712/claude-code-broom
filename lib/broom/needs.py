@@ -38,6 +38,7 @@ Machine = Tuple[str, str, str, str]  # a tool on PATH to probe: (lang, role, too
 
 @dataclass
 class Item:
+    """One finding for a language: a tool or config, its status (ok, missing, broken, off or conflict) and a fix."""
     lang: str
     role: str  # format, lint, types, lsp, plugin, deps or hook (git's)
     tool: str
@@ -51,10 +52,12 @@ class Item:
 
 
 def tools_db() -> dict:
+    """The tool database in defaults/tools.json: for each tool, its install commands and how to probe it."""
     return json.loads((DEFAULTS / "tools.json").read_text())
 
 
 def package_manager(project: Path, stop: Path) -> str:
+    """The package manager a JS project uses, from the lockfile found walking up to `stop`; npm when there is none."""
     for lock, pm in LOCKFILES:
         if find_up(project, [lock], stop):
             return pm
@@ -62,6 +65,7 @@ def package_manager(project: Path, stop: Path) -> str:
 
 
 def add_dev_command(project: Path, stop: Path) -> str:
+    """The command that adds a devDependency with the project's package manager, with its workspace flag if any."""
     pm = package_manager(project, stop)
     cmd = ADD_DEV[pm]
     if pm == "pnpm" and (project / "pnpm-workspace.yaml").exists():
@@ -72,6 +76,7 @@ def add_dev_command(project: Path, stop: Path) -> str:
 
 
 def install_command(spec: dict) -> str:
+    """The first install command whose manager is on PATH, else the first one listed; empty when the tool lists none."""
     options = spec.get("install") or []
     for manager, cmd in options:
         if shutil.which(manager):
@@ -90,6 +95,7 @@ def probe(exe: str, spec: dict, cwd: Path) -> Tuple[bool, str]:
 
 
 def settings_files(repo: Path) -> List[Path]:
+    """The Claude settings files that can enable plugins, in order: user, project, then project-local."""
     config = Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude")
     return [config / "settings.json", repo / ".claude" / "settings.json", repo / ".claude" / "settings.local.json"]
 
@@ -113,6 +119,7 @@ class Diagnosis:
         self.machine: List[Machine] = []
 
     def findings(self) -> List[Item]:
+        """Run every language's checks, probe the tools on PATH in parallel, and return all the items found."""
         steps: List[Callable[[], None]] = [self.go, self.js, self.rust, self.py, self.css_lint, self.css_dialects,
                                            self.css_format, self.smells, self.swift]
         for step in steps:
@@ -125,9 +132,11 @@ class Diagnosis:
     # helpers
 
     def rel(self, p: Path) -> str:
+        """The path `p` relative to the repo root, or "." for the root itself, as findings show it."""
         return "." if p == self.repo else str(p.relative_to(self.repo))
 
     def deps_missing(self, lang: str, name: str, d: Path) -> Item:
+        """The item for a JS tool whose package is configured here but not installed; its fix installs it in `d`."""
         cmd = f"{package_manager(d, self.repo)} install"
         return Item(lang, "deps", name, "missing", self.rel(d), DEPS_DETAIL,
                     cmd if d == self.repo else f"cd {self.rel(d)} && {cmd}")
@@ -156,11 +165,13 @@ class Diagnosis:
         return home
 
     def oxfmt_needed(self, lang: str, home: Path) -> None:
+        """Add an oxfmt item when it doesn't resolve for `home` and formatting is off; otherwise does nothing."""
         if not resolve_bin("oxfmt", home, self.repo):
             self.items.append(self.dev_fix(Item(lang, "format", "oxfmt", "off", self.rel(home),
                                                 "needed once formatting is on"), home, "oxfmt"))
 
     def check_machine(self, entry: Machine) -> Item:
+        """Check one tool on PATH: ok when its probe runs, broken when the probe fails, missing when not found."""
         lang, role, tool, name = entry
         spec = self.db.get(tool, {})
         exe = shutil.which(name)
@@ -174,6 +185,7 @@ class Diagnosis:
     # languages
 
     def go(self) -> None:
+        """Add the Go tools (types, format, lint, LSP) to the machine checks, and a golangci config item per project."""
         if "go" not in self.projects:
             return
         self.machine += [("go", "types", "go", "go"), ("go", "format", "gofmt", "gofmt"),
@@ -184,6 +196,7 @@ class Diagnosis:
                                    f"project {cfg.name}" if cfg else DEFAULTS_DETAIL))
 
     def js(self) -> None:
+        """Check each JS project's linter, formatter and tsc (if it has tsconfig.json), and its TypeScript server."""
         for p in self.projects.get("js", []):
             self.js_lint(p)
             self.js_format(p)
@@ -198,6 +211,7 @@ class Diagnosis:
             self.items.append(typescript_lsp(self.repo, self.db))
 
     def js_lint(self, p: Path) -> None:
+        """Check each JS linter the project's config selects (oxlint, eslint or biome) and add an item if missing."""
         for tool, _ in js_linters(p / "_.ts", self.repo):
             name = "oxlint" if tool.startswith("oxlint") else tool
             detail = DEFAULTS_DETAIL if tool == "oxlint-default" else f"project {name} config"
@@ -214,6 +228,7 @@ class Diagnosis:
                                                     "type-aware rules"), p, "oxlint-tsgolint"))
 
     def js_format(self, p: Path) -> None:
+        """Check the JS formatter a project uses; a project with none is skipped, reported once by js()."""
         fmt = js_formatter(p / "_.ts", self.repo)
         if fmt is None:
             return  # reported once for all such projects
@@ -223,12 +238,14 @@ class Diagnosis:
             self.items.append(self.deps_missing("js", fmt[0], p))
 
     def rust(self) -> None:
+        """Add the Rust tools (cargo, rustfmt, clippy, rust-analyzer) to the machine checks when the repo has Rust."""
         if "rust" in self.projects:
             self.machine += [("rust", "types", "cargo", "cargo"), ("rust", "format", "rustfmt", "rustfmt"),
                              ("rust", "lint", "cargo-clippy", "cargo"),
                              ("rust", "lsp", "rust-analyzer", "rust-analyzer")]
 
     def py(self) -> None:
+        """Add ruff and pyright-langserver to the machine checks for Python; report ruff format as off if unset."""
         if "py" not in self.projects:
             return
         self.machine += [("py", "lint", "ruff", "ruff"), ("py", "lsp", "pyright-langserver", "pyright-langserver")]
@@ -237,6 +254,7 @@ class Diagnosis:
             self.formatting_off("py", "ruff format", unformatted, "ruff", "Python")
 
     def css_lint(self) -> None:
+        """Check each CSS project's stylelint setup; a missing stylelint gets a fix that installs it."""
         for p in self.projects.get("css", []):
             for tool, d in css_linters(p / "_.css", self.repo):
                 name = "stylelint" if tool.startswith("stylelint") else tool
@@ -277,6 +295,7 @@ class Diagnosis:
                         self.items.append(item)
 
     def smells(self) -> None:
+        """Add the smell tools for the repo's languages to the machine checks, unless the smells setting is off."""
         if setting("smells", self.repo) == "off":
             return
         coded = [lang for lang in ("go", "js", "py", "swift", "rust", "css") if lang in self.projects]
@@ -287,6 +306,7 @@ class Diagnosis:
             self.machine.append(("js", "smells", "dependency-cruiser", "dependency-cruiser"))
 
     def swift(self) -> None:
+        """Add the Swift tools to the machine checks, and check each Swift project's linter and formatter."""
         swift = self.projects.get("swift") or []
         if not swift:
             return
@@ -321,6 +341,7 @@ class Diagnosis:
                                    fix=install_command(self.db.get(tool, {}))))
 
     def plugins(self) -> None:
+        """Report each enabled plugin that starts a language server for a language this repo uses, as a conflict."""
         for path in settings_files(self.repo):
             enabled = load_json(path, {}).get("enabledPlugins") or {}
             for key, on in enabled.items():

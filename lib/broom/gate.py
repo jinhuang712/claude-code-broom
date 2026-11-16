@@ -32,6 +32,7 @@ _lines: Dict[Path, List[str]] = {}
 
 
 def line_text(f: Path, n: int) -> str:
+    """The stripped text of line `n` (1-based) in `f`, cached per file; "" when the line or the file is missing."""
     if f not in _lines:
         try:
             _lines[f] = f.read_text(errors="replace").splitlines()
@@ -42,11 +43,13 @@ def line_text(f: Path, n: int) -> str:
 
 
 def issue_key(i: Issue) -> str:
+    """A short id for a finding: its file, tool, rule and message plus the text of its line, not its number."""
     # Keyed on the line's text, not its number, so a known issue stays known when lines above it move.
     return short_hash(f"{i.file}|{i.tool}|{i.rule}|{i.msg}|{line_text(i.file, i.line)}")
 
 
 def issue_entry(i: Issue) -> Dict[str, object]:
+    """The finding as a dict stamped with the time, for the baseline and commit record; `grown_from` if set."""
     entry: Dict[str, object] = {"t": time.time(), "file": str(i.file), "line": i.line, "tool": i.tool,
                                 "rule": i.rule, "msg": i.msg}
     if i.grown_from is not None:
@@ -55,6 +58,7 @@ def issue_entry(i: Issue) -> Dict[str, object]:
 
 
 def verdict(issues: List[Issue]) -> str:
+    """A short id for a set of issues: the same issues in any order give the same id, and no issues give a fixed one."""
     return short_hash("".join(sorted(issue_key(i) for i in issues)))
 
 
@@ -62,19 +66,23 @@ def verdict(issues: List[Issue]) -> str:
 
 
 def baseline_entries(raw: dict) -> Dict[str, dict]:
+    """The baseline as a dict of key to entry; the bare timestamp of version 0.2 becomes {"t": timestamp}."""
     # 0.2 stored a bare timestamp per key.
     return {k: (v if isinstance(v, dict) else {"t": v}) for k, v in raw.items()}
 
 
 def baseline_load() -> Dict[str, dict]:
+    """The known-issue baseline from disk, keyed by issue key; empty when there is none."""
     return baseline_entries(load_json(BASELINE, {}))
 
 
 def baseline_keys() -> Set[str]:
+    """The keys of the baseline's known issues, for telling which findings are already known."""
     return set(baseline_load())
 
 
 def baseline_add_entries(entries: Dict[str, dict]) -> None:
+    """Add `entries` to the baseline on disk, dropping entries older than BASELINE_DAYS; takes the file's lock."""
     cutoff = time.time() - BASELINE_DAYS * 86400
 
     def add(raw: dict) -> dict:
@@ -156,6 +164,7 @@ def baseline_under(roots: List[Path]) -> Dict[str, dict]:
 
 
 def baseline_remove(keys: List[str]) -> None:
+    """Remove the baseline entries for `keys` from disk, under the file's lock; keys not there are ignored."""
     def drop(raw: dict) -> dict:
         data = baseline_entries(raw)
         for k in keys:
@@ -191,12 +200,14 @@ def select(issues: List[Issue], files: Set[Path], known: Set[str], changed: Opti
 
 
 def display(p: Path) -> str:
+    """`p` as text for a person: under the home directory it starts with "~" instead of the full path."""
     home = str(Path.home())
     s = str(p)
     return "~" + s[len(home):] if s.startswith(home) else s
 
 
 def rel(f: Path, root: Path) -> str:
+    """`f` relative to `root` when it lies under it, else as display() shows it."""
     try:
         return str(f.relative_to(root))
     except ValueError:
@@ -204,10 +215,12 @@ def rel(f: Path, root: Path) -> str:
 
 
 def note_text(n: str) -> str:
+    """The message part of a note: the text after "timeout:" or "missing:", or the note itself."""
     return n.split(":", 1)[1] if n.startswith(("timeout:", "missing:")) else n
 
 
 def setup_hint(notes: List[str]) -> str:
+    """A one-line hint to run /broom:setup when a note reports a missing tool; "" when none does."""
     missing = [n for n in notes if n.startswith("missing:")]
     return "Some checks couldn't run because tools are missing: offer the user /broom:setup." if missing else ""
 

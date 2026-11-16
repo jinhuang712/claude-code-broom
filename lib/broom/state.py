@@ -63,6 +63,7 @@ def read_hook_input(wait: float = HOOK_INPUT_SECONDS) -> dict:
 
 
 def emit(obj: dict) -> None:
+    """Write `obj` as one JSON object to stdout, with no newline after it, and flush: how a hook answers Claude Code."""
     sys.stdout.write(json.dumps(obj))
     sys.stdout.flush()
 
@@ -91,6 +92,7 @@ def parse_jsonc(text: str) -> dict:
 
 
 def read_jsonc(path: Path) -> dict:
+    """Parse the JSON-with-comments file at `path` into a dict; an unreadable or invalid file gives {}."""
     try:
         return parse_jsonc(path.read_text())
     except (OSError, ValueError):  # unreadable, or not text
@@ -98,6 +100,7 @@ def read_jsonc(path: Path) -> dict:
 
 
 def session_dir(session_id: str) -> Path:
+    """Return the data directory for a session, made if missing; an empty id uses "nosession"."""
     safe = re.sub(r"[^A-Za-z0-9_.-]", "_", session_id or "nosession")
     d = DATA_ROOT / "sessions" / safe
     d.mkdir(parents=True, exist_ok=True)
@@ -105,11 +108,13 @@ def session_dir(session_id: str) -> Path:
 
 
 def append_line(path: Path, text: str) -> None:
+    """Append `text` and a newline to the file at `path`, creating the file when it is missing."""
     with open(path, "a") as f:
         f.write(text + "\n")
 
 
 def load_json(path: Path, default):
+    """Load the JSON file at `path`, or give `default` when it is missing, unreadable or not JSON."""
     try:
         return json.loads(path.read_text())
     except (ValueError, OSError):
@@ -175,8 +180,10 @@ def prune_dirs(root: Path, max_age_days: float) -> None:
 
 
 def prune_sessions(max_age_days: float = 7) -> None:
+    """Delete the session directories not touched for `max_age_days` days (7 by default), under the data root."""
     prune_dirs(DATA_ROOT / "sessions", max_age_days)
 
 
 def short_hash(text: str) -> str:
+    """Return the first 16 hex digits of the SHA-1 of `text`, a short id for keys and file names; not for security."""
     return hashlib.sha1(text.encode()).hexdigest()[:16]

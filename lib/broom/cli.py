@@ -71,6 +71,7 @@ def sweep_smells(root: Path, code: List[Path], args: argparse.Namespace) -> int:
 
 
 def cmd_sweep(args: argparse.Namespace) -> int:
+    """Run `broom sweep` on the scope given: format the changed files, then lint and type-check; 1 if issues remain."""
     files, changed, root = scope_files(args)
     if not files:
         say("broom: nothing to sweep in that scope")
@@ -101,6 +102,7 @@ def cmd_sweep(args: argparse.Namespace) -> int:
 
 
 def cmd_fmt(args: argparse.Namespace) -> int:
+    """Run `broom fmt` on the changed files, or on the paths given, skipping excluded ones; always returns 0."""
     root = git_root(Path.cwd().resolve())
     files = git_changed_files(root) if root else []
     if args.paths:
@@ -122,6 +124,7 @@ def cmd_fmt(args: argparse.Namespace) -> int:
 
 
 def repo_or_exit() -> Path:
+    """The git root of the current directory; exits with a message when it is not inside a repository."""
     root = git_root(Path.cwd().resolve())
     if root is None:
         raise SystemExit("broom: not inside a git repository")
@@ -129,6 +132,7 @@ def repo_or_exit() -> Path:
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
+    """Run `broom doctor`: the repo's tools and configs with their fixes, as JSON with --json; 1 when not healthy."""
     from .doctor import answered_kinds, diagnose, gap_kind, render_text
 
     repo = repo_or_exit()
@@ -143,6 +147,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 
 def cmd_setup(args: argparse.Namespace) -> int:
+    """Run `broom setup`: record the answer (done, dismissed or reset) and say how many gaps are left; returns 0."""
     from .doctor import gaps, record_setup, reset_setup
 
     if args.reset:
@@ -172,6 +177,7 @@ def cmd_init(args: argparse.Namespace) -> int:
 
 
 def cmd_smells(args: argparse.Namespace) -> int:
+    """Run `broom smells`: the repo's code smells, worst first (JSON with --json), or dismiss them; returns 0."""
     from .hotspots import dismiss, render, report
 
     repo = repo_or_exit()
@@ -184,6 +190,7 @@ def cmd_smells(args: argparse.Namespace) -> int:
 
 
 def cmd_known(args: argparse.Namespace) -> int:
+    """Run `broom known`: list the known issues here, accept the last blocked ones with a reason, or clear them."""
     roots = [Path(p).resolve() for p in args.paths] or [repo_or_exit()]
     if args.accept is not None:
         if not accept_allowed():
@@ -223,6 +230,7 @@ def cmd_known(args: argparse.Namespace) -> int:
 
 
 def cmd_install_hook(_args: argparse.Namespace) -> int:
+    """Run `broom install-hook`: add broom's line to the repo's git hook; 1 when that hook belongs to another tool."""
     from .githook import LINE, install
 
     written, path = install(repo_or_exit())
@@ -246,6 +254,7 @@ def give_up_after(seconds: float, event: str) -> None:
 
 
 def cmd_hook(args: argparse.Namespace) -> int:
+    """Run the check for `broom hook <event>`; an error is warned and let through, so 0 unless pre-commit blocks."""
     from .commitgate import hook_commit, hook_pre_commit
     from .hooks import hook_edit, hook_prompt, hook_session, hook_session_scan, hook_stop
 
@@ -290,6 +299,7 @@ SCOPE_HELP = "format changed lines, the functions holding them, or whole files (
 
 
 def add_sweep_parsers(sub: argparse._SubParsersAction) -> None:
+    """Add the `sweep` subcommand and its scope and mode flags to the subparsers `sub`, with its handler."""
     s = sub.add_parser("sweep", help="format, then lint and type-check a scope (default: uncommitted changes)")
     scope = s.add_mutually_exclusive_group()
     scope.add_argument("--staged", action="store_true", help="only the staged changes")
@@ -309,6 +319,7 @@ def add_sweep_parsers(sub: argparse._SubParsersAction) -> None:
 
 
 def add_setup_parsers(sub: argparse._SubParsersAction) -> None:
+    """Add the `doctor` and `setup` subcommands and their flags to the subparsers `sub`, each with its handler."""
     d = sub.add_parser("doctor", help="languages, tools, configs and conflicts for this repo, with fixes")
     d.add_argument("--json", action="store_true")
     d.set_defaults(fn=cmd_doctor)
@@ -325,6 +336,7 @@ def add_setup_parsers(sub: argparse._SubParsersAction) -> None:
 
 
 def add_issue_parsers(sub: argparse._SubParsersAction) -> None:
+    """Add the `known` and `smells` subcommands and their flags to the subparsers `sub`, each with its handler."""
     k = sub.add_parser("known", help="list, --accept or --clear issues accepted as known")
     k.add_argument("--accept", metavar="WHY",
                    help="accept the issues of the last blocked commit or turn end here, with the reason")
@@ -356,6 +368,7 @@ def add_internal_parsers(sub: argparse._SubParsersAction) -> None:
 
 
 def main(argv: List[str]) -> int:
+    """Parse `argv` with the broom subcommands, run the chosen one and return its exit code."""
     p = argparse.ArgumentParser(prog="broom", description="Format, lint and type-check with each project's own tools.")
     p.add_argument("--version", action="version", version=f"broom {__version__}")
     sub = p.add_subparsers(dest="cmd", required=True,
