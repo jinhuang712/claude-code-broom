@@ -76,16 +76,16 @@ class CommitTest(BroomCase):
     # commit hook: TypeScript
 
     @unittest.skipUnless(HAS_TS, "oxlint/tsc missing")
-    def test_commit_denied_then_same_result_passes(self) -> None:
+    def test_commit_denied_then_passes_once_accepted_with_a_reason(self) -> None:
         r = self.ts_repo()
         (r / "src/main.ts").write_text(TS_BAD)
         self.sh(r, "git", "add", "src/main.ts")
         reason = self.denied(self.commit(r, "git commit -m wip"))
         self.assertIn("no-floating-promises", reason)
         self.assertIn("no-unused-vars", reason)
-        again = self.commit(r, "git commit -m wip")
-        self.assertEqual(self.denied(again), "")
-        self.assertIn("known issue", again["hookSpecificOutput"]["additionalContext"])
+        self.assertIn("no-floating-promises", self.denied(self.commit(r, "git commit -m wip")), "the same result: no")
+        self.assertIn("accepted 2 issue(s)", self.cli(r, "known", "--accept", "demo code").stdout)
+        self.assertEqual(self.denied(self.commit(r, "git commit -m wip")), "")
         self.assertEqual(self.denied(self.commit(r, "git commit -m wip")), "", "known issues stay known")
 
     @unittest.skipUnless(HAS_TS, "oxlint/tsc missing")

@@ -83,9 +83,11 @@ class SweepTest(BroomCase):
         (r / "src/main.ts").write_text(TS_BAD)
         self.sh(r, "git", "add", "src/main.ts")
         self.assertTrue(self.denied(self.commit(r, "git commit -m x")))
+        self.assertEqual(self.cli(r, "known", "--accept", "demo code").returncode, 0)
         self.assertEqual(self.denied(self.commit(r, "git commit -m x")), "")
         listed = self.cli(r, "known").stdout
         self.assertIn("no-floating-promises", listed)
+        self.assertIn("(demo code)", listed)
         self.assertIn("main.ts:5", listed)
         self.assertIn("known issue(s) hidden", self.cli(r, "sweep", "--check").stdout)
         self.assertIn("cleared 2", self.cli(r, "known", "--clear").stdout)

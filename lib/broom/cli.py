@@ -205,11 +205,12 @@ def cmd_known(args: argparse.Namespace) -> int:
         repo = git_root(roots[0] if roots[0].is_dir() else roots[0].parent)
         if repo is None:
             raise SystemExit("broom: not inside a git repository")
-        n = accept_blocked(repo, why)
+        n, where = accept_blocked(repo, why)
         if not n:
-            print(f"broom: no blocked commit to accept in {display(repo)}")
+            print(f"broom: no blocked commit or turn end to accept in {display(repo)}")
             return 1
-        print(f"broom: accepted {n} issue(s) as known ({why}); commit again")
+        again = "stop again" if where.endswith("stop") else "commit again"
+        print(f"broom: accepted {n} issue(s) as known ({why}); {again}")
         return 0
     entries = baseline_under(roots)
     if args.clear:
@@ -219,7 +220,7 @@ def cmd_known(args: argparse.Namespace) -> int:
     if not entries:
         print("broom: no known issues here")
         return 0
-    print(f"broom: {len(entries)} known issue(s), accepted after Claude saw them and committed or stopped again:")
+    print(f"broom: {len(entries)} known issue(s), not raised again:")
     for e in sorted(entries.values(), key=lambda v: (str(v.get("file")), v.get("line", 0))):
         when = time.strftime("%Y-%m-%d", time.localtime(e.get("t", 0)))
         where = f"{display(Path(str(e.get('file', '?'))))}:{e.get('line', '?')}"
@@ -336,7 +337,8 @@ def add_setup_parsers(sub: argparse._SubParsersAction) -> None:
 
 def add_issue_parsers(sub: argparse._SubParsersAction) -> None:
     k = sub.add_parser("known", help="list, --accept or --clear issues accepted as known")
-    k.add_argument("--accept", metavar="WHY", help="accept the issues of the last blocked commit here, with the reason")
+    k.add_argument("--accept", metavar="WHY",
+                   help="accept the issues of the last blocked commit or turn end here, with the reason")
     k.add_argument("--clear", action="store_true")
     k.add_argument("paths", nargs="*", help="limit to these files or directories (default: the repo)")
     k.set_defaults(fn=cmd_known)

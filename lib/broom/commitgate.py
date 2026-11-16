@@ -2,10 +2,9 @@
 git's own pre-commit hook, which `broom install-hook` adds for commits that hook never sees. The turn-end gate
 checks with the same `checked`.
 
-Lint findings Claude has already seen once pass the second time unchanged, so broom never traps Claude in a loop
-over a false positive or an issue that predates it. Type and compile errors and smells past the hard limit don't
-pass on a retry: they pass fixed, or after Claude accepts them with `broom known --accept "<why>"`, which puts the
-reason on record.
+Every blocking finding, lint included, passes fixed, or after Claude accepts it with `broom known --accept "<why>"`,
+which puts the reason on record: a retry alone lets nothing through. A false positive or an issue that predates the
+change costs one command.
 """
 
 from __future__ import annotations
@@ -24,8 +23,8 @@ from .findings import Issue
 from .config import excluded, setting
 from .fmt import format_files
 from .gate import (
-    COMMITS, accept_allowed, baseline_add, baseline_keys, issue_entry, issue_key, new_notes, note_text, render,
-    save_commits, select, setup_hint, verdict,
+    COMMITS, accept_allowed, baseline_keys, issue_entry, issue_key, new_notes, note_text, render, save_commits,
+    select, setup_hint,
 )
 from .gitcmd import CommitPlan, GitOp, parse, parse_commit, plan_commit, staged
 from .githook import installed
@@ -34,8 +33,6 @@ from .passed import record, staged_blobs, unpassed, worktree_blobs
 from .smells import Smell, gate_smells, hint_text
 from .state import DATA_ROOT, emit, load_json, session_dir
 from .toolchain import lang_of
-
-MAX_BLOCKS = 3
 
 
 def claim(tool_use_id: Optional[str]) -> bool:
@@ -100,22 +97,30 @@ def record_passed(files: List[Path], blocking: List[Issue], hints: List[Smell], 
         record(repo, [f for f in group if f.resolve() not in found])
 
 
-def sticky(i: Issue) -> bool:
-    """Type and compile errors, and smells past their hard limit: they pass fixed or accepted, never on a retry."""
-    return i.hard or i.severe
+def accept_command(repos: Iterable[Path], cwd: Path) -> str:
+    """The command that accepts what was blocked in `repos`, as the block messages offer it: `broom known --accept
+    "<why>"` in backticks, with the repo's path where `cwd` isn't the repo. One command for each repo."""
+    return " and ".join("`" + 'broom known --accept "<why>"' + ("" if r == cwd else f" {shlex.quote(str(r))}") + "`"
+                        for r in repos)
 
 
-def block_head(count: int, hard: int, repo: Path, cwd: Path) -> str:
-    head = f"[broom] Commit blocked: {count} issue(s) in the files being committed"
-    if not hard:
-        return (f"{head}. Fix them and commit again. If one is pre-existing or a false positive, say so and run the "
-                "same commit again: broom lets an unchanged result through.")
-    head = f"{head}, {hard} of them type errors or code smells past the hard limit, which don't pass on a retry."
+def issues_by_repo(issues: List[Issue]) -> Dict[Path, List[Issue]]:
+    """`issues` grouped by the repo their file is in; an issue outside any repo is left out."""
+    groups: Dict[Path, List[Issue]] = {}
+    for i in issues:
+        root = git_root(i.file.parent)
+        if root:
+            groups.setdefault(root, []).append(i)
+    return groups
+
+
+def block_head(count: int, repo: Path, cwd: Path) -> str:
+    """The first lines of a commit's denial: what to do about the findings, fix them or accept them with a reason."""
+    head = f"[broom] Commit blocked: {count} issue(s) in the files being committed. Fix them and commit again"
     if not accept_allowed():
-        return f"{head} Fix them and commit again; accepting them is off here (BROOM_NO_ACCEPT)."
-    accept = 'broom known --accept "<why>"' + ("" if repo == cwd else f" {shlex.quote(str(repo))}")
-    return (f"{head} Fix them and commit again. If they predate this change or are false positives, run "
-            f"`{accept}`, then commit again.")
+        return f"{head}; accepting them is off here (BROOM_NO_ACCEPT)."
+    return (f"{head}. If one predates this change or is a false positive, run {accept_command([repo], cwd)}, then "
+            "commit again.")
 
 
 def entries_of(issues: Iterable[Issue]) -> Dict[str, dict]:
@@ -135,33 +140,23 @@ def skip_context(sd: Path, notes: List[str], repo: Path) -> List[str]:
 
 def gate_files(repo: Path, files: List[Path], sd: Path, cwd: Path, state: dict) -> Tuple[Optional[str], List[str]]:
     """Check what a commit takes from `repo`: the denial when it must stop (else None), and lines of context.
-    `state` holds each repo's last blocked commit, for the retry rule, `broom known --accept` and the ledger: what
-    it found, which hook and which session saw it."""
+    `state` holds each repo's last blocked commit, for `broom known --accept` and the ledger: what it found, which
+    hook and which turn saw it."""
     files = sorted(f for f in files if lang_of(f))
     blocking, hints, notes = checked(files)
     context = [hint_text(hints)] if hints else []
     ledger.hinted(entries_of(s.issue() for s in hints))
     key = str(repo)
-    prior = state.get(key, {})
     found = entries_of(blocking)
+    prior = state.get(key, {})
     if prior.get("pending"):
         ledger.fixes(prior["pending"], found, baseline_keys(), files, notes)
-    hard = sum(1 for i in blocking if sticky(i))
     if not blocking:
         state.pop(key, None)
         return None, context + skip_context(sd, notes, repo)
-    now = verdict(blocking)
-    if not hard and (prior.get("verdict") == now or int(prior.get("denials", 0)) >= MAX_BLOCKS):
-        # Claude saw these lint findings and committed again unchanged: they are known, the commit goes ahead.
-        baseline_add(blocking)
-        ledger.let_through(found, "retry" if prior.get("verdict") == now else "denials", sd)
-        state.pop(key, None)
-        return None, context + [f"broom let the commit through with {len(blocking)} known issue(s)"]
-    # Type errors and severe smells never pass on a retry alone: fixed, or accepted with a reason on record.
     ledger.blocked(found)
-    state[key] = {"verdict": now, "denials": int(prior.get("denials", 0)) + 1, "pending": found,
-                  "where": ledger.HOOK.where, "turn": str(sd)}
-    head = block_head(len(blocking), hard, repo, cwd)
+    state[key] = {"pending": found, "where": ledger.HOOK.where, "turn": str(sd)}
+    head = block_head(len(blocking), repo, cwd)
     return render(head, blocking, new_notes(sd / "notes.json", notes, repo), set(files)), context
 
 

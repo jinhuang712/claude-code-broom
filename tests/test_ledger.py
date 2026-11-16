@@ -78,16 +78,24 @@ class RecordTest(LedgerCase):
         self.assertEqual(lines("fix"), [], "a.py wasn't checked: its finding stays open")
 
     @unittest.skipUnless(HAS_PY, "ruff missing")
-    def test_a_retry_passes_a_lint_finding_and_the_ledger_says_how(self) -> None:
+    def test_a_lint_finding_blocks_again_and_again_until_it_is_fixed_or_accepted_with_a_reason(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
         (r / "a.py").write_text("import os\n")
         self.sh(r, "git", "add", "a.py")
-        self.assertIn("F401", self.denied(self.commit(r, "git commit -m x")))
+        first = self.denied(self.commit(r, "git commit -m x"))
+        self.assertIn("F401", first)
+        self.assertIn('run `broom known --accept "<why>"`, then commit again', first)
+        self.assertNotIn("same commit again", first)
+        for _ in range(4):  # no retry and no number of denials lets it through
+            self.assertIn("F401", self.denied(self.commit(r, "git commit -m x")))
+        self.assertEqual(lines("pass"), [])
+        self.assertEqual(self.cli(r, "known", "--accept", "unused on purpose").returncode, 0)
         self.assertEqual(self.denied(self.commit(r, "git commit -m x")), "")
-        self.assertEqual([(x["rule"], x["tool"]) for x in lines("block")], [("F401", "ruff")])
         (through,) = lines("pass")
-        self.assertEqual((through["how"], through["key"]), ("retry", lines("block")[0]["key"]))
-        self.assertEqual(self.stop(r)["systemMessage"], "broom let 1 through this turn: 1 F401 (retry)")
+        self.assertEqual((through["how"], through["why"], through["key"]), ("accept", "unused on purpose",
+                                                                           lines("block")[0]["key"]))
+        self.assertEqual(self.stop(r)["systemMessage"],
+                         "broom let 1 through this turn: 1 F401 (accepted: unused on purpose)")
 
     def test_accepting_with_a_reason_is_a_pass_with_the_reason(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
@@ -110,10 +118,53 @@ class RecordTest(LedgerCase):
         self.assertIn("issue(s) in this turn's changes", self.stop(r)["reason"])
         self.assertEqual(sorted((x["file"], x["where"]) for x in lines("block")), [("a.py", "stop"), ("b.py", "stop")])
         self.assertEqual(self.stop(r)["systemMessage"],
-                         "broom let 2 through this turn: 1 function_lines (stop-again), "
-                         "1 function_lines (turn-ended); 2 issue(s) left unfixed")
+                         "broom let 2 through this turn: 2 function_lines (turn-ended); 2 issue(s) left unfixed")
         self.assertEqual(sorted((x["file"], x["how"]) for x in lines("pass")),
-                         [("a.py", "stop-again"), ("b.py", "turn-ended")])
+                         [("a.py", "turn-ended"), ("b.py", "turn-ended")])
+
+    @unittest.skipUnless(HAS_PY, "ruff missing")
+    def test_stopping_again_leaves_a_lint_finding_open_and_not_known(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        (r / "a.py").write_text("import os\n")
+        self.edit(r, "a.py")
+        reason = self.stop(r)["reason"]
+        self.assertIn("F401", reason)
+        self.assertIn('run `broom known --accept "<why>"`, then stop again', reason)
+        self.assertEqual(self.stop(r)["systemMessage"],
+                         "broom let 1 through this turn: 1 F401 (turn-ended); 1 issue(s) left unfixed")
+        self.assertEqual([x["how"] for x in lines("pass")], ["turn-ended"])
+        self.assertEqual(self.cli(r, "known").stdout.strip(), "broom: no known issues here")
+        self.sh(r, "git", "add", "a.py")
+        self.assertIn("F401", self.denied(self.commit(r, "git commit -m x")), "the commit still stops on it")
+
+    @unittest.skipUnless(HAS_PY, "ruff missing")
+    def test_accepting_what_a_turn_end_blocked_lets_the_next_stop_through(self) -> None:
+        r = self.repo({"a.py": "x = 1\n", "b.py": "y = 1\n"})
+        (r / "a.py").write_text("import os\n")
+        self.edit(r, "a.py")
+        self.assertIn("F401", self.stop(r)["reason"])
+        out = self.cli(r, "known", "--accept", "unused on purpose")
+        self.assertEqual((out.returncode, out.stdout.strip()),
+                         (0, "broom: accepted 1 issue(s) as known (unused on purpose); stop again"))
+        self.assertEqual(self.cli(r, "known", "--accept", "again").returncode, 1, "nothing left to accept")
+        (r / "b.py").write_text("y = 2\n")  # a new edit: the check runs again, and finds a.py's issue known
+        self.edit(r, "b.py")
+        self.assertEqual(self.stop(r)["systemMessage"],
+                         "broom let 1 through this turn: 1 F401 (accepted: unused on purpose)")
+        (through,) = lines("pass")
+        self.assertEqual((through["how"], through["where"]), ("accept", "stop"))
+        self.assertEqual(lines("fix"), [], "accepted is not fixed")
+
+    @unittest.skipUnless(HAS_PY, "ruff missing")
+    def test_stopping_again_after_accepting_ends_the_turn_without_a_second_pass(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        (r / "a.py").write_text("import os\n")
+        self.edit(r, "a.py")
+        self.assertIn("F401", self.stop(r)["reason"])
+        self.assertEqual(self.cli(r, "known", "--accept", "unused on purpose").returncode, 0)
+        self.assertEqual(self.stop(r)["systemMessage"],
+                         "broom let 1 through this turn: 1 F401 (accepted: unused on purpose)")
+        self.assertEqual([x["how"] for x in lines("pass")], ["accept"], "what was accepted isn't also left unfixed")
 
     def test_a_finding_fixed_during_the_turn_is_a_fix_at_the_stop(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})

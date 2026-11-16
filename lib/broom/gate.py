@@ -2,8 +2,8 @@
 
 Lint findings count only on changed lines (git diff against a base revision; a new file counts whole), so a
 legacy repo's old issues never land on Claude. Compile and type errors count anywhere: a changed signature
-breaks callers in files nobody opened. A result Claude has seen and chosen not to fix is recorded as known and
-not raised again; `broom known` lists and clears those.
+breaks callers in files nobody opened. A finding Claude accepts with a reason (`broom known --accept`) is recorded
+as known and not raised again; `broom known` lists and clears those.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ from .gitutil import ChangedLines
 from .state import DATA_ROOT, load_json, short_hash, update_json
 
 BASELINE = DATA_ROOT / "baseline.json"
-COMMITS = DATA_ROOT / "commits.json"  # per repo: the last blocked commit's verdict, denials and pending issues
+COMMITS = DATA_ROOT / "commits.json"  # per repo: what the last commit or turn end blocked, by which hook
 BASELINE_DAYS = 30
 MAX_SHOWN = 40
 
@@ -67,10 +67,6 @@ def baseline_keys() -> Set[str]:
     return set(baseline_load())
 
 
-def baseline_add(issues: List[Issue]) -> None:
-    baseline_add_entries({issue_key(i): issue_entry(i) for i in issues})
-
-
 def baseline_add_entries(entries: Dict[str, dict]) -> None:
     cutoff = time.time() - BASELINE_DAYS * 86400
 
@@ -103,19 +99,21 @@ def accept_allowed() -> bool:
     return os.environ.get("BROOM_NO_ACCEPT", "") in ("", "0")
 
 
-def accept_blocked(repo: Path, why: str) -> int:
-    """Record the issues of the last commit broom blocked in `repo` as known, with the reason. Returns how many."""
+def accept_blocked(repo: Path, why: str) -> Tuple[int, str]:
+    """Record the issues of the last commit or turn end broom blocked in `repo` as known, with the reason. Returns how
+    many, and the hook that blocked them (`commit` when none is recorded)."""
     state = load_json(COMMITS, {})
     prior = state.get(str(repo)) or {}
     pending = prior.get("pending") or {}
+    where = prior.get("where") or "commit"
     if pending:
         now = time.time()
         baseline_add_entries({k: {**v, "t": now, "why": why} for k, v in pending.items()})
         turn = Path(prior["turn"]) if prior.get("turn") else None
-        ledger.let_through(pending, "accept", turn, why=why, where=prior.get("where") or "commit")
+        ledger.let_through(pending, "accept", turn, why=why, where=where)
         state.pop(str(repo), None)
         save_commits(state, [repo])
-    return len(pending)
+    return len(pending), where
 
 
 def baseline_under(roots: List[Path]) -> Dict[str, dict]:
