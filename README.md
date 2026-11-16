@@ -1,6 +1,6 @@
 # broom 🧹
 
-> Autonomous code hygiene for Claude Code.
+> A ruler for code quality in Claude Code, and a tool for refactoring.
 
 broom holds Claude's changes to the project's own formatter, linter and type checker before they leave the session. It judges only what a change made worse, so a legacy repo's old warnings never land on a small fix.
 

@@ -1,0 +1,91 @@
+# Issues
+
+---
+
+## Summary
+
+```
+Issues
+├── docs
+│   ├── I1: The moved text doesn't meet the wording rules
+│   └── I7: The docs don't say which systems are supported
+├── refactor
+│   ├── I2: Three paths call the same tools
+│   ├── I5: Four rules sit on an alpha plugin API
+│   └── I6: The Bash parser guesses what git's hook knows
+└── fix
+    ├── I3: The cause of the reported Stop hang is unconfirmed
+    └── I4: The tests write into the real data directory
+```
+
+---
+
+## I1: The moved text doesn't meet the wording rules
+
+- type: docs
+- why: The docs pass moved text into the new docs and kept much of its wording. Bullets with several commas remain. CHANGELOG's sections are dated and not yet grouped by area. README has no hero image and no architecture diagram.
+- found: the docs pass, 2026-11-17
+
+---
+
+## I2: Three paths call the same tools
+
+- type: refactor
+- why: The lint check, the scratch copy and the real tree each start the same linters on the same files. A cache keeps the base of a change from being measured twice, and the rest still runs more than once.
+- found: a review of the hooks' cost, 2026-11-16
+- touches:
+  - [F2.1: Commit check](../features/F2-sweep.md#f21-commit-check)
+  - [F4: Smells](../features/F4-smells.md)
+- next: the ledger's seconds per tool, to say which run to keep
+
+---
+
+## I3: The cause of the reported Stop hang is unconfirmed
+
+- type: fix
+- why: A Stop hook ran until Claude Code ended it at its timeout, 18 times in one session. 0.18.1 removed every wait that had no bound, and the hang didn't reproduce here, so the cause on that machine is not known.
+- found: a user's report, 2026-11-16
+- touches:
+  - [F2.7: Time limit](../features/F2-sweep.md#f27-time-limit)
+- next: a `hook-trace.log` from the machine where it happened
+
+---
+
+## I4: The tests write into the real data directory
+
+- type: fix
+- why: Tests that run in-process leave caches and records in the user's own data directory, so a test run changes what the next real hook reads. The suite also takes 100 to 143 seconds.
+- found: a review of the data directory, 2026-11-17
+- touches:
+  - [F2.5: Known issues](../features/F2-sweep.md#f25-known-issues)
+
+---
+
+## I5: Four rules sit on an alpha plugin API
+
+- type: refactor
+- why: `bool_params`, `type_lines`, `globals` and `commented_code` in TS/JS come from rules of broom's own, loaded through oxlint's JS plugins. oxlint's docs call that feature alpha, and it needs Node.
+- found: a review of what broom wrote itself, 2026-11-17
+- touches:
+  - [F4.2: Occurrence smells](../features/F4-smells.md#f42-occurrence-smells)
+- next: the fix rate of these four rules, to say whether to move them to another tool or drop them
+
+---
+
+## I6: The Bash parser guesses what git's hook knows
+
+- type: refactor
+- why: The commit hook reads a Bash command to predict the files a commit will take. git's own hook sees the staged files. The parser can go once git's hook is the norm and formatting at commit has another moment.
+- found: a review of what broom wrote itself, 2026-11-17
+- touches:
+  - [F2.1: Commit check](../features/F2-sweep.md#f21-commit-check)
+  - [F2.4: git's pre-commit hook](../features/F2-sweep.md#f24-gits-pre-commit-hook)
+- next: [F2.4.1: Offered at setup](../features/F2-sweep.md#f241-offered-at-setup)
+
+---
+
+## I7: The docs don't say which systems are supported
+
+- type: docs
+- why: broom locks files and ends process groups in ways only macOS and Linux have. README and INSTALL don't say so.
+- found: a review of the install path, 2026-11-17

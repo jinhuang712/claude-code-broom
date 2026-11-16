@@ -5,7 +5,8 @@ F1: Setup
 ├── F1.1: Doctor — what a repo needs and has
 ├── F1.2: Offer at session start — Claude offers a setup when a repo has gaps
 ├── F1.3: /broom:setup — at most two questions, then install and verify
-└── F1.4: Default configs — added where a project has none
+├── F1.4: Default configs — added where a project has none
+└── F1.5: Protection list — which checks run and which don't
 ```
 
 Setup gets a repo the formatters, linters, type checkers and language servers it needs. The user ends up with tools that run and configs that exist. Nothing is installed without their yes.
@@ -79,3 +80,11 @@ For Swift it adds a `.swift-format` with 4-space indents and 120 columns, where 
 
 - **Stance**: [The project's tools, not ours](../PHILOSOPHY.md#whose-rules-decide-what-is-clean)
 - **Commands**: [broom init](../CLI.md#broom-init)
+
+---
+
+## F1.5: Protection list
+
+The doctor lists, language by language, which checks run in this repo and which don't for lack of a tool, with the command that turns each one on. It also says what broom checks with no tool installed at all.
+
+- **Stance**: [Say what happened](../PHILOSOPHY.md#what-happens-to-what-was-skipped)

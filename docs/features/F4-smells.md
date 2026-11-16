@@ -4,13 +4,16 @@
 F4: Smells
 ├── F4.1: Sized smells — a hint past the soft limit, a block past the hard one
 ├── F4.2: Occurrence smells — a change that adds one gets its level
+│   ├── F4.2.1: Broad catch
+│   └── F4.2.2: Skipped test
 ├── F4.3: Duplicate code — a new copy anywhere in the repo
 ├── F4.4: Dead code — code a change adds and nothing uses
 ├── F4.5: Cycles — imports that lead back
 │   ├── F4.5.1: Import cycle
 │   └── F4.5.2: Folder cycle
 ├── F4.6: What is skipped — dependencies, build output and generated code
-└── F4.7: Tests — measured by rules of their own
+├── F4.7: Tests — measured by rules of their own
+└── F4.8: Limits told before the work — Claude knows the bar when it starts
 ```
 
 A smell is code that works and is hard to change. broom measures smells against its own limits in every repo, and only what a change made worse counts. Legacy code left as it was never comes up.
@@ -93,6 +96,18 @@ The four `broom/` rules need Node. Without it only these smells go unmeasured, a
 
 ---
 
+### F4.2.1: Broad catch
+
+`broad_catch` is an error handler that catches every error, such as a bare `except Exception`. It hides the error it wasn't written for. A change that adds one gets a hint.
+
+---
+
+### F4.2.2: Skipped test
+
+`skipped_test` is a test a change marks as skipped or disabled. It is the shortest way to make a failing suite pass. A change that adds one gets a hint.
+
+---
+
 ## F4.3: Duplicate code
 
 A new duplicate block with a side in the change's files hints past 10 lines and blocks past 30. It is found anywhere in the repo, and compared with the base so old copies stay quiet.
@@ -165,3 +180,9 @@ Tracked directories skipped by name are listed in a note.
 In tests, complexity and magic numbers don't count. Neither do the length or complexity of `describe`, `it` and `test` callbacks. Long test functions still count. `test_limits` in `.broom.json` moves the limits for test files.
 
 - **Why**: [012: Tests take limits of their own](../specs/decisions/012-test-limits.md)
+
+---
+
+## F4.8: Limits told before the work
+
+At the start of a session in a repo with code, Claude is told the limits in a few lines: how long a function, a file and a type may be, how deep code may nest and what blocks. It learns the bar before it writes, not from a block after.

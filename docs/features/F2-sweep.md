@@ -6,11 +6,15 @@ F2: Sweep
 ├── F2.2: Turn-end check — what a turn changed is checked when Claude stops
 ├── F2.3: Subagent check — a subagent fixes its own work
 ├── F2.4: git's pre-commit hook — commits Claude Code never sees
+│   └── F2.4.1: Offered at setup
 ├── F2.5: Known issues — what was let through, and why
 │   ├── F2.5.1: Pass on a retry
-│   └── F2.5.2: Accept with a reason
+│   ├── F2.5.2: Accept with a reason
+│   └── F2.5.3: A reason for every pass
 ├── F2.6: Sweep on request — a scope in the user's own words
-└── F2.7: Time limit — a hook run takes at most 30 seconds
+├── F2.7: Time limit — a hook run takes at most 30 seconds
+├── F2.8: Self-waivers shown — a loosened bar never goes unseen
+└── F2.9: Messages that say how to fix — the fix beside the finding
 ```
 
 A sweep formats, lints and type-checks Claude's changes and holds them back until they're clean. It uses the project's own tools and configs.
@@ -78,6 +82,12 @@ It never replaces another tool's hook and prints the line to add to it instead. 
 
 ---
 
+### F2.4.1: Offered at setup
+
+`/broom:setup` offers git's hook with the missing tools, in the same question. `broom doctor` says when a repo has none.
+
+---
+
 ## F2.5: Known issues
 
 A finding broom let through is recorded as known and not raised again for 30 days. `broom known` lists and clears them.
@@ -98,6 +108,14 @@ Committing the same lint result again passes. The block message tells Claude to 
 ### F2.5.2: Accept with a reason
 
 A type error, a compile error and a smell past the hard limit don't pass on a retry. They pass fixed, or after `broom known --accept "<why>"`, which puts the reason on record. `BROOM_NO_ACCEPT=1` turns accepting off, and the block message then stops offering it.
+
+---
+
+### F2.5.3: A reason for every pass
+
+Every finding broom lets through carries a reason. A lint finding passes after Claude says why, in one command, where today the same commit run twice is enough. The reason is kept with the known issue and shown in the turn's summary.
+
+It replaces F2.5.1 once it is built. A false positive still costs one round.
 
 ---
 
@@ -125,3 +143,25 @@ A hook still running after 20 seconds writes `hook-trace.log` in broom's data di
   - [024: Tools are kept to a quarter of the cores](../specs/decisions/024-thread-caps.md)
   - [025: A command writes to files](../specs/decisions/025-files-not-pipes.md)
   - [026: A hook run is cut at 30 seconds](../specs/decisions/026-thirty-second-hook.md)
+
+---
+
+## F2.8: Self-waivers shown
+
+A change that loosens the bar is listed in the turn's summary and in the record. It is not blocked.
+
+3 kinds:
+
+- A change to `.broom.json` that turns a smell off, raises a limit or excludes a path.
+- A new lint suppression, with a reason or without.
+- A commit made with `--no-verify`.
+
+- **Stance**: [Say what happened](../PHILOSOPHY.md#what-happens-to-what-was-skipped)
+
+---
+
+## F2.9: Messages that say how to fix
+
+A block lists what must be fixed first and what may pass with a reason after it, with each line marked. Each kind of smell carries its usual fix in one line, the same line `/broom:clean` uses. The way to let a finding through comes last.
+
+The message also says what is not a fix: a function cut in two at an arbitrary line, a new suppression and a looser `.broom.json`.

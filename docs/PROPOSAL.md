@@ -1,6 +1,6 @@
 # broom — Proposal
 
-> Autonomous code hygiene for Claude Code.
+> A ruler for code quality in Claude Code, and a tool for refactoring.
 
 ---
 
@@ -44,6 +44,24 @@ Checking whole files reports every old warning beside the one the change added. 
 
 ---
 
+#### Small smells pile up into rot
+
+A repo doesn't rot in a day. Each smell was cheap to fix on the day it appeared, and nobody fixed it. In one repo a function already past the hard limit grew a line at a time, and each line was let through with a reason.
+
+---
+
+#### Nobody can say what was let through
+
+A finding that passes on a second try leaves no reason, and a finding that was fixed leaves no trace. So nobody can say whether the checks work.
+
+---
+
+#### An old repo has no numbers to plan a refactor from
+
+A refactor of a repo that was never held to a bar starts blind: where the smells are, which files cost most and whether the work paid off are all guesses.
+
+---
+
 ## The idea
 
 One plugin does three things:
@@ -52,16 +70,22 @@ One plugin does three things:
 2. **Sweep**: At the right moments it formats, lints and type-checks Claude's changes, and holds them back until they're clean.
 3. **See**: It declares language servers so Claude gets diagnostics as it edits.
 
+Around these three it holds one bar for code smells. Each change is measured against the bar while it is made, and a whole repo is measured against it when someone plans a refactor.
+
 ---
 
 ## What we want
 
-4 wants:
+8 wants:
 
 - **Clean work without asking**: Claude's work comes out formatted, lint-clean and type-correct by the project's own rules.
 - **Tooling in one conversation**: A repo with no tooling gets working tooling in one short conversation.
 - **Mistakes seen while editing**: Claude sees its mistakes as it edits, through language servers.
 - **Nothing to pay when idle**: Doing nothing costs close to nothing.
+- **A ruler in everyday work**: Every change is measured against one bar for smells, so the code doesn't get worse as it grows.
+- **Clean as you go**: A smell is cleaned when it appears, before many of them become rot.
+- **A tool for refactoring**: A whole repo gets a full diagnosis, with the data a refactor is planned from and judged by.
+- **Nothing passes silently**: A finding is fixed, or it leaves a reason the user can see.
 
 ---
 
@@ -72,11 +96,21 @@ One plugin does three things:
 - **A replacement for pre-commit, lefthook or CI**: broom looks after Claude's work, and the user's own commits and CI stay theirs.
 - **A linter or a formatter**: broom runs existing ones.
 - **A style**: Defaults exist only where a project has none.
-- **A test runner**: Tests are too slow for a commit check, and CI runs them.
+- **A test runner**: Tests are too slow for a commit check, and CI runs them. broom reads the coverage report a project's own run wrote.
 - **A part of another plugin**: broom stands alone.
 
 ---
 
 ## Who it is for
 
-A developer who lets Claude Code change a repo and wants those changes to meet the repo's rules without watching each one.
+A developer who lets Claude Code change a repo and wants those changes to meet the repo's rules without watching each one. The same developer, the day they take over an old repo and plan its refactor.
+
+---
+
+## Risks
+
+3 risks:
+
+- **Noise teaches Claude to override broom**: Only what a change made worse counts, and a rule nobody fixes stops interrupting.
+- **A wrong finding holds good work back**: A false positive costs one round.
+- **broom grows heavier than what it guards**: It runs existing tools, and what the record shows as unused is cut.

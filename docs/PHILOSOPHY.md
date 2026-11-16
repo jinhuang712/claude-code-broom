@@ -52,8 +52,16 @@ Every skipped check, timeout and fallback is reported. broom doesn't guess: func
 
 ---
 
+## When is a smell cleaned?
+
+**Clean as you go.**
+
+A repo doesn't rot in a day. Rot is small smells that were each cheap to fix on the day they appeared, and that nobody fixed. So broom measures a change against the bar while it is being made, when the fix costs a minute. It keeps a whole-repo scan for the repos that weren't kept this way, and for the day someone plans their refactor.
+
+---
+
 ## Does broom work with other plugins?
 
 **Stand alone.**
 
-broom neither depends on nor integrates with other plugins.
+broom needs no other plugin and asks none to change. It still has to see the edits other tools make, since an edit it can't see is a change nothing checked. So its edit hook knows the edit tools of Serena.
