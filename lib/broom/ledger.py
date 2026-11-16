@@ -136,14 +136,14 @@ def write(rows: List[dict]) -> None:
     """Append `rows` in one write. A ledger that can't be written is no reason to stop a hook."""
     if not rows:
         return
-    text = "".join(json.dumps(r, separators=(",", ":"), default=str) + "\n" for r in rows)
     try:
+        text = "".join(json.dumps(r, separators=(",", ":"), default=str) + "\n" for r in rows)
         with locked(LEDGER):
             with open(LEDGER, "a") as f:
                 f.write(text)
             if LEDGER.stat().st_size > MAX_BYTES:
                 trim()
-    except OSError:
+    except (OSError, ValueError, TypeError):
         pass
 
 
@@ -166,16 +166,29 @@ def let_through(entries: Dict[str, dict], how: str, turn: Optional[Path] = None,
         note_through(turn, rows)
 
 
-def fixes(prior: Dict[str, dict], still: Set[str], files: List[Path], notes: List[str]) -> None:
-    """Findings of an earlier block that are gone, and really fixed: the check covered the finding's file, and no
-    note of a skipped tool covers the tool that found it. `still` holds the keys that aren't gone: those still
-    blocking and those accepted as known since. Anything else stays open: a commit of other files, or a tool that
-    didn't run, fixes nothing."""
+def fixes(prior: Dict[str, dict], now: Dict[str, dict], known: Set[str], files: List[Path], notes: List[str]) -> None:
+    """Findings of an earlier block that are gone, and really fixed. `now` holds what blocks now, `known` what was
+    accepted as known since: neither is gone. Anything else stays open: a commit of other files, a tool that didn't
+    run, a finding whose key changed because its message or its line did and that is still there under the new key
+    (a function cut from 120 lines to 110). That last case is told by the group: each finding of a file, tool and
+    rule that is new now takes the place of one that is gone."""
     covered = {f.resolve() for f in files}
     skipped = [n for n in notes if n.startswith(SKIP_PREFIXES)]
-    write([finding("fix", k, e) for k, e in prior.items()
-           if k not in still and Path(str(e.get("file") or "")).resolve() in covered
-           and not any(covers(n, e) for n in skipped)])
+    gone = {k: e for k, e in prior.items()
+            if k not in now and k not in known and Path(str(e.get("file") or "")).resolve() in covered
+            and not any(covers(n, e) for n in skipped)}
+    replaced = Counter(group(e) for k, e in now.items() if k not in prior)
+    out = {}
+    for k, e in sorted(gone.items(), key=lambda kv: kv[1].get("line") or 0):
+        if replaced[group(e)] > 0:
+            replaced[group(e)] -= 1
+        else:
+            out[k] = e
+    write([finding("fix", k, e) for k, e in out.items()])
+
+
+def group(entry: dict) -> Tuple[object, object, object]:
+    return entry.get("file"), entry.get("tool"), entry.get("rule")
 
 
 def skipped(notes: List[str], home: Path) -> None:
@@ -194,9 +207,10 @@ def timed(seconds: Dict[str, float]) -> None:
 
 
 def errored(error: Exception) -> None:
+    """A hook failed: this runs in its last-resort handler, so whatever goes wrong here stays here."""
     try:
         write([line("error", repo_of(Path.cwd()), note=f"{type(error).__name__}: {error}"[:200])])
-    except OSError:
+    except (OSError, ValueError, TypeError):
         pass
 
 
@@ -207,7 +221,7 @@ NOTE_NAMES = {"golangci-lint": ("golangci-lint", "go:"), "go vet": ("go vet", "g
 LANGUAGE_TOOLS = {"py": ("ruff",), "go": ("golangci-lint",), "js": ("oxlint",), "css": ("oxlint",),
                   "swift": ("swiftlint",), "rust": ("cargo",)}
 PY_NATIVE = {"function_lines", "type_lines", "file_lines", "nested_ternary"}  # Python's own parser measures these
-CLONE_RULES = {"duplicate_lines", "dead_code"}
+TOOLS_OF_RULE = {"duplicate_lines": ("jscpd",), "dead_code": ("jscpd",), "folder_cycle": ("dependency-cruiser",)}
 
 
 def note_tool(note: str) -> str:
@@ -218,13 +232,14 @@ def note_tool(note: str) -> str:
 
 def names_of(entry: dict) -> Tuple[str, ...]:
     """The names a note must mention to be about the tool that found `entry`. A smell comes from the measurement
-    of its file's language, from jscpd for duplicate and dead code, or from a scan that ran out of time."""
+    of its file's language, from the tool of its rule where that is another (jscpd, dependency-cruiser), or from a
+    scan that ran out of time."""
     tool = str(entry.get("tool") or "")
     if tool != "smells":
         return NOTE_NAMES.get(tool, (tool,))
     lang = lang_of(Path(str(entry.get("file") or ""))) or ""
     own = () if lang == "py" and entry.get("rule") in PY_NATIVE else LANGUAGE_TOOLS.get(lang, ())
-    return (*own, "smells", "scan", *(("jscpd", "dependency-cruiser") if entry.get("rule") in CLONE_RULES else ()))
+    return (*own, "smells", "scan", *TOOLS_OF_RULE.get(str(entry.get("rule")), ()))
 
 
 def covers(note: str, entry: dict) -> bool:

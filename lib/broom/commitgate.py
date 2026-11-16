@@ -143,7 +143,7 @@ def gate_files(repo: Path, files: List[Path], sd: Path, cwd: Path, state: dict) 
     prior = state.get(key, {})
     found = entries_of(blocking)
     if prior.get("pending"):
-        ledger.fixes(prior["pending"], set(found) | baseline_keys(), files, notes)
+        ledger.fixes(prior["pending"], found, baseline_keys(), files, notes)
     hard = sum(1 for i in blocking if sticky(i))
     if not blocking:
         state.pop(key, None)

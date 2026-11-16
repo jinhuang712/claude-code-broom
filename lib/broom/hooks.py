@@ -176,7 +176,7 @@ def hook_stop(data: dict) -> None:
     blocking, hints, notes = checked(files, turn_base(d, root))
     blocking += [s.issue() for s in hints]  # at a turn's end a hint stops Claude once: it cleans up now
     if gate.get("blocked"):
-        ledger.fixes(gate["blocked"], {issue_key(i) for i in blocking} | baseline_keys(), files, notes)
+        ledger.fixes(gate["blocked"], entries_of(blocking), baseline_keys(), files, notes)
     if not blocking:
         fresh = new_notes(d / "notes.json", notes, files[0])
         tail = "; ".join(note_text(n) for n in fresh) + (" (run /broom:setup)" if setup_hint(fresh) else "")

@@ -53,6 +53,20 @@ class RecordTest(LedgerCase):
         (fix,) = lines("fix")
         self.assertEqual((fix["key"], fix["rule"], fix["where"]), (block["key"], "function_lines", "commit"))
 
+    def test_a_finding_that_only_changed_isnt_fixed(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        self.huge(r)
+        self.assertTrue(self.denied(self.commit(r, "git commit -m x")))
+        (r / "a.py").write_text(py_function("huge", 110))  # shorter, and still past the hard limit: another message
+        self.sh(r, "git", "add", "a.py")
+        self.assertIn("huge is 110 lines long", self.denied(self.commit(r, "git commit -m x")))
+        self.assertEqual(len(lines("block")), 2)
+        self.assertEqual(lines("fix"), [], "the same finding, not a fixed one")
+        (r / "a.py").write_text(py_function("small", 20))
+        self.sh(r, "git", "add", "a.py")
+        self.assertEqual(self.commit(r, "git commit -m x"), {})
+        self.assertEqual([x["key"] for x in lines("fix")], [lines("block")[1]["key"]], "fixed under its last key")
+
     def test_a_commit_of_other_files_fixes_nothing(self) -> None:
         r = self.repo({"a.py": "x = 1\n", "b.py": "y = 1\n"})
         self.huge(r)
@@ -132,11 +146,11 @@ class RecordTest(LedgerCase):
         self.assertEqual(len([x for x in lines("skip") if x["tool"] == "ruff"]), 1, "recorded once per session")
         entry = {"file": str(r / "a.py"), "tool": "ruff", "rule": "F401"}
         for files, notes in (([r / "a.py"], [skip["note"]]), ([r / "b.py"], []), ([r / "a.py"], ["timeout:ruff in x"])):
-            ledger.fixes({"k": entry}, set(), files, notes)
+            ledger.fixes({"k": entry}, {}, set(), files, notes)
             self.assertEqual(lines("fix"), [], (files, notes))
-        ledger.fixes({"k": entry}, {"k"}, [r / "a.py"], [])
+        ledger.fixes({"k": entry}, {}, {"k"}, [r / "a.py"], [])
         self.assertEqual(lines("fix"), [], "accepted since: not fixed")
-        ledger.fixes({"k": entry}, set(), [r / "a.py"], ["missing:golangci-lint (brew install golangci-lint)"])
+        ledger.fixes({"k": entry}, {}, set(), [r / "a.py"], ["missing:golangci-lint (brew install golangci-lint)"])
         self.assertEqual([x["key"] for x in lines("fix")], ["k"], "a note about another tool holds nothing back")
 
     def test_a_smell_waits_for_the_tool_that_measures_it(self) -> None:
