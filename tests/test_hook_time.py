@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import time
 import unittest
@@ -12,14 +13,14 @@ from unittest import mock
 from support import BROOM, ROOT, BroomCase
 
 from broom import checks, hotspots
-from broom.gitutil import CLOCK, HOOK_SECONDS, run
+from broom.gitutil import CLOCK, HOOK_SECONDS, THREAD_VARS, run
 
 CLAUDE_CODE_KILLS_AT = 30  # seconds: the `timeout` of every hook in hooks.json
 
 
 class HookTimeTests(BroomCase):
     def tearDown(self) -> None:
-        CLOCK.end = None
+        CLOCK.end, CLOCK.env = None, {}
         super().tearDown()
 
     def test_every_hook_ends_before_claude_code_ends_it(self) -> None:
@@ -45,6 +46,21 @@ class HookTimeTests(BroomCase):
         marker = self.tmp / "marker"
         self.assertEqual(run(["touch", str(marker)], self.tmp), (None, "", ""))
         self.assertFalse(marker.exists())
+
+    def test_a_hook_keeps_each_tool_to_a_few_threads_unless_the_person_set_them(self) -> None:
+        environ = mock.patch.dict(os.environ)
+        environ.start()
+        self.addCleanup(environ.stop)
+        for name in THREAD_VARS:
+            os.environ.pop(name, None)
+        show = ["sh", "-c", "echo $GOMAXPROCS-$RAYON_NUM_THREADS-$CARGO_BUILD_JOBS"]
+        self.assertEqual(run(show, self.tmp)[1].strip(), "--", "outside a hook, every core")
+        CLOCK.start(30)
+        threads = str(max(2, (os.cpu_count() or 4) // 4))
+        self.assertEqual(run(show, self.tmp)[1].strip(), f"{threads}-{threads}-{threads}")
+        with mock.patch.dict(os.environ, {"GOMAXPROCS": "7"}):
+            CLOCK.start(30)
+            self.assertEqual(run(show, self.tmp)[1].strip(), f"7-{threads}-{threads}")
 
     def test_outside_a_hook_a_command_keeps_its_own_timeout(self) -> None:
         self.assertIsNone(CLOCK.left())

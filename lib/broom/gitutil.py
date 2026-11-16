@@ -14,15 +14,22 @@ from typing import Dict, List, Optional, Set, Tuple
 HOOK_SECONDS = 25  # all one hook run may take; Claude Code ends a hook at 30 (hooks.json), and waits for it until then
 
 
+THREAD_VARS = ("GOMAXPROCS", "RAYON_NUM_THREADS", "CARGO_BUILD_JOBS")  # Go, Rust's rayon (oxlint, jscpd), cargo
+
+
 class Clock:
-    """What is left of the time one hook run may take, for every command it runs between them. Outside a hook
-    (`broom sweep`, `broom smells`) it is never started, and each command keeps its own timeout."""
+    """What one hook run lends the commands it starts: the time left between them, and a cap on the threads each
+    may use, so a check doesn't take every core from what the person is doing meanwhile. Outside a hook
+    (`broom sweep`, `broom smells`) it is never started: each command keeps its own timeout and all the cores."""
 
     def __init__(self) -> None:
         self.end: Optional[float] = None
+        self.env: Dict[str, str] = {}
 
     def start(self, seconds: float) -> None:
         self.end = time.monotonic() + seconds
+        threads = str(max(2, (os.cpu_count() or 4) // 4))
+        self.env = {name: threads for name in THREAD_VARS if not os.environ.get(name)}  # the person's own win
 
     def left(self) -> Optional[float]:
         return None if self.end is None else max(0.0, self.end - time.monotonic())
@@ -48,9 +55,10 @@ def run(cmd: List[str], cwd: Path, timeout: float = 90,
         if left <= 0:
             return None, "", ""
         timeout = min(timeout, left)
+    extra = {**CLOCK.env, **(env or {})}
     try:
         p = subprocess.Popen(cmd, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                             env={**os.environ, **env} if env else None, start_new_session=True)
+                             env={**os.environ, **extra} if extra else None, start_new_session=True)
     except OSError as e:
         return -1, "", str(e)
     try:
