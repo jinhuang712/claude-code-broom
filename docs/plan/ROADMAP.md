@@ -20,7 +20,8 @@ Roadmap
 ├── ⬜ CP5: A check-up for rot — numbers that speak when they grow
 │   ├── ⬜ CP5.1: Counters, dead code and comments
 │   ├── ⬜ CP5.2: Tests: coverage, duplicates and skips
-│   └── ⬜ CP5.3: Dependencies and deprecated APIs
+│   ├── ⬜ CP5.3: Dependencies and deprecated APIs
+│   └── ⬜ CP5.4: Rust's missing smells
 ├── ⬜ CP6: Lighter — less code, fewer runs, less noise
 │   ├── ⬜ CP6.1: Fewer interruptions
 │   ├── ⬜ CP6.2: Fewer runs and less code
@@ -204,12 +205,13 @@ A refactor starts from numbers: what is in the repo, where it hurts most and whe
 
 Rot is what gets worse with no one change at fault. The check-up counts it across the repo and speaks when a number grew.
 
-**Exit criteria** (3):
+**Exit criteria** (4):
 
 - **Sub-checkpoints**
   - [CP5.1: Counters, dead code and comments](#cp51-counters-dead-code-and-comments) is met.
   - [CP5.2: Tests: coverage, duplicates and skips](#cp52-tests-coverage-duplicates-and-skips) is met.
   - [CP5.3: Dependencies and deprecated APIs](#cp53-dependencies-and-deprecated-apis) is met.
+  - [CP5.4: Rust's missing smells](#cp54-rusts-missing-smells) is met.
 
 ---
 
@@ -261,6 +263,23 @@ Rot is what gets worse with no one change at fault. The check-up counts it acros
 
 - **Objectives**
   - [O6: A number that got worse is told once](GOALS.md#o6-a-number-that-got-worse-is-told-once)
+
+---
+
+### CP5.4: Rust's missing smells
+
+**Status**: ⬜
+
+The user lifted the hold on Rust's smells on 2026-11-17.
+
+**Delivers** (1):
+
+- [F8.3: Rust](../features/F8-languages.md#f83-rust), with the smells it lacks.
+
+**Exit criteria** (1):
+
+- **Objectives**
+  - [O1: Clean work without asking](GOALS.md#o1-clean-work-without-asking)
 
 ---
 
@@ -335,7 +354,6 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 **Status**: ⬜
 
-**Delivers** (2):
+**Delivers** (1):
 
-- [F8.3: Rust](../features/F8-languages.md#f83-rust), with the smells it lacks.
 - [I3: The cause of the reported Stop hang is unconfirmed](ISSUES.md#i3-the-cause-of-the-reported-stop-hang-is-unconfirmed)
