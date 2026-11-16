@@ -82,10 +82,20 @@ def checked(files: List[Path], sd: Path, base: str = "HEAD") -> Tuple[List[Issue
         blocking += smell_blocks
         hints += smell_hints
         notes += smell_notes
-    if not (blocking or hints or any(n.startswith("timeout:") for n in notes)):
-        for repo, group in by_repo(files).items():
-            record(repo, group)
+    record_passed(files, blocking, hints, notes)
     return blocking, hints, notes
+
+
+def record_passed(files: List[Path], blocking: List[Issue], hints: List[Smell], notes: List[str]) -> None:
+    """Record each file nothing stopped and nothing hinted, so one file with a finding doesn't make the rest run
+    again at the next try. A timeout, or a finding outside these files (a type error in a file they affect),
+    records nothing: what it kept from finishing may concern any of them."""
+    mine = {f.resolve() for f in files}
+    if any(n.startswith("timeout:") for n in notes) or any(i.file.resolve() not in mine for i in blocking):
+        return
+    found = {i.file.resolve() for i in blocking} | {s.file.resolve() for s in hints}
+    for repo, group in by_repo(files).items():
+        record(repo, [f for f in group if f.resolve() not in found])
 
 
 def sticky(i: Issue) -> bool:
