@@ -54,7 +54,9 @@ A typed linter or a module graph can't work on the scratch copy, whose imports d
 
 Go's scratch copy runs only linters that read syntax alone, so Go's repeated literals stay unmeasured. One linter that needs types makes golangci-lint skip every linter in the run.
 
-clippy runs with thresholds from a `clippy.toml` of broom's own, under a config path and a target directory of its own, so it and the project's clippy run don't make cargo check the crate again each time. A crate is checked whole.
+clippy runs with thresholds from a `clippy.toml` of broom's own, under a config path and a target directory of its own, so it and the project's clippy run don't make cargo check the crate again each time. A crate is checked whole, in one run.
+
+clippy takes one threshold per lint, so it gets the soft limit, and the size in its message says whether the finding is a hint or a block. Its nesting lint names no depth, so that smell only hints. rustc's own warnings give dead code and unused parameters, the latter kept only where the unused variable sits in a function's parameter list. `cargo clippy` builds no test code, so tests are left out.
 
 The session scan gives these tools 20 seconds between them. The quick ones go first and clippy last, and a tool the time runs out before is skipped with a note. `broom smells` from the command line has no such limit.
 

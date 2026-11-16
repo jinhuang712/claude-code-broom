@@ -45,10 +45,11 @@ A sized smell counts when the change pushed it past a limit, or grew it while pa
 | `type_lines` | 250 | — | `ast` | `broom/class-lines` | — | `type_body_length` |
 | `duplicate_lines` | 10 | 30 | jscpd | jscpd | jscpd | jscpd |
 
-4 notes on the table:
+5 notes on the table:
 
 - `file_lines` and `duplicate_lines` count in Rust and CSS too.
-- Rust's `params` comes from clippy's `too_many_arguments`.
+- Rust gets 4 of them from clippy: `function_lines` from `too_many_lines`, `params` from `too_many_arguments`, `complexity` from `cognitive_complexity` and `nesting` from `excessive_nesting`.
+- Rust's `nesting` only hints, since clippy names no depth.
 - Swift has no control-flow nesting rule, and complexity covers it.
 - Swift's nested-ternary rule finds two ternary operators on one line.
 
@@ -89,7 +90,7 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 - A function handed to a call is the callee's choice and doesn't count for `bool_params`.
 - `module-state` is a `let` or `var` at module level that a function assigns.
 
-Rust gets 5 of these from clippy: `bool_params` · `debug_output` · `type_escape` · `suppression` · `params`. A test may unwrap and print. CSS, SCSS and Less have no smell tool.
+Rust gets 7 of these from clippy and rustc: `suppression` · `swallowed_error` · `unused_params` · `debug_output` · `todo` · `type_escape` · `bool_params`. Its `swallowed_error` is a `Result` dropped with `let _ =`, and it hints, since that can be deliberate. Its `todo` is a `todo!()` or an `unimplemented!()`. Test code is not built, so a test may be long, unwrap and print. CSS, SCSS and Less have no smell tool.
 
 The four `broom/` rules need Node. Without it only these smells go unmeasured, and a note says so.
 
@@ -129,7 +130,7 @@ It needs jscpd 5, which `broom doctor` checks for.
 
 ## F4.4: Dead code
 
-A file, export, symbol or import that nothing uses gets a hint when the change added it. It covers TS/JS and Python, with tests and entry points left out, and unexported code in Go.
+A file, export, symbol or import that nothing uses gets a hint when the change added it. It covers TS/JS and Python, with tests and entry points left out, unexported code in Go and what rustc calls dead in Rust.
 
 What loads dynamically, such as a manifest's scripts or plugins, looks unused too. `smells_off: ["dead_code"]` turns it off per repo.
 
@@ -204,7 +205,7 @@ A function, a type or a file that was already past the hard limit and that the c
 
 1 gap:
 
-- Outside Python, a touched function with too many parameters, too much nesting or too high a complexity is not told, since the tools give no range for those.
+- Outside Python, a touched function with too many parameters, too much nesting or too high a complexity is not told, since the tools give no range for those. In Rust a touched function that is too long is told.
 
 - **Stance**: [Clean as you go](../PHILOSOPHY.md#when-is-a-smell-cleaned)
 - **How it works**: [Smells](../specs/smells.md)

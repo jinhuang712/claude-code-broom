@@ -65,7 +65,7 @@ Features
 ├── 🚧 F8: Languages — six, with uneven smell coverage
 │   ├── ✅ F8.1: Go
 │   ├── ✅ F8.2: TS/JS
-│   ├── 🚧 F8.3: Rust — 7 of the smells
+│   ├── 🚧 F8.3: Rust — 14 of the smells, and nesting only hints
 │   ├── ✅ F8.4: Python
 │   ├── 🚧 F8.5: CSS, SCSS and Less — file length and duplicates only
 │   └── 🚧 F8.6: Swift — no compile check for Xcode projects

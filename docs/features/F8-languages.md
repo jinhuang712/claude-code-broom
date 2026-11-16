@@ -39,7 +39,9 @@ Without a project linter, oxlint runs with broom's defaults, type-aware. A solut
 
 ## F8.3: Rust
 
-A crate is checked whole. A cold `cargo clippy` can time out.
+A crate is checked whole, by one run of clippy that also measures the smells. A cold `cargo clippy` can time out.
+
+Rust has 14 of the smells: 6 sized ones and 7 that count by occurrence, plus dead code. It lacks magic numbers, commented-out code, globals, long types, nested ternaries and broad test assertions, which clippy has no lint for.
 
 ---
 

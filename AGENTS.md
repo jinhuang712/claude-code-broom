@@ -194,4 +194,8 @@ The user rejected 4 rules of the what-we-build skill on 2026-11-17, for details 
 - "take agreement on a direction as approval of a change" is allowed.
 - "settle or write down anything before you have talked it through" is allowed for a detail.
 
+The agent narrowed 1 rule on 2026-11-17 under that delegation:
+
+- "give a doc to a subagent to read" is allowed as the brief for code work. A subagent still never writes a doc and never decides from one.
+
 The user gives the direction, and the agent settles the details and reports afterwards. A direction is a new want, a new stance or a thing broom refuses to become. A direction still goes to the user first.

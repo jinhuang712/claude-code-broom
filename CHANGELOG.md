@@ -6,6 +6,16 @@
 
 ---
 
+## 0.21.1 — 2026-11-17
+
+---
+
+### Smells
+
+- Rust gets 7 more smells from the clippy run broom already makes: long functions, complexity, nesting, dead code, `todo!()` and `unimplemented!()`, a `Result` dropped with `let _ =`, and unused parameters. It had 7 and has 14. A Rust function that is too long is also told when a change touches it.
+
+---
+
 ## 0.21.0 — 2026-11-17
 
 ---

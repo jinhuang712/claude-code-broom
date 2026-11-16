@@ -17,11 +17,11 @@ Roadmap
 │   ├── 🟨 CP3.2: Limits told before the work
 │   └── ✅ CP3.3: Old smells in touched code
 ├── 🟨 CP4: A refactoring kit — a full diagnosis, the worst places first, the numbers after
-├── ⬜ CP5: A check-up for rot — numbers that speak when they grow
+├── 🟨 CP5: A check-up for rot — numbers that speak when they grow
 │   ├── ⬜ CP5.1: Counters, dead code and comments
 │   ├── ⬜ CP5.2: Tests: coverage, duplicates and skips
 │   ├── ⬜ CP5.3: Dependencies and deprecated APIs
-│   └── ⬜ CP5.4: Rust's missing smells
+│   └── ✅ CP5.4: Rust's missing smells
 ├── ⬜ CP6: Lighter — less code, fewer runs, less noise
 │   ├── ⬜ CP6.1: Fewer interruptions
 │   ├── ⬜ CP6.2: Fewer runs and less code
@@ -201,7 +201,7 @@ A refactor starts from numbers: what is in the repo, where it hurts most and whe
 
 ## CP5: A check-up for rot
 
-**Status**: ⬜
+**Status**: 🟨
 
 Rot is what gets worse with no one change at fault. The check-up counts it across the repo and speaks when a number grew.
 
@@ -268,9 +268,9 @@ Rot is what gets worse with no one change at fault. The check-up counts it acros
 
 ### CP5.4: Rust's missing smells
 
-**Status**: ⬜
+**Status**: ✅
 
-The user lifted the hold on Rust's smells on 2026-11-17.
+The user lifted the hold on Rust's smells on 2026-11-17, and 7 more shipped in 0.21.1 that day.
 
 **Delivers** (1):
 
@@ -279,7 +279,7 @@ The user lifted the hold on Rust's smells on 2026-11-17.
 **Exit criteria** (1):
 
 - **Objectives**
-  - [O1: Clean work without asking](GOALS.md#o1-clean-work-without-asking)
+  - [O1: Clean work without asking](GOALS.md#o1-clean-work-without-asking): ✅ 2026-11-17
 
 ---
 
