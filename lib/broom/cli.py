@@ -359,7 +359,7 @@ def main(argv: List[str]) -> int:
     p = argparse.ArgumentParser(prog="broom", description="Format, lint and type-check with each project's own tools.")
     p.add_argument("--version", action="version", version=f"broom {__version__}")
     sub = p.add_subparsers(dest="cmd", required=True,
-                           metavar="{sweep,smells,fixes,fmt,doctor,setup,init,known,report,stats,install-hook}")
+                           metavar="{sweep,smells,fixes,fmt,doctor,setup,init,known,report,stats,diagnose,install-hook}")
     for add in (add_sweep_parsers, add_setup_parsers, add_issue_parsers, add_ask_parsers, add_internal_parsers):
         add(sub)
     args = p.parse_args(argv)

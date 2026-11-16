@@ -1,5 +1,5 @@
-"""The commands that answer a question: `fixes`, `report` and `stats`. `cli` imports this module, so each command's
-own modules load only when that command runs."""
+"""The commands that answer a question: `fixes`, `report`, `stats` and `diagnose`. `cli` imports this module, so each
+command's own modules load only when that command runs."""
 
 import argparse
 import json
@@ -35,8 +35,28 @@ def cmd_stats(args: argparse.Namespace) -> int:
     return run(repo_or_exit(), args)
 
 
+def cmd_diagnose(args: argparse.Namespace) -> int:
+    """Print the diagnosis of the whole repo, narrowed to the paths given, or write it to `--out`; exit 1 outside a
+    git repository."""
+    from .cli import repo_or_exit
+    from .diagnoseview import run
+
+    return run(repo_or_exit(), args)
+
+
+def add_diagnosis_parsers(sub: argparse._SubParsersAction) -> None:
+    """Register `diagnose`."""
+    d = sub.add_parser("diagnose", help="the whole repo measured: smells, hotspots by churn and stats, as a report")
+    d.add_argument("paths", nargs="*", help="limit to these files or directories (default: the repo)")
+    d.add_argument("--top", type=int, default=10, help="how long each list is (default: 10)")
+    d.add_argument("--days", type=int, default=90, help="how far back changes are counted (default: 90)")
+    d.add_argument("--json", action="store_true", help="the same as JSON, with every smell")
+    d.add_argument("--out", metavar="FILE", help="write the report (or the JSON) to FILE and say where")
+    d.set_defaults(fn=cmd_diagnose)
+
+
 def add_ask_parsers(sub: argparse._SubParsersAction) -> None:
-    """Register the commands that answer a question: `fixes`, `report` and `stats`, in that order."""
+    """Register the commands that answer a question: `fixes`, `report`, `stats` and `diagnose`, in that order."""
     fx = sub.add_parser("fixes", help="the usual fix of each kind of code smell, the lines the blocks carry")
     fx.add_argument("names", nargs="*", metavar="smell", help="only these smells (default: all)")
     fx.add_argument("--json", action="store_true", help="the same as JSON")
@@ -53,3 +73,4 @@ def add_ask_parsers(sub: argparse._SubParsersAction) -> None:
     s.add_argument("--days", type=int, default=90, help="how far back history looks (default: 90)")
     s.add_argument("--json", action="store_true", help="the same as JSON")
     s.set_defaults(fn=cmd_stats)
+    add_diagnosis_parsers(sub)
