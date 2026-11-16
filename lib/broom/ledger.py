@@ -7,14 +7,16 @@ record), `event`, `where` (the hook: commit, pre-commit, stop, subagent-stop) an
 - block: a finding stopped a commit or a turn's end. `key` is the finding's key from gate.issue_key, `tool`, `rule`
   and `file` (relative to its own worktree's root) say which.
 - fix: a block's finding is gone, and the check that found it ran over its file with its tool.
-- pass: a finding was let through, with `how`: retry, denials, accept (with `why`), stop-again, turn-ended or gave-up.
+- pass: a finding was let through, with `how`: accept (with `why`), turn-ended or gave-up. Older lines also hold
+  retry, denials and stop-again, which no longer occur.
 - hint: a smell hint was given as context, without a block.
 - skip: a tool didn't run (`note` is the timeout or missing note, `tool` the tool).
 - time: seconds one check (`check`) took in a hook.
 - error: a hook failed and let the action through.
+- waiver: a change loosened the bar: `kind` (config, suppression or no-verify), `file` and a short `note`.
 
-Writing is one append under the lock, never raises into a hook, and keeps the file bounded. A pass is also noted in
-the turn's directory, where the turn's end reads it for the one line the user sees (the turn summary).
+Writing is one append under the lock, never raises into a hook, and keeps the file bounded. A pass and a waiver are
+also noted in the turn's directory, where the turn's end reads them for the one line the user sees (the turn summary).
 """
 
 from __future__ import annotations
@@ -35,6 +37,8 @@ LEDGER = DATA_ROOT / "ledger.jsonl"
 MAX_BYTES = 2_000_000  # over this at an append, the oldest lines go
 KEEP_DAYS = 90
 THROUGH = "through.jsonl"  # in a turn's directory: what the turn let through, for its summary
+WAIVED = "waivers.jsonl"  # in a turn's directory: the self-waivers it saw, for its summary and so each counts once
+TURN_NOTES = (THROUGH, WAIVED)
 SHOWN_GROUPS = 5
 SKIP_PREFIXES = ("timeout:", "missing:")
 
@@ -227,6 +231,18 @@ def errored(error: Exception) -> None:
         pass
 
 
+def waived(found: List[dict], turn: Optional[Path]) -> None:
+    """Log a `waiver` line for each self-waiver in `found` (dicts of kind, repo, file, note and key, from waivers.py)
+    that the turn hasn't seen yet, and note it in the turn's directory (`turn`) for its summary. Without a turn every
+    one is written."""
+    seen = {r.get("key") for r in read(turn / WAIVED)} if turn is not None else set()
+    fresh = {w["key"]: w for w in found if w["key"] not in seen}.values()
+    rows = [line("waiver", w["repo"], kind=w["kind"], file=w["file"], note=w["note"], key=w["key"]) for w in fresh]
+    write(rows)
+    if turn is not None and rows:
+        note_turn(turn, WAIVED, rows)
+
+
 # ---------------------------------------------------------------- which note covers which finding
 
 NOTE_NAMES = {"golangci-lint": ("golangci-lint", "go:"), "go vet": ("go vet", "go:"), "clippy": ("clippy", "cargo"),
@@ -266,29 +282,52 @@ def covers(note: str, entry: dict) -> bool:
 # ---------------------------------------------------------------- the turn summary
 
 
-def note_through(turn: Path, rows: List[dict]) -> None:
-    """Append the pass `rows` to the turn's `through.jsonl`, which `through_line` reads at the turn's end. A turn
-    directory that can't be written is skipped."""
-    text = "".join(json.dumps({"rule": r.get("rule", "?"), "how": r.get("how", "?"), "why": r.get("why", "")}) + "\n"
-                   for r in rows)
+def note_turn(turn: Path, name: str, rows: List[dict]) -> None:
+    """Append `rows` to the file `name` in the turn's directory. A turn directory that can't be written is skipped."""
     try:
-        with open(turn / THROUGH, "a") as f:
-            f.write(text)
+        with open(turn / name, "a") as f:
+            f.write("".join(json.dumps(r) + "\n" for r in rows))
     except OSError:
         pass
+
+
+def note_through(turn: Path, rows: List[dict]) -> None:
+    """Append the pass `rows` to the turn's `through.jsonl`, which `through_line` reads at the turn's end."""
+    note_turn(turn, THROUGH, [{"rule": r.get("rule", "?"), "how": r.get("how", "?"), "why": r.get("why", "")}
+                              for r in rows])
 
 
 def forget_through(turn: Path) -> None:
-    """Delete the turn's `through.jsonl`, so that what the turn before let through, never shown, isn't reported in this
-    one. A missing file is fine."""
-    try:
-        (turn / THROUGH).unlink()
-    except OSError:
-        pass
+    """Delete what the turn noted (`through.jsonl`, `waivers.jsonl`), so that what the turn before let through and
+    waived, never shown, isn't reported in this one. A missing file is fine."""
+    for name in TURN_NOTES:
+        try:
+            (turn / name).unlink()
+        except OSError:
+            pass
 
 
-def through_line(turn: Path) -> str:
-    """What the turn let through, as the one line the user sees at its end; empty when it let nothing through."""
+def waiver_text(row: dict) -> str:
+    """One self-waiver as the summary says it: `suppression in a.py`, `.broom.json smells_off +magic_numbers`,
+    `no-verify`."""
+    kind, file = row.get("kind", "?"), row.get("file", "")
+    if kind == "config":
+        return f"{file} {row.get('note', '')}".strip()
+    return f"{kind} in {file}" if file else kind
+
+
+def waiver_part(turn: Path) -> Tuple[int, str]:
+    """How many self-waivers the turn saw, and a list of them (the same one twice as `x2`); (0, "") for none."""
+    rows = list(read(turn / WAIVED))
+    groups = Counter(waiver_text(r) for r in rows)
+    parts = [text if n == 1 else f"{text} x{n}" for text, n in groups.most_common()]
+    more = f", and {len(parts) - SHOWN_GROUPS} more" if len(parts) > SHOWN_GROUPS else ""
+    return len(rows), ", ".join(parts[:SHOWN_GROUPS]) + more
+
+
+def through_part(turn: Path) -> str:
+    """What the turn let through, grouped by rule and by how: `broom let 3 through this turn: 2 magic_numbers (retry),
+    1 function_lines (accepted: why)`; empty when it let nothing through."""
     rows = list(read(turn / THROUGH))
     if not rows:
         return ""
@@ -297,3 +336,15 @@ def through_line(turn: Path) -> str:
              for (rule, how, why), n in groups.most_common()]
     more = f", and {len(parts) - SHOWN_GROUPS} more" if len(parts) > SHOWN_GROUPS else ""
     return f"broom let {len(rows)} through this turn: " + ", ".join(parts[:SHOWN_GROUPS]) + more
+
+
+def through_line(turn: Path) -> str:
+    """What the turn let through and what it waived, as the one line the user sees at its end: the `through_part`, then
+    `2 self-waivers: suppression in a.py, ...`; with waivers alone `broom saw 2 self-waivers this turn: ...`. Empty
+    when it did neither."""
+    through = through_part(turn)
+    count, waived_text = waiver_part(turn)
+    if not count:
+        return through
+    noun = f"{count} self-waiver{'' if count == 1 else 's'}"
+    return f"{through}; {noun}: {waived_text}" if through else f"broom saw {noun} this turn: {waived_text}"

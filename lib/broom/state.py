@@ -67,15 +67,22 @@ def emit(obj: dict) -> None:
     sys.stdout.flush()
 
 
-def read_jsonc(path: Path) -> dict:
+def parse_jsonc(text: str) -> dict:
+    """The JSON object in `text`, which may hold comments and trailing commas; {} when it isn't one."""
     try:
-        text = path.read_text()
         text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
         text = re.sub(r'^\s*//.*$|(?<=[,{\[\s])//[^"\n]*$', "", text, flags=re.M)
         text = re.sub(r",(\s*[}\]])", r"\1", text)
         data = json.loads(text)
         return data if isinstance(data, dict) else {}
-    except (ValueError, OSError):
+    except ValueError:
+        return {}
+
+
+def read_jsonc(path: Path) -> dict:
+    try:
+        return parse_jsonc(path.read_text())
+    except (OSError, ValueError):  # unreadable, or not text
         return {}
 
 

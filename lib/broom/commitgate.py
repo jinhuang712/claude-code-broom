@@ -17,7 +17,7 @@ import time
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
-from . import ledger
+from . import ledger, waivers
 from .checks import SLOW_PATH, run_checks
 from .findings import Issue
 from .config import excluded, setting
@@ -65,22 +65,26 @@ def by_repo(files: List[Path]) -> Dict[Path, List[Path]]:
     return groups
 
 
-def checked(files: List[Path], base: str = "HEAD") -> Tuple[List[Issue], List[Smell], List[str]]:
+def checked(files: List[Path], base: str = "HEAD", turn: Optional[Path] = None
+            ) -> Tuple[List[Issue], List[Smell], List[str]]:
     """What blocks (lint and type issues not yet known, smells past the hard limit), the smell hints, and notes,
     for what changed since `base`. Content that passed before isn't checked again; content that passes now is
-    recorded."""
+    recorded. What the change loosens (a suppression it adds, a looser .broom.json) is noted for `turn`, the
+    directory of the turn it belongs to."""
     files = [f for repo, group in by_repo(files).items() for f in unpassed(repo, group, worktree_blobs(repo, group))]
     if not files:
         return [], [], []
     issues, notes = run_checks(files, SLOW_PATH)
     known = baseline_keys()
-    blocking = select(issues, set(files), known, ChangedLines(base))
+    changed, groups = ChangedLines(base), by_repo(files)
+    blocking = select(issues, set(files), known, changed)
     hints: List[Smell] = []
-    for repo, group in by_repo(files).items():
+    for repo, group in groups.items():
         smell_blocks, smell_hints, smell_notes = gate_smells(repo, group, known, base)
         blocking += smell_blocks
         hints += smell_hints
         notes += smell_notes
+    ledger.waived(waivers.detect(groups, changed, base), turn)
     record_passed(files, blocking, hints, notes)
     return blocking, hints, notes
 
@@ -143,7 +147,7 @@ def gate_files(repo: Path, files: List[Path], sd: Path, cwd: Path, state: dict) 
     `state` holds each repo's last blocked commit, for `broom known --accept` and the ledger: what it found, which
     hook and which turn saw it."""
     files = sorted(f for f in files if lang_of(f))
-    blocking, hints, notes = checked(files)
+    blocking, hints, notes = checked(files, turn=sd)
     context = [hint_text(hints)] if hints else []
     ledger.hinted(entries_of(s.issue() for s in hints))
     key = str(repo)
@@ -227,6 +231,7 @@ def hook_commit(data: dict) -> None:
     if not any(op.kind == "commit" for op in ops) or not claim(data.get("tool_use_id")):
         return
     sd = session_dir(data.get("session_id") or "cli")
+    ledger.waived(waivers.no_verify_waivers(ops, (data.get("tool_input") or {}).get("command") or ""), sd)
     state = load_json(COMMITS, {})
     denials: List[str] = []
     context: List[str] = []

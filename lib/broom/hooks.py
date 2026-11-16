@@ -23,9 +23,9 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from . import ledger
+from . import ledger, waivers
 from .commitgate import accept_command, checked, entries_of, issues_by_repo
-from .config import excluded, setting
+from .config import REPO_FILE, excluded, setting
 from .doctor import describe, diagnose_cached, new_gaps
 from .fmt import format_files
 from .findings import Issue
@@ -59,6 +59,14 @@ def serena_path(rel: str, data: dict) -> Optional[Path]:
     return None
 
 
+def note_config(path: Path, sd: Path) -> None:
+    """A repo's own .broom.json was edited: note now what it loosens against the turn's base. A `check_on` set to off,
+    which no later check would see, is on record this way too."""
+    root = git_root(path.parent)
+    if root and path == root / REPO_FILE:
+        ledger.waived(waivers.config_waivers(root, turn_base(sd, root)), sd)
+
+
 def hook_edit(data: dict) -> None:
     tool = data.get("tool_name") or ""
     args = data.get("tool_input") or {}
@@ -82,6 +90,8 @@ def hook_edit(data: dict) -> None:
         # Outside any repo is a scratch file, a draft script in a temp directory: no project's code. Ten style
         # findings in one subagent's draft once stopped its session's turn.
         return
+    if path.name == REPO_FILE:
+        note_config(path, sd)
     if setting("check_on", path) == "stop" and lang_of(path):
         append_line(sd / "edits.txt", str(path))
     if setting("format_on", path) == "edit":
@@ -101,7 +111,7 @@ def read_lines(path: Path) -> List[str]:
 
 def end_turn(d: Path, root: Optional[Path]) -> None:
     """Forget the turn's records; the working tree as it is now is where the next turn's changes start."""
-    for name in ("edits.txt", "scan.txt", "gate.json", DEFERRED, ledger.THROUGH):
+    for name in ("edits.txt", "scan.txt", "gate.json", DEFERRED, *ledger.TURN_NOTES):
         try:
             (d / name).unlink()
         except OSError:
@@ -200,7 +210,7 @@ def hook_stop(data: dict) -> None:
     if gate.get("verdict") and gate.get("edits_at") == mark:
         stop_again(d, root, gate)
         return
-    blocking, hints, notes = checked(files, turn_base(d, root))
+    blocking, hints, notes = checked(files, turn_base(d, root), d)
     blocking += [s.issue() for s in hints]  # at a turn's end a hint stops Claude once: it cleans up now
     if gate.get("blocked"):
         ledger.fixes(gate["blocked"], entries_of(blocking), baseline_keys(), files, notes)
@@ -230,7 +240,7 @@ def hook_prompt(data: dict) -> None:
     d = turn_dir(data)
     if waiting(d) or (d / "gate.json").exists():
         return
-    ledger.forget_through(d)  # what the turn before let through was never shown, as no stop hook ended that turn
+    ledger.forget_through(d)  # what the turn before let through or waived was never shown: no stop hook ended it
     if root and setting("check_on", cwd) == "stop":
         snapshot(d, root)
 
