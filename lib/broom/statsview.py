@@ -4,8 +4,8 @@ is the `--json` object."""
 from __future__ import annotations
 
 import argparse
-import sys
 import json
+import sys
 from pathlib import Path
 from typing import Iterable, List, Sequence
 
@@ -112,5 +112,5 @@ def render(data: dict) -> str:
 def run(repo: Path, args: argparse.Namespace) -> int:
     """Print the stats of `repo`, narrowed to `args.paths`, as text or as JSON with `--json`."""
     data = report(repo, [Path(p).resolve() for p in args.paths], args.top, args.days)
-    sys.stdout.write(json.dumps(data, indent=1) if args.json else render(data) + "\n")
+    sys.stdout.write((json.dumps(data, indent=1) if args.json else render(data)) + "\n")
     return 0

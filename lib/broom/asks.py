@@ -2,8 +2,8 @@
 own modules load only when that command runs."""
 
 import argparse
-import sys
 import json
+import sys
 from pathlib import Path
 
 
@@ -23,7 +23,7 @@ def cmd_report(args: argparse.Namespace) -> int:
 
     roots = [] if args.all else [Path(p).resolve() for p in args.paths] or [repo_or_exit()]
     data = report(roots, args.days)
-    sys.stdout.write(json.dumps(data, indent=1) if args.json else render(data) + "\n")
+    sys.stdout.write((json.dumps(data, indent=1) if args.json else render(data)) + "\n")
     return 0
 
 
