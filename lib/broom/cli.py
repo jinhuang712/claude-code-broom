@@ -183,6 +183,14 @@ def cmd_smells(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_fixes(args: argparse.Namespace) -> int:
+    """Print the usual fix of each smell named (all without names), as JSON with `--json`; exit 1 on an unknown name."""
+    from .fixes import answer
+
+    print(answer(args.names, as_json=args.json))
+    return 0
+
+
 def cmd_report(args: argparse.Namespace) -> int:
     """Print the `broom report` for the repos the paths are in (this repo without paths, every repo with `--all`) over
     `--days`, as JSON with `--json`. Returns 0, or exits with an error outside a git repo unless `--all` is given."""
@@ -349,6 +357,10 @@ def add_issue_parsers(sub: argparse._SubParsersAction) -> None:
     m.add_argument("--json", action="store_true", help="the same as JSON")
     m.add_argument("--dismiss", action="store_true", help="quiet the session note until severe smells grow")
     m.set_defaults(fn=cmd_smells)
+    fx = sub.add_parser("fixes", help="the usual fix of each kind of code smell, the lines the blocks carry")
+    fx.add_argument("names", nargs="*", metavar="smell", help="only these smells (default: all)")
+    fx.add_argument("--json", action="store_true", help="the same as JSON")
+    fx.set_defaults(fn=cmd_fixes)
     r = sub.add_parser("report", help="what broom stopped, what was fixed and what went through, over a period")
     r.add_argument("paths", nargs="*", help="limit to these files or directories (default: the repo)")
     r.add_argument("--days", type=int, default=30, help="how far back to look (default: 30)")
@@ -374,7 +386,7 @@ def main(argv: List[str]) -> int:
     p = argparse.ArgumentParser(prog="broom", description="Format, lint and type-check with each project's own tools.")
     p.add_argument("--version", action="version", version=f"broom {__version__}")
     sub = p.add_subparsers(dest="cmd", required=True,
-                           metavar="{sweep,smells,fmt,doctor,setup,init,known,report,install-hook}")
+                           metavar="{sweep,smells,fixes,fmt,doctor,setup,init,known,report,install-hook}")
     for add in (add_sweep_parsers, add_setup_parsers, add_issue_parsers, add_internal_parsers):
         add(sub)
     args = p.parse_args(argv)
