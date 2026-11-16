@@ -178,7 +178,7 @@ def cmd_smells(args: argparse.Namespace) -> int:
     if args.dismiss:
         say(dismiss(repo))
         return 0
-    data = report(repo, [Path(p).resolve() for p in args.paths], args.top, args.base)
+    data = report(repo, [Path(p).resolve() for p in args.paths], args.top, args.base, args.by)
     say(json.dumps(data, indent=1) if args.json else render(data))
     return 0
 
@@ -335,6 +335,8 @@ def add_issue_parsers(sub: argparse._SubParsersAction) -> None:
     m.add_argument("paths", nargs="*", help="limit to these files or directories (default: the repo)")
     m.add_argument("--base", metavar="REV", help="only what the changes since REV made worse, e.g. HEAD or main")
     m.add_argument("--top", type=int, default=10, help="how many hotspot files and smells to list (default: 10)")
+    m.add_argument("--by", choices=["churn", "smells"], default="churn",
+                   help="order the hotspots by smells times recent changes, or by smells alone (default: churn)")
     m.add_argument("--json", action="store_true", help="the same as JSON")
     m.add_argument("--dismiss", action="store_true", help="quiet the session note until severe smells grow")
     m.set_defaults(fn=cmd_smells)

@@ -47,14 +47,22 @@ def old_lines(repo: Path, files: List[Tuple[str, List[int]]], days: int) -> Tupl
     return blamed, old, cut
 
 
-def log(repo: Path, days: int) -> Optional[List[List[str]]]:
-    """The files of each commit of the last `days` days, merges left out; None when git can't say (no commit yet, or
-    git gave up)."""
-    rc, out, _ = run(["git", "-c", "core.quotepath=off", "log", f"--since={days} days ago", "--name-only",
+def log(repo: Path, days: int, at: Optional[int] = None) -> Optional[List[List[str]]]:
+    """The files of each commit of the last `days` days (counted back from the time `at`, a Unix time, when given),
+    merges left out; None when git can't say (no commit yet, or git gave up)."""
+    since = f"{days} days ago" if at is None else str(at - days * DAY)
+    rc, out, _ = run(["git", "-c", "core.quotepath=off", "log", f"--since={since}", "--name-only",
                       "--no-renames", "--no-merges", "--format=%x01"], repo, timeout=LOG_SECONDS)
     if rc != 0:
         return None
     return [[n for n in chunk.splitlines() if n] for chunk in out.split("\x01")[1:]]
+
+
+def commits_per_file(repo: Path, days: int, at: Optional[int] = None) -> Optional[Counter]:
+    """How many commits of the last `days` days touched each file, from the same `git log` the history section
+    reads; None when git can't say."""
+    commits = log(repo, days, at)
+    return None if commits is None else Counter(f for files in commits for f in set(files))
 
 
 def changes(commits: List[List[str]], kept: Set[str]) -> Tuple[Counter, Counter]:

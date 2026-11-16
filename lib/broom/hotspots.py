@@ -15,12 +15,21 @@ from .gate import display, note_text
 from .gitutil import changed_since, git
 from .smells import Smell, find_smells
 from .state import DATA_ROOT, load_json, save_json, short_hash, update_json
+from .statsgit import commits_per_file
 
 CACHE = DATA_ROOT / "hotspots"
 DISMISSED = DATA_ROOT / "smells-dismissed.json"
 FILES_IN_NOTE = 3
 NOTE_MAX_FILES = 5000  # past this, a session start doesn't scan: `broom smells` still does
 SCAN_SECONDS = 20  # what the tools that run in the real tree have between them in that scan
+CHURN_DAYS = 90  # how far back a file's changes are counted
+SEVERE_WEIGHT = 3  # a smell past the hard limit weighs this much against a hint in a file's score
+HOTSPOTS_TITLE = {
+    "churn": f"Hotspots, by score = ({SEVERE_WEIGHT} x severe + hints) x (1 + changes in the last {CHURN_DAYS} days):",
+    "smells": "Hotspots, most severe first:",
+}
+ORDERS = {"churn": lambda f: (f["score"], f["severe"], f["hints"]), "smells": lambda f: (f["severe"], f["hints"])}
+NO_HISTORY = "no commits in the last {days} days, or git log failed: the hotspots are ordered by their smells"
 
 
 def repo_files(repo: Path, paths: List[Path], base: Optional[str] = None) -> List[Path]:
@@ -42,28 +51,63 @@ def severity(s: Smell) -> Tuple[bool, float]:
     return s.level == "block", s.value / s.limit if s.limit else float(s.value)
 
 
-def rank(smells: List[Smell]) -> Tuple[List[Smell], List[dict]]:
-    """The smells worst first, and the files holding them, most smells past the hard limit first."""
+def score(severe: int, hints: int, changes: int) -> int:
+    """A file's cost: its smells (one past the hard limit weighs `SEVERE_WEIGHT` hints) times one more than the
+    commits that touched it, so a bad file that changes every week comes before one nobody touches."""
+    return (SEVERE_WEIGHT * severe + hints) * (1 + changes)
+
+
+def churn_order(repo: Path, by: str = "churn", days: int = CHURN_DAYS) -> Tuple[Dict[str, int], str, List[str]]:
+    """The commits per file of the last `days` days, the order the hotspots can have and a note when it isn't the
+    one asked for: `by` is "churn" or "smells", and ranking by churn needs history."""
+    churn = dict(commits_per_file(repo, days) or {})
+    if by == "churn" and not churn:
+        return churn, "smells", [NO_HISTORY.format(days=days)]
+    return churn, by, []
+
+
+def rank(smells: List[Smell], churn: Dict[str, int], by: str = "churn") -> Tuple[List[Smell], List[dict]]:
+    """The smells worst first, and the files holding them: by score, which counts `churn` (commits per file), or with
+    `by` "smells" by their smells alone, the most past the hard limit first."""
     ordered = sorted(smells, key=severity, reverse=True)
     by_file: Dict[Path, List[Smell]] = {}
     for s in ordered:
         by_file.setdefault(s.file, []).append(s)
-    files = [{"file": str(f.relative_to(rows[0].repo)), "severe": sum(s.level == "block" for s in rows),
-              "hints": sum(s.level == "hint" for s in rows), "worst": rows[0].text()} for f, rows in by_file.items()]
-    return ordered, sorted(files, key=lambda f: (f["severe"], f["hints"]), reverse=True)
+    files = []
+    for f, rows in by_file.items():
+        rel = str(f.relative_to(rows[0].repo))
+        severe, hints = sum(s.level == "block" for s in rows), sum(s.level == "hint" for s in rows)
+        changes = churn.get(rel, 0)
+        files.append({"file": rel, "severe": severe, "hints": hints, "changes": changes,
+                      "score": score(severe, hints, changes), "worst": rows[0].text()})
+    return ordered, sorted(files, key=ORDERS[by], reverse=True)
 
 
-def report(repo: Path, paths: List[Path], top: int, base: Optional[str] = None) -> dict:
+def smell_row(repo: Path, s: Smell, base: Optional[str] = None) -> dict:
+    """One smell as the JSON and the worst-smells list show it; `was` is its size or count at `base`, None for a
+    new smell and without a base."""
+    return {"file": str(s.file.relative_to(repo)), "line": s.line, "smell": s.metric, "level": s.level,
+            "text": s.text(), "was": s.was if base else None}
+
+
+def report(repo: Path, paths: List[Path], top: int, base: Optional[str] = None, by: str = "churn") -> dict:
     """The smells in `paths` (the repo when empty): counts, the `top` hotspot files and the `top` worst smells.
     With `base`, only what the changes since that revision made worse; each smell's `was` is then its size or
-    count at `base`, None for a new one."""
+    count at `base`, None for a new one. `by` orders the hotspots, "churn" or "smells"; the `by` returned is the
+    order they really have."""
+    churn, order, history_notes = churn_order(repo, by)
     found, notes = find_smells(repo, repo_files(repo, paths, base), base)
-    ordered, files = rank(found)
+    ordered, files = rank(found, churn, order)
     severe = sum(s.level == "block" for s in found)
-    smells = [{"file": str(s.file.relative_to(repo)), "line": s.line, "smell": s.metric, "level": s.level,
-               "text": s.text(), "was": s.was if base else None} for s in ordered[:top]]
     return {"repo": str(repo), "base": base, "total": len(found), "severe": severe, "hints": len(found) - severe,
-            "hotspots": files[:top], "smells": smells, "notes": notes}
+            "by": order, "hotspots": files[:top], "smells": [smell_row(repo, s, base) for s in ordered[:top]],
+            "notes": notes + history_notes}
+
+
+def hotspot_line(f: dict) -> str:
+    """One hotspot row of the text report."""
+    return (f"  {f['file']}  {f['severe']} severe, {f['hints']} hints, {f['changes']} changes, score {f['score']}; "
+            f"worst: {f['worst']}")
 
 
 def render(data: dict) -> str:
@@ -74,8 +118,7 @@ def render(data: dict) -> str:
     rows = [f"[broom] {data['total']} code smell(s) {where}: {data['severe']} past the hard limit, "
             f"{data['hints']} hints." + (f" Not all measured, missing: {'; '.join(missing)}." if missing else "")]
     if data["hotspots"]:
-        rows += ["", "Hotspots:"] + [f"  {f['file']}  {f['severe']} severe, {f['hints']} hints; worst: {f['worst']}"
-                                     for f in data["hotspots"]]
+        rows += ["", HOTSPOTS_TITLE[data["by"]]] + [hotspot_line(f) for f in data["hotspots"]]
         rows += ["", "Worst smells:"] + [f"  {s['file']}:{s['line']}  {s['smell']}  {s['text']}"
                                          for s in data["smells"]]
         if data["total"] > len(data["smells"]):
@@ -106,8 +149,9 @@ def summary(repo: Path) -> Optional[dict]:
     files = repo_files(repo, [])
     if len(files) > NOTE_MAX_FILES:
         return None
+    churn, order, _ = churn_order(repo)  # first: a scan that uses the hook's time up leaves none for git
     found, notes = find_smells(repo, files, None, budget=SCAN_SECONDS)
-    _, hot = rank(found)
+    _, hot = rank(found, churn, order)
     data = {"head": head, "total": len(found), "severe": sum(s.level == "block" for s in found),
             "hotspots": [f["file"] for f in hot[:FILES_IN_NOTE]],
             "partial": any(n.startswith("timeout:") for n in notes)}  # the time ran out: the counts are a floor

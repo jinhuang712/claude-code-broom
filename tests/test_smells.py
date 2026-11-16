@@ -65,7 +65,8 @@ class SmellTest(BroomCase):
     def test_the_report_says_how_many_smells_the_list_cut_off(self) -> None:
         one = {"file": "a.py", "line": 1, "smell": "todo", "text": "1 TODO/FIXME comment(s)"}
         data = {"repo": "/r", "base": None, "total": 5, "severe": 0, "hints": 5, "notes": [], "smells": [one],
-                "hotspots": [{"file": "a.py", "severe": 0, "hints": 5, "worst": "x"}]}
+                "by": "smells", "hotspots": [{"file": "a.py", "severe": 0, "hints": 5, "changes": 0, "score": 5,
+                                              "worst": "x"}]}
         self.assertIn("and 4 more; `--top 5` lists them all", render(data))
         self.assertNotIn("more;", render({**data, "total": 1}))
 
