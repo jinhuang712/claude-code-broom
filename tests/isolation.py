@@ -3,7 +3,11 @@
 broom fixes its data directory when its modules are imported, so support.py imports this file first: it points
 CLAUDE_PLUGIN_DATA at a directory the run owns, and every module then derives its paths from that. A guard on
 writes backs that up, so a path that still reaches the user's directory is refused and the test that tried it fails.
-A test that needs a clean state gets a directory of its own through `repoint`."""
+A test that needs a clean state gets a directory of its own through `repoint`.
+
+The process also gets a temporary directory of its own, since tools name things in it that are the same for every
+process: golangci-lint's lock file, which makes a second `golangci-lint run` at once fail with "parallel
+golangci-lint is running". With one each, test files can run at once (tests/run.py) and meet no one else's."""
 
 from __future__ import annotations
 
@@ -76,14 +80,24 @@ def take_violations() -> list:
     return found
 
 
+def own_temp_dir() -> None:
+    """Make the system temporary directory this process's own, for it and for every tool it starts. The name is short:
+    a socket's path may not pass about 100 characters."""
+    temp = Path(tempfile.mkdtemp(prefix="broom-tmp-")).resolve()
+    atexit.register(shutil.rmtree, temp, ignore_errors=True)
+    os.environ["TMPDIR"] = str(temp)
+    tempfile.tempdir = str(temp)
+
+
 def start() -> Path:
-    """Give this run its own data directory, before broom is imported, and guard the user's."""
+    """Give this run its own data and temporary directories, before broom is imported, and guard the user's."""
     sys.path.insert(0, str(ROOT / "lib"))
     if "broom.state" in sys.modules:
         raise RuntimeError("broom was imported before tests/support.py: its data directory is already fixed")
     root = Path(tempfile.mkdtemp(prefix="broom-test-data-")).resolve()
     atexit.register(shutil.rmtree, root, ignore_errors=True)
     os.environ["CLAUDE_PLUGIN_DATA"] = str(root)
+    own_temp_dir()
     sys.addaudithook(audit)
     return root
 
