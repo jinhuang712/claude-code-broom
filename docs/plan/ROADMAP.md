@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP4: A refactoring kit](#cp4-a-refactoring-kit). CP2 and CP3 shipped and wait for their first numbers.
+**Current checkpoint**: [CP5: A check-up for rot](#cp5-a-check-up-for-rot). CP2, CP3 and CP4 shipped, and their goals that need use or a fresh session are still open.
 
 ---
 
@@ -178,7 +178,7 @@ The feature shipped in 0.20.0 on 2026-11-17.
 
 **Status**: 🟨
 
-`broom stats` shipped in 0.19.2 and the diagnosis, the churn hotspots and the comparison in 0.20.1, on 2026-11-17. The tests' data directory is next.
+Everything it delivers shipped by 0.21.0 on 2026-11-17. The goal that a fresh session writes no script is not yet run.
 
 A refactor starts from numbers: what is in the repo, where it hurts most and whether the work paid off.
 
@@ -189,7 +189,7 @@ A refactor starts from numbers: what is in the repo, where it hurts most and whe
 - [F10.3: Before and after](../features/F10-diagnosis.md#f103-before-and-after)
 - [F10.4: Numbers on request](../features/F10-diagnosis.md#f104-numbers-on-request)
 - [F10.5: Claude knows what to ask](../features/F10-diagnosis.md#f105-claude-knows-what-to-ask)
-- [I4: The tests write into the real data directory](ISSUES.md#i4-the-tests-write-into-the-real-data-directory)
+- A test run no longer writes into the user's data directory, done on 2026-11-17.
 
 **Exit criteria** (2):
 
@@ -317,8 +317,9 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 **Status**: ⬜
 
-**Delivers** (4):
+**Delivers** (5):
 
+- [I9: The test suite takes two and a half minutes](ISSUES.md#i9-the-test-suite-takes-two-and-a-half-minutes)
 - [I8: Two holes in the record](ISSUES.md#i8-two-holes-in-the-record)
 - [I2: Three paths call the same tools](ISSUES.md#i2-three-paths-call-the-same-tools)
 - [I5: Four rules sit on an alpha plugin API](ISSUES.md#i5-four-rules-sit-on-an-alpha-plugin-api)

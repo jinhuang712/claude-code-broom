@@ -24,5 +24,5 @@ Work in a worktree of this repo, commit in small steps and land by fast-forward 
 
 2 checks must pass:
 
-- `python3 -m unittest discover -s tests` runs the test suite.
+- `python3 -m unittest discover -s tests` runs the test suite. It takes about two and a half minutes and writes nothing into your own broom data.
 - `claude plugin validate .` checks the plugin's manifest and parts.

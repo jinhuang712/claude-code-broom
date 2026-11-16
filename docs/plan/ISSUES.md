@@ -12,10 +12,10 @@ Issues
 ├── refactor
 │   ├── I2: Three paths call the same tools
 │   ├── I5: Four rules sit on an alpha plugin API
+│   ├── I9: The test suite takes two and a half minutes
 │   └── I6: The Bash parser guesses what git's hook knows
 └── fix
     ├── I3: The cause of the reported Stop hang is unconfirmed
-    ├── I4: The tests write into the real data directory
     └── I8: Two holes in the record
 ```
 
@@ -52,13 +52,12 @@ Issues
 
 ---
 
-## I4: The tests write into the real data directory
+## I9: The test suite takes two and a half minutes
 
-- type: fix
-- why: Tests that run in-process leave caches and records in the user's own data directory, so a test run changes what the next real hook reads. The suite also takes 100 to 143 seconds.
-- found: a review of the data directory, 2026-11-17
-- touches:
-  - [F2.5: Known issues](../features/F2-sweep.md#f25-known-issues)
+- type: refactor
+- why: The suite took 122 seconds with 183 tests on 2026-11-16 and 149 seconds with 312 on 2026-11-17. It is real tool runs: 6 tests of 3 seconds or more take 56 seconds, and a trivial commit hook costs about 0.4 seconds from some 25 child processes. No fixture or cache gave a cheap win.
+- found: the work on the tests' data directory, 2026-11-17
+- next: run each test file in a process of its own, several at a time, since each already gets a data directory of its own
 
 ---
 

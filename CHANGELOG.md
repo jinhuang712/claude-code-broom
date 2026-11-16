@@ -6,6 +6,16 @@
 
 ---
 
+## 0.21.0 — 2026-11-17
+
+---
+
+### Tests
+
+- Running broom's test suite no longer writes into the data directory your sessions read. Before, a test run left known issues, caches and ledger lines there. After, the run gets a directory of its own, and a test that reaches for the real one fails.
+
+---
+
 ## 0.20.1 — 2026-11-17
 
 ---
