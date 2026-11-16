@@ -24,10 +24,6 @@ NOTE_MAX_FILES = 5000  # past this, a session start doesn't scan: `broom smells`
 SCAN_SECONDS = 20  # what the tools that run in the real tree have between them in that scan
 CHURN_DAYS = 90  # how far back a file's changes are counted
 SEVERE_WEIGHT = 3  # a smell past the hard limit weighs this much against a hint in a file's score
-HOTSPOTS_TITLE = {
-    "churn": f"Hotspots, by score = ({SEVERE_WEIGHT} x severe + hints) x (1 + changes in the last {CHURN_DAYS} days):",
-    "smells": "Hotspots, most severe first:",
-}
 ORDERS = {"churn": lambda f: (f["score"], f["severe"], f["hints"]), "smells": lambda f: (f["severe"], f["hints"])}
 NO_HISTORY = "no commits in the last {days} days, or git log failed: the hotspots are ordered by their smells"
 
@@ -57,10 +53,19 @@ def score(severe: int, hints: int, changes: int) -> int:
     return (SEVERE_WEIGHT * severe + hints) * (1 + changes)
 
 
-def churn_order(repo: Path, by: str = "churn", days: int = CHURN_DAYS) -> Tuple[Dict[str, int], str, List[str]]:
-    """The commits per file of the last `days` days, the order the hotspots can have and a note when it isn't the
-    one asked for: `by` is "churn" or "smells", and ranking by churn needs history."""
-    churn = dict(commits_per_file(repo, days) or {})
+def order_text(by: str, days: int = CHURN_DAYS) -> str:
+    """How hotspots are ordered, in words: `by` is "churn" or "smells"."""
+    if by == "churn":
+        return f"by score = ({SEVERE_WEIGHT} x severe + hints) x (1 + changes in the last {days} days)"
+    return "most severe first"
+
+
+def churn_order(repo: Path, by: str = "churn", days: int = CHURN_DAYS,
+                at: Optional[int] = None) -> Tuple[Dict[str, int], str, List[str]]:
+    """The commits per file of the last `days` days (before the Unix time `at`, when given), the order the hotspots
+    can have and a note when it isn't the one asked for: `by` is "churn" or "smells", and ranking by churn needs
+    history."""
+    churn = dict(commits_per_file(repo, days, at) or {})
     if by == "churn" and not churn:
         return churn, "smells", [NO_HISTORY.format(days=days)]
     return churn, by, []
@@ -118,7 +123,7 @@ def render(data: dict) -> str:
     rows = [f"[broom] {data['total']} code smell(s) {where}: {data['severe']} past the hard limit, "
             f"{data['hints']} hints." + (f" Not all measured, missing: {'; '.join(missing)}." if missing else "")]
     if data["hotspots"]:
-        rows += ["", HOTSPOTS_TITLE[data["by"]]] + [hotspot_line(f) for f in data["hotspots"]]
+        rows += ["", f"Hotspots, {order_text(data['by'])}:"] + [hotspot_line(f) for f in data["hotspots"]]
         rows += ["", "Worst smells:"] + [f"  {s['file']}:{s['line']}  {s['smell']}  {s['text']}"
                                          for s in data["smells"]]
         if data["total"] > len(data["smells"]):

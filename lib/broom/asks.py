@@ -1,5 +1,5 @@
-"""The commands that answer a question: `fixes`, `report`, `stats` and `diagnose`. `cli` imports this module, so each
-command's own modules load only when that command runs."""
+"""The commands that answer a question: `fixes`, `report`, `stats`, `diagnose` and `compare`. `cli` imports this
+module, so each command's own modules load only when that command runs."""
 
 import argparse
 import json
@@ -44,8 +44,17 @@ def cmd_diagnose(args: argparse.Namespace) -> int:
     return run(repo_or_exit(), args)
 
 
+def cmd_compare(args: argparse.Namespace) -> int:
+    """Print what the work since a revision did to the repo's smells; exit 1 for an unknown revision or outside a git
+    repository."""
+    from .cli import repo_or_exit
+    from .compareview import run
+
+    return run(repo_or_exit(), args)
+
+
 def add_diagnosis_parsers(sub: argparse._SubParsersAction) -> None:
-    """Register `diagnose`."""
+    """Register `diagnose` and `compare`."""
     d = sub.add_parser("diagnose", help="the whole repo measured: smells, hotspots by churn and stats, as a report")
     d.add_argument("paths", nargs="*", help="limit to these files or directories (default: the repo)")
     d.add_argument("--top", type=int, default=10, help="how long each list is (default: 10)")
@@ -53,10 +62,15 @@ def add_diagnosis_parsers(sub: argparse._SubParsersAction) -> None:
     d.add_argument("--json", action="store_true", help="the same as JSON, with every smell")
     d.add_argument("--out", metavar="FILE", help="write the report (or the JSON) to FILE and say where")
     d.set_defaults(fn=cmd_diagnose)
+    c = sub.add_parser("compare", help="what the work since a revision did to the smells: gone, new, smaller, bigger")
+    c.add_argument("base", metavar="BASE", help="the revision to compare with, e.g. v1.2.0 or main~20")
+    c.add_argument("--top", type=int, default=10, help="how many hotspots, and how long each list is (default: 10)")
+    c.add_argument("--json", action="store_true", help="the same as JSON, with every smell of each list")
+    c.set_defaults(fn=cmd_compare)
 
 
 def add_ask_parsers(sub: argparse._SubParsersAction) -> None:
-    """Register the commands that answer a question: `fixes`, `report`, `stats` and `diagnose`, in that order."""
+    """Register the commands that answer a question: `fixes`, `report`, `stats`, `diagnose` and `compare`, in that order."""
     fx = sub.add_parser("fixes", help="the usual fix of each kind of code smell, the lines the blocks carry")
     fx.add_argument("names", nargs="*", metavar="smell", help="only these smells (default: all)")
     fx.add_argument("--json", action="store_true", help="the same as JSON")

@@ -10,7 +10,7 @@ from typing import List
 
 from .diagnose import diagnose
 from .gate import display
-from .hotspots import HOTSPOTS_TITLE
+from .hotspots import order_text
 from .state import say
 from .statsview import history_lines, rot_lines, size_lines, table, tests_lines
 
@@ -51,7 +51,7 @@ def hotspot_lines(data: dict) -> List[str]:
     """The hotspot files with their smells, changes and score, under the line that says how they are ordered."""
     rows = [[f["file"], f["severe"], f["hints"], f["changes"], f["score"]] for f in data["hotspots"]]
     shown = table(["file", "past the hard limit", "hints", "changes", "score"], rows)
-    return [f"  {HOTSPOTS_TITLE[data['by']]}", *shown] if shown else []
+    return [f"  Ordered {order_text(data['by'], data['stats']['days'])}.", *shown] if shown else []
 
 
 def worst_lines(data: dict, top: int) -> List[str]:

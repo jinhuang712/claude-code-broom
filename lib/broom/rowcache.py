@@ -72,3 +72,11 @@ class RowCache:
             return dict(newest)
 
         update_json(self.path, {}, merge)
+
+
+def forget(repo: Path) -> None:
+    """Drop the rows kept for `repo`, a path that won't come back (a temporary checkout), rather than leave them to
+    pile up."""
+    path = ROWS / f"{short_hash(str(repo))}.json"
+    for f in (path, path.with_name(path.name + ".lock")):
+        f.unlink(missing_ok=True)
