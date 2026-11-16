@@ -48,6 +48,7 @@ It lives in `lib/broom/`.
 - [Setup](setup.md)
 - [Settings](settings.md)
 - [Cleanup](cleanup.md)
+- [Record](record.md)
 
 ---
 
@@ -77,9 +78,10 @@ They live in `skills/`.
 
 ## The data directory
 
-State lives in `~/.claude/plugins/data/broom-claude-code-broom/`: known issues, passed content, the last blocked commit, per-session records and the tools' caches.
+State lives in `~/.claude/plugins/data/broom-claude-code-broom/`: known issues, passed content, the last blocked commit, the ledger, per-session records and the tools' caches.
 
 - [Hook limits](hook-limits.md)
+- [Record](record.md)
 
 ---
 

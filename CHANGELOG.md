@@ -6,6 +6,24 @@
 
 ---
 
+## 0.18.2 — 2026-11-17
+
+---
+
+### Record
+
+- broom keeps a record of what it did with each finding. Every block, fix, pass and skip leaves a line, with the hook it came from, and a repo and its linked worktrees share one record. Before, a finding that was fixed left no trace, so nobody could say whether the checks work.
+- `broom report` prints that record for a repo over a period: findings blocked, fixed and let through with the fix rate, the same per rule, the tools that were skipped and the seconds each check took.
+- A turn that let something through says so in one line at its end, such as `broom let 3 through this turn: 2 magic_numbers (retry), 1 function_lines (accepted: <why>)`. It is not shown with `check_on` at `commit`.
+
+---
+
+### Docs
+
+- The docs are reorganized: one question per doc, with a roadmap, goals with dates and a record of each decision.
+
+---
+
 ## 0.18.1 — 2026-11-16
 
 - A Stop hook that ran until Claude Code ended it at its timeout (18 of 130 Stops in one session, about 90 minutes,

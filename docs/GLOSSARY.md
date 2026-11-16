@@ -28,3 +28,7 @@ Each term has its meaning, the words that lost to it and its name in the code wh
 | Note | a line that says what a check skipped | — | `notes` |
 | Gap | a tool or a config a repo needs and lacks | — | `Item` |
 | Session scan | the whole-repo smell scan at session start | — | `session-scan` |
+| Ledger | the record of what broom did with each finding | log | `ledger.jsonl` |
+| Fix | a blocked finding that is gone from a later check that covered it | — | `fix` |
+| Pass | a finding that was let through, with how | waiver | `pass` |
+| Turn summary | the one line the user sees when a turn let something through | — | `through_line` |

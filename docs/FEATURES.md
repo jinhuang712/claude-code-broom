@@ -2,7 +2,7 @@
 
 The marks: ✅ built · 🚧 built, with a gap named beside it · ❔ claimed and not yet run, with the reason beside it · ⬜ planned.
 
-A ✅ here means the test suite covers the feature and passed on 2026-11-16.
+A ✅ here means the test suite covers the feature and passed on 2026-11-17.
 
 ---
 
@@ -70,10 +70,10 @@ Features
 │   ├── ✅ F8.4: Python
 │   ├── 🚧 F8.5: CSS, SCSS and Less — file length and duplicates only
 │   └── 🚧 F8.6: Swift — no compile check for Xcode projects
-├── ⬜ F9: Record — what broom stopped, what was fixed and what passed
-│   ├── ⬜ F9.1: Ledger — every block, fix, pass and skip leaves a line
-│   ├── ⬜ F9.2: Turn summary — the user sees what was let through
-│   ├── ⬜ F9.3: Report — the record of a repo over a period
+├── 🚧 F9: Record — tiers by fix rate are not built
+│   ├── ✅ F9.1: Ledger — every block, fix, pass and skip leaves a line
+│   ├── 🚧 F9.2: Turn summary — not shown with `check_on` at `commit`
+│   ├── ✅ F9.3: Report — the record of a repo over a period
 │   └── ⬜ F9.4: Tiers by fix rate — a rule nobody fixes stops interrupting
 ├── ⬜ F10: Diagnosis — a repo's numbers before and after a refactor
 │   ├── 🚧 F10.1: Whole-repo diagnosis — `broom smells` ranks, and the full report is not built

@@ -146,6 +146,29 @@ Status: ✅ built · ⬜ planned
 
 ---
 
+### broom report
+
+**Status**: ✅
+
+`broom report [paths...] [--days N] [--all] [--json]` prints what broom stopped, what was fixed and what went through.
+
+| Flag | Means | Default |
+|---|---|---|
+| `paths` | limit to these files or directories | the repo |
+| `--days N` | how far back to look | 30 |
+| `--all` | every repo in the ledger | off |
+| `--json` | print JSON | off |
+
+**Called by**: a person and Claude.
+
+**Prints**: stdout gets a line of totals with the fix rate, then a table per rule, the skips by tool and the median and longest seconds per check. With nothing recorded it prints `broom: nothing recorded for <repo> in the last N days`. stderr gets `broom: not inside a git repository`.
+
+**Fails**: exit 1 outside a repo without `--all`.
+
+**Example**: `broom report --days 7` prints `blocked 41, fixed 33, let through 8, still open 0` with the fix rate, then the rules behind it.
+
+---
+
 ### broom install-hook
 
 **Status**: ✅
@@ -241,10 +264,11 @@ An uncaught error exits 1 with a traceback.
 
 ## Output formats
 
-2 commands print JSON a script relies on:
+3 commands print JSON a script relies on:
 
 - **`broom doctor --json`**: `version` · `repo` · `languages` · `items` · `fix` · `configure` · `fix_global` · `configure_global` · `healthy` · `settings`.
 - **`broom smells --json`**: `repo` · `base` · `total` · `severe` · `hints` · `hotspots` · `smells` · `notes`.
+- **`broom report --json`**: `days` · `repos` · `blocked` · `fixed` · `let_through` · `open` · `how` · `fix_rate` · `rules` · `skips` · `seconds` · `errors`.
 
 Each item of `smells` holds `file` · `line` · `smell` · `level` · `text` · `was`. `was` is null for a new smell.
 

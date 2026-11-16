@@ -16,21 +16,37 @@ The record says what broom did with each finding. The user ends up knowing wheth
 
 ## F9.1: Ledger
 
-Every block, fix, pass and skip is written as one line: when, which repo, which rule, which file and how it ended. A finding counts as fixed when a block is followed by content that passes.
+Every block, fix, pass and skip is written as one line: when, which repo, which rule, which file and how it ended. A repo and its linked worktrees share one record.
 
-The ledger also notes how many seconds each tool took in each check.
+A finding counts as fixed when it was blocked and is gone from a later check that covered its file with its tool. A commit of other files fixes nothing, and neither does a run where the tool was skipped.
+
+The ledger also notes how many seconds each check took, and each time a hook failed and let the action through. It keeps 90 days and at most 2 MB.
+
+- **How it works**: [Record](../specs/record.md)
 
 ---
 
 ## F9.2: Turn summary
 
-When a turn let something through, the user sees one line at its end, such as "broom let 3 through: 2 magic numbers, 1 long function". A turn that let nothing through says nothing.
+When a turn let something through, the user sees one line at its end, such as `broom let 3 through this turn: 2 magic_numbers (retry), 1 function_lines (accepted: <why>)`. A turn that let nothing through says nothing more than before.
+
+2 gaps:
+
+- With `check_on` at `commit`, no summary is shown.
+- What git's own pre-commit hook let through is recorded and not shown.
+
+- **How it works**: [Record](../specs/record.md)
 
 ---
 
 ## F9.3: Report
 
-One command prints the record of a repo over a period: findings blocked, fixed and let through, by rule, with the reasons given.
+`broom report` prints the record of a repo over a period: findings blocked, fixed and let through with the fix rate, then the same per rule, the skips by tool and the seconds per check. It covers 30 days and this repo unless told otherwise.
+
+A finding counts once, however often it was blocked. Hints given without a block are recorded and not yet shown.
+
+- **Commands**: [broom report](../CLI.md#broom-report)
+- **How it works**: [Record](../specs/record.md)
 
 ---
 

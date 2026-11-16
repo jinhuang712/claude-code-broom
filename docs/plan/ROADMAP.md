@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP2: Nothing passes silently](#cp2-nothing-passes-silently). The ledger is being built.
+**Current checkpoint**: [CP2: Nothing passes silently](#cp2-nothing-passes-silently). The ledger shipped in 0.18.2, and its first numbers come with use.
 
 ---
 
@@ -69,6 +69,8 @@ broom keeps no record of what it stopped and what was fixed, so nobody can say w
 ### CP2.1: The ledger
 
 **Status**: 🟨
+
+The three features shipped in 0.18.2 on 2026-11-17. The measures get their first value after a week of sessions on the new version.
 
 **Delivers** (3):
 
