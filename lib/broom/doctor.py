@@ -14,7 +14,7 @@ from . import __version__
 from .config import DEAD_CODE, LIMIT_PAIR, REPO_FILE, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, repo_file
 from .gitutil import git
 from .needs import LANG_NAMES, LOCKFILES, Diagnosis, Item, settings_files
-from .state import DATA_ROOT, load_json, save_json, short_hash
+from .state import DATA_ROOT, load_json, save_json, short_hash, update_json
 from .toolchain import (
     BIOME_CFG, DIALECT_DEFAULTS, ESLINT_CFG, GOLANGCI_CFG, OXFMT_CFG, OXLINT_CFG, PRETTIER_CFG, RUFF_CFG,
     STYLELINT_CFG, SWIFT_FORMAT_CFG, SWIFTFORMAT_CFG, SWIFTLINT_CFG, find_up,
@@ -285,10 +285,11 @@ def record_setup(repo: Path, status: str) -> dict:
     gaps left are remembered by kind for every repo: broom raises setup again only for a kind of gap the user
     hasn't answered yet, anywhere."""
     result = diagnose_cached(repo)
-    state = load_json(SETUP_STATE, {})
-    state[str(repo)] = {"status": status, "gaps": gaps_hash(result)}
-    state[ANSWERED] = sorted(set(state.get(ANSWERED) or []) | {gap_kind(i) for i in gaps(result)})
-    save_json(SETUP_STATE, state)
+    def answer(state: dict) -> None:
+        state[str(repo)] = {"status": status, "gaps": gaps_hash(result)}
+        state[ANSWERED] = sorted(set(state.get(ANSWERED) or []) | {gap_kind(i) for i in gaps(result)})
+
+    update_json(SETUP_STATE, {}, answer)
     return result
 
 

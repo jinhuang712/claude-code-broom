@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from .gitutil import git
-from .state import DATA_ROOT, load_json, save_json
+from .state import DATA_ROOT, load_json, update_json
 
 PASSED = DATA_ROOT / "passed.json"  # {repo: {path: [blob id, time]}}
 KEEP_SECONDS = 86400
@@ -47,10 +47,12 @@ def record(repo: Path, files: List[Path]) -> None:
     """The files' content, as it is on disk, passed."""
     if not files:
         return
-    data = load_json(PASSED, {})
-    cutoff = time.time() - KEEP_SECONDS
-    rows = {rel: v for rel, v in data.get(str(repo), {}).items() if v[1] >= cutoff}
+    blobs = worktree_blobs(repo, files)
     now = time.time()
-    rows.update({rel: [blob, now] for rel, blob in worktree_blobs(repo, files).items()})
-    data[str(repo)] = rows
-    save_json(PASSED, data)
+
+    def add(data: dict) -> None:
+        rows = {rel: v for rel, v in data.get(str(repo), {}).items() if v[1] >= now - KEEP_SECONDS}
+        rows.update({rel: [blob, now] for rel, blob in blobs.items()})
+        data[str(repo)] = rows
+
+    update_json(PASSED, {}, add)

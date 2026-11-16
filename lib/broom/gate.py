@@ -12,12 +12,12 @@ import os
 import time
 from collections import Counter
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from .findings import Issue
 from .config import excluded
 from .gitutil import ChangedLines
-from .state import DATA_ROOT, load_json, save_json, short_hash
+from .state import DATA_ROOT, load_json, short_hash, update_json
 
 BASELINE = DATA_ROOT / "baseline.json"
 COMMITS = DATA_ROOT / "commits.json"  # per repo: the last blocked commit's verdict, denials and pending issues
@@ -53,10 +53,13 @@ def verdict(issues: List[Issue]) -> str:
 # ---------------------------------------------------------------- known issues
 
 
-def baseline_load() -> Dict[str, dict]:
-    raw = load_json(BASELINE, {})
+def baseline_entries(raw: dict) -> Dict[str, dict]:
     # 0.2 stored a bare timestamp per key.
     return {k: (v if isinstance(v, dict) else {"t": v}) for k, v in raw.items()}
+
+
+def baseline_load() -> Dict[str, dict]:
+    return baseline_entries(load_json(BASELINE, {}))
 
 
 def baseline_keys() -> Set[str]:
@@ -68,10 +71,29 @@ def baseline_add(issues: List[Issue]) -> None:
 
 
 def baseline_add_entries(entries: Dict[str, dict]) -> None:
-    data = baseline_load()
-    data.update(entries)
     cutoff = time.time() - BASELINE_DAYS * 86400
-    save_json(BASELINE, {k: v for k, v in data.items() if v.get("t", 0) >= cutoff})
+
+    def add(raw: dict) -> dict:
+        data = baseline_entries(raw)
+        data.update(entries)
+        return {k: v for k, v in data.items() if v.get("t", 0) >= cutoff}
+
+    update_json(BASELINE, {}, add)
+
+
+def save_commits(state: dict, repos: Iterable[Path]) -> None:
+    """Write this run's repos' entries of the last-blocked-commit record back, and leave the other repos' as they
+    are on disk: another hook may have changed them since this one read the file."""
+    keys = {str(r) for r in repos}
+
+    def put(data: dict) -> None:
+        for key in keys:
+            if key in state:
+                data[key] = state[key]
+            else:
+                data.pop(key, None)
+
+    update_json(COMMITS, {}, put)
 
 
 def accept_allowed() -> bool:
@@ -88,7 +110,7 @@ def accept_blocked(repo: Path, why: str) -> int:
         now = time.time()
         baseline_add_entries({k: {**v, "t": now, "why": why} for k, v in pending.items()})
         state.pop(str(repo), None)
-        save_json(COMMITS, state)
+        save_commits(state, [repo])
     return len(pending)
 
 
@@ -103,10 +125,13 @@ def baseline_under(roots: List[Path]) -> Dict[str, dict]:
 
 
 def baseline_remove(keys: List[str]) -> None:
-    data = baseline_load()
-    for k in keys:
-        data.pop(k, None)
-    save_json(BASELINE, data)
+    def drop(raw: dict) -> dict:
+        data = baseline_entries(raw)
+        for k in keys:
+            data.pop(k, None)
+        return data
+
+    update_json(BASELINE, {}, drop)
 
 
 # ---------------------------------------------------------------- selection and report
@@ -188,7 +213,11 @@ def render(head: str, issues: List[Issue], notes: List[str], files: Set[Path]) -
 
 def new_notes(state: Path, notes: List[str]) -> List[str]:
     """Notes not shown before in this session, so a missing tool is mentioned once, not every time."""
-    seen = set(load_json(state, []))
-    fresh = [n for n in notes if n not in seen]
-    save_json(state, sorted(seen | set(fresh)))
+    fresh: List[str] = []
+
+    def add(seen_before: list) -> list:
+        fresh[:] = [n for n in notes if n not in set(seen_before)]
+        return sorted(set(seen_before) | set(fresh))
+
+    update_json(state, [], add)
     return fresh

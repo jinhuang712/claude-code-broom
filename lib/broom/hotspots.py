@@ -14,7 +14,7 @@ from .config import drop_excluded, setting
 from .gate import display, note_text
 from .gitutil import changed_since, git
 from .smells import Smell, find_smells
-from .state import DATA_ROOT, load_json, save_json, short_hash
+from .state import DATA_ROOT, load_json, save_json, short_hash, update_json
 
 CACHE = DATA_ROOT / "hotspots"
 DISMISSED = DATA_ROOT / "smells-dismissed.json"
@@ -132,7 +132,5 @@ def session_note(repo: Path, data: Optional[dict]) -> Optional[str]:
 
 def dismiss(repo: Path) -> str:
     data = summary(repo) or {"severe": 0}
-    seen = load_json(DISMISSED, {})
-    seen[str(repo)] = data["severe"]
-    save_json(DISMISSED, seen)
+    update_json(DISMISSED, {}, lambda seen: seen.update({str(repo): data["severe"]}))
     return f"broom: the session note stays quiet until this repo has more than {data['severe']} severe smell(s)"

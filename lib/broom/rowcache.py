@@ -14,7 +14,7 @@ from typing import Callable, Dict, List, Optional
 
 from . import __version__
 from .measure import Limits, Raw, measure
-from .state import DATA_ROOT, load_json, save_json, short_hash
+from .state import DATA_ROOT, load_json, short_hash, update_json
 from .toolchain import resolve_bin
 
 ROWS = DATA_ROOT / "rows"
@@ -61,8 +61,14 @@ class RowCache:
         return rows + fresh
 
     def save(self) -> None:
+        """Add this run's rows to what is on disk now: another run may have added its own meanwhile."""
         if not self.changed:
             return
-        with self.lock:
-            newest = sorted(self.entries.items(), key=lambda kv: kv[1][0], reverse=True)[:MAX_ENTRIES]
-            save_json(self.path, dict(newest))
+
+        def merge(on_disk: dict) -> dict:
+            with self.lock:
+                on_disk.update(self.entries)
+            newest = sorted(on_disk.items(), key=lambda kv: kv[1][0], reverse=True)[:MAX_ENTRIES]
+            return dict(newest)
+
+        update_json(self.path, {}, merge)

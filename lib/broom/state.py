@@ -3,14 +3,18 @@ and the small JSON files that carry state from one hook to the next."""
 
 from __future__ import annotations
 
+import fcntl
 import hashlib
 import json
 import os
 import re
 import shutil
 import sys
+import threading
 import time
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Callable, Iterator
 
 # Resolved from this file, not CLAUDE_PLUGIN_ROOT: that variable is set for hooks but not for `broom` run from Bash.
 PLUGIN_ROOT = Path(__file__).resolve().parents[2]
@@ -64,10 +68,38 @@ def load_json(path: Path, default):
 
 
 def save_json(path: Path, data) -> None:
+    """Write whole or not at all. The temporary file is this process's and thread's own: two writers at once used
+    to share one, and the second to finish found it already renamed away."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
     tmp.write_text(json.dumps(data))
     tmp.replace(path)
+
+
+@contextmanager
+def locked(path: Path) -> Iterator[None]:
+    """Hold an exclusive lock for `path`, so hooks that run at once take turns. A lock that can't be had (a
+    read-only directory) is no lock: the change goes ahead, as it did before there were any."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(f"{path}.lock", os.O_CREAT | os.O_RDWR)
+    except OSError:
+        yield
+        return
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        yield
+    finally:
+        os.close(fd)
+
+
+def update_json(path: Path, default, change: Callable) -> None:
+    """Read `path`, let `change(data)` modify it in place (or return a new value), and write it back, all under
+    the lock: two hooks reading, changing and writing at once no longer lose one another's change."""
+    with locked(path):
+        data = load_json(path, default)
+        result = change(data)
+        save_json(path, data if result is None else result)
 
 
 def prune_dirs(root: Path, max_age_days: float) -> None:

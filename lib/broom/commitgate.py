@@ -24,13 +24,13 @@ from .config import excluded, setting
 from .fmt import format_files
 from .gate import (
     COMMITS, accept_allowed, baseline_add, baseline_keys, issue_entry, issue_key, new_notes, note_text, render,
-    select, setup_hint, verdict,
+    save_commits, select, setup_hint, verdict,
 )
 from .gitcmd import CommitPlan, GitOp, parse, parse_commit, plan_commit, staged
 from .gitutil import ChangedLines, git, git_root
 from .passed import record, staged_blobs, unpassed, worktree_blobs
 from .smells import Smell, gate_smells, hint_text
-from .state import DATA_ROOT, emit, load_json, save_json, session_dir
+from .state import DATA_ROOT, emit, load_json, session_dir
 from .toolchain import lang_of
 
 MAX_BLOCKS = 3
@@ -156,7 +156,7 @@ def hook_pre_commit() -> int:
         return 0
     state = load_json(COMMITS, {})
     denial, context = gate_files(repo, files, session_dir("git-pre-commit"), repo, state)
-    save_json(COMMITS, state)
+    save_commits(state, [repo])
     for line in context + ([denial] if denial else []):
         print(line, file=sys.stderr)
     return 1 if denial else 0
@@ -214,7 +214,8 @@ def hook_commit(data: dict) -> None:
     state = load_json(COMMITS, {})
     denials: List[str] = []
     context: List[str] = []
-    for plan in commit_plans(ops):
+    plans = commit_plans(ops)
+    for plan in plans:
         if setting("format_on", plan.repo) != "off":
             context += format_commit(plan)
         if setting("check_on", plan.repo) == "off":
@@ -222,5 +223,5 @@ def hook_commit(data: dict) -> None:
         denial, more = gate_files(plan.repo, list(plan.files), sd, cwd, state)
         context += more
         denials += [denial] if denial else []
-    save_json(COMMITS, state)
+    save_commits(state, {plan.repo for plan in plans})
     answer(denials, context)
