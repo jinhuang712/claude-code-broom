@@ -12,13 +12,12 @@ import tempfile
 import unittest
 import uuid
 from pathlib import Path
-from unittest import mock
 
-ROOT = Path(__file__).resolve().parent.parent
-BROOM = ROOT / "bin" / "broom"
-sys.path.insert(0, str(ROOT / "lib"))
+import isolation  # first: it gives the run a data directory of its own, before broom fixes one
+from broom.toolchain import swift_format_cmd
 
-from broom.toolchain import swift_format_cmd  # noqa: E402
+ROOT = isolation.ROOT
+BROOM = isolation.BROOM
 
 CARD = "broom's bar in this repo"  # how the limits card, told at session start, begins
 GIT_ENV = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
@@ -100,18 +99,13 @@ class BroomCase(unittest.TestCase):
         # An empty Claude config, so the real user settings (broom's options, enabled plugins) never leak in.
         self.env = {**env, **GIT_ENV, "CLAUDE_PLUGIN_DATA": str(self.tmp / "data"),
                     "CLAUDE_CONFIG_DIR": str(self.config_dir())}
-        # What a measurement found is kept by content: one test's must not stand in for another's, which may run
-        # the same text with a tool broken on purpose.
-        rows = mock.patch("broom.rowcache.ROWS", self.tmp / "rows")
-        rows.start()
-        self.addCleanup(rows.stop)
-        # The ledger in this process goes where the hooks' does, under the test's own data directory.
-        ledger = mock.patch("broom.ledger.LEDGER", self.tmp / "data" / "ledger.jsonl")
-        ledger.start()
-        self.addCleanup(ledger.stop)
+        # The data directory of this process is the hooks' too, one per test: what a measurement found is kept by
+        # content, and one test's must not stand in for another's, which may run the same text with a tool broken.
+        self.addCleanup(isolation.repoint(isolation.PATHS, self.tmp / "data").close)
 
     def tearDown(self) -> None:
         shutil.rmtree(self.tmp, ignore_errors=True)
+        self.assertEqual(isolation.take_violations(), [], "a test wrote into the user's own data directory")
 
     # helpers
 
