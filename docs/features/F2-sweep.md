@@ -1,0 +1,127 @@
+# F2: Sweep
+
+```
+F2: Sweep
+├── F2.1: Commit check — a git commit is formatted, checked and held back
+├── F2.2: Turn-end check — what a turn changed is checked when Claude stops
+├── F2.3: Subagent check — a subagent fixes its own work
+├── F2.4: git's pre-commit hook — commits Claude Code never sees
+├── F2.5: Known issues — what was let through, and why
+│   ├── F2.5.1: Pass on a retry
+│   └── F2.5.2: Accept with a reason
+├── F2.6: Sweep on request — a scope in the user's own words
+└── F2.7: Time limit — a hook run takes at most 30 seconds
+```
+
+A sweep formats, lints and type-checks Claude's changes and holds them back until they're clean. It uses the project's own tools and configs.
+
+Lint findings count on the lines that changed. Type and compile errors count anywhere, and the report marks one outside the change with `[not in the changed files]`. A report lists at most 40 findings, and names the ten most frequent rules when there are more.
+
+---
+
+## F2.1: Commit check
+
+When Claude runs a `git commit`, broom formats the commit's files, lints and type-checks them, and blocks the commit while findings remain.
+
+It reads commands written as `git -C dir commit`, `T=dir; git -C $T commit` and `git add . && git commit`. A partly staged file is left unformatted. A commit with `--no-verify` is not checked.
+
+A Bash call that isn't a commit costs about 13 ms, or about 60 ms when the command mentions git and commit without committing.
+
+- **Design**: [2. An idle hook exits in milliseconds](../DESIGNS.md#2-an-idle-hook-exits-in-milliseconds) · [4. A finding counts only where the change made things worse](../DESIGNS.md#4-a-finding-counts-only-where-the-change-made-things-worse)
+- **How it works**: [Commit check](../specs/commit-check.md) · [What counts](../specs/what-counts.md)
+- **Why**: [002: The commit hook reads every Bash call](../specs/decisions/002-every-bash-call.md)
+
+---
+
+## F2.2: Turn-end check
+
+When Claude stops, broom checks the files the turn changed: files Claude edited, and files changed or committed since the prompt by any means. It blocks the turn's end once.
+
+It applies with `check_on` at `stop`, the default. It waits while background work runs, up to half an hour. A turn in plan mode is not checked. An idle turn end costs one Python start, 30 to 45 ms measured on macOS.
+
+A hint stops the turn here too, once. Stopping again without a new edit ends the turn.
+
+- **Design**: [6. A false positive costs one round](../DESIGNS.md#6-a-false-positive-costs-one-round)
+- **How it works**: [Turn end](../specs/turn-end.md)
+- **Why**:
+  - [019: The turn-end check waits for background work](../specs/decisions/019-wait-for-background.md)
+  - [020: The turn's changes come from a snapshot at the prompt](../specs/decisions/020-turn-snapshot.md)
+
+**Stories** (1):
+
+- A user who commits by hand still gets Claude's edits checked, at the end of each turn.
+
+---
+
+## F2.3: Subagent check
+
+A subagent's edits are checked at that subagent's end. The block goes to the subagent, which fixes its own work.
+
+- **How it works**: [Turn end](../specs/turn-end.md)
+- **Why**: [021: A subagent's end checks its own edits](../specs/decisions/021-subagent-own-end.md)
+
+---
+
+## F2.4: git's pre-commit hook
+
+`broom install-hook` adds git's own pre-commit hook to a repo. It checks the staged files of every commit, a wrapper script's and a person's included, without formatting.
+
+It never replaces another tool's hook and prints the line to add to it instead. Content that passed already goes through at once. Where it is installed it is the commit check, and the commit check of F2.1 only formats.
+
+- **Commands**: [broom install-hook](../CLI.md#broom-install-hook)
+- **How it works**: [Commit check](../specs/commit-check.md)
+- **Why**: [004: git's own hook checks without formatting](../specs/decisions/004-git-hook-checks.md)
+
+**Stories** (1):
+
+- A user whose wrapper script commits for them installs the hook, so those commits are checked too.
+
+---
+
+## F2.5: Known issues
+
+A finding broom let through is recorded as known and not raised again for 30 days. `broom known` lists and clears them.
+
+- **Design**: [6. A false positive costs one round](../DESIGNS.md#6-a-false-positive-costs-one-round)
+- **Commands**: [broom known](../CLI.md#broom-known)
+- **How it works**: [What counts](../specs/what-counts.md)
+- **Why**: [003: A lint result passes on a retry and a type error doesn't](../specs/decisions/003-retry-and-accept.md)
+
+---
+
+### F2.5.1: Pass on a retry
+
+Committing the same lint result again passes. The block message tells Claude to say that a finding is pre-existing or a false positive and to run the same commit again.
+
+---
+
+### F2.5.2: Accept with a reason
+
+A type error, a compile error and a smell past the hard limit don't pass on a retry. They pass fixed, or after `broom known --accept "<why>"`, which puts the reason on record. `BROOM_NO_ACCEPT=1` turns accepting off, and the block message then stops offering it.
+
+---
+
+## F2.6: Sweep on request
+
+`/broom:sweep` sweeps a scope the user describes in their own words: what is staged, the last 3 commits, this branch, some folders or the whole repo. It reports what is left.
+
+`broom sweep` does the same from the command line. A sweep of the whole repo only reports unless `--fix` is given.
+
+- **Commands**: [broom sweep](../CLI.md#broom-sweep) · [broom fmt](../CLI.md#broom-fmt)
+
+---
+
+## F2.7: Time limit
+
+One run of any hook takes at most 30 seconds. A tool that runs out of time is cut off with everything it started. The check goes ahead without it and says so in a note.
+
+A commit or a stop that a tool kept from finishing is never blocked for it. A check that ran out of time is skipped for 20 minutes in every session, with a note. A cold `cargo clippy` or `swift build` can time out.
+
+A hook still running after 20 seconds writes `hook-trace.log` in broom's data directory.
+
+- **Design**: [3. A hook run ends within 30 seconds](../DESIGNS.md#3-a-hook-run-ends-within-30-seconds) · [5. A tool that is missing or fails never blocks](../DESIGNS.md#5-a-tool-that-is-missing-or-fails-never-blocks)
+- **How it works**: [Hook limits](../specs/hook-limits.md)
+- **Why**:
+  - [024: Tools are kept to a quarter of the cores](../specs/decisions/024-thread-caps.md)
+  - [025: A command writes to files](../specs/decisions/025-files-not-pipes.md)
+  - [026: A hook run is cut at 30 seconds](../specs/decisions/026-thirty-second-hook.md)
