@@ -22,6 +22,8 @@ In a repo with code it lists git's pre-commit hook as a gap until `broom install
 
 The SessionStart hook runs a cached doctor. The cache key includes the modification time of every PATH directory, so installing a tool invalidates it. When there are gaps it asks Claude, once per session, to offer `/broom:setup`.
 
+The same hook tells Claude the limits card first: the repo's smell limits, what blocks for being added, how a finding passes and which command answers a question about the repo. The card is built from the cached diagnosis and the repo's config alone, so no tool runs for it.
+
 ---
 
 ## Answers

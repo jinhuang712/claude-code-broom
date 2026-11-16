@@ -33,26 +33,8 @@ unless they already asked for the cleanup itself.
   stays: say so, and offer `.broom.json` `exclude`, `limits` (`test_limits` for tests that are long because they
   list cases), `legacy` (code a migration is replacing) or `smells_off` instead of contorting the code.
 
-How each kind is usually put right:
-
-| Smell | The fix |
-|---|---|
-| `function_lines`, `complexity`, `nesting` | Extract the steps the function takes into functions named for what they do; return early to flatten |
-| `file_lines`, `type_lines` | Split by area, not by size. Move what the parts share into a module of its own first, so they don't import one another |
-| `params`, `bool_params` | Group related parameters in one object; make a flag keyword-only (`*, flag` in Python) or an enum |
-| `unused_params` | Remove it and the callers' argument. Where a shared signature fixes it (a callback table, a command handler), name it `_name` |
-| `magic_numbers` | A named constant that says what the number means, with its unit |
-| `nested_ternary` | Plain `if` statements, or early returns |
-| `duplicate_lines` | Extract the shared block; where the copies differ, a function with a parameter for the difference |
-| `dead_code`, `commented_code` | Delete it; git keeps it |
-| `import_cycle` | Move what the files share into a third module both import. An import inside a function is the last resort |
-| `folder_cycle` | Decide which folder is the lower layer, and move what it takes from the upper one into a third folder both import, or into the lower one |
-| `globals` | Pass the state in, or hold it in an object |
-| `debug_output` | Delete it, or use the project's logger |
-| `type_escape` | Narrow the type with a check instead of casting or unwrapping |
-| `suppression`, `swallowed_error` | Give the suppression its rule and a reason; handle or log the error |
-| `todo` | Do it, or write it down as an issue and drop the comment |
-| `broad_test_asserts` | Assert on the message or the exact error |
+How each kind is usually put right: run `broom fixes`, or `broom fixes <smell>` for one. It prints the usual fix of
+each smell, the same line a block message carries.
 
 ## 4. Check and commit
 

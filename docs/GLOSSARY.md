@@ -28,6 +28,8 @@ Each term has its meaning, the words that lost to it and its name in the code wh
 | Gap | a tool or a config a repo needs and lacks | — | `Item` |
 | Session scan | the whole-repo smell scan at session start | — | `session-scan` |
 | Ledger | the record of what broom did with each finding | log | `ledger.jsonl` |
+| Fix line | the usual fix of one kind of smell, in one sentence | — | `fixes.json` |
+| Limits card | the lines that tell Claude a repo's bar at session start | — | `card` |
 | Fix | a blocked finding that is gone from a later check that covered it | — | `fix` |
 | Pass | a finding that was let through, with how | — | `pass` |
 | Self-waiver | a change that loosens the bar: a looser `.broom.json`, a new suppression or a `--no-verify` commit | waiver | `waiver` |

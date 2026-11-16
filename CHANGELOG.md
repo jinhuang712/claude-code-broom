@@ -6,6 +6,23 @@
 
 ---
 
+## 0.19.1 — 2026-11-17
+
+---
+
+### Sweep
+
+- A block says how to fix what it found. It opens with what was blocked and what to do, lists the findings, then gives the usual fix of each kind of smell among them and says what is not a fix. The way to accept a finding moved from the first line to the last.
+- `broom fixes` prints the usual fix of each smell, and `/broom:clean` asks it instead of carrying a table of its own.
+
+---
+
+### Smells
+
+- At the start of a session in a repo with code, Claude is told the bar before it writes: the repo's limits, what blocks for being added, how a finding passes and which broom command answers a question about the repo.
+
+---
+
 ## 0.19.0 — 2026-11-17
 
 ---

@@ -155,6 +155,11 @@ A change that loosens the bar is listed in the turn's summary and in the record.
 
 ## F2.9: Messages that say how to fix
 
-A block lists what must be fixed first and what may pass with a reason after it, with each line marked. Each kind of smell carries its usual fix in one line, the same line `/broom:clean` uses. The way to let a finding through comes last.
+A block says first what was blocked and what to do, then lists the findings. After them it gives the usual fix of each kind of smell found, one line per kind, the same line `broom fixes` prints. A linter's or a type checker's finding gets no line, since its own message says it.
 
-The message also says what is not a fix: a function cut in two at an arbitrary line, a new suppression and a looser `.broom.json`.
+The message then says what is not a fix: a function cut in two at an arbitrary line, a new lint suppression and a looser `.broom.json`. The way to accept a finding comes last.
+
+A message holds at most 9,000 characters. Past that it shows fewer findings and says how many more there are. A hint given at a commit ends with the fix of up to 3 of its kinds.
+
+- **Commands**: [broom fixes](../CLI.md#broom-fixes)
+- **How it works**: [Commit check](../specs/commit-check.md)

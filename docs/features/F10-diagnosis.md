@@ -64,4 +64,4 @@ A question broom can't answer is said so, with what is missing.
 
 ## F10.5: Claude knows what to ask
 
-At the start of a session Claude is told in a line or two what broom can answer, so it asks broom before it writes a script. The skills name the command for each kind of question.
+At the start of a session Claude is told in a line which broom command answers a question about the repo, so it asks broom before it writes a script. The line is the end of the limits card. The skills name the command for each kind of question.

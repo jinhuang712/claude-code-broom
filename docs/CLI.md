@@ -124,6 +124,27 @@ Status: ✅ built · ⬜ planned
 
 ---
 
+### broom fixes
+
+**Status**: ✅
+
+`broom fixes [smell...] [--json]` prints the usual fix of each kind of smell.
+
+| Flag | Means | Default |
+|---|---|---|
+| `smell` | only these smells | all of them |
+| `--json` | print JSON | off |
+
+**Called by**: a person and the `/broom:clean` skill.
+
+**Prints**: stdout gets one line per smell, its name and its fix. stderr gets `broom: unknown smell <name>` with the list of names.
+
+**Fails**: exit 1 for an unknown smell.
+
+**Example**: `broom fixes nesting` prints `nesting: Return early to flatten, and extract the inner block into a function named for what it does.`
+
+---
+
 ### broom known
 
 **Status**: ✅
@@ -264,10 +285,11 @@ An uncaught error exits 1 with a traceback.
 
 ## Output formats
 
-3 commands print JSON a script relies on:
+4 commands print JSON a script relies on:
 
 - **`broom doctor --json`**: `version` · `repo` · `languages` · `items` · `fix` · `configure` · `fix_global` · `configure_global` · `healthy` · `settings`.
 - **`broom smells --json`**: `repo` · `base` · `total` · `severe` · `hints` · `hotspots` · `smells` · `notes`.
+- **`broom fixes --json`**: one key per smell, with its fix line.
 - **`broom report --json`**: `days` · `repos` · `blocked` · `fixed` · `let_through` · `open` · `how` · `fix_rate` · `rules` · `waivers` · `skips` · `seconds` · `errors`.
 
 Each item of `smells` holds `file` · `line` · `smell` · `level` · `text` · `was`. `was` is null for a new smell.

@@ -36,7 +36,9 @@ The files are formatted, and what was staged in full is staged again. A partly s
 
 ## Checking
 
-The files are linted and type-checked, their smells are measured, and the result is filtered to what counts. Findings deny the commit with a report of at most 40 lines, grouped by tool.
+The files are linted and type-checked, their smells are measured, and the result is filtered to what counts. Findings deny the commit with a report of at most 40 findings, grouped by tool.
+
+The report has a fixed order: what was blocked and what to do, the findings, the usual fix of each kind of smell among them, what is not a fix, the way to accept a finding, and the checks that were skipped. The fix lines come from one data file, which `broom fixes` prints too. The report holds at most 9,000 characters, and findings give way to the rest of it.
 
 A blocked finding passes fixed, or after `broom known --accept "<why>"`, which records the blocked result as known with the reason. Running the same commit again blocks again. `BROOM_NO_ACCEPT` turns accepting off.
 

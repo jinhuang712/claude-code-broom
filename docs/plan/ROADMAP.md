@@ -12,9 +12,9 @@ Roadmap
 ├── 🟨 CP2: Nothing passes silently — every pass leaves a reason the user sees
 │   ├── 🟨 CP2.1: The ledger
 │   └── 🟨 CP2.2: Reasons and self-waivers
-├── ⬜ CP3: Claude knows how to fix — the bar before the work, the fix beside the finding
-│   ├── ⬜ CP3.1: Messages that say how to fix
-│   ├── ⬜ CP3.2: Limits told before the work
+├── 🟨 CP3: Claude knows how to fix — the bar before the work, the fix beside the finding
+│   ├── 🟨 CP3.1: Messages that say how to fix
+│   ├── 🟨 CP3.2: Limits told before the work
 │   └── ⬜ CP3.3: Old smells in touched code
 ├── ⬜ CP4: A refactoring kit — a full diagnosis, the worst places first, the numbers after
 ├── ⬜ CP5: A check-up for rot — numbers that speak when they grow
@@ -109,7 +109,7 @@ The three features shipped in 0.19.0 on 2026-11-17. The two goals are not yet ru
 
 ## CP3: Claude knows how to fix
 
-**Status**: ⬜
+**Status**: 🟨
 
 A block says what is over a limit and not what to do about it. This checkpoint puts the fix beside the finding and the bar before the work.
 
@@ -124,7 +124,9 @@ A block says what is over a limit and not what to do about it. This checkpoint p
 
 ### CP3.1: Messages that say how to fix
 
-**Status**: ⬜
+**Status**: 🟨
+
+The feature shipped in 0.19.1 on 2026-11-17. The fix rate after it comes with use.
 
 **Delivers** (1):
 
@@ -139,7 +141,9 @@ A block says what is over a limit and not what to do about it. This checkpoint p
 
 ### CP3.2: Limits told before the work
 
-**Status**: ⬜
+**Status**: 🟨
+
+The feature shipped in 0.19.1 on 2026-11-17. The fix rate after it comes with use.
 
 **Delivers** (1):
 

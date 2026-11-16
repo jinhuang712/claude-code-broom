@@ -45,6 +45,6 @@ When the user says not now, Claude runs `broom smells --dismiss`, and the note s
 
 The skill ranks the smells of the repo or an area, agrees a scope and batches with the user, and cleans up worst first. It keeps behavior and the tests green, re-checks each batch and commits it alone.
 
-It carries a table of the usual fix for each smell. A smell that is deliberate stays, and the skill offers `exclude`, `limits`, `legacy` or `smells_off` instead of contorting the code.
+It asks `broom fixes` for the usual fix of each smell. A smell that is deliberate stays, and the skill offers `exclude`, `limits`, `legacy` or `smells_off` instead of contorting the code.
 
 - **Commands**: [broom smells](../CLI.md#broom-smells)

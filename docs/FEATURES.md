@@ -28,7 +28,7 @@ Features
 │   ├── ✅ F2.6: Sweep on request — a scope in the user's own words
 │   ├── 🚧 F2.7: Time limit — a cold build can be cut off and go unchecked
 │   ├── 🚧 F2.8: Self-waivers shown — missed when every file's content had already passed
-│   └── ⬜ F2.9: Messages that say how to fix — the fix beside the finding
+│   └── ✅ F2.9: Messages that say how to fix — the fix beside the finding
 ├── ✅ F3: Formatting — the project's formatter on what changed
 │   ├── ✅ F3.1: When to format — at commit, after every edit, or never
 │   └── ✅ F3.2: How much to format — the scope
@@ -47,7 +47,7 @@ Features
 │   │   └── 🚧 F4.5.2: Folder cycle — TS/JS needs a TypeScript below 7
 │   ├── ✅ F4.6: What is skipped — dependencies, build output and generated code
 │   ├── ✅ F4.7: Tests — measured by rules of their own
-│   ├── ⬜ F4.8: Limits told before the work — Claude knows the bar when it starts
+│   ├── ✅ F4.8: Limits told before the work — Claude knows the bar when it starts
 │   └── ⬜ F4.9: Old smells in touched code — whoever is in the code cleans it
 ├── ✅ F5: Cleanup — the smells already in a repo
 │   ├── ✅ F5.1: Ranking — the smells of a repo or an area, worst first
@@ -79,7 +79,7 @@ Features
 │   ├── ⬜ F10.2: Hotspots by churn — the files that are both bad and often changed
 │   ├── 🚧 F10.3: Before and after — `--base` lists what got worse, and not what got better
 │   ├── ⬜ F10.4: Numbers on request — what a session would otherwise script
-│   └── ⬜ F10.5: Claude knows what to ask — broom before a script
+│   └── 🚧 F10.5: Claude knows what to ask — the session card names three commands, and the skills don't yet
 └── ⬜ F11: Check-up — rot across the whole repo, told when it grows
     ├── ⬜ F11.1: Counters — suppressions, skipped tests and old TODOs
     ├── ⬜ F11.2: Test coverage — code the tests never reach

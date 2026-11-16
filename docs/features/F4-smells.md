@@ -186,7 +186,11 @@ In tests, complexity and magic numbers don't count. Neither do the length or com
 
 ## F4.8: Limits told before the work
 
-At the start of a session in a repo with code, Claude is told the limits in a few lines: how long a function, a file and a type may be, how deep code may nest and what blocks. It learns the bar before it writes, not from a block after.
+At the start of a session in a repo with code, Claude is told the bar in a few lines: how long a function and a file may be, how many parameters, how deep the nesting and how high the complexity, each with the size past which a change is blocked. It also names what blocks for being added, how a blocked finding passes and which broom command answers a question about the repo.
+
+The numbers are the repo's own, so limits moved in `.broom.json` show, and a smell the repo turned off is left out. A repo with no code, or with `smells` off, gets no card. It is told once per session.
+
+- **How it works**: [Setup](../specs/setup.md)
 
 ---
 
