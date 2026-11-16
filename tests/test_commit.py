@@ -39,7 +39,9 @@ class CommitTest(BroomCase):
 
     def test_parse_follows_variables_the_command_sets(self) -> None:
         repo = (self.tmp / "r").resolve()
-        cwd = lambda command: [str(op.cwd) for op in parse(command, self.tmp)]  # noqa: E731
+        def cwd(command: str) -> list:
+            return [str(op.cwd) for op in parse(command, self.tmp)]
+
         self.assertEqual(cwd(f"T={repo}; git -C $T commit -m x"), [str(repo)])
         self.assertEqual(cwd(f"export T={repo} && cd $T && git commit -m x"), [str(repo)])
         self.assertEqual(cwd(f"T={repo} && git -C ${{T}}/sub commit"), [str(repo / "sub")])

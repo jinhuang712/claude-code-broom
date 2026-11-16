@@ -145,7 +145,9 @@ class CssTest(BroomCase):
         r = self.repo({"package.json": "{}\n", "biome.json": "{}\n",
                        "web/package.json": '{"devDependencies": {"@eslint/css": "^1"}}\n',
                        "web/eslint.config.js": "export default [];\n", "lib/.stylelintrc.json": "{}\n"})
-        tools = lambda p: [(t, str(d.relative_to(r)) if d != r else ".") for t, d in css_linters(r / p, r)]  # noqa: E731
+        def tools(p: str) -> list:
+            return [(t, str(d.relative_to(r)) if d != r else ".") for t, d in css_linters(r / p, r)]
+
         self.assertEqual(tools("a.css"), [("biome", ".")])
         self.assertEqual(tools("a.scss"), [("stylelint-default", ".")], "biome doesn't read SCSS")
         self.assertEqual(tools("web/a.css"), [("eslint", "web")])
