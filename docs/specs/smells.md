@@ -43,7 +43,7 @@ Where a smell is found by a guess and not a parse, it hints even when the same s
 
 A typed linter or a module graph can't work on the scratch copy, whose imports don't resolve. Those tools run in the project's own checkout: Go's typed linters, TS/JS import cycles, dependency-cruiser and clippy. With no copy of the base to compare with, a finding counts when it is on a line the change added, a new file included.
 
-Go's scratch copy runs only linters that read syntax alone. One linter that needs types makes golangci-lint skip every linter in the run.
+Go's scratch copy runs only linters that read syntax alone, so Go's repeated literals stay unmeasured. One linter that needs types makes golangci-lint skip every linter in the run.
 
 clippy runs with thresholds from a `clippy.toml` of broom's own, under a config path and a target directory of its own, so it and the project's clippy run don't make cargo check the crate again each time. A crate is checked whole.
 
@@ -67,7 +67,9 @@ A folder cycle is an import that leads into a folder whose files lead back to th
 
 Four rules of broom's own are loaded as an oxlint JS plugin, an alpha feature, in a second oxlint pass. They need Node. Without it, or with an oxlint that can't load plugins, only these smells go unmeasured, and a note says so. A test loads the plugin with the oxlint installed, so an upgrade that breaks it shows up there. It was tested with oxlint 1.85 and Node 24.
 
-The commented-code rule guesses: a comment that compiles as JS and has code's punctuation. TypeScript syntax in a comment doesn't compile, so it is missed.
+The commented-code rule guesses: a comment that compiles as JS and has code's punctuation, with `Note: x()` skipped as a label. TypeScript syntax in a comment doesn't compile, so it is missed.
+
+oxlint's own rule list, read in full in 2026-11, has nothing for these four smells, bar Jest's `require-to-throw-message`.
 
 ---
 
