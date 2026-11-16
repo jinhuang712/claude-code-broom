@@ -17,7 +17,7 @@ F4: Smells
 └── F4.9: Old smells in touched code — whoever is in the code cleans it
 ```
 
-A smell is code that works and is hard to change. broom measures smells against its own limits in every repo, and only what a change made worse counts. Legacy code left as it was never comes up.
+A smell is code that works and is hard to change. broom measures smells against its own limits in every repo. What a change made worse counts, and so does an old smell in the code it touches. Code a change doesn't touch never comes up.
 
 A hint goes into the commit's context and stops a turn's end once. A block stops the commit and passes only fixed or accepted with a reason. The `smells` setting turns them all off, and `smells_off` in `.broom.json` turns single ones off.
 
@@ -196,9 +196,16 @@ The numbers are the repo's own, so limits moved in `.broom.json` show, and a sme
 
 ## F4.9: Old smells in touched code
 
-When a change touches a function or a file that already holds a smell, Claude is told to clean that smell in the same change. It is a hint: it stops the turn's end once and passes with a reason.
+When a change touches a function, a type or a file that already holds a sized smell, Claude is told to clean it in the same change. The finding says `you touched it, clean it up in this change`, so it reads apart from a smell the change made worse. It is a hint: it goes into a commit's context, stops the turn's end once and passes with a reason.
 
-Code the change doesn't touch stays quiet. A function already past the hard limit can't grow again on a reason alone.
+A function or a type is touched when a changed line lies inside it. A file is touched when it gained code lines besides imports. Code the change doesn't touch stays quiet, and so does a file that was only renamed.
+
+A function, a type or a file that was already past the hard limit and that the change grew can't be accepted. The block marks that line, and `broom known --accept` leaves it out and says what size to bring it back to. Stopping again still ends the turn. A smell that is newly past the hard limit can be accepted as before.
+
+1 gap:
+
+- Outside Python, a touched function with too many parameters, too much nesting or too high a complexity is not told, since the tools give no range for those.
 
 - **Stance**: [Clean as you go](../PHILOSOPHY.md#when-is-a-smell-cleaned)
+- **How it works**: [Smells](../specs/smells.md)
 - **Why**: [028: A change is told the old smells in the code it touches](../specs/decisions/028-old-smells-in-touched-code.md)

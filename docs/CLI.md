@@ -161,7 +161,7 @@ Status: ✅ built · ⬜ planned
 
 **Prints**: stdout gets one line per known issue with its location, tool, rule, message, date and reason. Accept prints `broom: accepted N issue(s) as known (WHY); commit again`, or `stop again` after a turn-end block. stderr gets the refusals.
 
-**Fails**: exit 1 when there is no blocked commit or turn end to accept, when WHY is empty, when `BROOM_NO_ACCEPT` is set and outside a repo.
+**Fails**: exit 1 when there is no blocked commit or turn end to accept, when every finding is one that can't be accepted, when WHY is empty, when `BROOM_NO_ACCEPT` is set and outside a repo.
 
 **Example**: `broom known --accept "predates this change"` prints `broom: accepted 2 issue(s) as known (predates this change); commit again`.
 

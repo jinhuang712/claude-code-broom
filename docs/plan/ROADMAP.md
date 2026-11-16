@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP3: Claude knows how to fix](#cp3-claude-knows-how-to-fix). CP2 shipped in 0.19.0 and waits for its first numbers.
+**Current checkpoint**: [CP4: A refactoring kit](#cp4-a-refactoring-kit). CP2 and CP3 shipped and wait for their first numbers.
 
 ---
 
@@ -15,7 +15,7 @@ Roadmap
 ├── 🟨 CP3: Claude knows how to fix — the bar before the work, the fix beside the finding
 │   ├── 🟨 CP3.1: Messages that say how to fix
 │   ├── 🟨 CP3.2: Limits told before the work
-│   └── ⬜ CP3.3: Old smells in touched code
+│   └── ✅ CP3.3: Old smells in touched code
 ├── 🟨 CP4: A refactoring kit — a full diagnosis, the worst places first, the numbers after
 ├── ⬜ CP5: A check-up for rot — numbers that speak when they grow
 │   ├── ⬜ CP5.1: Counters, dead code and comments
@@ -158,7 +158,9 @@ The feature shipped in 0.19.1 on 2026-11-17. The fix rate after it comes with us
 
 ### CP3.3: Old smells in touched code
 
-**Status**: ⬜
+**Status**: ✅
+
+The feature shipped in 0.20.0 on 2026-11-17.
 
 **Delivers** (1):
 
@@ -167,7 +169,7 @@ The feature shipped in 0.19.1 on 2026-11-17. The fix rate after it comes with us
 **Exit criteria** (1):
 
 - **Constraints**
-  - [R3: An old smell in untouched code never comes up](GOALS.md#r3-an-old-smell-in-untouched-code-never-comes-up)
+  - [R3: An old smell in untouched code never comes up](GOALS.md#r3-an-old-smell-in-untouched-code-never-comes-up): ✅ 2026-11-17
 
 ---
 

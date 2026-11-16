@@ -25,4 +25,4 @@ A change that touches a function or a file with an old smell is told to clean it
 
 ## Consequences
 
-A small fix in a bad file now carries a hint about that file. The hint passes with a reason, and the record shows how often it is fixed.
+A small fix in a bad function now carries a hint about that function. The hint passes with a reason, and the record shows how often it is fixed. A unit already past the hard limit that grows can't be accepted at all: it comes back to its size, or what was added moves out.

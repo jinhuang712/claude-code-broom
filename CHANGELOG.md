@@ -6,6 +6,17 @@
 
 ---
 
+## 0.20.0 — 2026-11-17
+
+---
+
+### Smells
+
+- A change is told the old smells in the code it touches. Before, an edit inside a function that was already too long said nothing as long as the function didn't grow past a limit. After, it gets a hint that says `you touched it, clean it up in this change`, for a function, a type or a file, and in Python for parameters, nesting and complexity too. Code the change doesn't touch stays quiet.
+- A function, a type or a file that was already past the hard limit can't grow on a reason alone. Before, `broom known --accept` let each added line through. After, the block marks the finding as one that can't be accepted, and accepting leaves it out and says what size to bring it back to.
+
+---
+
 ## 0.19.2 — 2026-11-17
 
 ---

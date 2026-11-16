@@ -48,7 +48,7 @@ Features
 │   ├── ✅ F4.6: What is skipped — dependencies, build output and generated code
 │   ├── ✅ F4.7: Tests — measured by rules of their own
 │   ├── ✅ F4.8: Limits told before the work — Claude knows the bar when it starts
-│   └── ⬜ F4.9: Old smells in touched code — whoever is in the code cleans it
+│   └── 🚧 F4.9: Old smells in touched code — outside Python only lengths are told
 ├── ✅ F5: Cleanup — the smells already in a repo
 │   ├── ✅ F5.1: Ranking — the smells of a repo or an area, worst first
 │   ├── ✅ F5.2: Session note — Claude raises severe smells at a natural point

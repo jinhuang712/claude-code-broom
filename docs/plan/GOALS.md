@@ -27,7 +27,7 @@ Goals
 └── Constraints
     ├── ✅ R1: No old warning blocks Claude
     ├── ⬜ R2: A false positive costs one round
-    ├── ⬜ R3: An old smell in untouched code never comes up
+    ├── ✅ R3: An old smell in untouched code never comes up
     └── ⬜ R4: Setup asks at most two questions
 ```
 
@@ -287,9 +287,9 @@ An edit or a turn's end with nothing to check costs one Python start.
 
 **Condition**: A change gets no hint and no block for an old smell in a function or a file it didn't touch.
 
-**How**: A test edits one function of a file and leaves alone another function that is past the soft limit.
+**How**: `tests/test_touched.py` edits one function of a file and leaves alone another function that is past the soft limit.
 
-**Status**: ⬜ No test was matched to it in the docs pass of 2026-11-17.
+**Status**: ✅ 2026-11-17
 
 ---
 

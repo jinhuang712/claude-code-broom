@@ -33,9 +33,18 @@ An occurrence smell counts when the change raises the count in a file. Lines mat
 
 Where a smell is found by a guess and not a parse, it hints even when the same smell blocks in another language.
 
+---
+
+## Touched
+
+A sized smell that was already past its soft limit at the base, and that the change didn't make worse, is a hint when a changed line lies in its unit. A function or a type runs from the row's line through its length. A file counts when it gained lines besides imports. In Python `ast` gives each function's range, so parameters, nesting, complexity and a nested ternary are told too. The other languages' tools give no range for those four, so there they stay untold. No tool runs for this: it reuses the rows of both versions.
+
+A sized smell that was past the hard limit at the base and grew carries the size it had. That mark travels with the blocked result, and accepting leaves such a finding out.
+
 - [006: A smell counts when the change pushed it past a limit](decisions/006-made-worse.md)
 - [007: A renamed file is measured against its old path](decisions/007-renames-and-imports.md)
 - [009: An occurrence counts when the change raises the count](decisions/009-occurrence-by-count.md)
+- [028: A change is told the old smells in the code it touches](decisions/028-old-smells-in-touched-code.md)
 
 ---
 

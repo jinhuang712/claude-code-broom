@@ -100,7 +100,7 @@ A finding Claude accepted with a reason is known and not raised again for 30 day
 
 ### F2.5.1: A reason for every pass
 
-A blocked finding passes fixed, or after `broom known --accept "<why>"`, which puts the reason on record. Running the same commit again blocks again. A finding that is wrong costs one command and one sentence.
+A blocked finding passes fixed, or after `broom known --accept "<why>"`, which puts the reason on record. Running the same commit again blocks again. A finding that is wrong costs one command and one sentence. One kind can't be accepted: a function, a type or a file that was already past the hard limit and grew.
 
 `BROOM_NO_ACCEPT=1` turns accepting off, and the block message then stops offering it.
 

@@ -16,6 +16,7 @@ Each term has its meaning, the words that lost to it and its name in the code wh
 | Hint | a finding Claude is told about without a block at commit | — | `level == "hint"` |
 | Block | a finding that stops the commit or the turn's end | denial | `level == "block"` |
 | Severe smell | a smell past its hard limit | — | `Issue.severe` |
+| Touched smell | an old sized smell in a function, a type or a file the change touches | — | `Smell.touched` |
 | Known issue | a finding accepted with a reason, which broom no longer raises | baseline · accepted issue | `baseline.json` |
 | Accept | to record a blocked result as known with a reason | — | `broom known --accept` |
 | Base | the revision a change is measured against | — | `base` |
