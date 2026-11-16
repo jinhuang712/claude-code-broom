@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.18.1
+
+- A Stop hook that ran until Claude Code ended it at its timeout (18 of 130 Stops in one session, about 90 minutes,
+  none between a few seconds and the timeout) is made hard to repeat. The cause on that machine isn't confirmed:
+  it didn't reproduce here. What was found and fixed:
+  - broom read each tool's output through pipes. A tool that exits and leaves a daemon behind in a session of its
+    own (a language server, a build server, git's file system monitor) holds those pipes open, and `run()` waited
+    for the daemon: 12.0 s for a tool that took no time, with the daemon sleeping 12 s; and after a timeout it
+    waited with no limit. Output now goes to files and is read when the command is done, and a command reads no
+    input.
+  - `git cat-file`, run on every check, was started outside the hook's 25 seconds, with its own 60. It goes through
+    the same limits now.
+  - git is told not to start its file system monitor, take its optional index lock or ask for a password, for each
+    command broom starts.
+  - The hook's input was read until its pipe closed (the commit hook's launcher too). It is read until it parses.
+  - A state file's lock is waited for 5 seconds at most.
+- A hook still running after 20 seconds writes `hook-trace.log` in broom's data directory: where each thread is and
+  what processes it started. If it happens again, that says whether broom or a tool was holding it.
+- The per-path caches of golangci-lint and clippy are kept 7 days, not 30: every worktree an agent makes has a path
+  of its own, and one data directory held 844 MB of them.
+
 ## 0.18.0
 
 - One run of any hook takes at most 30 seconds. Every hook in `hooks.json` has that `timeout` (the commit and stop

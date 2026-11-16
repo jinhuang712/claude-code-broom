@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import time
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -39,6 +40,20 @@ class StateTests(BroomCase):
         data = json.loads(path.read_text())
         self.assertEqual(data["n"], 240, "every one of the 6 x 40 changes is in")
         self.assertTrue(all(data.get(f"w{i}") for i in range(6)))
+
+    def test_a_lock_held_for_good_is_not_waited_for_for_good(self) -> None:
+        path = self.tmp / "held.json"
+        holder = subprocess.Popen([sys.executable, "-I", "-c",
+                                   "import fcntl, os, sys, time; fd = os.open(sys.argv[1] + '.lock', os.O_CREAT | os.O_RDWR);"
+                                   "fcntl.flock(fd, fcntl.LOCK_EX); print('held', flush=True); time.sleep(30)", str(path)],
+                                  stdout=subprocess.PIPE, text=True)
+        self.addCleanup(lambda: (holder.kill(), holder.wait(), holder.stdout.close()))
+        self.assertEqual(holder.stdout.readline().strip(), "held")
+        start = time.monotonic()
+        with mock.patch("broom.state.LOCK_WAIT", 0.3):
+            update_json(path, {}, lambda d: d.update(done=True))
+        self.assertLess(time.monotonic() - start, 3)
+        self.assertEqual(load_json(path, None), {"done": True}, "the change went ahead without the lock")
 
     def test_a_file_that_is_missing_or_broken_starts_over(self) -> None:
         path = self.tmp / "new.json"

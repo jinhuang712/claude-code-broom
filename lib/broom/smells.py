@@ -12,7 +12,6 @@ up.
 from __future__ import annotations
 
 import re
-import subprocess
 import tempfile
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
@@ -24,7 +23,7 @@ from .findings import Issue
 from .clones import Clone, Unused, find_clones, find_unused
 from .config import DEAD_CODE, LIMIT_PAIR, SMELL_LIMITS, SMELL_PRESENCE, repo_config, setting
 from .gate import issue_key
-from .gitutil import ChangedLines, renamed
+from .gitutil import ChangedLines, renamed, run_bytes
 from .maintained import Maintained
 from .measure import SMELL_EXTS, Limits, Raw, code_lines
 from .realtree import Budget, Found, find_in_real_tree
@@ -238,10 +237,8 @@ def base_texts(repo: Path, base: str, rels: List[str], was: Optional[Dict[str, s
     maps a renamed file to its path at `base`."""
     was = was or {}
     query = "".join(f"{base}:{was.get(rel, rel)}\n" for rel in rels).encode()
-    try:
-        out = subprocess.run(["git", "cat-file", "--batch"], input=query, cwd=repo, capture_output=True,
-                             timeout=GIT_TIMEOUT).stdout
-    except (OSError, subprocess.TimeoutExpired):
+    rc, out, _ = run_bytes(["git", "cat-file", "--batch"], repo, timeout=GIT_TIMEOUT, stdin=query)
+    if rc is None or rc < 0:
         return {}
     texts, pos = {}, 0
     for rel in rels:

@@ -20,6 +20,7 @@ from .gate import (
     accept_allowed, accept_blocked, baseline_keys, baseline_remove, baseline_under, display, issue_key, render, select,
 )
 from .gitcmd import staged
+from .hooktrace import watch
 from .gitutil import CLOCK, HOOK_SECONDS, changed_since, ChangedLines, git, git_changed_files, git_root
 from .scaffold import add_default_configs
 from .smells import find_smells
@@ -250,6 +251,7 @@ def cmd_hook(args: argparse.Namespace) -> int:
     seconds = float(os.environ.get("BROOM_HOOK_SECONDS") or HOOK_SECONDS)  # the variable is for tests
     CLOCK.start(seconds)
     give_up_after(seconds + 3, args.event)
+    watch(args.event, os.getcwd())
     if args.event == "pre-commit":
         try:
             return hook_pre_commit()

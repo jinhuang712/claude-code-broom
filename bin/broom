@@ -33,8 +33,30 @@ if sys.argv[1:2] == ["hook"] and not _repo_file():
 
 # The commit hook sees every Bash call: Claude Code's `if` patterns can't match commands like
 # `T=~/repo; git -C $T commit`, so broom filters for itself, and anything without both words leaves here.
+def _read_input(wait: float = 10) -> str:
+    """What Claude Code sends, read until it parses and not until the end of the input, which a harness may not close."""
+    import select
+    import time
+
+    buf, end = b"", time.monotonic() + wait
+    while True:
+        try:
+            json.loads(buf)
+            break
+        except ValueError:
+            pass
+        left = end - time.monotonic()
+        if left <= 0 or not select.select([0], [], [], left)[0]:
+            break
+        chunk = os.read(0, 65536)
+        if not chunk:
+            break
+        buf += chunk
+    return buf.decode(errors="replace")
+
+
 if sys.argv[1:3] == ["hook", "commit"]:
-    _raw = sys.stdin.read()
+    _raw = _read_input()
     try:
         _command = str((json.loads(_raw).get("tool_input") or {}).get("command", ""))
     except (ValueError, AttributeError):

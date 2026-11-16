@@ -223,7 +223,7 @@ def clippy_dirs(crate: Path, params: int) -> Tuple[Path, Path]:
     """Where broom's clippy run keeps its config and its build output, the same each time. cargo counts a different
     CLIPPY_CONF_DIR (a fresh temporary directory per run was one) and different clippy arguments as a reason to check
     the crate again, so the project's own clippy run and this one would each throw away the other's work. With a
-    stable config path and a target directory of its own, both stay fresh. Unused for 30 days, they go."""
+    stable config path and a target directory of its own, both stay fresh. Unused for 7 days, they go."""
     conf = CLIPPY_DIRS / "conf" / str(params)
     conf.mkdir(parents=True, exist_ok=True)
     text = RUST_CONFIG.format(params=params)
@@ -232,7 +232,7 @@ def clippy_dirs(crate: Path, params: int) -> Tuple[Path, Path]:
     target = CLIPPY_DIRS / "target" / short_hash(str(crate))
     target.mkdir(parents=True, exist_ok=True)
     os.utime(target)
-    prune_dirs(CLIPPY_DIRS / "target", 30)
+    prune_dirs(CLIPPY_DIRS / "target", 7)
     return conf, target
 
 

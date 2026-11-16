@@ -7,6 +7,7 @@ import os
 import re
 import signal
 import subprocess
+import tempfile
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
@@ -38,7 +39,7 @@ class Clock:
 CLOCK = Clock()
 
 
-def kill_group(p: "subprocess.Popen[str]") -> None:
+def kill_group(p: "subprocess.Popen[bytes]") -> None:
     """End a command and what it started: a linter's own compiler keeps the CPU busy after the linter is gone."""
     try:
         os.killpg(p.pid, signal.SIGKILL)
@@ -46,31 +47,67 @@ def kill_group(p: "subprocess.Popen[str]") -> None:
         p.kill()
 
 
-def run(cmd: List[str], cwd: Path, timeout: float = 90,
-        env: Optional[Dict[str, str]] = None) -> Tuple[Optional[int], str, str]:
-    """Run a command; the return code is None when it timed out, or when the hook's time (CLOCK) was used up
-    before or while it ran. `env` adds to the environment."""
+# What every command broom starts gets, in a hook or not: git doesn't wait on a prompt, doesn't take the optional
+# index lock a read refreshes it with (the agents and the person run git meanwhile), and doesn't start the file
+# system monitor daemon, which lives on holding the pipes of the command that started it.
+QUIET_ENV = {"GIT_OPTIONAL_LOCKS": "0", "GIT_TERMINAL_PROMPT": "0"}
+NO_FSMONITOR = {"GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "core.fsmonitor", "GIT_CONFIG_VALUE_0": "false"}
+
+
+def command_env(env: Optional[Dict[str, str]]) -> Dict[str, str]:
+    quiet = {} if "GIT_CONFIG_COUNT" in os.environ else NO_FSMONITOR  # the person's own config count wins
+    return {**os.environ, **QUIET_ENV, **quiet, **CLOCK.env, **(env or {})}
+
+
+def reap(p: "subprocess.Popen[bytes]") -> None:
+    try:
+        p.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        pass  # in a state a kill doesn't reach: it is not waited for
+
+
+def run_bytes(cmd: List[str], cwd: Path, timeout: float = 90, env: Optional[Dict[str, str]] = None,
+              stdin: Optional[bytes] = None) -> Tuple[Optional[int], bytes, bytes]:
+    """Run a command, and give back what it wrote. The return code is None when it timed out, or when the hook's time
+    (CLOCK) was used up before or while it ran; -1 when it couldn't start. `env` adds to the environment.
+
+    The command writes to files, not pipes, and reads `stdin` from a file or from nothing. A pipe is open as long as
+    any process holds the end of it, so a command that exited, leaving a daemon it started (a language server, a
+    file system monitor, a build server), kept the caller waiting for the daemon, up to the command's timeout, and
+    after a timeout for good. A file is read when the command is done."""
     left = CLOCK.left()
     if left is not None:
         if left <= 0:
-            return None, "", ""
+            return None, b"", b""
         timeout = min(timeout, left)
-    extra = {**CLOCK.env, **(env or {})}
-    try:
-        p = subprocess.Popen(cmd, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                             env={**os.environ, **extra} if extra else None, start_new_session=True)
-    except OSError as e:
-        return -1, "", str(e)
-    try:
-        out, err = p.communicate(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        kill_group(p)
-        p.communicate()
-        return None, "", ""
-    except BaseException:  # Ctrl-C or the like: its own session no longer gets the signal from the terminal
-        kill_group(p)
-        raise
-    return p.returncode, out or "", err or ""
+    with tempfile.TemporaryFile() as out, tempfile.TemporaryFile() as err, tempfile.TemporaryFile() as given:
+        if stdin is not None:
+            given.write(stdin)
+            given.seek(0)
+        try:
+            p = subprocess.Popen(cmd, cwd=str(cwd), stdin=given if stdin is not None else subprocess.DEVNULL,
+                                 stdout=out, stderr=err, env=command_env(env), start_new_session=True)
+        except OSError as e:
+            return -1, b"", str(e).encode()
+        try:
+            rc = p.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            kill_group(p)
+            reap(p)
+            return None, b"", b""
+        except BaseException:  # Ctrl-C or the like: its own session no longer gets the signal from the terminal
+            kill_group(p)
+            raise
+        out.seek(0)
+        err.seek(0)
+        return rc, out.read(), err.read()
+
+
+def run(cmd: List[str], cwd: Path, timeout: float = 90,
+        env: Optional[Dict[str, str]] = None) -> Tuple[Optional[int], str, str]:
+    """`run_bytes`, with the output as text."""
+    rc, out, err = run_bytes(cmd, cwd, timeout, env)
+    return rc, out.decode(errors="replace"), err.decode(errors="replace")
 
 
 def git(args: List[str], cwd: Path) -> Optional[str]:

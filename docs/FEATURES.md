@@ -37,6 +37,13 @@ At 28 seconds the hook gives up and lets the commit, the edit or the stop throug
 reaches. A scan at session start that ran out of time keeps what it counted as a floor ("at least N") and runs
 again at the next session start, the tools' own caches having warmed meanwhile.
 
+What a hook waits on is bounded too. A command writes to files, not pipes, and reads no input, so a tool that
+exits leaving a daemon behind (a language server, a build server, git's file system monitor) is not waited for; git
+is told not to start that monitor, take its optional index lock or ask for a password. The input Claude Code sends
+is read until it parses, not until its pipe closes, and a lock on a state file is waited for 5 seconds at most. A
+hook still running after 20 seconds writes `hook-trace.log` in broom's data directory: where each thread is, and
+which processes it started and hasn't heard from, so a hook that Claude Code has to end at its timeout says why.
+
 Files outside any git repo, such as drafts in a temp directory, are no project's code: the hooks neither record
 nor format them.
 

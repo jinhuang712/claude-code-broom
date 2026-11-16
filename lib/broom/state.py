@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import re
+import select
 import shutil
 import sys
 import threading
@@ -23,12 +24,42 @@ PLUGIN_ROOT = Path(__file__).resolve().parents[2]
 DATA_ROOT = Path(os.environ.get("CLAUDE_PLUGIN_DATA") or Path.home() / ".claude" / "plugins" / "data" / "broom-claude-code-broom")
 DEFAULTS = PLUGIN_ROOT / "defaults"
 
-def read_hook_input() -> dict:
+HOOK_INPUT_SECONDS = 10  # how long a hook waits for what Claude Code sends it, whether or not it closes its end
+
+
+def read_hook_input(wait: float = HOOK_INPUT_SECONDS) -> dict:
+    """The JSON object Claude Code sends a hook. It is read until it parses, not until the end of the input: a harness
+    that doesn't close the pipe would otherwise keep the hook waiting until Claude Code gave up on it."""
     try:
-        data = json.load(sys.stdin)
-        return data if isinstance(data, dict) else {}
-    except (ValueError, OSError):
-        return {}
+        fd = sys.stdin.fileno()
+    except (ValueError, OSError):  # not a real file: the launcher read the input already, and put it back
+        try:
+            data = json.load(sys.stdin)
+            return data if isinstance(data, dict) else {}
+        except (ValueError, OSError):
+            return {}
+    buf = b""
+    end = time.monotonic() + wait
+    while True:
+        try:
+            data = json.loads(buf)
+            return data if isinstance(data, dict) else {}
+        except ValueError:
+            pass  # not all of it yet
+        left = end - time.monotonic()
+        try:
+            if left <= 0 or not select.select([fd], [], [], left)[0]:
+                return {}
+            chunk = os.read(fd, 65536)
+        except (OSError, ValueError):
+            return {}
+        if not chunk:  # the end of the input: what there is, parsed or not
+            try:
+                data = json.loads(buf)
+            except ValueError:
+                return {}
+            return data if isinstance(data, dict) else {}
+        buf += chunk
 
 
 def emit(obj: dict) -> None:
@@ -76,10 +107,14 @@ def save_json(path: Path, data) -> None:
     tmp.replace(path)
 
 
+LOCK_WAIT = 5  # seconds; a lock held longer is taken for dead
+
+
 @contextmanager
 def locked(path: Path) -> Iterator[None]:
-    """Hold an exclusive lock for `path`, so hooks that run at once take turns. A lock that can't be had (a
-    read-only directory) is no lock: the change goes ahead, as it did before there were any."""
+    """Hold an exclusive lock for `path`, so hooks that run at once take turns. A lock that can't be had, because the
+    directory is read-only or because whoever holds it holds it for LOCK_WAIT seconds, is no lock: the change
+    goes ahead, as it did before there were any. Waiting on it for good is how a hook would hang."""
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         fd = os.open(f"{path}.lock", os.O_CREAT | os.O_RDWR)
@@ -87,7 +122,15 @@ def locked(path: Path) -> Iterator[None]:
         yield
         return
     try:
-        fcntl.flock(fd, fcntl.LOCK_EX)
+        end = time.monotonic() + LOCK_WAIT
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError:
+                if time.monotonic() >= end:
+                    break
+                time.sleep(0.01)
         yield
     finally:
         os.close(fd)
