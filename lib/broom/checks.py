@@ -35,6 +35,7 @@ class Plan:
         self.swift: Set[Path] = set()
 
     def add(self, f: Path) -> None:
+        """Put file `f` in the plan under the project and tool for its language; other files are ignored."""
         adders = {"go": self.add_go, "js": self.add_js, "rust": self.add_rust, "py": self.add_py,
                   "css": self.add_css, "swift": self.add_swift}
         lang = lang_of(f)
@@ -42,11 +43,13 @@ class Plan:
             adders[lang](f, boundary(f))
 
     def add_go(self, f: Path, stop: Path) -> None:
+        """Add a Go file to the plan under its go.mod's module, found walking up to `stop`; no go.mod means skipped."""
         mod = find_up(f.parent, ["go.mod"], stop)
         if mod:
             self.go.setdefault((mod.parent, stop), []).append(f)
 
     def add_js(self, f: Path, stop: Path) -> None:
+        """Add a JS or TS file to the linters that check it, and to the tsc run of its tsconfig.json when it has one."""
         for tool, d in js_linters(f, stop):
             self.web.setdefault((tool, d, stop), []).append(f)
         if f.suffix.lower() in (".ts", ".tsx", ".mts", ".cts"):
@@ -55,25 +58,30 @@ class Plan:
                 self.tsc.update((cfg, stop) for cfg in ts_projects(tsconfig))
 
     def add_rust(self, f: Path, stop: Path) -> None:
+        """Add a Rust file to the clippy run of the crate whose Cargo.toml lies above it, up to `stop`."""
         cargo = find_up(f.parent, ["Cargo.toml"], stop)
         if cargo:
             self.rust.add((cargo.parent, stop))
 
     def add_py(self, f: Path, stop: Path) -> None:
+        """Add a Python file to the ruff run of its project root: the nearest marker up to `stop`, or `stop` itself."""
         marker = find_up(f.parent, PY_ROOT_MARKERS, stop)
         self.py.setdefault((marker.parent if marker else stop, stop), []).append(f)
 
     def add_css(self, f: Path, stop: Path) -> None:
+        """Add a CSS file to the linters that check it."""
         for tool, d in css_linters(f, stop):
             self.web.setdefault((tool, d, stop), []).append(f)
 
     def add_swift(self, f: Path, stop: Path) -> None:
+        """Add a Swift file to its swiftlint run, and its package to the build check when it has a Package.swift."""
         self.swiftlint.setdefault(swift_linter(f, stop), []).append(f)
         package = find_up(f.parent, ["Package.swift"], stop)
         if package:  # an Xcode project has no command-line build broom can run
             self.swift.add(package.parent)
 
     def checks(self, *, whole: bool) -> List[Check]:
+        """The planned checks as (name, run) pairs, one per tool and project, for run_checks to time and run."""
         out: List[Check] = [(f"go:{mod}", partial(check_go, mod, fs, stop, whole=whole))
                             for (mod, stop), fs in self.go.items()]
         out += [(f"{tool}:{d}", web_check(tool, d, fs, stop, whole=whole)) for (tool, d, stop), fs in self.web.items()]
@@ -106,6 +114,7 @@ def plan(files: List[Path], *, whole: bool = False) -> List[Check]:
 
 
 def timed(check: Callable[[], Findings]) -> Tuple[Findings, float]:
+    """Run `check` and return its findings with the seconds it took."""
     start = time.monotonic()
     return check(), time.monotonic() - start
 

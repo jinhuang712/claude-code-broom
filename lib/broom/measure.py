@@ -26,6 +26,7 @@ GO_MOD = "module broomsmells\n\ngo 1.22\n"
 
 
 def measure_files(r: Reader, rels: List[str], lim: Limits) -> None:
+    """Record one row for each file in `rels` over its file-length limit; the sizes are counted in the scratch tree."""
     for rel in rels:
         count = len((r.root / rel).read_text(errors="replace").splitlines())
         r.add(rel, 1, "file_lines", count if count > lim["file_lines"][0] else None, "file")
@@ -98,6 +99,7 @@ RUFF_METRICS = {
 
 
 def measure_python(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None:
+    """Measure the Python files with ruff, for its complexity, argument and nesting findings; no ruff gives a note."""
     for rel in rels:
         python_sizes(r, rel, lim)
     ruff = shutil.which("ruff")
@@ -125,6 +127,7 @@ def nestif_complexity(depth: int) -> int:
 
 
 def nesting_depth(complexity: int) -> int:
+    """The nesting depth a nestif complexity of `complexity` stands for: the inverse of nestif_complexity."""
     return round((1 + (1 + 8 * complexity) ** 0.5) / 2)
 
 
@@ -181,6 +184,7 @@ def golangci_read(linter: str, text: str) -> Optional[Tuple[str, Optional[int], 
 
 
 def measure_go(r: Reader, _rels: List[str], lim: Limits, _start: Path) -> None:
+    """Measure the Go files with golangci-lint in a scratch module; without golangci-lint, a note and no rows."""
     exe = shutil.which("golangci-lint")
     if not exe:
         r.notes.append("missing:golangci-lint (brew install golangci-lint)")
@@ -225,10 +229,12 @@ SWIFT_CUSTOM_RULES = {
 
 
 def yaml_value(value: object) -> str:
+    """A YAML scalar for `value`: a list as a flow sequence, anything else as a quoted string."""
     return f"[{', '.join(value)}]" if isinstance(value, list) else f"'{value}'"
 
 
 def swiftlint_config(lim: Limits) -> str:
+    """The SwiftLint config text: the size rules at the limits in `lim`, and broom's custom rules."""
     rows = [f"only_rules: [{', '.join([*SWIFTLINT_METRICS, 'custom_rules'])}]"]
     rows += [f"{rule}: {{warning: {lim[metric][0]}, error: {UNREACHABLE}}}" for rule, metric in SWIFTLINT_SIZES.items()]
     rows.append("custom_rules:")
@@ -239,6 +245,7 @@ def swiftlint_config(lim: Limits) -> str:
 
 
 def measure_swift(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None:
+    """Measure the Swift files with swiftlint, under a config with the size and custom rules; no swiftlint, a note."""
     exe = shutil.which("swiftlint")
     if not exe:
         r.notes.append("missing:swiftlint (brew install swiftlint)")
@@ -265,6 +272,7 @@ SMELL_EXTS = PY_EXTS | JS_EXTS | GO_EXTS | SWIFT_EXTS | LINES_ONLY_EXTS
 
 
 def measure(root: Path, contents: Dict[str, str], lim: Limits, start: Path, notes: List[str]) -> List[Raw]:
+    """Write `contents` under the scratch tree `root`, measure it with every tool, and return the rows."""
     for rel, text in contents.items():
         path = root / rel
         path.parent.mkdir(parents=True, exist_ok=True)

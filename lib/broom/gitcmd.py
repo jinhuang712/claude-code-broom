@@ -28,6 +28,7 @@ VAR_REF = re.compile(r"\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*
 
 @dataclass
 class GitOp:
+    """One git command in a Bash line: its kind (`add` or `commit`), the directory it runs in, and its arguments."""
     kind: str  # "add" or "commit"
     cwd: Path
     args: List[str]
@@ -35,6 +36,7 @@ class GitOp:
 
 @dataclass
 class CommitSpec:
+    """What a `git commit` asks for: its directory, the -a, --no-verify and --dry-run flags, and any pathspecs."""
     cwd: Path
     all: bool = False
     no_verify: bool = False
@@ -44,6 +46,7 @@ class CommitSpec:
 
 @dataclass
 class CommitPlan:
+    """The files a commit will contain, with the ones to re-add after formatting and the ones staged in part."""
     repo: Path
     files: Set[Path]  # what the commit will contain
     restage: Set[Path]  # staged in full and not re-added by the command: re-add after formatting
@@ -51,6 +54,7 @@ class CommitPlan:
 
 
 def split_commands(command: str) -> List[List[str]]:
+    """Split a shell line at ; & | ( ) and newlines into one word list per command; quotes keep words whole."""
     lex = shlex.shlex(command, posix=True, punctuation_chars=";&|()\n")
     lex.whitespace = " \t\r"
     lex.whitespace_split = True
@@ -153,6 +157,7 @@ def _short_flags(cluster: str, spec: CommitSpec) -> bool:
 
 
 def parse_commit(op: GitOp) -> CommitSpec:
+    """Read a `git commit`'s flags (-a, --no-verify, --dry-run) and its pathspecs, the words that aren't flags."""
     spec = CommitSpec(op.cwd)
     args, i, paths_only = op.args, 0, False
     while i < len(args):
@@ -180,14 +185,17 @@ def _names(repo: Path, args: List[str]) -> Set[Path]:
 
 
 def tracked_changes(repo: Path) -> Set[Path]:
+    """The tracked files with unstaged changes in `repo`, as absolute paths."""
     return _names(repo, ["diff", "--name-only", "--diff-filter=ACMR"])
 
 
 def untracked(repo: Path) -> Set[Path]:
+    """The files in `repo` that git neither tracks nor ignores, as absolute paths."""
     return _names(repo, ["ls-files", "--others", "--exclude-standard"])
 
 
 def staged(repo: Path) -> Set[Path]:
+    """The files in `repo` with staged changes (added, copied, modified or renamed), as absolute paths."""
     return _names(repo, ["diff", "--cached", "--name-only", "--diff-filter=ACMR"])
 
 
@@ -232,6 +240,7 @@ def add_targets(op: GitOp, repo: Path) -> Set[Path]:
 
 
 def plan_commit(spec: CommitSpec, adds: List[GitOp]) -> Optional[CommitPlan]:
+    """Predict what `spec` commits, after the `adds` before it on the same line; None when not in a repo."""
     repo = git_root(spec.cwd)
     if repo is None:
         return None
