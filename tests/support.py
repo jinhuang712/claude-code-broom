@@ -21,6 +21,9 @@ BROOM = isolation.BROOM
 
 CARD = "broom's bar in this repo"  # how the limits card, told at session start, begins
 GIT_ENV = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+# The 25 seconds one hook run may take are what a cold swift build uses up when other test files hold the cores: the
+# check is then skipped for a while and the next commit passes. A test of the budget sets its own.
+TEST_HOOK_SECONDS = "120"
 HAS_GO = all(shutil.which(t) for t in ("go", "gofmt", "golangci-lint"))
 HAS_TS = all(shutil.which(t) for t in ("oxlint", "tsc"))
 HAS_PY = shutil.which("ruff") is not None
@@ -98,7 +101,7 @@ class BroomCase(unittest.TestCase):
         env = {k: v for k, v in os.environ.items() if not k.startswith(("CLAUDE_PLUGIN_", "GIT_"))}
         # An empty Claude config, so the real user settings (broom's options, enabled plugins) never leak in.
         self.env = {**env, **GIT_ENV, "CLAUDE_PLUGIN_DATA": str(self.tmp / "data"),
-                    "CLAUDE_CONFIG_DIR": str(self.config_dir())}
+                    "CLAUDE_CONFIG_DIR": str(self.config_dir()), "BROOM_HOOK_SECONDS": TEST_HOOK_SECONDS}
         # The data directory of this process is the hooks' too, one per test: what a measurement found is kept by
         # content, and one test's must not stand in for another's, which may run the same text with a tool broken.
         self.addCleanup(isolation.repoint(isolation.PATHS, self.tmp / "data").close)
