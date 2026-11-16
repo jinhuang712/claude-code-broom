@@ -172,5 +172,29 @@ class SummaryTest(LedgerCase):
         self.assertEqual(ledger.through_line(turn), "broom saw 1 self-waiver this turn: suppression in a.py")
 
 
+class WaiverReportTest(LedgerCase):
+    def report(self, cwd: Path) -> dict:
+        out = self.cli(cwd, "report", "--json")
+        self.assertEqual(out.returncode, 0, out.stderr)
+        return json.loads(out.stdout)
+
+    def test_the_report_counts_the_waivers_by_kind_and_lists_the_config_ones(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        rows = [{"t": time.time(), "repo": str(r), "event": "waiver", "where": "commit", "kind": kind, "file": file,
+                 "note": note} for kind, file, note in (
+                     ("suppression", "a.py", "noqa"), ("suppression", "b.py", "noqa"),
+                     ("config", ".broom.json", "smells_off +magic_numbers"),
+                     ("no-verify", "", "git commit --no-verify"))]
+        ledger.write(rows)
+        data = self.report(r)
+        self.assertEqual(data["waivers"], {"count": 4, "kinds": {"config": 1, "no-verify": 1, "suppression": 2},
+                                           "config": [".broom.json smells_off +magic_numbers"]})
+        text = self.cli(r, "report").stdout
+        self.assertIn("Self-waivers", text)
+        self.assertIn("  config 1, no-verify 1, suppression 2\n  .broom.json smells_off +magic_numbers", text)
+        other = self.repo({"b.py": "y = 1\n"})
+        self.assertEqual(self.report(other)["waivers"], {"count": 0, "kinds": {}, "config": []})
+
+
 if __name__ == "__main__":
     unittest.main()

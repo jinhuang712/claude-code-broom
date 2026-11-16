@@ -3,7 +3,8 @@
 A finding counts once: the ledger holds a block line each time a commit or a turn's end is blocked on it, and the
 report counts the distinct findings, (repo, key), each by how it ended last: fixed, let through (with its `how`), or
 still open (blocked, and neither fixed nor let through yet). The fix rate is fixed over fixed plus let through, so a
-finding that hasn't ended doesn't count against a rule.
+finding that hasn't ended doesn't count against a rule. The self-waivers, changes that loosened the bar, are counted by
+kind beside that, with what each `.broom.json` change was.
 """
 
 from __future__ import annotations
@@ -112,13 +113,21 @@ def seconds(rows: List[dict]) -> Dict[str, dict]:
             for c, s in sorted(runs.items())}
 
 
+def waivers(rows: List[dict]) -> dict:
+    """The `waiver` rows: `count`, the count per `kind` (sorted by name) and the `config` ones' notes, oldest first."""
+    found = [r for r in rows if r.get("event") == "waiver"]
+    kinds = Counter(str(r.get("kind", "?")) for r in found)
+    return {"count": len(found), "kinds": dict(sorted(kinds.items())),
+            "config": [f"{r.get('file', '')} {r.get('note', '')}".strip() for r in found if r.get("kind") == "config"]}
+
+
 def report(roots: List[Path], days: int) -> dict:
     """The record of the repos `roots` are in (every repo without roots) over the last `days` days."""
     repos, narrow = scope(roots) if roots else (None, {})
     rows = window(days, repos, narrow)
     found = ended(rows)
     return {"days": days, "repos": sorted(repos) if repos is not None else "all", **tally(found.values()),
-            "rules": by_rule(found), "skips": skips(rows), "seconds": seconds(rows),
+            "rules": by_rule(found), "skips": skips(rows), "seconds": seconds(rows), "waivers": waivers(rows),
             "errors": sum(1 for r in rows if r.get("event") == "error")}
 
 
@@ -149,26 +158,41 @@ def rule_rows(rules: List[dict]) -> List[str]:
             .rstrip() for row in table]
 
 
+def skip_rows(skips: Dict[str, Dict[str, int]]) -> List[str]:
+    """One line per tool in the skip counts (from `skips`): its total, then the count per kind of note."""
+    return [f"  {tool}: {sum(k.values())} (" + ", ".join(f"{kind} {n}" for kind, n in k.items()) + ")"
+            for tool, k in skips.items()]
+
+
+def second_rows(checks: Dict[str, dict]) -> List[str]:
+    """One line per check in the seconds (from `seconds`): median, longest and the number of runs."""
+    return [f"  {c}: median {v['median']}, max {v['max']} ({v['runs']} run{'' if v['runs'] == 1 else 's'})"
+            for c, v in checks.items()]
+
+
+def waiver_rows(w: dict) -> List[str]:
+    """The self-waivers (from `waivers`): the count per kind on one line, then each `config` note; none for none."""
+    if not w["count"]:
+        return []
+    return ["  " + ", ".join(f"{kind} {n}" for kind, n in w["kinds"].items()), *[f"  {c}" for c in w["config"]]]
+
+
 def render(data: dict) -> str:
     """The text `broom report` prints for `data` (from `report`): a summary, then each section that has something to
     show. With nothing recorded it is one line."""
     where = "every repo" if data["repos"] == "all" else ", ".join(display(Path(r)) for r in data["repos"])
-    if not (data["blocked"] or data["skips"] or data["seconds"] or data["errors"]):
+    if not (data["blocked"] or data["skips"] or data["seconds"] or data["errors"] or data["waivers"]["count"]):
         return f"broom: nothing recorded for {where} in the last {data['days']} days"
     out = [f"broom report: {where}, the last {data['days']} days",
            f"blocked {data['blocked']}, fixed {data['fixed']}, let through {data['let_through']}, "
            f"still open {data['open']}, fix rate {percent(data['fix_rate'])}"]
-    if data["rules"]:
-        out += ["", "By rule (each finding counts once; fix rate is fixed over fixed plus let through):"]
-        out += [f"  {row}" for row in rule_rows(data["rules"])]
-    if data["skips"]:
-        out += ["", "Skipped checks, by tool:"]
-        out += [f"  {tool}: {sum(k.values())} (" + ", ".join(f"{kind} {n}" for kind, n in k.items()) + ")"
-                for tool, k in data["skips"].items()]
-    if data["seconds"]:
-        out += ["", "Seconds per check:"]
-        out += [f"  {c}: median {v['median']}, max {v['max']} ({v['runs']} run{'' if v['runs'] == 1 else 's'})"
-                for c, v in data["seconds"].items()]
+    sections = [("By rule (each finding counts once; fix rate is fixed over fixed plus let through):",
+                 [f"  {row}" for row in rule_rows(data["rules"])] if data["rules"] else []),
+                ("Skipped checks, by tool:", skip_rows(data["skips"])),
+                ("Seconds per check:", second_rows(data["seconds"])),
+                ("Self-waivers (changes that loosened the bar; shown, never blocked):", waiver_rows(data["waivers"]))]
+    for title, rows in sections:
+        out += ["", title, *rows] if rows else []
     if data["errors"]:
         out += ["", f"A hook failed and let the action through {data['errors']} time(s)."]
     return "\n".join(out)
