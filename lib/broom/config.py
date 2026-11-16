@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
-from .gitutil import git, git_root
+from .gitutil import git_root, main_worktree
 from .state import read_jsonc
 
 SETTINGS = {
@@ -75,9 +75,8 @@ def repo_file(root: Path) -> Optional[Path]:
     with broom's defaults instead of the repo's limits and excludes."""
     if (root / REPO_FILE).is_file():
         return root / REPO_FILE
-    common = git(["rev-parse", "--path-format=absolute", "--git-common-dir"], root)
-    main = Path(common.strip()).parent if common else None
-    return main / REPO_FILE if main and main != root and (main / REPO_FILE).is_file() else None
+    main = main_worktree(root)
+    return main / REPO_FILE if main != root and (main / REPO_FILE).is_file() else None
 
 
 _repo_configs: Dict[Path, dict] = {}

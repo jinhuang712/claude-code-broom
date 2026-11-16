@@ -131,6 +131,20 @@ def git_root(d: Path) -> Optional[Path]:
     return _git_roots[d]
 
 
+_main_roots: Dict[Path, Path] = {}
+
+
+def main_worktree(root: Path) -> Path:
+    """The root of the main worktree of the repo whose worktree root is `root`: `root` itself in the main checkout,
+    the main checkout from a linked worktree (they share the git common directory). Asked once per root and
+    process: it starts git."""
+    if root not in _main_roots:
+        common = git(["rev-parse", "--path-format=absolute", "--git-common-dir"], root)
+        main = Path(common.strip()).resolve() if common and common.strip() else None
+        _main_roots[root] = main.parent if main and main.name == ".git" else root
+    return _main_roots[root]
+
+
 def git_changed_files(root: Path) -> List[Path]:
     """Tracked files changed against HEAD plus untracked, non-ignored files."""
     files: List[str] = []
