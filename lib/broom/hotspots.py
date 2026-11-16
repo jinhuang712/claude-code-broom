@@ -152,6 +152,7 @@ def smell_counts(repo: Path, found: List[Smell], notes: List[str]) -> Dict[str, 
 
 
 def head_of(repo: Path) -> str:
+    """The HEAD commit of the repo as a hash, or an empty string when it has none."""
     return (git(["rev-parse", "HEAD"], repo) or "").strip()
 
 
@@ -201,6 +202,7 @@ def session_note(repo: Path, data: Optional[dict]) -> Optional[str]:
 
 
 def dismiss(repo: Path) -> str:
+    """Mute the session note for this repo until it has more smells than now; returns the message to show."""
     data = summary(repo) or {"severe": 0}
     update_json(DISMISSED, {}, lambda seen: seen.update({str(repo): data["severe"]}))
     return f"broom: the session note stays quiet until this repo has more than {data['severe']} severe smell(s)"

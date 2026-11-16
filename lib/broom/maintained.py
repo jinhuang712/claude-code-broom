@@ -52,6 +52,7 @@ class Maintained:
         return None
 
     def __call__(self, rel: str) -> bool:
+        """Whether file `rel` is measured: it lies in no skipped folder and is not a minified file."""
         return self.skipped_dir(rel) is None and not rel.endswith(MINIFIED)
 
     def record(self, rel: str) -> bool:

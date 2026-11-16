@@ -37,6 +37,7 @@ Ranges = List[Tuple[int, int]]
 
 
 def major_version(version: str) -> Optional[int]:
+    """The major version in a string such as "5.4.1" or "Version 5.4"; None when the string has no such number."""
     m = re.match(r"\s*(?:Version\s+)?(\d+)\.", version)
     return int(m.group(1)) if m else None
 
@@ -160,6 +161,7 @@ class Client:
                     self.done.notify_all()
 
     def request(self, method: str, params: dict, timeout: float) -> object:
+        """Send a request and wait up to `timeout` seconds for its reply; raises on a timeout or an error reply."""
         self.next_id += 1
         rid = self.next_id
         self._send({"id": rid, "method": method, "params": params})
@@ -172,9 +174,11 @@ class Client:
         return msg.get("result")
 
     def notify(self, method: str, params: dict) -> None:
+        """Send a notification with `method` and `params`; the server sends no reply to it."""
         self._send({"method": method, "params": params})
 
     def start(self, timeout: float) -> None:
+        """Start the language server for this project root and tell it so, waiting up to `timeout` seconds for it."""
         uri = self.root.as_uri()
         self.request("initialize", {
             "processId": os.getpid(), "rootUri": uri, "workspaceFolders": [{"uri": uri, "name": self.root.name}],
@@ -184,6 +188,7 @@ class Client:
         self.notify("initialized", {})
 
     def close(self) -> None:
+        """Shut the server down (shutdown, then exit); it is killed if it hasn't exited within about two seconds."""
         try:
             self.request("shutdown", {}, 2)
             self.notify("exit", {})

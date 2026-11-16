@@ -27,6 +27,7 @@ OXLINT_MAGIC = {"ignore": [-1, 0, 1, 2], "ignoreArrayIndexes": True, "ignoreDefa
 
 
 def oxlint_config(lim: Limits) -> dict:
+    """The oxlint config for one run: its size and complexity rules at the limits in `lim`, and the smell rules."""
     whole = {"skipBlankLines": False, "skipComments": False}
     sized = {
         "max-lines-per-function": ["warn", {"max": lim["function_lines"][0], **whole}],
@@ -60,6 +61,7 @@ def rule_name(rule: str) -> str:
 
 
 def oxlint_value(metric: str, msg: str) -> Optional[int]:
+    """The value oxlint's message `msg` gives a rule of `metric`: 1 for a presence smell, else the number in it."""
     if metric == "nested_ternary" or metric in SMELL_PRESENCE:
         return 1
     return number(r"complexity of (\d+)", msg) if metric == "complexity" else number(r"\((\d+)\)", msg)
@@ -93,6 +95,7 @@ BROOM_RULE_METRICS = {"bool-params": "bool_params", "class-lines": "type_lines",
 
 
 def broom_rules_config(lim: Limits) -> dict:
+    """The oxlint config for broom's own TS/JS rules (its plugin), with the class-lines limit taken from `lim`."""
     return {"jsPlugins": [str(BROOM_RULES)], "plugins": ["typescript"],
             "categories": {c: "off" for c in OXLINT_CATEGORIES},
             "rules": {"broom/bool-params": "warn", "broom/class-lines": ["warn", {"max": lim["type_lines"][0]}],
@@ -100,10 +103,12 @@ def broom_rules_config(lim: Limits) -> dict:
 
 
 def broom_rule_metric(rule: str, _msg: str) -> Optional[str]:
+    """The smell metric of one of broom's own rules, by its name; None for a rule broom doesn't measure."""
     return BROOM_RULE_METRICS.get(rule)
 
 
 def measure_js(r: Reader, rels: List[str], lim: Limits, start: Path) -> None:
+    """Measure the JS and TS files with oxlint, and with broom's own rules when node is there; no oxlint is a note."""
     exe = resolve_bin("oxlint", start, start)
     if not exe:
         r.notes.append("missing:oxlint (npm i -g oxlint), so TS/JS smells aren't measured")

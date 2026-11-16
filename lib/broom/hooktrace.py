@@ -39,6 +39,7 @@ def descendants(rows: List[str], root: int) -> List[str]:
 
 
 def write(event: str, cwd: str, started: float) -> None:
+    """Append a still-running hook's state to hook-trace.log: its threads, and the processes it has not finished."""
     try:
         LOG.parent.mkdir(parents=True, exist_ok=True)
         if LOG.exists() and LOG.stat().st_size > MAX_BYTES:
