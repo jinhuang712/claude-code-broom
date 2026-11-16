@@ -348,7 +348,7 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 **Delivers** (4):
 
-- [I9: The test suite takes two and a half minutes](ISSUES.md#i9-the-test-suite-takes-two-and-a-half-minutes)
+- The test suite runs each file in a process of its own and takes about 40 seconds, where it took 150, done on 2026-11-17.
 - [I2: Three paths call the same tools](ISSUES.md#i2-three-paths-call-the-same-tools)
 - [I5: Four rules sit on an alpha plugin API](ISSUES.md#i5-four-rules-sit-on-an-alpha-plugin-api)
 - [I6: The Bash parser guesses what git's hook knows](ISSUES.md#i6-the-bash-parser-guesses-what-gits-hook-knows)

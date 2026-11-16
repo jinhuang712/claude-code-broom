@@ -1,6 +1,6 @@
 # Goals
 
-The goals are checked at the end of a checkpoint and before a release. The test suite is `python3 -m unittest discover -s tests`.
+The goals are checked at the end of a checkpoint and before a release. The test suite is `python3 tests/run.py`.
 
 ---
 

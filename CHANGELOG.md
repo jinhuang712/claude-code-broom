@@ -19,6 +19,7 @@
 ### Smells
 
 - Two new hints: `missing_docs`, for a change that adds public code with no doc comment, in Python, Go and Swift, and `broad_catch`, for a change that adds a handler that catches every error, in Python.
+- Two checks that ran at once, as when two agents commit Go code together, made the second golangci-lint fail on its lock file, so its smells went unmeasured. It may now run beside another one.
 
 ---
 

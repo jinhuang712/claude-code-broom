@@ -12,7 +12,6 @@ Issues
 ├── refactor
 │   ├── I2: Three paths call the same tools
 │   ├── I5: Four rules sit on an alpha plugin API
-│   ├── I9: The test suite takes two and a half minutes
 │   └── I6: The Bash parser guesses what git's hook knows
 └── fix
     ├── I3: The cause of the reported Stop hang is unconfirmed
@@ -50,15 +49,6 @@ Issues
 - touches:
   - [F2.7: Time limit](../features/F2-sweep.md#f27-time-limit)
 - next: a `hook-trace.log` from the machine where it happened
-
----
-
-## I9: The test suite takes two and a half minutes
-
-- type: refactor
-- why: The suite took 122 seconds with 183 tests on 2026-11-16 and 149 seconds with 312 on 2026-11-17. It is real tool runs: 6 tests of 3 seconds or more take 56 seconds, and a trivial commit hook costs about 0.4 seconds from some 25 child processes. No fixture or cache gave a cheap win.
-- found: the work on the tests' data directory, 2026-11-17
-- next: run each test file in a process of its own, several at a time, since each already gets a data directory of its own
 
 ---
 
