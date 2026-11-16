@@ -25,6 +25,7 @@ OUT_OF_TIME = "timeout:the time of this scan ran out before dependency-cruiser m
 
 
 def folder_of(rel: str) -> str:
+    """The folder of a POSIX relative path `rel`: its directory part, "" for a file at the root."""
     return posixpath.dirname(rel)
 
 
@@ -37,11 +38,13 @@ class Folders:
         self.known: Dict[str, Set[str]] = {}
 
     def out(self, folder: str) -> Set[str]:
+        """The folders that `folder` imports, not counting itself; read through edges() once and cached."""
         if folder not in self.known:
             self.known[folder] = set(self.edges(folder)) - {folder}
         return self.known[folder]
 
     def reaches(self, start: str, goal: str) -> bool:
+        """Whether folder `goal` can be reached from folder `start` through the imports, for cycle checks."""
         seen: Set[str] = set()
         todo = [start]
         while todo:

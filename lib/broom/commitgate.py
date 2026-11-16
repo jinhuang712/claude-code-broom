@@ -56,6 +56,7 @@ def claim(tool_use_id: Optional[str]) -> bool:
 
 
 def by_repo(files: List[Path]) -> Dict[Path, List[Path]]:
+    """Group `files` by the git repo each one is in (its root), leaving out files outside any repo."""
     groups: Dict[Path, List[Path]] = {}
     for f in files:
         root = git_root(f.parent)
@@ -218,6 +219,7 @@ def format_commit(plan: CommitPlan) -> List[str]:
 
 
 def answer(denials: List[str], context: List[str]) -> None:
+    """Emit the PreToolUse answer: a deny with its reasons, else the context as a hint; nothing if neither."""
     out: dict = {"hookEventName": "PreToolUse"}
     if denials:
         out["permissionDecision"] = "deny"

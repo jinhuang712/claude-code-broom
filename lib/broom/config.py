@@ -87,6 +87,7 @@ _repo_configs: Dict[Path, dict] = {}
 
 
 def setting(name: str, start: Optional[Path] = None) -> str:
+    """The value of setting `name` for the repo at `start` (default: the working directory), from config or defaults."""
     return setting_source(name, start)[0]
 
 

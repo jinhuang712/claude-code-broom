@@ -9,6 +9,7 @@ from typing import List, Optional, Tuple
 
 @dataclass
 class Issue:
+    """One finding from a check: its tool, where it ran, the file, line, column, rule and message, and how it blocks."""
     tool: str
     root: Path  # where the check ran, for grouping the report
     file: Path
@@ -25,6 +26,7 @@ Findings = Tuple[List[Issue], List[str]]
 
 
 def resolve_in(root: Path, name: str, *fallbacks: Optional[Path]) -> Path:
+    """`name` as an absolute path, or the first of `root` and the fallbacks it is found under; else under `root`."""
     p = Path(name)
     if p.is_absolute():
         return p.resolve()

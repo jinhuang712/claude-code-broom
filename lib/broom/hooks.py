@@ -52,6 +52,7 @@ SERENA_MANY_FILES = re.compile(r"^mcp__.*serena.*__(rename_symbol|replace_in_fil
 
 
 def serena_path(rel: str, data: dict) -> Optional[Path]:
+    """The path a Serena call names: as given if absolute, else found under its cwd or project; None if not."""
     p = Path(rel)
     if p.is_absolute():
         return p
@@ -70,6 +71,7 @@ def note_config(path: Path, sd: Path) -> None:
 
 
 def hook_edit(data: dict) -> None:
+    """The edit hook: list the file a tool call changed for the stop check, and format it if format_on is edit."""
     tool = data.get("tool_name") or ""
     args = data.get("tool_input") or {}
     cwd = Path(data.get("cwd") or os.getcwd()).resolve()
@@ -105,6 +107,7 @@ def hook_edit(data: dict) -> None:
 
 
 def read_lines(path: Path) -> List[str]:
+    """The non-empty lines of the file at `path`, or an empty list when it can't be read."""
     try:
         return [x for x in path.read_text().splitlines() if x]
     except OSError:
