@@ -86,10 +86,23 @@ class HookTimeTests(BroomCase):
         quick = ("late", lambda: ([], ["timeout:ruff in /x"]))
         with mock.patch.object(checks, "plan", return_value=[quick]):
             checks.run_checks([Path("a.py")], slow_path)
-            self.assertEqual(json.loads(slow_path.read_text()), [])
+            self.assertFalse(slow_path.exists(), "cut short after a moment: late, not slow")
             with mock.patch.object(checks, "SLOW_SECONDS", 0):
                 checks.run_checks([Path("a.py")], slow_path)
-        self.assertEqual(json.loads(slow_path.read_text()), ["late"])
+        self.assertEqual(list(json.loads(slow_path.read_text())), ["late"])
+
+    def test_a_slow_check_is_skipped_for_a_while_in_every_session_and_says_so(self) -> None:
+        slow_path = self.tmp / "slow.json"
+        calls = []
+        slow = ("late", lambda: (calls.append(1), ([], ["timeout:ruff in /x"]))[1])
+        with mock.patch.object(checks, "plan", return_value=[slow]), mock.patch.object(checks, "SLOW_SECONDS", 0):
+            checks.run_checks([Path("a.py")], slow_path)
+            _issues, notes = checks.run_checks([Path("a.py")], slow_path)
+            self.assertEqual(len(calls), 1, "the second try didn't run it")
+            self.assertTrue(any(n.startswith("timeout:late skipped for now") for n in notes), notes)
+            slow_path.write_text(json.dumps({"late": time.time() - checks.SLOW_KEEP - 1}))
+            checks.run_checks([Path("a.py")], slow_path)
+        self.assertEqual(len(calls), 2, "after SLOW_KEEP it gets another go")
 
     def test_a_scan_that_ran_out_of_time_is_scanned_again(self) -> None:
         repo = self.repo({"a.py": "x = 1\n"})

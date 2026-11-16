@@ -18,7 +18,7 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from .checks import run_checks
+from .checks import SLOW_PATH, run_checks
 from .findings import Issue
 from .config import excluded, setting
 from .fmt import format_files
@@ -66,14 +66,14 @@ def by_repo(files: List[Path]) -> Dict[Path, List[Path]]:
     return groups
 
 
-def checked(files: List[Path], sd: Path, base: str = "HEAD") -> Tuple[List[Issue], List[Smell], List[str]]:
+def checked(files: List[Path], base: str = "HEAD") -> Tuple[List[Issue], List[Smell], List[str]]:
     """What blocks (lint and type issues not yet known, smells past the hard limit), the smell hints, and notes,
     for what changed since `base`. Content that passed before isn't checked again; content that passes now is
     recorded."""
     files = [f for repo, group in by_repo(files).items() for f in unpassed(repo, group, worktree_blobs(repo, group))]
     if not files:
         return [], [], []
-    issues, notes = run_checks(files, sd / "slow.json")
+    issues, notes = run_checks(files, SLOW_PATH)
     known = baseline_keys()
     blocking = select(issues, set(files), known, ChangedLines(base))
     hints: List[Smell] = []
@@ -120,7 +120,7 @@ def gate_files(repo: Path, files: List[Path], sd: Path, cwd: Path, state: dict) 
     """Check what a commit takes from `repo`: the denial when it must stop (else None), and lines of context.
     `state` holds each repo's last blocked commit, for the retry rule and `broom known --accept`."""
     files = sorted(f for f in files if lang_of(f))
-    blocking, hints, notes = checked(files, sd)
+    blocking, hints, notes = checked(files)
     context = [hint_text(hints)] if hints else []
     key = str(repo)
     prior = state.get(key, {})

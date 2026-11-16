@@ -145,7 +145,7 @@ def hook_stop(data: dict) -> None:
         emit({"systemMessage": f"broom: {gate.get('count', 0)} issue(s) left unfixed"})
         return
 
-    blocking, hints, notes = checked(files, d, turn_base(d, root))
+    blocking, hints, notes = checked(files, turn_base(d, root))
     blocking += [s.issue() for s in hints]  # at a turn's end a hint stops Claude once: it cleans up now
     if not blocking:
         end_turn(d, root)

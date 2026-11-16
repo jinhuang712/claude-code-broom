@@ -10,13 +10,15 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from .findings import Findings, Issue
 from .langlint import check_go, check_python, check_rust, check_swift_build, check_swiftlint
-from .state import load_json, save_json
+from .state import DATA_ROOT, load_json, update_json
 from .toolchain import PY_ROOT_MARKERS, boundary, css_linters, find_up, js_linters, lang_of, swift_linter
 from .weblint import check_biome, check_eslint, check_oxlint, check_stylelint, check_tsc, ts_projects
 
 
 Check = Tuple[str, Callable[[], Findings]]  # (key, check); the key lets a check that timed out be skipped later
 SLOW_SECONDS = 10  # how long a check that timed out must have run to count as slow
+SLOW_KEEP = 1200  # how long one that did is skipped, in every session: a cold build gets another go after that
+SLOW_PATH = DATA_ROOT / "slow.json"
 
 
 class Plan:
@@ -107,19 +109,32 @@ def timed(check: Callable[[], Findings]) -> Tuple[Findings, float]:
     return check(), time.monotonic() - start
 
 
+def slow_checks(path: Path) -> Dict[str, float]:
+    """The checks that ran out of time in the last SLOW_KEEP seconds, by when."""
+    raw = load_json(path, {})
+    now = time.time()
+    return {k: t for k, t in raw.items() if isinstance(t, (int, float)) and now - t < SLOW_KEEP} if isinstance(
+        raw, dict) else {}
+
+
 def run_checks(files: List[Path], slow_path: Optional[Path] = None, *, whole: bool = False) -> Findings:
-    """Run every check in parallel; one that timed out after running for SLOW_SECONDS is recorded in `slow_path`
-    and skipped after. One cut short because the hook's time ran out before it got far is only late: it runs again."""
-    slow = set(load_json(slow_path, [])) if slow_path else set()
-    todo = [(k, fn) for k, fn in plan(files, whole=whole) if k not in slow]
+    """Run every check in parallel. One that timed out after running for SLOW_SECONDS is recorded in `slow_path`,
+    for every session and agent, and skipped for SLOW_KEEP seconds with a note, so each one doesn't wait for it
+    again; one cut short because the hook's time ran out before it got far is only late, and runs again."""
+    slow = slow_checks(slow_path) if slow_path else {}
+    every = plan(files, whole=whole)
+    todo = [(k, fn) for k, fn in every if k not in slow]
+    now = time.time()
+    notes: List[str] = [f"timeout:{k} skipped for now: it ran out of time {int((now - slow[k]) / 60)} min ago"
+                        for k, _ in every if k in slow]
     issues: List[Issue] = []
-    notes: List[str] = []
+    ran_out: Dict[str, float] = {}
     with ThreadPoolExecutor(max_workers=4) as pool:
         for key, ((found, msgs), seconds) in zip([k for k, _ in todo], pool.map(lambda kv: timed(kv[1]), todo)):
             issues += found
             notes += msgs
             if seconds >= SLOW_SECONDS and any(m.startswith("timeout:") for m in msgs):
-                slow.add(key)
-    if slow_path:
-        save_json(slow_path, sorted(slow))
+                ran_out[key] = time.time()
+    if slow_path and ran_out:
+        update_json(slow_path, {}, lambda data: data.update(ran_out))
     return issues, notes

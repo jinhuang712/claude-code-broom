@@ -21,7 +21,7 @@ class RowCacheTests(BroomCase):
         self.calls: list = []
 
     def measuring(self, notes_to_add=()):
-        def measure(root, texts, limits, repo, notes):
+        def measure(_root, texts, _limits, _repo, notes):
             self.calls.append(sorted(texts))
             notes += list(notes_to_add)
             return [Raw(rel, 1, "function_lines", "f", len(text), "fake") for rel, text in texts.items()]

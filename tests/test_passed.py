@@ -42,8 +42,8 @@ class PassedTests(BroomCase):
 
         with mock.patch.object(commitgate, "run_checks", run_checks), \
                 mock.patch.object(commitgate, "select", lambda issues, *_a: list(issues)), \
-                mock.patch.object(commitgate, "gate_smells", lambda repo, group, *_a: ([], list(hints), list(notes))):
-            commitgate.checked(list(self.files), self.tmp / "sd")
+                mock.patch.object(commitgate, "gate_smells", lambda _repo, _group, *_a: ([], list(hints), list(notes))):
+            commitgate.checked(list(self.files))
         return asked
 
     def test_a_file_with_a_hint_doesnt_keep_the_clean_ones_from_being_recorded(self) -> None:
