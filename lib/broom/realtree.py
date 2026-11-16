@@ -12,7 +12,7 @@ import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 
 from .config import DEAD_CODE
 from .findings import failure
@@ -21,6 +21,7 @@ from .gitutil import run
 from .jsmeasure import OXLINT_CATEGORIES
 from .langlint import golangci_cache
 from .pycycles import import_cycles
+from .rustlint import RUST_LINTS, RUST_FLAGS, config_text, read as rust_read, thresholds
 from .state import DATA_ROOT, prune_dirs, short_hash
 from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS, find_up, resolve_bin
 
@@ -165,25 +166,6 @@ def js_found(repo: Path, rels: List[str], notes: List[str], budget: Budget) -> L
     return found
 
 
-# clippy's lints, by what they find. The thresholds come from a clippy.toml in a directory of broom's own, so the
-# project's is never read and nothing is written into the crate. A test may unwrap and print.
-RUST_LINTS = {
-    "clippy::too_many_arguments": "params", "clippy::fn_params_excessive_bools": "bool_params",
-    "clippy::dbg_macro": "debug_output", "clippy::print_stdout": "debug_output",
-    "clippy::print_stderr": "debug_output", "clippy::unwrap_used": "type_escape",
-    "clippy::allow_attributes_without_reason": "suppression",
-}
-RUST_CONFIG = """too-many-arguments-threshold = {params}
-max-fn-params-bools = 0
-allow-unwrap-in-tests = true
-allow-print-in-tests = true
-allow-dbg-in-tests = true
-"""
-RUST_FLAGS = [flag for lint in RUST_LINTS for flag in ("-W", lint)]
-FN_NAME = re.compile(r"\bfn\s+(\w+)")
-ARGUMENTS = re.compile(r"\((\d+)/\d+\)")
-
-
 def locate(repo: Path, crate: Path, name: str) -> Optional[str]:
     """The repo-relative path of a file clippy names: relative to the crate's workspace, so to it or a parent."""
     for base in (crate, *crate.parents):
@@ -194,39 +176,55 @@ def locate(repo: Path, crate: Path, name: str) -> Optional[str]:
     return None
 
 
-def rust_messages(repo: Path, crate: Path, out: str) -> List[Found]:
-    found = []
+def diagnostics(out: str) -> Iterator[dict]:
+    """The compiler messages among the JSON rows cargo prints."""
     for row in out.splitlines():
         try:
-            d = json.loads(row)
-        except ValueError:
+            message = json.loads(row).get("message")
+        except (ValueError, AttributeError):
             continue
-        message = d.get("message") or {}
-        metric = RUST_LINTS.get((message.get("code") or {}).get("code") or "")
-        span = next((s for s in message.get("spans") or [] if s.get("is_primary")), None)
-        rel = locate(repo, crate, span["file_name"]) if metric and span else None
-        if not (rel and span):
+        if isinstance(message, dict):
+            yield message
+
+
+def message_found(repo: Path, crate: Path, message: dict, soft: Dict[str, int], sources: Dict[str, str]) -> Iterator[Found]:
+    """The smells one compiler message holds. `sources` keeps the text of the files it has read."""
+    metric = RUST_LINTS.get((message.get("code") or {}).get("code") or "")
+    if not metric:
+        return
+    spans = [s for s in message.get("spans") or [] if s.get("is_primary")]
+    for span in spans if metric == DEAD_CODE else spans[:1]:  # dead code names several items
+        rel = locate(repo, crate, span["file_name"])
+        if rel is None:
             continue
-        line = int(span["line_start"])
-        text = (repo / rel).read_text(errors="replace").splitlines()[line - 1:line]
-        name = FN_NAME.search(text[0]) if text else None
-        size = ARGUMENTS.search(message.get("message", ""))
-        found.append(Found(rel, line, metric, "clippy", name[1] if name else "function",
-                           int(size[1]) if size else 1))
-    return found
+        if rel not in sources:
+            sources[rel] = (repo / rel).read_text(errors="replace")
+        read = rust_read(metric, message, span, sources[rel], soft)
+        if read:
+            yield Found(rel, int(span["line_start"]), metric, "clippy", *read)
+
+
+def rust_messages(repo: Path, crate: Path, out: str, soft: Dict[str, int]) -> List[Found]:
+    """What clippy and rustc found, as the smells RUST_LINTS names. `soft` holds the soft limits clippy ran with."""
+    found: Dict[Tuple[str, int, str, str], Found] = {}
+    sources: Dict[str, str] = {}
+    for message in diagnostics(out):
+        for row in message_found(repo, crate, message, soft, sources):
+            found.setdefault((row.rel, row.line, row.metric, row.key), row)  # a crate built twice says things twice
+    return list(found.values())
 
 
 CLIPPY_DIRS = DATA_ROOT / "clippy"
 
 
-def clippy_dirs(crate: Path, params: int) -> Tuple[Path, Path]:
+def clippy_dirs(crate: Path, soft: Dict[str, int]) -> Tuple[Path, Path]:
     """Where broom's clippy run keeps its config and its build output, the same each time. cargo counts a different
     CLIPPY_CONF_DIR (a fresh temporary directory per run was one) and different clippy arguments as a reason to check
     the crate again, so the project's own clippy run and this one would each throw away the other's work. With a
     stable config path and a target directory of its own, both stay fresh. Unused for 7 days, they go."""
-    conf = CLIPPY_DIRS / "conf" / str(params)
+    conf = CLIPPY_DIRS / "conf" / "-".join(str(n) for n in thresholds(soft).values())
     conf.mkdir(parents=True, exist_ok=True)
-    text = RUST_CONFIG.format(params=params)
+    text = config_text(soft)
     if not (conf / "clippy.toml").exists() or (conf / "clippy.toml").read_text() != text:
         (conf / "clippy.toml").write_text(text)
     target = CLIPPY_DIRS / "target" / short_hash(str(crate))
@@ -236,9 +234,10 @@ def clippy_dirs(crate: Path, params: int) -> Tuple[Path, Path]:
     return conf, target
 
 
-def rust_found(repo: Path, rels: List[str], params: int, notes: List[str], budget: Budget) -> List[Found]:
-    """clippy's structural and presence lints in the crates the changed Rust files belong to. A crate is checked
-    whole; smells.py keeps what is on the lines the change added."""
+def rust_found(repo: Path, rels: List[str], soft: Dict[str, int], notes: List[str], budget: Budget) -> List[Found]:
+    """clippy's structural and presence lints and rustc's dead-code and unused-parameter warnings in the crates the
+    changed Rust files belong to, from one clippy run per crate. A crate is checked whole; smells.py keeps what is
+    on the lines the change added. Tests are never built, so the new lints leave them out as the old ones did."""
     cargo = shutil.which("cargo")
     manifests = [find_up((repo / rel).parent, ["Cargo.toml"], repo) for rel in rels if Path(rel).suffix in RS_EXTS]
     crates = sorted({m.parent for m in manifests if m})
@@ -250,25 +249,25 @@ def rust_found(repo: Path, rels: List[str], params: int, notes: List[str], budge
         if not timeout:
             notes.append(OUT_OF_TIME.format(tool="clippy"))
             break
-        conf, target = clippy_dirs(crate, params)
+        conf, target = clippy_dirs(crate, soft)
         rc, out, _ = run([cargo, "clippy", "--message-format=json", "--quiet", "--", *RUST_FLAGS], crate,
                          timeout=timeout, env={"CLIPPY_CONF_DIR": str(conf), "CARGO_TARGET_DIR": str(target)})
         if rc is None:
             notes.append(f"timeout:cargo clippy measuring smells in {crate} (cold build?)")
             continue
-        found += rust_messages(repo, crate, out)
+        found += rust_messages(repo, crate, out, soft)
     return found
 
 
-def find_in_real_tree(repo: Path, rels: List[str], params: int, notes: List[str],
+def find_in_real_tree(repo: Path, rels: List[str], soft: Dict[str, int], notes: List[str],
                       budget: Optional[Budget] = None) -> List[Found]:
     """What the tools that need the real tree find in the files `rels` (their package or crate, more exactly).
-    `params` is the soft limit on a function's parameters. The quick tools go first, so clippy, which may be
-    building a crate cold, gets what is left of a `budget`."""
+    `soft` maps a sized smell to its soft limit; clippy gets those of rustlint.SOFT_LIMITS. The quick tools go
+    first, so clippy, which may be building a crate cold, gets what is left of a `budget`."""
     budget = budget or Budget()
     found = go_found(repo, rels, notes, budget) + js_found(repo, rels, notes, budget)
     found += [Found(rel, line, "import_cycle", "broom") for rel, line in import_cycles(repo, rels)]
     found += [Found(rel, line, "folder_cycle", "broom") for rel, line in python_folder_cycles(repo, rels)]
     found += [Found(rel, line, "folder_cycle", "dependency-cruiser")
               for rel, line in js_folder_cycles(repo, rels, notes, budget.timeout)]
-    return found + rust_found(repo, rels, params, notes, budget)
+    return found + rust_found(repo, rels, soft, notes, budget)

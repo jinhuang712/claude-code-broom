@@ -7,9 +7,11 @@ import unittest
 
 from support import HAS_GO, BroomCase
 
+from broom.config import SMELL_LIMITS
 from broom.realtree import TOOL_TIMEOUT, Budget, clippy_dirs, find_in_real_tree
 from broom.smells import find_smells
 
+SOFT = {metric: pair[0] for metric, pair in SMELL_LIMITS.items()}
 GO_MOD = "module example.com/x\n\ngo 1.22\n"
 GO_CLEAN = 'package main\n\nimport "strings"\n\nfunc Upper(s string) string {\n\treturn strings.ToUpper(s)\n}\n'
 GO_SMELLY = """package main
@@ -127,11 +129,13 @@ class RealTreeTest(BroomCase):
     def test_clippys_config_and_build_output_stay_where_they_were(self) -> None:
         # cargo checks a crate again when CLIPPY_CONF_DIR changes, so the path must be the same on every run.
         crate = self.tmp / "crate"
-        conf, target = clippy_dirs(crate, 5)
-        self.assertEqual(clippy_dirs(crate, 5), (conf, target))
+        conf, target = clippy_dirs(crate, SOFT)
+        self.assertEqual(clippy_dirs(crate, SOFT), (conf, target))
         self.assertIn("too-many-arguments-threshold = 5", (conf / "clippy.toml").read_text())
-        self.assertNotEqual(clippy_dirs(crate, 6)[0], conf, "another limit, another config, and no rewrite of this one")
-        self.assertNotEqual(clippy_dirs(self.tmp / "other", 5)[1], target, "each crate has its own build output")
+        for name in ("params", "function_lines", "complexity", "nesting"):
+            self.assertNotEqual(clippy_dirs(crate, {**SOFT, name: SOFT[name] + 1})[0], conf,
+                                f"another {name} limit, another config, and no rewrite of this one")
+        self.assertNotEqual(clippy_dirs(self.tmp / "other", SOFT)[1], target, "each crate has its own build output")
 
     def test_a_budget_caps_what_the_next_tool_may_take_and_ends_at_zero(self) -> None:
         self.assertEqual(Budget().timeout(), TOOL_TIMEOUT, "no budget leaves each tool its own timeout")
@@ -143,6 +147,6 @@ class RealTreeTest(BroomCase):
     def test_a_spent_budget_skips_the_tools_and_says_so(self) -> None:
         r = self.repo({"go.mod": GO_MOD, "main.go": GO_SMELLY, "a.ts": "export const a = 1;\n"})
         notes: list = []
-        self.assertEqual(find_in_real_tree(r, ["main.go", "a.ts"], 5, notes, Budget(0)), [])
+        self.assertEqual(find_in_real_tree(r, ["main.go", "a.ts"], SOFT, notes, Budget(0)), [])
         self.assertEqual(sorted(n.split(" before ")[1].split(" measured")[0] for n in notes), ["golangci-lint", "oxlint"])
-        self.assertTrue(find_in_real_tree(r, ["main.go"], 5, [], Budget(60)), "a roomy budget still measures")
+        self.assertTrue(find_in_real_tree(r, ["main.go"], SOFT, [], Budget(60)), "a roomy budget still measures")

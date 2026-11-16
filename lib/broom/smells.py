@@ -30,7 +30,7 @@ from .realtree import Budget, Found, find_in_real_tree
 from .rowcache import RowCache
 from .smell import Smell, level, made_worse
 from .touched import old_smells, touched
-from .toolchain import GO_EXTS, JS_EXTS
+from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS
 
 GENERATED = re.compile(r"DO NOT EDIT|@generated")
 TEST_FILE = re.compile(r"(^|/)(tests?|__tests__|Tests)/|_test\.(go|py)$|(^|/)test_[^/]*\.py$|"
@@ -96,8 +96,9 @@ def one_per_line(rows: List[Raw]) -> List[Raw]:
     return sorted(seen.values(), key=lambda r: (r.rel, r.line))
 
 
-# Where a smell is found by a guess, not a parse, it hints even when the same smell blocks in another language.
-GUESSED = {"commented_code": JS_EXTS | GO_EXTS}
+# Where a smell is found by a guess, not a parse, it hints even when the same smell blocks in another language. In Rust
+# `let _ = f();` drops a Result by design as often as by mistake, and clippy can't tell which.
+GUESSED = {"commented_code": JS_EXTS | GO_EXTS, "swallowed_error": RS_EXTS}
 
 
 def presence_level(metric: str, rel: str) -> str:
@@ -276,7 +277,8 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str],
     old_text = base_texts(repo, base, list(now_text), renamed(repo, [base])) if base else None
     rows = RowCache(repo, lim.measured)
     with tempfile.TemporaryDirectory(prefix="broom-smells-") as tmp, ThreadPoolExecutor(5) as pool:
-        real = pool.submit(find_in_real_tree, repo, list(now_text), lim.measured["params"][0], notes, Budget(budget))
+        soft = {metric: pair[0] for metric, pair in lim.measured.items()}
+        real = pool.submit(find_in_real_tree, repo, list(now_text), soft, notes, Budget(budget))
         now = pool.submit(rows.measure, Path(tmp) / "now", now_text, notes)
         before = pool.submit(rows.measure, Path(tmp) / "before", old_text, []) if old_text else None
         clones = None if "duplicate_lines" in off else pool.submit(
