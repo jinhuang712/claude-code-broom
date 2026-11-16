@@ -17,6 +17,7 @@ from typing import Dict, Iterable, List, Optional, Set, Tuple
 from . import ledger
 from .findings import Issue
 from .config import excluded
+from .fixes import how_to_fix
 from .gitutil import ChangedLines
 from .state import DATA_ROOT, load_json, short_hash, update_json
 
@@ -24,6 +25,8 @@ BASELINE = DATA_ROOT / "baseline.json"
 COMMITS = DATA_ROOT / "commits.json"  # per repo: what the last commit or turn end blocked, by which hook
 BASELINE_DAYS = 30
 MAX_SHOWN = 40
+MAX_CHARS = 9000  # what a block message holds at most: findings give way to the rest of it
+MORE_ROOM = 40  # for the "... and N more" line
 
 _lines: Dict[Path, List[str]] = {}
 
@@ -183,34 +186,66 @@ def setup_hint(notes: List[str]) -> str:
     return "Some checks couldn't run because tools are missing: offer the user /broom:setup." if missing else ""
 
 
-def render(head: str, issues: List[Issue], notes: List[str], files: Set[Path]) -> str:
-    out = [head]
-    if len(issues) > MAX_SHOWN:
-        top = Counter(f"{i.tool} {i.rule}" for i in issues).most_common(10)
-        out.append("\nMost frequent: " + ", ".join(f"{rule} ×{n}" for rule, n in top))
+def listing(issues: List[Issue], files: Set[Path]) -> List[Tuple[Issue, List[str]]]:
+    """Each finding in the order the report shows them (grouped by tool and root, then by file and line), with the
+    lines it takes: its own, and before it the header of its group when it is the group's first."""
     groups: Dict[Tuple[str, Path], List[Issue]] = {}
     for i in issues:
         groups.setdefault((i.tool, i.root), []).append(i)
-    shown = 0
+    out = []
     for (tool, root), items in groups.items():
-        if shown >= MAX_SHOWN:
-            break
-        out.append(f"\n{tool} ({display(root)}):")
-        for i in sorted(items, key=lambda x: (str(x.file), x.line, x.col)):
-            if shown >= MAX_SHOWN:
-                break
+        for n, i in enumerate(sorted(items, key=lambda x: (str(x.file), x.line, x.col))):
             where = f"{rel(i.file, root)}:{i.line}:{i.col}" if i.line else rel(i.file, root)
             tag = "" if i.file in files or not files else "  [not in the changed files]"
-            out.append(f"  {where}  {i.rule}  {i.msg}{tag}")
-            shown += 1
-    if len(issues) > shown:
-        out.append(f"\n... and {len(issues) - shown} more")
-    if notes:
-        out.append("\nSkipped: " + "; ".join(note_text(n) for n in notes))
-        hint = setup_hint(notes)
-        if hint:
-            out.append(hint)
-    return "\n".join(out)
+            head = [f"\n{tool} ({display(root)}):"] if n == 0 else []
+            out.append((i, head + [f"  {where}  {i.rule}  {i.msg}{tag}"]))
+    return out
+
+
+def size(lines: List[str]) -> int:
+    """The characters `lines` take once joined, a newline after each."""
+    return sum(len(x) + 1 for x in lines)
+
+
+def fit(entries: List[Tuple[Issue, List[str]]], budget: int) -> Tuple[List[str], int]:
+    """The lines of as many findings as `budget` characters and MAX_SHOWN allow (the first always), and how many."""
+    out: List[str] = []
+    shown = 0
+    for _, lines in entries[:MAX_SHOWN]:
+        if shown and size(out) + size(lines) > budget:
+            break
+        out += lines
+        shown += 1
+    return out, shown
+
+
+def guidance(entries: List[Tuple[Issue, List[str]]], way_out: Optional[str]) -> List[str]:
+    """The lines a block message ends its findings with: how to fix each kind of smell found, in the order the kinds
+    first appear (what a linter reports says its own fix), what is not a fix, and then `way_out`. None for a
+    report that isn't a block."""
+    if way_out is None:
+        return []
+    fix = how_to_fix(i.rule for i, _ in entries if i.tool == "smells")
+    return (["\n" + "\n".join(fix)] if fix else []) + ["\n" + way_out]
+
+
+def skipped(notes: List[str]) -> List[str]:
+    """The lines saying which checks didn't run, and the setup offer when a tool is missing."""
+    if not notes:
+        return []
+    return ["\nSkipped: " + "; ".join(note_text(n) for n in notes), *filter(None, [setup_hint(notes)])]
+
+
+def render(head: str, issues: List[Issue], notes: List[str], files: Set[Path], way_out: Optional[str] = None) -> str:
+    """The report Claude reads: `head`, the findings (at most MAX_SHOWN, fewer to keep the whole under MAX_CHARS,
+    with how many more), then for a block (a `way_out` given) how to fix and the way out, then what was skipped."""
+    entries = listing(issues, files)
+    top = Counter(f"{i.tool} {i.rule}" for i in issues).most_common(10) if len(issues) > MAX_SHOWN else []
+    before = [head] + (["\nMost frequent: " + ", ".join(f"{rule} ×{n}" for rule, n in top)] if top else [])
+    after = guidance(entries, way_out) + skipped(notes)
+    lines, shown = fit(entries, MAX_CHARS - size(before) - size(after) - MORE_ROOM)
+    more = [f"\n... and {len(issues) - shown} more"] if len(issues) > shown else []
+    return "\n".join(before + lines + more + after)
 
 
 def new_notes(state: Path, notes: List[str], home: Path) -> List[str]:

@@ -118,13 +118,18 @@ def issues_by_repo(issues: List[Issue]) -> Dict[Path, List[Issue]]:
     return groups
 
 
-def block_head(count: int, repo: Path, cwd: Path) -> str:
-    """The first lines of a commit's denial: what to do about the findings, fix them or accept them with a reason."""
-    head = f"[broom] Commit blocked: {count} issue(s) in the files being committed. Fix them and commit again"
+def block_head(count: int) -> str:
+    """The first line of a commit's denial: what was blocked, and the first thing to do about it."""
+    return f"[broom] Commit blocked: {count} issue(s) in the files being committed. Fix them and commit again."
+
+
+def way_out(repos: Iterable[Path], cwd: Path, then: str) -> str:
+    """The last of a block's own lines: how a finding passes without a fix, by accepting it with a reason and then
+    doing `then` (`commit again`, `stop again`), or that nothing does where accepting is off."""
     if not accept_allowed():
-        return f"{head}; accepting them is off here (BROOM_NO_ACCEPT)."
-    return (f"{head}. If one predates this change or is a false positive, run {accept_command([repo], cwd)}, then "
-            "commit again.")
+        return "Fixing is the only way out: accepting them is off here (BROOM_NO_ACCEPT)."
+    return (f"If one predates this change or is a false positive, run {accept_command(repos, cwd)}, then "
+            f"{then}.")
 
 
 def entries_of(issues: Iterable[Issue]) -> Dict[str, dict]:
@@ -160,8 +165,8 @@ def gate_files(repo: Path, files: List[Path], sd: Path, cwd: Path, state: dict) 
         return None, context + skip_context(sd, notes, repo)
     ledger.blocked(found)
     state[key] = {"pending": found, "where": ledger.HOOK.where, "turn": str(sd)}
-    head = block_head(len(blocking), repo, cwd)
-    return render(head, blocking, new_notes(sd / "notes.json", notes, repo), set(files)), context
+    return render(block_head(len(blocking)), blocking, new_notes(sd / "notes.json", notes, repo), set(files),
+                  way_out([repo], cwd, "commit again")), context
 
 
 def hook_pre_commit() -> int:
@@ -219,7 +224,8 @@ def answer(denials: List[str], context: List[str]) -> None:
         out["permissionDecision"] = "deny"
         out["permissionDecisionReason"] = "\n\n".join(denials + context)
     elif context:
-        out["additionalContext"] = "; ".join(context)
+        # A hint carries lines of its own (how to fix): they go on separate lines, not run on after a semicolon.
+        out["additionalContext"] = ("\n" if any("\n" in c for c in context) else "; ").join(context)
     if len(out) > 1:
         emit({"hookSpecificOutput": out})
 

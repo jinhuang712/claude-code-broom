@@ -24,13 +24,13 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import ledger, waivers
-from .commitgate import accept_command, checked, entries_of, issues_by_repo
+from .commitgate import checked, entries_of, issues_by_repo, way_out
 from .config import REPO_FILE, excluded, setting
 from .doctor import describe, diagnose_cached, new_gaps
 from .fmt import format_files
 from .findings import Issue
 from .gate import (
-    COMMITS, accept_allowed, baseline_keys, new_notes, note_text, render, save_commits, setup_hint, verdict,
+    COMMITS, baseline_keys, new_notes, note_text, render, save_commits, setup_hint, verdict,
 )
 from .gitutil import git_changed_files, git_root
 from .hotspots import cached_summary, session_note, summary
@@ -152,14 +152,16 @@ def stop_again(d: Path, root: Optional[Path], gate: dict) -> None:
     finish(d, root, f"{len(left)} issue(s) left unfixed" if left else "")
 
 
-def turn_head(repos: List[Path], count: int, cwd: Path) -> str:
-    """The first lines of a turn-end block: fix the findings, or accept them with a reason and stop again."""
-    head = f"[broom] {count} issue(s) in this turn's changes. Fix them before finishing"
+def turn_head(count: int) -> str:
+    """The first line of a turn-end block: what was found, and the first thing to do about it."""
+    return f"[broom] {count} issue(s) in this turn's changes. Fix them before finishing."
+
+
+def turn_way_out(repos: List[Path], cwd: Path) -> str:
+    """The last of a turn-end block's own lines: accept what is left with a reason and stop again, or stop again and
+    leave it open."""
     leave = "Stopping again ends the turn, but leaves the issues open: a commit still stops on them."
-    if not accept_allowed():
-        return f"{head}; accepting them is off here (BROOM_NO_ACCEPT). {leave}"
-    accept = accept_command(repos or [cwd], cwd)
-    return f"{head}. If one predates this change or is a false positive, run {accept}, then stop again. {leave}"
+    return f"{way_out(repos or [cwd], cwd, 'stop again')} {leave}"
 
 
 def note_turn_block(d: Path, groups: Dict[Path, List[Issue]]) -> None:
@@ -226,8 +228,8 @@ def hook_stop(data: dict) -> None:
         finish(d, root, f"gave up after {MAX_BLOCKS} rounds, {len(blocking)} issue(s) left")
         return
     groups = issues_by_repo(blocking)
-    reason = render(turn_head(list(groups), len(blocking), cwd), blocking, new_notes(d / "notes.json", notes, files[0]),
-                    set(files))
+    reason = render(turn_head(len(blocking)), blocking, new_notes(d / "notes.json", notes, files[0]), set(files),
+                    turn_way_out(list(groups), cwd))
     block_turn(d, blocking, {"edits_at": mark, "blocks": blocks}, reason)
 
 

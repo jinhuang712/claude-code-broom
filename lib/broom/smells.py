@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 from .findings import Issue
+from .fixes import fix_lines
 from .clones import Clone, Unused, find_clones, find_unused
 from .config import DEAD_CODE, LIMIT_PAIR, SMELL_LIMITS, SMELL_PRESENCE, repo_config, setting
 from .gate import issue_key
@@ -63,6 +64,7 @@ LABELS = {
     "folder_cycle": "import(s) that close a cycle between folders",
 }
 HINTS_SHOWN = 10
+HINT_KINDS = 3  # how many kinds of smell a hint gives the fix of
 LINES_SHOWN = 5
 
 
@@ -381,6 +383,11 @@ def gate_smells(repo: Path, files: List[Path], known: set, base: str = "HEAD"
 
 
 def hint_text(hints: List[Smell]) -> str:
+    """What Claude is told of the hints a change made: the first HINTS_SHOWN of them, and to end with, the fix lines
+    of the kinds of smell those are, at most HINT_KINDS."""
     shown = "; ".join(f"{s.file.relative_to(s.repo)}:{s.line} {s.text()}" for s in hints[:HINTS_SHOWN])
     more = f"; and {len(hints) - HINTS_SHOWN} more" if len(hints) > HINTS_SHOWN else ""
-    return f"broom: {len(hints)} code smell(s) this change made worse; clean them up now: {shown}{more}"
+    kinds = list(dict.fromkeys(s.metric for s in hints[:HINTS_SHOWN]))[:HINT_KINDS]
+    fix = fix_lines(kinds)
+    return (f"broom: {len(hints)} code smell(s) this change made worse; clean them up now: {shown}{more}"
+            + ("\nHow to fix:\n" + "\n".join(fix) if fix else ""))
