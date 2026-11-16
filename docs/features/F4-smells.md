@@ -13,7 +13,8 @@ F4: Smells
 │   └── F4.5.2: Folder cycle
 ├── F4.6: What is skipped — dependencies, build output and generated code
 ├── F4.7: Tests — measured by rules of their own
-└── F4.8: Limits told before the work — Claude knows the bar when it starts
+├── F4.8: Limits told before the work — Claude knows the bar when it starts
+└── F4.9: Old smells in touched code — whoever is in the code cleans it
 ```
 
 A smell is code that works and is hard to change. broom measures smells against its own limits in every repo, and only what a change made worse counts. Legacy code left as it was never comes up.
@@ -186,3 +187,14 @@ In tests, complexity and magic numbers don't count. Neither do the length or com
 ## F4.8: Limits told before the work
 
 At the start of a session in a repo with code, Claude is told the limits in a few lines: how long a function, a file and a type may be, how deep code may nest and what blocks. It learns the bar before it writes, not from a block after.
+
+---
+
+## F4.9: Old smells in touched code
+
+When a change touches a function or a file that already holds a smell, Claude is told to clean that smell in the same change. It is a hint: it stops the turn's end once and passes with a reason.
+
+Code the change doesn't touch stays quiet. A function already past the hard limit can't grow again on a reason alone.
+
+- **Stance**: [Clean as you go](../PHILOSOPHY.md#when-is-a-smell-cleaned)
+- **Why**: [028: A change is told the old smells in the code it touches](../specs/decisions/028-old-smells-in-touched-code.md)

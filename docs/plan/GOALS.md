@@ -26,7 +26,7 @@ Goals
 └── Constraints
     ├── ✅ R1: No old warning blocks Claude
     ├── ⬜ R2: A false positive costs one round
-    ├── ⬜ R3: A smell the change didn't push past a limit never comes up
+    ├── ⬜ R3: An old smell in untouched code never comes up
     └── ⬜ R4: Setup asks at most two questions
 ```
 
@@ -264,15 +264,15 @@ An edit or a turn's end with nothing to check costs one Python start.
 
 ---
 
-#### R3: A smell the change didn't push past a limit never comes up
+#### R3: An old smell in untouched code never comes up
 
 **Want**: a ruler in everyday work.
 
 **Checks**: [F4.1: Sized smells](../features/F4-smells.md#f41-sized-smells)
 
-**Condition**: A change to a file with an old smell it didn't grow gets no hint and no block.
+**Condition**: A change gets no hint and no block for an old smell in a function or a file it didn't touch.
 
-**How**: A test edits a file that holds a function past the soft limit without touching the function.
+**How**: A test edits one function of a file and leaves alone another function that is past the soft limit.
 
 **Status**: ⬜ No test was matched to it in the docs pass of 2026-11-17.
 

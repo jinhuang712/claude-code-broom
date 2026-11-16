@@ -44,13 +44,13 @@ The other docs are read when the work needs them.
 
 8 facts:
 
-- The root holds `README.md` · `AGENTS.md` · `CLAUDE.md` · `CHANGELOG.md`.
-- `CLAUDE.md` only loads this file.
+- The root holds `README.md` · `AGENTS.md` · `CHANGELOG.md`.
+- `.claude/CLAUDE.md` only loads this file.
 - [docs/](docs/) holds the reasons and the contract: PROPOSAL · PHILOSOPHY · DESIGNS · FEATURES · CLI · INSTALL · GLOSSARY · CONTRIBUTING.
 - [docs/features/](docs/features/) holds one file per feature group.
 - [docs/specs/](docs/specs/) holds how each part works, with [docs/specs/decisions/](docs/specs/decisions/) under it.
 - [docs/plan/](docs/plan/) holds GOALS · ROADMAP · ISSUES · TODO.
-- `report/` is a local review that git ignores through `.git/info/exclude`.
+- `report/` holds work records and the ratchet's numbers, and git ignores it through `.git/info/exclude`.
 - `docs/README.zh-CN.md` is the Chinese copy of README and changes with it.
 
 ---
@@ -59,7 +59,7 @@ The other docs are read when the work needs them.
 
 The handbook is [CONTRIBUTING.md](docs/CONTRIBUTING.md): how to set up, run the checks and land a change.
 
-12 rules:
+17 rules:
 
 - [MUST] follow these rules strictly unless the user rejects one.
 - [MUST] read every doc you work on in full.
@@ -67,10 +67,15 @@ The handbook is [CONTRIBUTING.md](docs/CONTRIBUTING.md): how to set up, run the 
 - [MUST] land a worktree on the branch it was forked from by fast-forward.
 - [MUST] run the checks in CONTRIBUTING before a change lands.
 - [MUST] look at each checkpoint's end for kinds of rot broom still misses, then add each to FEATURES or to TODO.
+- [MUST] push and tag when a checkpoint or a sub-checkpoint ends and the checks pass, then tell the user.
+- [MUST] bump Z for a release, and Y when a whole checkpoint ends.
+- [MUST] keep this repo at zero findings by broom's own measure.
+- [MUST] measure this repo with broom when a stage ends, and record the gain against the baseline in `report/ratchet/`.
 - [NEVER] give a doc to a subagent to read or write.
 - [NEVER] use a script or a search in place of reading a doc in full.
 - [NEVER] check the goals for a small change.
-- [NEVER] push or tag until the user says so.
+- [NEVER] bump X.
+- [NEVER] force a push.
 - [NEVER] write the name of another repo of the user, a file in it or a usage number from it into a tracked file.
 - [BETTER] give code work to a subagent with a short brief, then read its diff before it lands.
 

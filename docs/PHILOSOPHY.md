@@ -24,7 +24,7 @@ Code smells are the exception to the project's tools. Long functions, big files,
 
 **Only what changed.**
 
-Lint findings count on the lines that changed, and by default so does formatting. A one-line fix never turns into a reformatted file or a wall of someone else's old warnings. Type errors are the exception: they count anywhere, because a changed signature breaks callers in files nobody touched.
+Lint findings count on the lines that changed, and by default so does formatting. A one-line fix never turns into a reformatted file or a wall of someone else's old warnings. Code a change doesn't touch never comes up. Type errors are the exception: they count anywhere, because a changed signature breaks callers in files nobody touched.
 
 ---
 
@@ -56,7 +56,7 @@ Every skipped check, timeout and fallback is reported. broom doesn't guess: func
 
 **Clean as you go.**
 
-A repo doesn't rot in a day. Rot is small smells that were each cheap to fix on the day they appeared, and that nobody fixed. So broom measures a change against the bar while it is being made, when the fix costs a minute. It keeps a whole-repo scan for the repos that weren't kept this way, and for the day someone plans their refactor.
+A repo doesn't rot in a day. Rot is small smells that were each cheap to fix on the day they appeared, and that nobody fixed. So broom measures a change against the bar while it is being made, when the fix costs a minute. A change also cleans the old smells in the code it touches, since whoever is in that code now knows it best. It keeps a whole-repo scan for the repos that weren't kept this way, and for the day someone plans their refactor.
 
 ---
 

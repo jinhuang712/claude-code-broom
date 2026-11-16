@@ -6,28 +6,6 @@
 
 ---
 
-### [P1][DISCUSSION] Who pushes and tags a release?
-
-- description: The user gave the agent the details and kept the direction. Pushing and tagging publish a release to every user of the plugin, and the rule so far was that the user says when.
-- created: 2026-11-17
-- status: OPEN
-- found: the docs pass
-- blocks: CP1 in [ROADMAP.md](ROADMAP.md)
-- next: ask the user
-
----
-
-### [P1][DISCUSSION] How far does "clean as you go" reach?
-
-- description: Today only what a change made worse counts, and old code left as it was never comes up. The wider reading is that a change also cleans an old smell in the code it touches. The wider reading gives up the promise that legacy code stays quiet.
-- created: 2026-11-17
-- status: OPEN
-- found: the user's direction of 2026-11-17
-- blocks: how [F4.1: Sized smells](../features/F4-smells.md#f41-sized-smells) treats a function past the hard limit that grows a line at a time
-- next: ask the user
-
----
-
 ### [P2][IDEA] A hint at the edit for a signal that is cheap and certain
 
 - description: A file that just passed 1,000 lines could be told at the edit, before more is written into it. PROPOSAL argues against a lint after every edit, and that argument is about half-finished code, which a line count is not.

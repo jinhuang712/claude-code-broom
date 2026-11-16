@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP1: 0.18.1 reaches users](#cp1-0181-reaches-users). The work is done and sits on the local `main`, and the push waits for an answer.
+**Current checkpoint**: [CP2: Nothing passes silently](#cp2-nothing-passes-silently). The ledger is being built.
 
 ---
 
@@ -8,13 +8,14 @@
 
 ```
 Roadmap
-├── 🟨 CP1: 0.18.1 reaches users — the hook limits and the docs set are released
-├── ⬜ CP2: Nothing passes silently — every pass leaves a reason the user sees
-│   ├── ⬜ CP2.1: The ledger
+├── ✅ CP1: 0.18.1 reaches users — the hook limits and the docs set are released
+├── 🟨 CP2: Nothing passes silently — every pass leaves a reason the user sees
+│   ├── 🟨 CP2.1: The ledger
 │   └── ⬜ CP2.2: Reasons and self-waivers
 ├── ⬜ CP3: Claude knows how to fix — the bar before the work, the fix beside the finding
 │   ├── ⬜ CP3.1: Messages that say how to fix
-│   └── ⬜ CP3.2: Limits told before the work
+│   ├── ⬜ CP3.2: Limits told before the work
+│   └── ⬜ CP3.3: Old smells in touched code
 ├── ⬜ CP4: A refactoring kit — a full diagnosis, the worst places first, the numbers after
 ├── ⬜ CP5: A check-up for rot — numbers that speak when they grow
 │   ├── ⬜ CP5.1: Counters, dead code and comments
@@ -31,9 +32,9 @@ Roadmap
 
 ## CP1: 0.18.1 reaches users
 
-**Status**: 🟨
+**Status**: ✅
 
-Versions 0.18.0 and 0.18.1 and the docs set are committed locally. Nothing is pushed or tagged. The open question is [Who pushes and tags a release?](TODO.md#p1discussion-who-pushes-and-tags-a-release).
+Versions 0.18.0 and 0.18.1 and the docs set were pushed and tagged `v0.18.1` on 2026-11-17.
 
 **Delivers** (2):
 
@@ -53,7 +54,7 @@ Versions 0.18.0 and 0.18.1 and the docs set are committed locally. Nothing is pu
 
 ## CP2: Nothing passes silently
 
-**Status**: ⬜
+**Status**: 🟨
 
 broom keeps no record of what it stopped and what was fixed, so nobody can say whether it works. This checkpoint gives it a record and makes every pass carry a reason.
 
@@ -67,7 +68,7 @@ broom keeps no record of what it stopped and what was fixed, so nobody can say w
 
 ### CP2.1: The ledger
 
-**Status**: ⬜
+**Status**: 🟨
 
 **Delivers** (3):
 
@@ -108,11 +109,12 @@ broom keeps no record of what it stopped and what was fixed, so nobody can say w
 
 A block says what is over a limit and not what to do about it. This checkpoint puts the fix beside the finding and the bar before the work.
 
-**Exit criteria** (2):
+**Exit criteria** (3):
 
 - **Sub-checkpoints**
   - [CP3.1: Messages that say how to fix](#cp31-messages-that-say-how-to-fix) is met.
   - [CP3.2: Limits told before the work](#cp32-limits-told-before-the-work) is met.
+  - [CP3.3: Old smells in touched code](#cp33-old-smells-in-touched-code) is met.
 
 ---
 
@@ -143,6 +145,21 @@ A block says what is over a limit and not what to do about it. This checkpoint p
 
 - **Measures**
   - [M1: Fix rate](GOALS.md#m1-fix-rate) is recorded before and after.
+
+---
+
+### CP3.3: Old smells in touched code
+
+**Status**: ⬜
+
+**Delivers** (1):
+
+- [F4.9: Old smells in touched code](../features/F4-smells.md#f49-old-smells-in-touched-code)
+
+**Exit criteria** (1):
+
+- **Constraints**
+  - [R3: An old smell in untouched code never comes up](GOALS.md#r3-an-old-smell-in-untouched-code-never-comes-up)
 
 ---
 

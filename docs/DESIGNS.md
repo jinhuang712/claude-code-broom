@@ -7,7 +7,7 @@ broom is designed around 8 guidelines:
 1. **Only Claude Code's plugin parts and Python's standard library**: Nothing runs between hooks, and nothing is installed beyond the tools themselves.
 2. **An idle hook exits in milliseconds**: A hook with nothing to do costs a process start.
 3. **A hook run ends within 30 seconds**: A slow tool is cut off, never waited for.
-4. **A finding counts only where the change made things worse**: Old code left as it was never comes up.
+4. **A finding counts only where the change made things worse**: Old code a change doesn't touch never comes up.
 5. **A tool that is missing or fails never blocks**: The check goes ahead without it and says so.
 6. **A false positive costs one round**: Nothing traps Claude in a loop.
 7. **Nothing is installed or set without a yes**: A hook tells Claude, and Claude asks the user.
@@ -68,6 +68,7 @@ A legacy repo holds more old warnings than any change adds, and noise teaches Cl
 - **Stance**: [Only what changed](PHILOSOPHY.md#how-much-of-the-code-does-a-check-judge)
 - **Decisions**:
   - [006: A smell counts when the change pushed it past a limit](specs/decisions/006-made-worse.md)
+  - [028: A change is told the old smells in the code it touches](specs/decisions/028-old-smells-in-touched-code.md)
   - [007: A renamed file is measured against its old path](specs/decisions/007-renames-and-imports.md)
   - [009: An occurrence counts when the change raises the count](specs/decisions/009-occurrence-by-count.md)
   - [013: Dead code counts on added lines](specs/decisions/013-dead-code-added-lines.md)
