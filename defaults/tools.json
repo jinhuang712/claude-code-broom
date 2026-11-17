@@ -61,14 +61,21 @@
     "probe": ["jscpd", "--version"],
     "install": [["npm", "npm i -g jscpd"], ["cargo", "cargo install jscpd"]]
   },
-  "_comment_optional": "Tools `broom diagnose` uses when they are installed, and only then: `optional` keeps them out of the doctor's gaps, its fixes, its exit code and the session start, which never offer them. `for` says what each finds; `lang` is the language whose projects it serves, `any` for all. They are found by name on PATH, with no probe, so that listing them costs a lookup.",
-  "knip": {"optional": true, "lang": "js", "for": "unused dependencies in TS/JS", "install": [["npm", "npm i -g knip"]]},
+  "_comment_optional": "Tools broom uses when they are installed, and only then: `optional` keeps them out of the doctor's gaps, its fixes, its exit code and the session start, which never offer them. `for` says what each finds; `lang` is the language whose projects it serves, `any` for all. They are found by name on PATH, with no probe, so that listing them costs a lookup.",
+  "tsgolint": {
+    "optional": true, "lang": "js", "for": "calls to deprecated APIs in TS/JS, in every check",
+    "install": [["npm", "npm i -g oxlint-tsgolint"]]
+  },
+  "knip": {
+    "optional": true, "lang": "js", "for": "unused dependencies in TS/JS, in `broom diagnose`",
+    "install": [["npm", "npm i -g knip"]]
+  },
   "deptry": {
-    "optional": true, "lang": "py", "for": "unused dependencies in Python",
+    "optional": true, "lang": "py", "for": "unused dependencies in Python, in `broom diagnose`",
     "install": [["uv", "uv tool install deptry"], ["pipx", "pipx install deptry"]]
   },
   "cargo-machete": {
-    "optional": true, "lang": "rust", "for": "unused dependencies in Rust",
+    "optional": true, "lang": "rust", "for": "unused dependencies in Rust, in `broom diagnose`",
     "install": [["cargo", "cargo install cargo-machete"]]
   },
   "osv-scanner": {

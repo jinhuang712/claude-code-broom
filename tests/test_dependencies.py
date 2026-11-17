@@ -282,14 +282,15 @@ class DoctorTest(DependencyCase):
         r = self.repo({"package.json": "{}\n", "pyproject.toml": PYPROJECT, "Cargo.toml": CARGO})
         _, bare = self.doctor_of(r, self.fake_path())
         self.assertEqual([(t["tool"], t["installed"], t["install"]) for t in bare["optional"]],
-                         [("knip", False, "npm i -g knip"), ("deptry", False, "uv tool install deptry"),
+                         [("tsgolint", False, "npm i -g oxlint-tsgolint"), ("knip", False, "npm i -g knip"),
+                          ("deptry", False, "uv tool install deptry"),
                           ("cargo-machete", False, "cargo install cargo-machete"),
                           ("osv-scanner", False, "brew install osv-scanner")])
         _, some = self.doctor_of(r, self.fake_path(fakes={"knip": "exit 0"}))
-        self.assertEqual([t["installed"] for t in some["optional"]], [True, False, False, False])
+        self.assertEqual([t["installed"] for t in some["optional"]], [False, True, False, False, False])
         text = self.cli(r, "doctor", env=self.fake_path()).stdout
-        self.assertIn("Optional, for `broom diagnose`", text)
-        self.assertIn("○ knip           unused dependencies in TS/JS  install: npm i -g knip", text)
+        self.assertIn("Optional (none of them is a gap", text)
+        self.assertIn("○ knip           unused dependencies in TS/JS, in `broom diagnose`  install: npm i -g knip", text)
 
     def test_only_the_languages_a_repo_has_get_their_tool(self) -> None:
         _, d = self.doctor_of(self.repo({"go.mod": GO_MOD, "main.go": GO_FREE}), self.fake_path())

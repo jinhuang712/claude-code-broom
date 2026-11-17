@@ -16,7 +16,7 @@ from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from . import ledger
 from .findings import Issue
-from .config import excluded
+from .config import OPTIONAL_NOTE, excluded
 from .fixes import how_to_fix
 from .gitutil import ChangedLines
 from .state import DATA_ROOT, load_json, say, short_hash, update_json
@@ -215,8 +215,8 @@ def rel(f: Path, root: Path) -> str:
 
 
 def note_text(n: str) -> str:
-    """The message part of a note: the text after "timeout:" or "missing:", or the note itself."""
-    return n.split(":", 1)[1] if n.startswith(("timeout:", "missing:")) else n
+    """The message part of a note: the text after "timeout:", "missing:" or "optional:", or the note itself."""
+    return n.split(":", 1)[1] if n.startswith(("timeout:", "missing:", OPTIONAL_NOTE)) else n
 
 
 def setup_hint(notes: List[str]) -> str:
@@ -291,11 +291,13 @@ def render(head: str, issues: List[Issue], notes: List[str], files: Set[Path], w
 
 def new_notes(state: Path, notes: List[str], home: Path) -> List[str]:
     """Notes not shown before in this session, so a missing tool is mentioned once, not every time. Each fresh
-    timeout or missing-tool note goes in the ledger, with `home`, the directory the hook ran in."""
+    timeout or missing-tool note goes in the ledger, with `home`, the directory the hook ran in. A note about an
+    optional tool is never shown by a hook: nothing nags for a tool the user didn't ask for, and `broom diagnose` and
+    `broom doctor` say it."""
     fresh: List[str] = []
 
     def add(seen_before: list) -> list:
-        fresh[:] = [n for n in notes if n not in set(seen_before)]
+        fresh[:] = [n for n in notes if n not in set(seen_before) and not n.startswith(OPTIONAL_NOTE)]
         return sorted(set(seen_before) | set(fresh))
 
     update_json(state, [], add)

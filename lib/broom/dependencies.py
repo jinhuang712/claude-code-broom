@@ -329,6 +329,6 @@ def optional_lines(rows: List[dict]) -> List[str]:
     if not rows:
         return []
     width = max(len(r["tool"]) for r in rows)
-    out = ["", "Optional, for `broom diagnose` (none of them is a gap, and none is installed for you):"]
+    out = ["", "Optional (none of them is a gap, and none is installed for you):"]
     return out + [f"  {'✓' if r['installed'] else '○'} {r['tool'].ljust(width)}  {r['for']}"
                   + ("" if r["installed"] else f"  install: {r['install']}") for r in rows]

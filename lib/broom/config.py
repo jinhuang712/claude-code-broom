@@ -58,6 +58,8 @@ SMELL_PRESENCE = {
 }
 # Presence smells whose text carries what the tool said of the first finding: a deprecation note names what replaced it.
 NOTED = ("deprecated_api",)
+# What starts a note about a tool nobody asked the user to install: a hook never shows it, a diagnosis does.
+OPTIONAL_NOTE = "optional:"
 PLUGIN_ID = "broom@claude-code-broom"
 
 

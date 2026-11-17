@@ -12,6 +12,7 @@ from unittest import mock
 
 from support import HAS_GO, HAS_PY, BroomCase
 
+from broom import gate, realtree
 from broom.config import NOTED, SMELL_PRESENCE
 from broom.fixes import fixes
 from broom.hotspots import smell_counts
@@ -168,7 +169,7 @@ class TypeScriptTest(DeprecatedCase):
             found, notes = self.deprecated(self.FILES, "src/main.ts", TS_ADDED)
         self.assertEqual(found, [])
         self.assertEqual([n for n in notes if "tsgolint" in n],
-                         ["oxlint-tsgolint is missing, so deprecated TS/JS APIs aren't measured "
+                         ["optional:oxlint-tsgolint is missing, so deprecated TS/JS APIs aren't measured "
                           "(npm i -g oxlint-tsgolint)"])
         self.assertEqual([n for n in notes if "failed" in n or "timeout" in n], [], "oxlint ran without --type-aware")
 
@@ -177,7 +178,7 @@ class CounterTest(DeprecatedCase):
     def test_the_check_up_counts_them_and_leaves_the_count_out_when_a_tool_behind_it_is_short(self) -> None:
         r = self.repo({"README.md": "x\n"})
         for note in ("missing:ruff (brew install ruff)", "timeout:cargo clippy measuring smells in /r (cold build?)",
-                     "oxlint-tsgolint is missing, so deprecated TS/JS APIs aren't measured (npm i -g oxlint-tsgolint)",
+                     "optional:oxlint-tsgolint is missing, so deprecated TS/JS APIs aren't measured (npm i -g oxlint-tsgolint)",
                      "timeout:the time of this scan ran out before golangci-lint measured smells"):
             with self.subTest(note):
                 self.assertIsNone(smell_counts(r, [], [note])["deprecated_api"])
@@ -197,3 +198,13 @@ class CheckupTest(DeprecatedCase):
         rows = {c["counter"]: c for c in json.loads(self.cli(r, "diagnose", "--json", env=env).stdout)["checkup"]["counters"]}
         self.assertEqual((rows["deprecated_api"]["now"], rows["deprecated_api"]["label"]),
                          (2, "calls to deprecated APIs"))
+
+
+class OptionalNoteTest(DeprecatedCase):
+    def test_a_hook_never_shows_a_note_about_an_optional_tool_and_a_diagnosis_does(self) -> None:
+        note = realtree.NO_TSGOLINT
+        self.assertTrue(note.startswith("optional:"))
+        state = self.tmp / "notes.json"
+        self.assertEqual(gate.new_notes(state, [note, "timeout:ruff"], self.tmp), ["timeout:ruff"])
+        self.assertEqual(gate.note_text(note), "oxlint-tsgolint is missing, so deprecated TS/JS APIs aren't measured "
+                                               "(npm i -g oxlint-tsgolint)")

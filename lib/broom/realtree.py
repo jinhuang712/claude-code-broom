@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Tuple
 
-from .config import DEAD_CODE
+from .config import DEAD_CODE, OPTIONAL_NOTE
 from .findings import failure
 from .foldercycles import js_folder_cycles, python_folder_cycles
 from .gitutil import run
@@ -150,6 +150,10 @@ def go_key(metric: str, text: str) -> str:
     return f"{m[1]} is deprecated: {m[2]}" if m else text.removeprefix("SA1019: ").strip()
 
 
+NO_TSGOLINT = (f"{OPTIONAL_NOTE}oxlint-tsgolint is missing, so deprecated TS/JS APIs aren't measured "
+               "(npm i -g oxlint-tsgolint)")
+
+
 def js_config(*, typed: bool) -> dict:
     """The oxlint config for the real tree: import cycles, and where tsgolint gives it types, deprecated calls."""
     rules = {"import/no-cycle": "warn", **({"typescript/no-deprecated": "warn"} if typed else {})}
@@ -172,7 +176,7 @@ def js_found(repo: Path, rels: List[str], notes: List[str], budget: Budget) -> L
     """Import cycles and deprecated calls in the changed TS/JS files, from one oxlint run. `import/no-cycle` follows
     imports on disk, so the modules the changed files import have to be there; it finds each file's tsconfig itself.
     `typescript/no-deprecated` needs types, so it runs with `--type-aware` where tsgolint is installed (it makes the
-    run slower, and a timeout loses the cycles too); without it a note says what isn't measured."""
+    run slower, and a timeout loses the cycles too); without it an `optional:` note says what isn't measured."""
     files = [str(repo / rel) for rel in rels if Path(rel).suffix in JS_EXTS]
     exe = resolve_bin("oxlint", repo, repo)  # jsmeasure says when it is missing
     if not files or not exe:
@@ -183,8 +187,7 @@ def js_found(repo: Path, rels: List[str], notes: List[str], budget: Budget) -> L
         return []
     typed = bool(resolve_bin("tsgolint", repo, repo))
     if not typed:
-        notes.append("oxlint-tsgolint is missing, so deprecated TS/JS APIs aren't measured "
-                     "(npm i -g oxlint-tsgolint)")
+        notes.append(NO_TSGOLINT)  # a hook keeps it to itself: the doctor lists the tool as optional
     with tempfile.TemporaryDirectory(prefix="broom-realtree-") as tmp:
         cfg = Path(tmp) / "oxlint.json"
         cfg.write_text(json.dumps(js_config(typed=typed)))
