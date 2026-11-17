@@ -298,13 +298,14 @@ The user lifted the hold on Rust's smells on 2026-11-17, and 7 more shipped in 0
 
 The user asked on 2026-11-17 for a round of polish and self-test once the features are in. broom is used end to end in fresh sessions, on throwaway repos and on real ones, and what that finds is fixed.
 
-**Delivers** (5):
+**Delivers** (6):
 
 - [F1.5: Protection list](../features/F1-setup.md#f15-protection-list)
 - [I10: No fresh session has used broom end to end](ISSUES.md#i10-no-fresh-session-has-used-broom-end-to-end)
 - [I8: Two holes in the record](ISSUES.md#i8-two-holes-in-the-record)
 - [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)
 - [I7: The docs don't say which systems are supported](ISSUES.md#i7-the-docs-dont-say-which-systems-are-supported)
+- [I11: An idle Stop hook takes 119 ms](ISSUES.md#i11-an-idle-stop-hook-takes-119-ms)
 
 **Exit criteria** (6):
 
@@ -313,7 +314,7 @@ The user asked on 2026-11-17 for a round of polish and self-test once the featur
   - [O3: Mistakes seen while editing](GOALS.md#o3-mistakes-seen-while-editing)
   - [O7: No script to write](GOALS.md#o7-no-script-to-write)
 - **Thresholds**
-  - [T2: An idle Python hook costs 50 ms at most](GOALS.md#t2-an-idle-python-hook-costs-50-ms-at-most)
+  - [T2: An idle Python hook costs 50 ms at most](GOALS.md#t2-an-idle-python-hook-costs-50-ms-at-most): ❌ 2026-11-17, 51 ms for an edit and 119 ms for a turn's end
 - **Constraints**
   - [R2: A false positive costs one round](GOALS.md#r2-a-false-positive-costs-one-round)
   - [R4: Setup asks at most two questions](GOALS.md#r4-setup-asks-at-most-two-questions)

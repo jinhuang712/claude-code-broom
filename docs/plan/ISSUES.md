@@ -16,7 +16,8 @@ Issues
 └── fix
     ├── I3: The cause of the reported Stop hang is unconfirmed
     ├── I8: Two holes in the record
-    └── I10: No fresh session has used broom end to end
+    ├── I10: No fresh session has used broom end to end
+    └── I11: An idle Stop hook takes 119 ms
 ```
 
 ---
@@ -103,3 +104,15 @@ Issues
   - [F1.3: /broom:setup](../features/F1-setup.md#f13-broomsetup)
   - [F2.9: Messages that say how to fix](../features/F2-sweep.md#f29-messages-that-say-how-to-fix)
   - [F9.2: Turn summary](../features/F9-record.md#f92-turn-summary)
+
+---
+
+## I11: An idle Stop hook takes 119 ms
+
+- type: fix
+- why: A turn's end with nothing to check starts git 9 times, which takes about 80 ms, and waits for each in a loop that sleeps. An idle edit hook takes 51 ms, of which about 27 ms is importing broom's modules. The limit for both is 50 ms.
+- found: a measurement for the goal, 2026-11-17
+- touches:
+  - [2. An idle hook exits in milliseconds](../DESIGNS.md#2-an-idle-hook-exits-in-milliseconds)
+  - [F2.2: Turn-end check](../features/F2-sweep.md#f22-turn-end-check)
+

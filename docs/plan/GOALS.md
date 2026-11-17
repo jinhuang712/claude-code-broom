@@ -21,7 +21,7 @@ Goals
 │   └── ⬜ M2: Check time — the seconds a commit check takes
 ├── Thresholds
 │   ├── ✅ T1: An idle Bash call costs 15 ms at most
-│   ├── ⬜ T2: An idle Python hook costs 50 ms at most
+│   ├── ❌ T2: An idle Python hook costs 50 ms at most
 │   ├── ✅ T3: A hook run takes 30 seconds at most
 │   └── ✅ T4: Content that passed is let through in 100 ms at most
 └── Constraints
@@ -215,7 +215,7 @@ An edit or a turn's end with nothing to check costs one Python start.
 
 **How**: Time `broom hook edit` and `broom hook stop` with nothing to do.
 
-**Status**: ⬜ The docs record 30 to 45 ms on macOS with no date.
+**Status**: ❌ 2026-11-17, on an Apple M5 Pro with Python 3.14: `broom hook edit` took 51 ms and `broom hook stop` 119 ms, each the median of 30 runs. [I11: An idle Stop hook takes 119 ms](ISSUES.md#i11-an-idle-stop-hook-takes-119-ms) holds the work.
 
 ---
 
