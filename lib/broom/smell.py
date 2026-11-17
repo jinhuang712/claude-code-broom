@@ -6,8 +6,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple
 
+from .clones import Clone
 from .config import DEAD_CODE, SMELL_PRESENCE
 from .findings import Issue
 
@@ -109,3 +110,13 @@ def made_worse(value: int, old: Optional[int], limit: Tuple[int, int]) -> bool:
     was = level(old, limit) if old is not None else ""
     now = level(value, limit)
     return LEVELS.index(now) > LEVELS.index(was) or (now == "block" and old is not None and value > old)
+
+
+class Scan(List[Smell]):
+    """The smells a scan found, as a list, and with them the clones between two test files that the same scan saw. Those
+    are no smells, since the checks on a change leave tests that repeat their setup alone (decision 010); the
+    whole-repo diagnosis and the check-up keep them apart."""
+
+    def __init__(self, smells: Iterable[Smell] = (), duplicate_tests: Optional[List[Clone]] = None) -> None:
+        super().__init__(smells)
+        self.duplicate_tests: List[Clone] = duplicate_tests or []

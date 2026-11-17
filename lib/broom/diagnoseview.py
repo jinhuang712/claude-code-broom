@@ -90,6 +90,19 @@ def checkup_lines(data: dict) -> List[str]:
     return [last_line(c), *table(["counter", "now", "at the last check-up", "change"], rows, left=(0, 3))]
 
 
+def duplicate_lines(data: dict, top: int) -> List[str]:
+    """The tests that repeat one another, the `top` largest: both places and the lines they share."""
+    rows = data["duplicate_tests"]
+    if not rows:
+        return ["  not measured: jscpd is missing"] if any(t.startswith("jscpd") for t in data["missing_tools"]) else []
+    shown = table(["where", "also at", "lines"],
+                  [[f"{r['file']}:{r['line']}", f"{r['other']}:{r['other_line']}", r["lines"]] for r in rows[:top]],
+                  left=(0, 1))
+    more = len(rows) - top
+    return [f"  {len(rows)} place(s) where tests repeat one another; the checks on a change leave these out.", *shown,
+            *([f"  ... and {more} more; `--json` lists them all"] if more > 0 else [])]
+
+
 def stats_sections(stats: dict) -> List[str]:
     """The four sections of `broom stats`, each under a `##` heading."""
     out: List[str] = []
@@ -101,12 +114,14 @@ def stats_sections(stats: dict) -> List[str]:
 
 def render(data: dict, top: int) -> str:
     """The report for `data` (from `diagnose`): the summary, the smells by kind and by language, the hotspots, the
-    `top` worst smells, the check-up's counters, the four stats sections, and how long it took."""
+    `top` worst smells, the check-up's counters, the tests that repeat one another, the four stats sections, and how long
+    it took."""
     narrowed = f", narrowed to {', '.join(data['paths'])}" if data["paths"] else ""
     out = [f"# broom diagnose: {display(Path(data['repo']))}{narrowed}"]
     out += heading("Summary", summary_lines(data)) + heading("Smells by kind", kind_lines(data))
     out += heading("Smells by language", language_lines(data)) + heading("Hotspots by churn", hotspot_lines(data))
     out += heading("The worst smells", worst_lines(data, top)) + heading("Check-up", checkup_lines(data))
+    out += heading("Duplicate tests", duplicate_lines(data, top))
     out += stats_sections(data["stats"])
     return "\n".join(out + ["", f"broom diagnose took {data['summary']['seconds']} s"])
 

@@ -11,12 +11,14 @@ from typing import Dict, List, Tuple
 from .checkup import section as checkup_section
 from .gate import note_text
 from .hotspots import CHURN_DAYS, churn_order, rank, repo_files, smell_counts, smell_row
-from .smells import Smell, find_smells
+from .smell import Scan, Smell
+from .smells import find_smells
 from .stats import collect, report as stats_report
+from .testrot import duplicate_rows
 from .toolchain import lang_of
 
 
-def measure(repo: Path, paths: List[Path]) -> Tuple[List[Smell], List[str]]:
+def measure(repo: Path, paths: List[Path]) -> Tuple[Scan, List[str]]:
     """Every smell in the repo or in `paths`, and the notes: no base, so nothing is left out for being old, and no
     time budget, so the tools that run in the real tree run to the end. There is no limit on the files."""
     return find_smells(repo, repo_files(repo, paths), None)
@@ -59,7 +61,7 @@ def diagnose(repo: Path, paths: List[Path], top: int, days: int = CHURN_DAYS) ->
                "severe": severe, "hints": len(found) - severe, "seconds": round(time.monotonic() - started, 1)}
     return {"repo": str(repo), "paths": stats["paths"], "summary": summary, "by_smell": by_smell(repo, ordered),
             "by_language": by_language(found), "by": order, "hotspots": files[:top],
-            "smells": [smell_row(repo, s) for s in ordered],
+            "smells": [smell_row(repo, s) for s in ordered], "duplicate_tests": duplicate_rows(found.duplicate_tests),
             "missing_tools": [note_text(n) for n in notes if n.startswith("missing:")],
             "notes": [note_text(n) for n in notes if not n.startswith("missing:")] + history_notes, "stats": stats,
             "checkup": checkup_section(repo, facts, smell_counts(repo, found, notes), narrowed=bool(paths))}

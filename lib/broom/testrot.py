@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Pattern, Set, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Pattern, Set, Tuple
 
+from .clones import Clone
 from .config import SMELL_PRESENCE
 from .gitutil import git
-from .reading import Raw
-from .smell import Smell
+from .maintained import Maintained, generated
+from .reading import Limits, Raw
+from .smell import Smell, level
 from .toolchain import lang_of
 
 TEST_FILE = re.compile(r"(^|/)(tests?|__tests__|Tests)/|_test\.(go|py)$|(^|/)test_[^/]*\.py$|"
@@ -114,3 +116,56 @@ def untested_smells(repo: Path, now: Dict[str, str], old: Optional[Dict[str, str
     return [Smell(repo, repo / rel, 1, UNTESTED_FILE, UNTESTED_FILE, 1, None, "broom", SMELL_PRESENCE[UNTESTED_FILE],
                   0, [1])
             for rel in added if (lang_of(Path(rel)), stem_of(rel)) not in named]
+
+
+# ---------------------------------------------------------------- tests that repeat one another
+
+DUPLICATE_TESTS = "duplicate_tests"
+
+
+def test_clones(keep: Maintained, clones: List[Clone], scope: Set[str],
+                limits_of: Callable[[str], Limits]) -> List[Clone]:
+    """The clones with both sides in test files that someone maintains here (not generated, not legacy), a side in
+    `scope`, and past the duplicate limit of tests: the largest first. The checks on a change leave these out."""
+    out = []
+    for c in clones:
+        sides = (c.rel, c.other)
+        if not all(TEST_FILE.search(rel) and keep(rel) and not keep.legacy(rel) for rel in sides):
+            continue
+        if scope.isdisjoint(sides) or any(generated(keep.repo / rel) for rel in sides):
+            continue
+        if level(c.lines, limits_of(c.rel)["duplicate_lines"]):
+            out.append(c)
+    return sorted(out, key=lambda c: (-c.lines, c.rel, c.line))
+
+
+def newer_side(repo: Path, c: Clone) -> str:
+    """The side of a clone that was written last, where the copy is likelier to be: the later path breaks a tie."""
+
+    def written(rel: str) -> int:
+        try:
+            return (repo / rel).stat().st_mtime_ns
+        except OSError:
+            return 0
+
+    return max((c.rel, c.other), key=lambda rel: (written(rel), rel))
+
+
+def duplicate_counter(repo: Path, found: object, notes: List[str], off: Iterable[str]) -> Optional[Dict[str, int]]:
+    """The check-up's count of duplicate test blocks per file, each block on its newer side, from the scan `found`. None
+    when the scan can't say: no clones in it, the repo turned duplicates off, or jscpd was missing, failed or cut short,
+    as a count that low would read as a fall."""
+    clones = getattr(found, "duplicate_tests", None)
+    if clones is None or {"duplicate_lines", DUPLICATE_TESTS} & set(off) or any("jscpd" in n for n in notes):
+        return None
+    counts: Dict[str, int] = {}
+    for c in clones:
+        rel = newer_side(repo, c)
+        counts[rel] = counts.get(rel, 0) + 1
+    return counts
+
+
+def duplicate_rows(clones: List[Clone]) -> List[dict]:
+    """The clones as the diagnosis shows them, largest first: both places and the lines they share."""
+    return [{"file": c.rel, "line": c.line, "other": c.other, "other_line": c.other_line, "lines": c.lines}
+            for c in clones]

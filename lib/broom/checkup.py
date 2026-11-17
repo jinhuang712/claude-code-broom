@@ -1,9 +1,10 @@
 """The check-up: a look at the whole repo for rot, which gets worse without any one change being at fault. It keeps
-five counters (lint suppressions, skipped tests, TODO comments older than `OLD_DAYS` days, dead-code findings, public
-code with no doc comment) per file, and the numbers of the last check-up per repo, in broom's data directory. The
-session scan runs it in the background after the smell scan, and tells Claude, once, of each counter that is higher
-than at the last check-up, with the files that added to it. It never blocks and takes only what is cheap: the one
-pass over the files `broom stats` makes, a bounded `git blame`, and the counts the smell scan already has.
+the counters of `LABELS` (lint suppressions, skipped tests, TODO comments older than `OLD_DAYS` days, dead-code
+findings, public code with no doc comment, duplicate test blocks) per file, and the numbers of the last check-up per
+repo, in broom's data directory. The session scan runs it in the background after the smell scan, and tells Claude,
+once, of each counter that is higher than at the last check-up, with the files that added to it. It never blocks and
+takes only what is cheap: the one pass over the files `broom stats` makes, a bounded `git blame`, and the counts the
+smell scan already has.
 
 `broom diagnose` lists every counter, grown or not (`section`); it never changes the record."""
 
@@ -19,14 +20,16 @@ from .state import DATA_ROOT, load_json, short_hash, update_json
 from .stats import collect
 from .statscan import Facts
 from .statsgit import BLAME_LINES, OLD_DAYS, old_lines
+from .testrot import DUPLICATE_TESTS
 
 RECORDS = DATA_ROOT / "checkup"
 FILES_NAMED = 3  # how many files a line of the note names
 MIN_SECONDS = 6  # a hook with less time left than this leaves the check-up to the next session
 LABELS = {"suppressions": "lint suppressions", "skipped_tests": "skipped tests",
           "old_todos": f"TODO comments older than {OLD_DAYS} days", DEAD_CODE: "dead-code findings",
-          "missing_docs": "public code with no doc comment"}
-SMELL_COUNTERS = (DEAD_CODE, "missing_docs")  # counted by the smell scan, not by the pass over the files
+          "missing_docs": "public code with no doc comment", DUPLICATE_TESTS: "duplicate test blocks"}
+# Counted by the smell scan, not by the pass over the files.
+SMELL_COUNTERS = (DEAD_CODE, "missing_docs", DUPLICATE_TESTS)
 TELL = "At a natural point tell the user; don't interrupt their task."
 
 Counts = Dict[str, int]  # per file: the files that hold any, by path from the repo root

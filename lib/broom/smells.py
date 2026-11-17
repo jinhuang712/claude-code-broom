@@ -28,8 +28,8 @@ from .maintained import GENERATED, Maintained, generated
 from .measure import SMELL_EXTS, Limits, Raw, code_lines
 from .realtree import Budget, Found, find_in_real_tree
 from .rowcache import RowCache
-from .smell import Smell, level, made_worse
-from .testrot import TEST_FILE, UNTESTED_FILE, skip_rows, untested_smells
+from .smell import Scan, Smell, level, made_worse
+from .testrot import TEST_FILE, UNTESTED_FILE, skip_rows, test_clones, untested_smells
 from .touched import old_smells, touched, touches
 from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS
 
@@ -282,7 +282,7 @@ def with_skips(rows: Optional[List[Raw]], texts: Optional[Dict[str, str]]) -> Op
 
 
 def find_smells(repo: Path, files: List[Path], base: Optional[str],
-                budget: Optional[float] = None) -> Tuple[List[Smell], List[str]]:
+                budget: Optional[float] = None) -> Tuple[Scan, List[str]]:
     """Smells in `files` that are new or worse than at `base`; every smell when `base` is None. A file renamed
     since `base` is compared with its old path. `budget` is the seconds the tools that run in the real tree have
     between them (no limit when None)."""
@@ -290,7 +290,7 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str],
     now_text = current_texts(repo, files, keep)
     notes = [n for n in (keep.note(),) if n]
     if not now_text:
-        return [], notes
+        return Scan(), notes
     lim = RepoLimits(repo)
     off = tuple(repo_config(repo).get("smells_off") or ())
     old_text = base_texts(repo, base, list(now_text), renamed(repo, [base])) if base else None
@@ -303,20 +303,22 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str],
         clones = None if "duplicate_lines" in off else pool.submit(
             find_clones, repo, base, lim.measured["duplicate_lines"][0] + 1, keep.clone_skips(), notes)
         unused = None if DEAD_CODE in off else pool.submit(find_unused, repo, keep.dead_code_skips(), notes)
-        unmeasured = [] if base else None  # a base with nothing at it: every file is new
+        unmeasured = [] if base else None  # a base with no file at it makes every row new; no base, a sweep
         old_rows = with_skips(before.result() if before else unmeasured, old_text)
         rows_now = drop_import_growth(now.result(), now_text, old_text) + skip_rows(now_text)
         found = compare(rows_now, old_rows, lim, repo, off)
         if base:  # the old smells in what the change touches
             found += touched(old_smells(counted(rows_now, off), old_rows, lim.of, repo), base, now_text)
-        found += clone_smells(keep, clones.result() if clones else [], set(now_text), base, lim)
+        cloned = clones.result() if clones else []
+        found += clone_smells(keep, cloned, set(now_text), base, lim)
         found += unused_smells(repo, unused.result() if unused else [], set(now_text), base)
         found += real_tree_smells(repo, real.result(), base, lim, off)
         found += [] if UNTESTED_FILE in off else untested_smells(repo, now_text, old_text)
     rows.save()
     for s in found:
         s.compared = base is not None
-    return sorted(found, key=lambda s: (s.level != "block", str(s.file), s.line)), list(dict.fromkeys(notes))
+    ordered = sorted(found, key=lambda s: (s.level != "block", str(s.file), s.line))
+    return Scan(ordered, test_clones(keep, cloned, set(now_text), lim.of)), list(dict.fromkeys(notes))
 
 
 def gate_smells(repo: Path, files: List[Path], known: set, base: str = "HEAD"

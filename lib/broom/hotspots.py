@@ -16,6 +16,7 @@ from .gitutil import changed_since, git
 from .smells import Smell, find_smells
 from .state import DATA_ROOT, load_json, save_json, short_hash, update_json
 from .statsgit import commits_per_file
+from .testrot import DUPLICATE_TESTS, duplicate_counter
 
 CACHE = DATA_ROOT / "hotspots"
 DISMISSED = DATA_ROOT / "smells-dismissed.json"
@@ -136,8 +137,9 @@ def render(data: dict) -> str:
 
 def smell_counts(repo: Path, found: List[Smell], notes: List[str]) -> Dict[str, Optional[Dict[str, int]]]:
     """The check-up's smell counters from a scan of the whole repo (`found` has no base): per file, how many dead-code
-    findings and how many public declarations with no doc comment it holds. A counter is None when the repo turned
-    its smell off or a tool behind it was missing, failed or cut short: a count that low would read as a fall."""
+    findings, public declarations with no doc comment and duplicate test blocks it holds. A counter is None when the
+    repo turned its smell off or a tool behind it was missing, failed or cut short: a count that low would read as a
+    fall."""
     off = repo_config(repo).get("smells_off") or []
     out: Dict[str, Optional[Dict[str, int]]] = {}
     for metric, tools in COUNTED_BY.items():
@@ -148,6 +150,7 @@ def smell_counts(repo: Path, found: List[Smell], notes: List[str]) -> Dict[str, 
                 per_file[rel] = per_file.get(rel, 0) + s.value
         short = any(tool in note for note in notes for tool in tools)
         out[metric] = None if metric in off or short else per_file
+    out[DUPLICATE_TESTS] = duplicate_counter(repo, found, notes, off)
     return out
 
 

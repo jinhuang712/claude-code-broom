@@ -160,7 +160,8 @@ class DiagnoseTest(CheckupCase):
         d = self.diagnose(r)
         self.assertEqual((d["off"], d["narrowed"], d["last"]), (False, False, date.today().isoformat()))
         rows = {c["counter"]: c for c in d["counters"]}
-        self.assertEqual(list(rows), ["suppressions", "skipped_tests", "old_todos", "dead_code", "missing_docs"])
+        self.assertEqual(list(rows), ["suppressions", "skipped_tests", "old_todos", "dead_code", "missing_docs",
+                                      "duplicate_tests"])
         self.assertEqual(rows["suppressions"], {"counter": "suppressions", "label": "lint suppressions", "now": 3,
                                                 "was": 1, "grew": True, "files": ["b.py"]})
         self.assertEqual((rows["skipped_tests"]["now"], rows["skipped_tests"]["was"], rows["skipped_tests"]["grew"]),

@@ -6,13 +6,17 @@ in two pieces where a line of it would start like one: broom reads its own tests
 from __future__ import annotations
 
 import json
+import os
 import shutil
+import time
 import unittest
+from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
+from gitwork import GitWork
 from support import BroomCase, py_function
 
-from broom import testrot
+from broom import checkup
 from broom.config import SMELL_PRESENCE
 from broom.smells import find_smells
 
@@ -185,3 +189,125 @@ class UntestedFileTest(BroomCase):
         self.assertEqual([(s["file"], s["smell"], s["level"]) for s in smells], [("pkg/fresh.py", "untested_file", "hint")])
         self.assertIn("no test file beside it by name", smells[0]["text"])
         self.assertIn("test_name.py", self.cli(r, "fixes", "untested_file").stdout)
+
+
+HAS_JSCPD = shutil.which("jscpd") is not None
+BODY = py_function("one", 40).split("\n", 1)[1]  # 39 lines: the same text in two test files is a clone
+TELL = "At a natural point tell the user; don't interrupt their task."
+
+
+def test_with_body(name: str) -> str:
+    """A test file whose one test has `BODY`."""
+    return f"def test_{name}(x):\n{BODY}"
+
+
+@unittest.skipUnless(HAS_JSCPD, "jscpd missing")
+class DuplicateTestsTest(GitWork):
+    def two_copies(self) -> Path:
+        """A repo whose test_a.py and test_b.py repeat one test, the older file test_a.py."""
+        r = self.repo({"tests/test_a.py": test_with_body("a"), "tests/test_b.py": test_with_body("b"),
+                       "pkg/code.py": "VALUE = 1\n"})
+        old = time.time() - 3600
+        os.utime(r / "tests/test_a.py", (old, old))
+        return r
+
+    def test_a_scan_keeps_them_apart_from_the_smells(self) -> None:
+        r = self.two_copies()
+        found, notes = find_smells(r, [r / "tests/test_a.py", r / "tests/test_b.py"], "HEAD")
+        self.assertEqual(notes, [])
+        self.assertEqual([s for s in found if s.metric == "duplicate_lines"], [], "the checks on a change leave them out")
+        (clone,) = found.duplicate_tests
+        self.assertEqual({clone.rel, clone.other}, {"tests/test_a.py", "tests/test_b.py"})
+        self.assertGreater(clone.lines, 30)
+
+    def test_the_whole_repo_scan_lists_each_with_both_places_and_the_lines_shared_the_largest_first(self) -> None:
+        r = self.two_copies()
+        (r / "tests/test_c.py").write_text(test_with_body("c").replace("+=", "-=").replace("x -= 5", "x -= 6"))
+        (r / "tests/test_d.py").write_text((r / "tests/test_c.py").read_text().replace("test_c", "test_d"))
+        found, _ = find_smells(r, [r / "tests/test_a.py", r / "tests/test_b.py", r / "tests/test_c.py",
+                                   r / "tests/test_d.py"], None)
+        pairs = [{c.rel, c.other} for c in found.duplicate_tests]
+        self.assertIn({"tests/test_a.py", "tests/test_b.py"}, pairs)
+        self.assertIn({"tests/test_c.py", "tests/test_d.py"}, pairs)
+        self.assertEqual([c.lines for c in found.duplicate_tests], sorted((c.lines for c in found.duplicate_tests),
+                                                                         reverse=True))
+
+    def test_a_copy_of_code_in_a_test_is_a_smell_and_not_a_duplicate_test(self) -> None:
+        r = self.repo({"code.py": "def one(x):\n" + BODY, "tests/test_a.py": test_with_body("a")})
+        found, _ = find_smells(r, [r / "code.py", r / "tests/test_a.py"], None)
+        self.assertEqual(found.duplicate_tests, [])
+        self.assertEqual([s.metric for s in found if s.metric == "duplicate_lines"], ["duplicate_lines"])
+
+    def test_the_scan_of_some_files_keeps_the_clones_with_a_side_among_them(self) -> None:
+        r = self.two_copies()
+        mine, _ = find_smells(r, [r / "tests/test_a.py"], None)
+        self.assertEqual(len(mine.duplicate_tests), 1)
+        other, _ = find_smells(r, [r / "pkg/code.py"], None)
+        self.assertEqual(other.duplicate_tests, [])
+
+    def test_small_clones_generated_and_legacy_tests_are_left_out(self) -> None:
+        short = "def test_s(x):\n" + "".join(f"    x += {i}\n" for i in range(6)) + "    return x\n"
+        r = self.repo({"tests/test_s1.py": short, "tests/test_s2.py": short.replace("test_s", "test_t")})
+        self.assertEqual(find_smells(r, [r / "tests/test_s1.py"], None)[0].duplicate_tests, [])
+        legacy = self.repo({"tests/test_a.py": test_with_body("a"), "tests/test_b.py": test_with_body("b"),
+                            ".broom.json": json.dumps({"legacy": ["tests/test_b.py"]})})
+        self.assertEqual(find_smells(legacy, [legacy / "tests/test_a.py"], None)[0].duplicate_tests, [])
+        header = "# DO NOT EDIT\n"
+        gen = self.repo({"tests/test_a.py": header + test_with_body("a"), "tests/test_b.py": test_with_body("b")})
+        self.assertEqual(find_smells(gen, [gen / "tests/test_b.py"], None)[0].duplicate_tests, [])
+
+    def test_smells_off_duplicate_lines_leaves_the_scan_without_them(self) -> None:
+        r = self.repo({"tests/test_a.py": test_with_body("a"), "tests/test_b.py": test_with_body("b"),
+                       ".broom.json": json.dumps({"smells_off": ["duplicate_lines"]})})
+        self.assertEqual(find_smells(r, [r / "tests/test_a.py"], None)[0].duplicate_tests, [])
+
+    def scan(self, r: Path, session: str) -> str:
+        """What the async session scan tells Claude in `session`, with every tool the machine has."""
+        out = self.session(r, session, self.env, "session-scan")
+        return out.get("hookSpecificOutput", {}).get("additionalContext", "")
+
+    def test_the_check_up_counts_them_on_the_newer_side_and_tells_when_they_grow(self) -> None:
+        r = self.repo({"tests/test_a.py": test_with_body("a"), "pkg/code.py": "VALUE = 1\n"})
+        self.assertEqual(self.scan(r, "s1"), "")
+        counters = json.loads(checkup.record_path(r).read_text())["counters"]
+        self.assertEqual(counters["duplicate_tests"], {}, "none yet, and counted")
+        self.commit_all(r, {"tests/test_b.py": test_with_body("b")})
+        note = self.scan(r, "s2")
+        self.assertIn("duplicate test blocks 0 -> 1 (tests/test_b.py)", note)
+        self.assertEqual(self.scan(r, "s3"), "", "told once")
+        self.commit_all(r, {"tests/test_b.py": "X = 1\n"})
+        self.assertEqual(self.scan(r, "s4"), "", "a number that fell says nothing")
+        self.assertEqual(json.loads(checkup.record_path(r).read_text())["counters"]["duplicate_tests"], {})
+
+    def test_the_diagnosis_lists_them_in_a_section_and_in_the_json(self) -> None:
+        r = self.two_copies()
+        data = json.loads(self.cli(r, "diagnose", "--json").stdout)
+        (row,) = data["duplicate_tests"]
+        self.assertEqual({row["file"], row["other"]}, {"tests/test_a.py", "tests/test_b.py"})
+        self.assertEqual((row["line"], row["other_line"]), (1, 1))
+        self.assertGreater(row["lines"], 30)
+        counter = {c["counter"]: c for c in data["checkup"]["counters"]}["duplicate_tests"]
+        self.assertEqual((counter["label"], counter["now"]), ("duplicate test blocks", 1))
+        text = self.cli(r, "diagnose").stdout
+        section = text.split("## Duplicate tests\n")[1].split("\n\n## ")[0].splitlines()
+        self.assertIn("1 place(s) where tests repeat one another", section[0])
+        self.assertRegex(section[1], r"^  where\s+also at\s+lines$")
+        self.assertRegex(section[2], r"^  tests/test_[ab]\.py:1\s+tests/test_[ab]\.py:1\s+\d+$")
+        self.assertLess(text.index("## Check-up"), text.index("## Duplicate tests"))
+        self.assertLess(text.index("## Duplicate tests"), text.index("## Size"))
+
+
+class DuplicateTestsWithoutTheToolTest(GitWork):
+    def test_without_jscpd_nothing_is_counted_and_the_diagnosis_says_it_was_not_measured(self) -> None:
+        bare = self.fake_path()
+        r = self.repo({"tests/test_a.py": test_with_body("a"), "tests/test_b.py": test_with_body("b")})
+        out = self.session(r, "s1", bare, "session-scan")
+        self.assertEqual(out, {})
+        self.assertNotIn("duplicate_tests", json.loads(checkup.record_path(r).read_text())["counters"])
+        data = json.loads(self.cli(r, "diagnose", "--json", env=bare).stdout)
+        self.assertEqual(data["duplicate_tests"], [])
+        row = {c["counter"]: c for c in data["checkup"]["counters"]}["duplicate_tests"]
+        self.assertIsNone(row["now"])
+        text = self.cli(r, "diagnose", env=bare).stdout
+        self.assertIn("## Duplicate tests\n  not measured: jscpd is missing", text)
+        self.assertRegex(text, r"\n  duplicate test blocks\s+-\s+-\s+not measured\n")
