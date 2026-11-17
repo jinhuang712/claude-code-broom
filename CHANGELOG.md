@@ -6,6 +6,10 @@
 
 ---
 
+## 0.22.0 — 2026-11-17
+
+---
+
 ### Tests
 
 - `broom stats` and `broom diagnose` show test coverage, read from the report your own test run wrote: Cobertura XML, lcov, Go's cover profile or the JSON of coverage.py. broom runs no tests. Without a report they name the command that writes one.

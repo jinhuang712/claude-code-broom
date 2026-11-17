@@ -41,3 +41,47 @@
 
 - description: A link checker such as lychee could tell when a doc points at a file that is gone.
 - created: 2026-11-17
+
+---
+
+### [P2][IDEA] Dependencies that fell far behind
+
+- description: A package many major versions behind is rot the unused-package tools don't see. Finding it asks a registry, so it would run only on request, like the vulnerability lookup.
+- created: 2026-11-17
+- found: the look for missed rot at the end of CP5
+- related: [030: Known vulnerabilities are looked up only on request](../specs/decisions/030-vulnerabilities-on-request.md)
+
+---
+
+### [P2][IDEA] Tests that assert nothing
+
+- description: A test with no assertion passes whatever the code does. Finding one needs each language's test forms, and a helper that asserts for the test would read as a miss.
+- created: 2026-11-17
+- found: the look for missed rot at the end of CP5
+
+---
+
+### [P2][IDEA] Rules turned off in the project's lint config
+
+- description: A lint config loses rules one at a time, and no change is at fault. A counter of the rules a config turns off would tell when it grew. Each linter writes that differently.
+- created: 2026-11-17
+- found: the look for missed rot at the end of CP5
+- related: [F11.1: Counters](../features/F11-checkup.md#f111-counters)
+
+---
+
+### [P2][IDEA] The largest tracked files
+
+- description: A binary or a data file committed by mistake stays in the repo for good. `broom stats` could list the largest tracked files beside the longest code files.
+- created: 2026-11-17
+- found: the look for missed rot at the end of CP5
+- related: [F10.4: Numbers on request](../features/F10-diagnosis.md#f104-numbers-on-request)
+
+---
+
+### [P2][IDEA] Type escapes as a counter
+
+- description: `any`, a forced cast and the like are hinted when a change adds one, and nothing counts them across the repo. A counter would tell when typing got looser over a month.
+- created: 2026-11-17
+- found: the look for missed rot at the end of CP5
+- related: [F11.1: Counters](../features/F11-checkup.md#f111-counters)

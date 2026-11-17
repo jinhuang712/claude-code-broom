@@ -23,6 +23,7 @@ PLACES = ("coverage.xml", "cobertura.xml", "coverage/coverage.xml", "coverage/co
           "coverage/lcov.info", "coverage.lcov", "coverage.out", "cover.out", "coverage.json")
 MAX_BYTES = 32 * 1024 * 1024  # a larger report is left unread: a hook must not spend its seconds on one file
 DAY = 86400
+SLACK = 60  # a commit made within a minute after the report is the one the tests ran for: the report isn't behind it
 GO_BLOCK = re.compile(r"^(.+):(\d+\.\d+,\d+\.\d+) (\d+) (\d+)$")
 # How each language's usual test run writes a report broom reads.
 HOW = {"py": "coverage run -m pytest && coverage xml", "go": "go test -coverprofile=coverage.out ./...",
@@ -177,7 +178,7 @@ def section(repo: Path, code: Dict[str, str], top: int) -> dict:
     worst = sorted(mine.items(), key=lambda kv: (kv[1][0] - kv[1][1], kv[0]))[:top]
     reached, total = sum(r for r, _ in mine.values()), sum(t for _, t in mine.values())
     return {"report": name, "unread": False, "age_days": int((time.time() - written) // DAY),
-            "behind": last.strip().isdigit() and written < int(last), "lines": total, "reached": reached,
+            "behind": last.strip().isdigit() and written < int(last) - SLACK, "lines": total, "reached": reached,
             "percent": percent(reached, total), "files": len(mine),
             "unreached_files": sum(1 for r, t in mine.values() if t and not r),
             "least": [{"file": rel, "lines": t, "missed": t - r, "percent": percent(r, t)}

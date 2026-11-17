@@ -104,6 +104,12 @@ class StatsCoverageTest(GitWork):
         self.assertRegex(text, r"\n  least reached\s+lines\s+not reached\s+reached\n  a\.py\s+8\s+6\s+25%\n")
         self.assertNotIn("tests/test_a.py  ", text.split("coverage:")[1].split("\nRot")[0], "tests are left out")
 
+    def test_a_report_written_just_before_the_commit_is_not_behind_it(self) -> None:
+        r = self.repo({"a.py": CODE, "lcov.info": lcov("a.py", 1, 1)})
+        before = time.time() - 5  # as when the tests ran, and the commit came seconds later
+        os.utime(r / "lcov.info", (before, before))
+        self.assertFalse(self.coverage_of(r)["behind"])
+
     def test_a_report_older_than_the_last_commit_is_said_to_be(self) -> None:
         r = self.repo({"a.py": CODE, "lcov.info": lcov("a.py", 1, 1)})
         old = time.time() - 3 * 86400 - 60
