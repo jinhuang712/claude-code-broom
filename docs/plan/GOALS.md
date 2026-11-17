@@ -215,7 +215,7 @@ An edit or a turn's end with nothing to check costs one Python start.
 
 **How**: Time `broom hook edit` and `broom hook stop` with nothing to do.
 
-**Status**: ✅ 2026-11-17, on an Apple M5 Pro with Python 3.14: `broom hook edit` took 31 ms and `broom hook stop` 39 ms, each the median of 30 runs. `tests/test_turnhooks.py` and `tests/test_edithook.py` hold what the time rests on: one git call at most and no check loaded.
+**Status**: ✅ 2026-11-17, on an Apple M5 Pro with Python 3.14: `broom hook edit` took 31 ms and `broom hook stop` 39 ms, each the median of 30 runs. Later that day, with a bare `python3` start at 16 ms where it had been 14.5, they took 32 ms and 46 ms. `tests/test_turnhooks.py` and `tests/test_edithook.py` hold what the time rests on: one git call at most and no check loaded.
 
 ---
 
