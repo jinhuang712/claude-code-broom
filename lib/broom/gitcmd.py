@@ -73,6 +73,47 @@ def split_commands(command: str) -> List[List[str]]:
     return cmds
 
 
+HEREDOC = re.compile(r"(?<!<)<<(?!<)(-?)[ \t]*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")  # <<EOF, <<-EOF, <<'EOF'; not <<<
+
+
+def without_heredocs(command: str) -> str:
+    """The command without the bodies of its here-documents. A body is input for a command, such as a commit's
+    message: it holds no command of its own, and an apostrophe in it is no quote. Read as shell, a body with one
+    made the whole line unreadable, and a `git add` before the commit went unseen. A here-document that never ends
+    is left as it is."""
+    kept: List[str] = []
+    ends: List[Tuple[str, bool]] = []  # the end word of each here-document still open, and whether tabs lead it
+    for line in command.split("\n"):
+        if ends:
+            word, tabs = ends[0]
+            if (line.lstrip("\t") if tabs else line) == word:
+                ends.pop(0)
+            continue
+        kept.append(line)
+        ends = [(m[3], bool(m[1])) for m in HEREDOC.finditer(line)]
+    return command if ends else "\n".join(kept)
+
+
+REDIRECTION = re.compile(r"^\d*(?:>>?|<<?<?|<>|>\|)(\S*)$")  # > >> < << <<< <> >|, after a file descriptor or not
+
+
+def without_redirections(toks: List[str]) -> List[str]:
+    """A command's words without its redirections: `> file`, `2>/dev/null`, `<<EOF`, the `2>` that `2>&1` leaves
+    once `&` has ended the command. They name no path the command takes. Read as words, they made
+    `git commit -m x 2>&1 | tail` a commit of the path `2>`, which no changed file matched, so nothing was checked."""
+    out: List[str] = []
+    target_next = False
+    for tok in toks:
+        found = None if target_next else REDIRECTION.match(tok)
+        if target_next:
+            target_next = False
+        elif found:
+            target_next = not found[1]  # `> file`: the file is the next word
+        else:
+            out.append(tok)
+    return out
+
+
 def _commit_in_unquotable(command: str, cwd: Path) -> List[GitOp]:
     """A command shlex can't follow, such as an unquoted heredoc: read the commit's flags up to any quote."""
     m = re.search(r"\bgit\b[^\n;&|]*?\bcommit\b(?P<rest>[^\n;&|'\"]*)", command)
@@ -114,7 +155,7 @@ class _Shell:
 
     def words(self, toks: List[str]) -> List[str]:
         """A command's words, expanded, without the assignments set for it alone and the wrappers before it."""
-        toks = [self.expand(t) for t in toks]
+        toks = without_redirections([self.expand(t) for t in toks])
         while toks and ASSIGNMENT.match(toks[0]):  # set for one command only, after its arguments are expanded
             toks = toks[1:]
         while toks and toks[0] in WRAPPERS:
@@ -139,7 +180,7 @@ class _Shell:
 def parse(command: str, cwd: Path) -> List[GitOp]:
     """The `git add` and `git commit` invocations in a shell command, in order, with the directory each runs in."""
     try:
-        commands = split_commands(command)
+        commands = split_commands(without_heredocs(command))
     except ValueError:
         return _commit_in_unquotable(command, cwd)
     shell = _Shell(cwd)

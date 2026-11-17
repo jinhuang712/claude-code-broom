@@ -10,7 +10,7 @@ import uuid
 from pathlib import Path
 
 from support import (
-    GO_UTIL, HAS_GO, HAS_TS, ROOT, TS_BAD, TS_MAIN, BroomCase,
+    GO_UTIL, HAS_GO, HAS_TS, ROOT, TS_BAD, TS_MAIN, BroomCase, py_function,
 )
 
 from broom.gitcmd import GitOp, parse, parse_commit
@@ -27,6 +27,36 @@ class CommitTest(BroomCase):
         spec = parse_commit(ops[1])
         self.assertTrue(spec.all)
         self.assertFalse(spec.no_verify)
+
+    def test_a_message_from_a_here_document_hides_no_command_before_it(self) -> None:
+        cmd = "git add a.py b.py && git commit -q -F - <<'EOF'\nit's done: git commit -n was dropped\nEOF\necho ok"
+        ops = parse(cmd, self.tmp)
+        self.assertEqual([(o.kind, o.args) for o in ops], [("add", ["a.py", "b.py"]), ("commit", ["-q", "-F", "-"])],
+                         "the apostrophe in the message is no quote, and its words are no command")
+        tabbed = "git add -A && git commit -F - <<-EOF\n\tone \"quote\n\tEOF\ngit add c.py"
+        self.assertEqual([o.kind for o in parse(tabbed, self.tmp)], ["add", "commit", "add"])
+        self.assertEqual([o.kind for o in parse("cat <<< 'x' && git commit -m x", self.tmp)], ["commit"])
+        endless = "git add -A && git commit -F - <<EOF\nit's never closed"
+        self.assertEqual([o.kind for o in parse(endless, self.tmp)], ["commit"], "unreadable: the commit alone")
+
+    def test_a_commit_whose_message_is_a_here_document_with_an_apostrophe_is_checked(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        (r / "a.py").write_text(py_function("huge", 120))
+        out = self.commit(r, "git add a.py && git commit -q -F - <<'EOF'\nit's a long one\nEOF\necho done")
+        self.assertIn("huge is 120 lines long", self.denied(out))
+
+    def test_a_redirection_is_no_path_of_the_commit(self) -> None:
+        for tail in ("2>&1 | tail -3", "> /dev/null", "2>/dev/null", ">> log.txt 2>&1", "&> /dev/null", "< /dev/null"):
+            ops = parse(f"git add a.py && git commit -q -m x {tail}", self.tmp)
+            self.assertEqual([(o.kind, o.args) for o in ops], [("add", ["a.py"]), ("commit", ["-q", "-m", "x"])], tail)
+        spec = parse_commit(parse("git commit -m 'a > b' a.py 2>&1", self.tmp)[0])
+        self.assertEqual(spec.pathspecs, ["a.py"], "a quoted message keeps its >, and the path stays a path")
+
+    def test_a_commit_whose_output_is_redirected_is_checked(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        (r / "a.py").write_text(py_function("huge", 120))
+        for command in ("git add a.py && git commit -m wip 2>&1 | tail -3", "git commit -qam wip > /dev/null"):
+            self.assertIn("huge is 120 lines long", self.denied(self.commit(r, command)), command)
 
     def test_parse_git_dash_c_and_options(self) -> None:
         ops = parse("git -C other -c core.x=1 commit -n --author 'A <a@b>' -m x", self.tmp)

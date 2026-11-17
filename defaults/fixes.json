@@ -10,7 +10,7 @@
   "magic_numbers": "Use a named constant that says what the number means, with its unit.",
   "nested_ternary": "Use plain `if` statements, or early returns.",
   "duplicate_lines": "Extract the shared block; where the copies differ, make it a function with a parameter for the difference.",
-  "dead_code": "Delete it; git keeps it.",
+  "dead_code": "Delete it, since git keeps it, or use it. New code that waits for its caller is accepted with that as the reason.",
   "commented_code": "Delete it; git keeps it.",
   "import_cycle": "Move what the files share into a third module both import; an import inside a function is the last resort.",
   "folder_cycle": "Decide which folder is the lower layer, and move what it takes from the upper one into a third folder both import, or into the lower one.",

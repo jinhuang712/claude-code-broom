@@ -22,8 +22,9 @@ LEAD = "broom's bar in this repo, for the code you write or touch: {}."
 ACCEPT = 'A blocked finding passes fixed, or with `broom known --accept "<why>"`.'
 ASK = ("For a repo's numbers ask broom before writing a script: `broom stats` (lines, tests, coverage, suppressions, "
        "TODOs, what changes most), `broom smells` (smells, ranked; `--only "
-       "function_lines` for the longest functions), `broom diagnose` (the whole repo, before a refactor), `broom "
-       "report` (what was blocked, fixed and let through), `broom doctor` (tools).")
+       "function_lines` for the longest functions), `broom diagnose` (the whole repo: with those, dead code, missing "
+       "doc comments, calls to deprecated APIs, duplicate tests and unused dependencies), `broom report` (what was "
+       "blocked, fixed and let through), `broom doctor` (tools).")
 
 
 def smells_off(repo: Path) -> List[str]:

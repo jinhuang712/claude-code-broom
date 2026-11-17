@@ -12,6 +12,7 @@ from .dependencies import lines as dependency_lines
 from .diagnose import diagnose
 from .gate import display
 from .hotspots import order_text
+from .needs import LANG_NAMES
 from .state import say
 from .statsview import history_lines, rot_lines, size_lines, table, tests_lines
 from .vulnerabilities import lines as vulnerability_lines
@@ -46,7 +47,8 @@ def kind_lines(data: dict) -> List[str]:
 def language_lines(data: dict) -> List[str]:
     """Smells by language."""
     return table(["language", "count", "past the hard limit", "hints"],
-                 [[r["language"], r["count"], r["severe"], r["hints"]] for r in data["by_language"]])
+                 [[LANG_NAMES.get(r["language"], r["language"]), r["count"], r["severe"], r["hints"]]
+                  for r in data["by_language"]])
 
 
 def hotspot_lines(data: dict) -> List[str]:
