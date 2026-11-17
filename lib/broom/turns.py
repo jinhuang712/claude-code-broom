@@ -18,7 +18,8 @@ import time
 from pathlib import Path
 from typing import List, Optional
 
-from .gitutil import git, tree_state
+from .config import REPO_FILE
+from .gitutil import git, git_root, tree_state
 from .maintained import DEPENDENCY_DIRS
 from .state import load_json, save_json, session_dir
 from .toolchain import lang_of
@@ -42,12 +43,13 @@ def turn_dir(data: dict) -> Path:
 
 def tree(root: Path) -> dict:
     """The repo's HEAD and its changed and untracked code files outside dependencies, each with its modification time
-    and size: one git call and no file read, cheap enough for every prompt and every turn's end."""
+    and size: one git call and no file read, cheap enough for every prompt and every turn's end. The repo's own
+    .broom.json is among them: a turn that loosens it by any means is seen."""
     head, changed = tree_state(root)
     files = {}
     for f in changed:
         rel = f.relative_to(root).as_posix()
-        if lang_of(f) and not DEPENDENCY_DIRS & set(rel.split("/")[:-1]):
+        if rel == REPO_FILE or (lang_of(f) and not DEPENDENCY_DIRS & set(rel.split("/")[:-1])):
             st = f.stat()
             files[rel] = [st.st_mtime_ns, st.st_size]
     return {"head": head, "files": files}
@@ -62,14 +64,15 @@ def snapshot(d: Path, root: Path, now: Optional[dict] = None) -> None:
 
 
 def changed_since_snapshot(d: Path, root: Path, now: dict) -> List[Path]:
-    """Code files changed since the snapshot by any means, and those committed since, as they are in the tree `now`."""
+    """Code files, and the repo's .broom.json, changed since the snapshot by any means, and those committed since,
+    as they are in the tree `now`."""
     snap = load_json(d / SNAPSHOT, {}).get(str(root))
     if not snap:
         return []
     out = [root / rel for rel, stat in now["files"].items() if snap["files"].get(rel) != stat]
     if snap.get("head") and now["head"] and now["head"] != snap["head"]:
         committed = git(["diff", "--name-only", "--diff-filter=ACMR", snap["head"], now["head"]], root) or ""
-        out += [root / n for n in committed.splitlines() if n and lang_of(root / n)]
+        out += [root / n for n in committed.splitlines() if n and (n == REPO_FILE or lang_of(root / n))]
     return [f for f in dict.fromkeys(out) if f.is_file()]
 
 
@@ -80,6 +83,17 @@ def turn_base(d: Path, root: Optional[Path]) -> str:
     if head and git(["rev-parse", "--verify", "-q", f"{head}^{{commit}}"], root) is not None:
         return head
     return "HEAD"
+
+
+def note_config(path: Path, sd: Path) -> None:
+    """A repo's own .broom.json, at `path`, was changed in the turn whose records are in `sd`: note now what it
+    loosens against the turn's base. A `check_on` set to off, which no later check would see, is on record this way
+    too. What reads a config's waivers loads the smells with it, so it is loaded here, when a config changed."""
+    from . import ledger, waivers
+
+    root = git_root(path.parent)
+    if root and path == root / REPO_FILE:
+        ledger.waived(waivers.config_waivers(root, turn_base(sd, root)), sd)
 
 
 def waiting(d: Path) -> bool:

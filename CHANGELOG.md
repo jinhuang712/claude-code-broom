@@ -6,6 +6,12 @@
 
 ---
 
+### Record
+
+- A `.broom.json` loosened by a command, such as `sed`, shows in the turn's summary. Before, only a change made with the edit tools did.
+
+---
+
 ## 0.22.4 — 2026-11-17
 
 ---

@@ -2,7 +2,7 @@
 the file for the turn's end when check_on=stop, a subagent's edit for that subagent's own end.
 
 It runs after every edit, and most edits leave it nothing but a line to append. So what only some edits need (the
-formatter, the reading of a `.broom.json`) is loaded where it is used, not when the module is."""
+formatter) is loaded where it is used, not when the module is."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ from .config import REPO_FILE, excluded, setting
 from .gitutil import git_root
 from .state import append_line
 from .toolchain import lang_of
-from .turns import turn_base, turn_dir
+from .turns import note_config, turn_dir
 
 SERENA_ONE_FILE = re.compile(
     r"^mcp__.*serena.*__(replace_symbol_body|insert_after_symbol|insert_before_symbol|replace_content|create_text_file)$"
@@ -32,16 +32,6 @@ def serena_path(rel: str, data: dict) -> Optional[Path]:
         if base and (Path(base) / p).exists():
             return Path(base) / p
     return None
-
-
-def note_config(path: Path, sd: Path) -> None:
-    """A repo's own .broom.json was edited: note now what it loosens against the turn's base. A `check_on` set to off,
-    which no later check would see, is on record this way too."""
-    from . import ledger, waivers  # the reading of a config's waivers loads the smells with it
-
-    root = git_root(path.parent)
-    if root and path == root / REPO_FILE:
-        ledger.waived(waivers.config_waivers(root, turn_base(sd, root)), sd)
 
 
 def edited_path(data: dict, sd: Path) -> Optional[Path]:

@@ -149,6 +149,8 @@ A change that loosens the bar is listed in the turn's summary and in the record.
 - A new lint suppression, with a reason or without.
 - A commit made with `--no-verify`.
 
+A `.broom.json` loosened by a command, such as `sed`, is seen at the turn's end. With `check_on` at `commit` no turn's end looks, and such a change is missed when the content of every committed file had already passed.
+
 - **Stance**: [Say what happened](../PHILOSOPHY.md#what-happens-to-what-was-skipped)
 
 ---

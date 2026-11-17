@@ -169,6 +169,24 @@ class ConfigTest(LedgerCase):
                          ".broom.json smells_off +todo, .broom.json exclude +gen/*")
         self.assertEqual(self.stop(r), {})
 
+    def test_a_config_loosened_by_a_command_is_seen_at_the_turns_end(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        turn = {"session_id": "s1", "cwd": str(r)}
+        self.hook("prompt", turn)
+        (r / ".broom.json").write_text('{"smells_off": ["dead_code", "todo"]}')  # as `sed` would: no edit hook runs
+        self.assertEqual(self.stop(r)["systemMessage"], "broom saw 1 self-waiver this turn: .broom.json smells_off +todo")
+        (waiver,) = lines("waiver")
+        self.assertEqual((waiver["where"], waiver["kind"]), ("stop", "config"))
+        self.hook("prompt", turn)
+        self.assertEqual(self.stop(r), {}, "the next turn left the file as it was: nothing to say")
+
+    def test_a_config_loosened_and_committed_by_a_command_is_seen_too(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        self.hook("prompt", {"session_id": "s1", "cwd": str(r)})
+        (r / ".broom.json").write_text('{"smells_off": ["dead_code"], "exclude": ["gen/*"]}')
+        self.sh(r, "git", "commit", "-qam", "looser")
+        self.assertEqual(self.stop(r)["systemMessage"], "broom saw 1 self-waiver this turn: .broom.json exclude +gen/*")
+
 
 class SummaryTest(LedgerCase):
     def test_the_summary_line_has_what_was_let_through_then_the_waivers(self) -> None:

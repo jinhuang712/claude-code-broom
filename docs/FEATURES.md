@@ -27,7 +27,7 @@ Features
 │   │   └── ✅ F2.5.2: A turn can end with a finding open
 │   ├── ✅ F2.6: Sweep on request — a scope in the user's own words
 │   ├── 🚧 F2.7: Time limit — a cold build can be cut off and go unchecked
-│   ├── 🚧 F2.8: Self-waivers shown — missed when every file's content had already passed
+│   ├── 🚧 F2.8: Self-waivers shown — a config loosened by a command is missed with `check_on` at `commit`
 │   └── ✅ F2.9: Messages that say how to fix — the fix beside the finding
 ├── ✅ F3: Formatting — the project's formatter on what changed
 │   ├── ✅ F3.1: When to format — at commit, after every edit, or never

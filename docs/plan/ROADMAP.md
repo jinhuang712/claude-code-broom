@@ -302,7 +302,7 @@ The user asked on 2026-11-17 for a round of polish and self-test once the featur
 
 - [F1.5: Protection list](../features/F1-setup.md#f15-protection-list)
 - [I10: No fresh session has used broom end to end](ISSUES.md#i10-no-fresh-session-has-used-broom-end-to-end)
-- [I8: Two holes in the record](ISSUES.md#i8-two-holes-in-the-record)
+- [I8: A hole in the record](ISSUES.md#i8-a-hole-in-the-record)
 - [I12: A fresh session finishes four of ten answers by hand](ISSUES.md#i12-a-fresh-session-finishes-four-of-ten-answers-by-hand)
 - [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)
 - README and INSTALL say which systems are supported, done on 2026-11-17.

@@ -16,11 +16,11 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from . import ledger
-from .config import excluded, setting
+from .config import REPO_FILE, excluded, setting
 from .gitutil import git_changed_files, git_root
 from .state import emit, prune_sessions, read_lines, short_hash
 from .toolchain import lang_of
-from .turns import DEFERRED, changed_since_snapshot, paused, snapshot, tree, turn_dir, waiting
+from .turns import DEFERRED, changed_since_snapshot, note_config, paused, snapshot, tree, turn_dir, waiting
 
 
 def end_turn(d: Path, root: Optional[Path], now: Optional[dict] = None) -> None:
@@ -68,7 +68,10 @@ def hook_stop(data: dict) -> None:
     prune_sessions()
     root = None if data.get("agent_id") else git_root(cwd)  # a subagent's end checks only the edits recorded for it
     now = tree(root) if root else None
-    files, mark = turn_files(d, changed_since_snapshot(d, root, now) if root and now else [])
+    since = changed_since_snapshot(d, root, now) if root and now else []
+    if root and root / REPO_FILE in since:
+        note_config(root / REPO_FILE, d)  # loosened by a command, which no edit hook saw
+    files, mark = turn_files(d, since)
     if not files:
         finish(d, root, now=now)
         return
