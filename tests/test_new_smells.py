@@ -31,6 +31,10 @@ NARROW = text(*HEAD, "    except ValueError:", "        return 0")
 RERAISED = text(*HEAD, "    except Exception:", "        raise")
 
 
+# Written in two pieces: this file would otherwise hold a suppression itself.
+DIRECTIVE = "// eslint" + "-disable-next-line no-console"
+
+
 class NewSmellCase(BroomCase):
     def changed(self, rel: str, before: str, after: str, off: Sequence[str] = ()) -> List[Tuple[str, List[int]]]:
         """The (smell, added lines) a change from `before` to `after` of the file `rel` makes worse, for the two smells
@@ -118,7 +122,7 @@ class OtherLanguagesTest(NewSmellCase):
             "", "export function fresh(): number {", "  return 2;", "}",  # 6: no comment
             "", "// A line comment says what it is for.", "export const noted = (): number => 3;",
             "", "export const bare = (): number => 4;",  # 13: no comment
-            "", "// eslint-disable-next-line no-console", "export class Loud {}",  # 16: a directive is no comment
+            "", DIRECTIVE, "export class Loud {}",  # 16: a directive is no comment
             "", "function local(): number {", "  return 5;", "}",
             "", "export function over(a: string): void;", "export function over(a: number): void;",
             "export function over(a: unknown): void {", "  void a;", "}",  # overloads: left alone
