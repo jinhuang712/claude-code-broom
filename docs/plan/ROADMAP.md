@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP6: Polish and self-test](#cp6-polish-and-self-test). CP2, CP3 and CP4 shipped, and their goals that need use or a fresh session are still open. CP5 ended with 0.22.0.
+**Current checkpoint**: [CP6: Polish and self-test](#cp6-polish-and-self-test). CP2, CP3 and CP4 shipped, and their goals that need use or a fresh session are still open. CP5 ended with 0.22.0, and CP2.2 with 0.22.2.
 
 ---
 

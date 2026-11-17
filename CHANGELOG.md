@@ -6,6 +6,10 @@
 
 ---
 
+## 0.22.2 — 2026-11-17
+
+---
+
 ### Speed
 
 - A turn's end with nothing to check takes about 40 ms, where it took about 100. An edit takes about 30 ms, where it took about 50.
