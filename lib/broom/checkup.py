@@ -1,10 +1,10 @@
 """The check-up: a look at the whole repo for rot, which gets worse without any one change being at fault. It keeps
 the counters of `LABELS` (lint suppressions, skipped tests, TODO comments older than `OLD_DAYS` days, dead-code
-findings, public code with no doc comment, duplicate test blocks) per file, and the numbers of the last check-up per
-repo, in broom's data directory. The session scan runs it in the background after the smell scan, and tells Claude,
-once, of each counter that is higher than at the last check-up, with the files that added to it. It never blocks and
-takes only what is cheap: the one pass over the files `broom stats` makes, a bounded `git blame`, and the counts the
-smell scan already has.
+findings, public code with no doc comment, duplicate test blocks, lines no test reaches) per file, and the numbers of
+the last check-up per repo, in broom's data directory. The session scan runs it in the background after the smell
+scan, and tells Claude, once, of each counter that is higher than at the last check-up, with the files that added to
+it. It never blocks and takes only what is cheap: the one pass over the files `broom stats` makes, a bounded `git
+blame`, the coverage report a test run left, and the counts the smell scan already has.
 
 `broom diagnose` lists every counter, grown or not (`section`); it never changes the record."""
 
@@ -14,6 +14,7 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from . import coverage
 from .config import CHECKUP, DEAD_CODE, repo_config, setting
 from .gitutil import CLOCK, main_worktree
 from .state import DATA_ROOT, load_json, short_hash, update_json
@@ -23,11 +24,13 @@ from .statsgit import BLAME_LINES, OLD_DAYS, old_lines
 from .testrot import DUPLICATE_TESTS
 
 RECORDS = DATA_ROOT / "checkup"
+UNCOVERED = "uncovered_lines"
 FILES_NAMED = 3  # how many files a line of the note names
 MIN_SECONDS = 6  # a hook with less time left than this leaves the check-up to the next session
 LABELS = {"suppressions": "lint suppressions", "skipped_tests": "skipped tests",
           "old_todos": f"TODO comments older than {OLD_DAYS} days", DEAD_CODE: "dead-code findings",
-          "missing_docs": "public code with no doc comment", DUPLICATE_TESTS: "duplicate test blocks"}
+          "missing_docs": "public code with no doc comment", DUPLICATE_TESTS: "duplicate test blocks",
+          UNCOVERED: "lines no test reaches, by the coverage report"}
 # Counted by the smell scan, not by the pass over the files.
 SMELL_COUNTERS = (DEAD_CODE, "missing_docs", DUPLICATE_TESTS)
 TELL = "At a natural point tell the user; don't interrupt their task."
@@ -65,12 +68,13 @@ def old_todos(repo: Path, facts: List[Facts]) -> Optional[Counts]:
 
 
 def counters(repo: Path, facts: List[Facts], from_smells: Optional[Counted]) -> Counted:
-    """Every counter, per file, as the repo is now. `from_smells` holds the two the smell scan counted (hotspots.
+    """Every counter, per file, as the repo is now. `from_smells` holds those the smell scan counted (hotspots.
     smell_counts); a counter is None when it couldn't be counted: it is then neither compared nor recorded."""
     now: Counted = {
         "suppressions": {f.rel: len(f.suppressions) for f in facts if f.suppressions},
         "skipped_tests": {f.rel: f.skipped for f in facts if f.skipped},
-        "old_todos": old_todos(repo, facts)}
+        "old_todos": old_todos(repo, facts),
+        UNCOVERED: coverage.missed(repo, {f.rel for f in facts if not f.test})}
     return {**now, **{name: (from_smells or {}).get(name) for name in SMELL_COUNTERS}}
 
 

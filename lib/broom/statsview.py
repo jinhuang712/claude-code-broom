@@ -58,9 +58,24 @@ def size_lines(d: dict) -> List[str]:
     return section("Size (non-blank lines)", d["note"], [langs, folders, longest])
 
 
+def coverage_lines(c: dict) -> List[str]:
+    """The coverage part of the tests section: the share of lines a test reached by the project's own report and the
+    files with most lines none did; without a report, how a test run writes one."""
+    if c["report"] is None:
+        return ["  no coverage report found (coverage.xml, lcov.info, coverage.out or coverage.json); broom runs no tests.",
+                *captioned("A test run writes one with:", [f"    {how}" for how in c["how"]])]
+    if c["unread"]:
+        return [f"  coverage: {c['report']} could not be read"]
+    behind = ", older than the last commit" if c["behind"] else ""
+    head = (f"  coverage: {c['percent']}% of {c['lines']} lines reached, by {c['report']} ({c['age_days']} days old"
+            f"{behind}); {c['unreached_files']} of {c['files']} files not reached at all")
+    return [head, *table(["least reached", "lines", "not reached", "reached"],
+                         [[r["file"], r["lines"], r["missed"], f"{r['percent']}%"] for r in c["least"]])]
+
+
 def tests_lines(d: dict) -> List[str]:
-    """The tests section: files, cases and skipped tests by language, the files with most skipped, and the code files with no
-    test file by name."""
+    """The tests section: files, cases and skipped tests by language, the files with most skipped, the code files with no
+    test file by name, and the coverage."""
     langs = table(["language", "test files", "cases", "skipped"],
                   [[r["language"], r["files"], r["cases"], r["skipped"]] for r in d["languages"]])
     skipped = table(["most skipped", "skipped"], [[r["file"], r["count"]] for r in d["skipped_files"]])
@@ -68,7 +83,7 @@ def tests_lines(d: dict) -> List[str]:
     bare = [f"  {u['count']} of {u['of']} code files have no test file by name.", *PAIRING_TEXT]
     bare += table(["largest of them", "lines"], [[r["file"], r["lines"]] for r in u["largest"]])
     total = [f"  {d['files']} test files, {d['cases']} test cases, {d['skipped']} skipped"]
-    return section("Tests", d["note"], [total, langs, skipped, bare if u["of"] else []])
+    return section("Tests", d["note"], [total, langs, skipped, bare if u["of"] else [], coverage_lines(d["coverage"])])
 
 
 def todo_text(t: dict) -> str:

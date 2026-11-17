@@ -9,6 +9,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
+from .coverage import section as coverage_section
 from .hotspots import repo_files
 from .maintained import GENERATED, Maintained
 from .statscan import Facts, scan
@@ -85,9 +86,9 @@ def untested(facts: List[Facts]) -> Tuple[int, List[Facts]]:
     return len(code), sorted(bare, key=lambda f: (-f.lines, f.rel))
 
 
-def tests_section(facts: List[Facts], top: int, note: Optional[str]) -> dict:
-    """Test files and cases, per language; the skipped ones with the `top` files holding most; and the code files with no
-    test file by name, with the `top` largest."""
+def tests_section(repo: Path, facts: List[Facts], top: int, note: Optional[str]) -> dict:
+    """Test files and cases, per language; the skipped ones with the `top` files holding most; the code files with no
+    test file by name, with the `top` largest; and the coverage a report of the project's own test run shows."""
     groups: Dict[str, List[Facts]] = defaultdict(list)
     for f in facts:
         if f.test or f.cases or f.skipped:
@@ -99,7 +100,8 @@ def tests_section(facts: List[Facts], top: int, note: Optional[str]) -> dict:
     return {"files": sum(f.test for f in facts), "cases": sum(f.cases for f in facts), "skipped": sum(skipped.values()),
             "languages": languages, "skipped_files": ranked(skipped, top),
             "untested": {"count": len(bare), "of": checked,
-                         "largest": [{"file": f.rel, "lines": f.lines} for f in bare[:top]]}, "note": note}
+                         "largest": [{"file": f.rel, "lines": f.lines} for f in bare[:top]]},
+            "coverage": coverage_section(repo, {f.rel: f.lang for f in facts if not f.test}, top), "note": note}
 
 
 # ---------------------------------------------------------------- rot
@@ -144,6 +146,6 @@ def report(repo: Path, paths: List[Path], top: int, days: int, facts: Optional[L
     shown = [relative(repo, p) for p in paths]
     note = None if facts else "no code files " + (f"under {', '.join(shown)}" if shown else "in the repo")
     return {"repo": str(repo), "paths": shown, "files": len(facts), "days": days,
-            "size": size_section(facts, top, note), "tests": tests_section(facts, top, note),
+            "size": size_section(facts, top, note), "tests": tests_section(repo, facts, top, note),
             "rot": rot_section(repo, facts, top, note),
             "history": history(repo, {f.rel for f in facts}, days, top, note)}

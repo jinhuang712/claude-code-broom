@@ -243,7 +243,7 @@ class ScanTest(StatsCase):
 class CommandTest(StatsCase):
     SECTIONS = {
         "size": {"total", "languages", "folders", "more_folders", "longest", "note"},
-        "tests": {"files", "cases", "skipped", "languages", "skipped_files", "untested", "note"},
+        "tests": {"files", "cases", "skipped", "languages", "skipped_files", "untested", "coverage", "note"},
         "rot": {"suppressions", "todos", "skipped_tests", "note"},
         "history": {"days", "commits", "files", "pairs", "note"},
     }
