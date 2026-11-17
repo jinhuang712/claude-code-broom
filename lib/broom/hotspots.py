@@ -13,6 +13,8 @@ from typing import Dict, List, NamedTuple, Optional, Tuple
 from .config import DEAD_CODE, drop_excluded, repo_config, setting
 from .gate import display, note_text
 from .gitutil import changed_since, git
+from .sizes import SIZED, find_sizes
+from .smell import DESCRIBE
 from .smells import Smell, find_smells
 from .state import DATA_ROOT, load_json, save_json, short_hash, update_json
 from .statsgit import commits_per_file
@@ -114,15 +116,28 @@ def report(repo: Path, paths: List[Path], ask: Ask) -> dict:
     """The smells in `paths` (the repo when empty): counts, the `top` hotspot files and the `top` worst smells.
     With `base`, only what the changes since that revision made worse; each smell's `was` is then its size or
     count at `base`, None for a new one. With `only`, the smells of those kinds alone, so the worst of one kind
-    come first: the longest functions, say. The `by` returned is the order the hotspots really have."""
+    come first: the longest functions, say. The `by` returned is the order the hotspots really have. With `only`
+    naming one of `SIZED` and no `base`, `sizes` goes on where the smells end: see `size_rows`."""
     churn, order, history_notes = churn_order(repo, ask.by)
-    found, notes = find_smells(repo, repo_files(repo, paths, ask.base), ask.base)
+    files = repo_files(repo, paths, ask.base)
+    found, notes = find_smells(repo, files, ask.base)
     kept = [s for s in found if not ask.only or s.metric in ask.only]
-    ordered, files = rank(kept, churn, order)
+    ordered, hotspots = rank(kept, churn, order)
     severe = sum(s.level == "block" for s in kept)
-    return {"repo": str(repo), "base": ask.base, "only": list(ask.only), "total": len(kept), "severe": severe,
-            "hints": len(kept) - severe, "by": order, "hotspots": files[:ask.top],
+    data = {"repo": str(repo), "base": ask.base, "only": list(ask.only), "total": len(kept), "severe": severe,
+            "hints": len(kept) - severe, "by": order, "hotspots": hotspots[:ask.top],
             "smells": [smell_row(repo, s, ask.base) for s in ordered[:ask.top]], "notes": notes + history_notes}
+    if len(ask.only) == 1 and ask.only[0] in SIZED and not ask.base:
+        data["sizes"], more = size_rows(repo, files, ask.only[0], ask.top - len(data["smells"]))
+        data["notes"] = list(dict.fromkeys(data["notes"] + more))
+    return data
+
+
+def size_rows(repo: Path, files: List[Path], metric: str, room: int) -> Tuple[List[dict], List[str]]:
+    """The next `room` longest of `metric` under the soft limit, as the JSON shows them, and the notes of the
+    measuring: the sizes that fill a `--top` list the smells leave short. They are no smells and change no count."""
+    rows, notes = find_sizes(repo, files, metric, room)
+    return [{"file": r.rel, "line": r.line, "name": r.key, "value": r.value} for r in rows], notes
 
 
 def hotspot_line(f: dict) -> str:
@@ -131,20 +146,34 @@ def hotspot_line(f: dict) -> str:
             f"worst: {f['worst']}")
 
 
+def worst_rows(data: dict) -> List[str]:
+    """The hotspots and the worst smells of the text report; nothing when there are no smells."""
+    if not data["hotspots"]:
+        return []
+    rows = ["", f"Hotspots, {order_text(data['by'])}:"] + [hotspot_line(f) for f in data["hotspots"]]
+    rows += ["", "Worst smells:"] + [f"  {s['file']}:{s['line']}  {s['smell']}  {s['text']}" for s in data["smells"]]
+    if data["total"] > len(data["smells"]):
+        rows.append(f"  ... and {data['total'] - len(data['smells'])} more; `--top {data['total']}` lists them all")
+    return rows
+
+
+def size_lines(data: dict) -> List[str]:
+    """The sizes under the limit of the text report, one row like a smell's: file and line, kind, what it is."""
+    metric = data["only"][0] if data.get("sizes") else ""
+    rows = [f"  {s['file']}:{s['line']}  {metric}  {DESCRIBE[metric].format(key=s['name'], value=s['value'])}"
+            for s in data.get("sizes") or []]
+    return ["", "Longest under the limit (not smells):"] + rows if rows else []
+
+
 def render(data: dict) -> str:
     """The report for a person. Missing tools go in the first line: counts without them read as cleaner than the
     code is."""
     where = f"the changes since {data['base']} made worse" if data["base"] else f"in {display(Path(data['repo']))}"
     missing = [note_text(n) for n in data["notes"] if n.startswith("missing:")]
     kinds = f" of {', '.join(data['only'])}" if data.get("only") else ""
-    rows = [f"[broom] {data['total']} code smell(s){kinds} {where}: {data['severe']} past the hard limit, "
-            f"{data['hints']} hints." + (f" Not all measured, missing: {'; '.join(missing)}." if missing else "")]
-    if data["hotspots"]:
-        rows += ["", f"Hotspots, {order_text(data['by'])}:"] + [hotspot_line(f) for f in data["hotspots"]]
-        rows += ["", "Worst smells:"] + [f"  {s['file']}:{s['line']}  {s['smell']}  {s['text']}"
-                                         for s in data["smells"]]
-        if data["total"] > len(data["smells"]):
-            rows.append(f"  ... and {data['total'] - len(data['smells'])} more; `--top {data['total']}` lists them all")
+    first = (f"[broom] {data['total']} code smell(s){kinds} {where}: {data['severe']} past the hard limit, "
+             f"{data['hints']} hints." + (f" Not all measured, missing: {'; '.join(missing)}." if missing else ""))
+    rows = [first] + worst_rows(data) + size_lines(data)
     return "\n".join(rows + [f"note: {note_text(n)}" for n in data["notes"] if not n.startswith("missing:")])
 
 
