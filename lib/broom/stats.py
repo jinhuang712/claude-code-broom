@@ -5,23 +5,16 @@ bounded `git blame` (statsgit). A question it can't answer comes back with a `no
 
 from __future__ import annotations
 
-import re
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 from .hotspots import repo_files
-from .maintained import Maintained
-from .smells import GENERATED
+from .maintained import GENERATED, Maintained
 from .statscan import Facts, scan
 from .statsgit import OLD_DAYS, history, old_lines, top_counts
+from .testrot import needs_test, stem_of, tested
 from .toolchain import lang_of
-
-# How a test file is named after the code it tests, per language; the pattern matches the file name without its
-# extension and holds the code's name in its groups.
-PAIRING = {"py": re.compile(r"test_(.+)|(.+)_test"), "go": re.compile(r"(.+)_test"),
-           "js": re.compile(r"(.+)\.(?:test|spec)"), "swift": re.compile(r"(.+?)Tests?")}
-NO_TEST_NEEDED = {"__init__.py", "conftest.py"}
 
 
 def collect(repo: Path, paths: List[Path]) -> List[Facts]:
@@ -83,24 +76,11 @@ def size_section(facts: List[Facts], top: int, note: Optional[str]) -> dict:
 # ---------------------------------------------------------------- tests
 
 
-def stem_of(rel: str) -> str:
-    """A file's name without its folder and its extension."""
-    return rel.rsplit("/", 1)[-1].rsplit(".", 1)[0]
-
-
-def subject_of(rel: str, lang: str) -> Optional[str]:
-    """The name of the code a test file is named for (`test_foo.py` and `foo_test.py`, `foo_test.go`, `foo.test.ts` and
-    `foo.spec.ts`, `FooTests.swift` are for `foo` or `Foo`), or None when its name follows no such form."""
-    pattern = PAIRING.get(lang)
-    m = pattern.fullmatch(stem_of(rel)) if pattern else None
-    return next((g for g in m.groups() if g), None) if m else None
-
-
 def untested(facts: List[Facts]) -> Tuple[int, List[Facts]]:
     """How many code files have a test file named for them somewhere in `facts`, as the pairing goes by file name, and
     those that have none, the largest first. Files of a language with no such naming (CSS, Rust) are not counted."""
-    named = {(f.lang, subject_of(f.rel, f.lang)) for f in facts if f.test}
-    code = [f for f in facts if not f.test and f.lang in PAIRING and f.rel.rsplit("/", 1)[-1] not in NO_TEST_NEEDED]
+    named = tested((f.rel, f.lang) for f in facts)
+    code = [f for f in facts if needs_test(f.rel, f.lang)]
     bare = [f for f in code if (f.lang, stem_of(f.rel)) not in named]
     return len(code), sorted(bare, key=lambda f: (-f.lines, f.rel))
 

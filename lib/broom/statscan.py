@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Pattern, Tuple
 
-from .smells import TEST_FILE
+from .testrot import SKIPS, TEST_FILE
 from .waivers import MARKERS, suppression_in
 
 
@@ -16,17 +16,14 @@ def rx(pattern: str) -> Pattern[str]:
     return re.compile(pattern, re.M)
 
 
-# Per language: how a test case is written, and how one is skipped. Go, Python, JS/TS and Swift are read in test
-# files only (`it(` and `.disabled` mean other things elsewhere); Rust keeps its tests next to the code.
+# Per language: how a test case is written, and how one is skipped (testrot). Go, Python, JS/TS and Swift are read in
+# test files only (`it(` and `.disabled` mean other things elsewhere); Rust keeps its tests next to the code.
 FORMS: Dict[str, Tuple[Pattern[str], Pattern[str]]] = {
-    "py": (rx(r"^[ \t]*(?:async[ \t]+)?def[ \t]+test_"),
-           rx(r"^[ \t]*@(?:[\w.]+\.)?(?:skip|skipIf|skipUnless|skipif|xfail)\b|\bself\.skipTest\(|\bpytest\.skip\(")),
-    "js": (rx(r"(?<![\w.$])(?:x?it|x?test)(?:\.(?:only|skip|each|concurrent|fails))?[ \t]*\("),
-           rx(r"(?<![\w.$])(?:it|test|describe|context|suite)\.skip[ \t]*\(|(?<![\w.$])x(?:it|describe|test)[ \t]*\(")),
-    "go": (rx(r"^func[ \t]+Test\w*[ \t]*\("), rx(r"\b[tb]\.Skip(?:f|Now)?[ \t]*\(")),
-    "rust": (rx(r"#\[(?:\w+::)*test\b[^\]]*\]"), rx(r"#\[ignore\b")),
-    "swift": (rx(r"^[ \t]*(?:@\w+[ \t]+)*func[ \t]+test\w*[ \t]*\(|^[ \t]*@Test\b"),
-              rx(r"\bXCTSkip\w*[ \t]*\(|\.disabled\b")),
+    "py": (rx(r"^[ \t]*(?:async[ \t]+)?def[ \t]+test_"), SKIPS["py"]),
+    "js": (rx(r"(?<![\w.$])(?:x?it|x?test)(?:\.(?:only|skip|each|concurrent|fails))?[ \t]*\("), SKIPS["js"]),
+    "go": (rx(r"^func[ \t]+Test\w*[ \t]*\("), SKIPS["go"]),
+    "rust": (rx(r"#\[(?:\w+::)*test\b[^\]]*\]"), SKIPS["rust"]),
+    "swift": (rx(r"^[ \t]*(?:@\w+[ \t]+)*func[ \t]+test\w*[ \t]*\(|^[ \t]*@Test\b"), SKIPS["swift"]),
 }
 TODO_WORD = re.compile(r"\b(?:TODO|FIXME|HACK|XXX)\b")
 STRING = r"\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*'"  # a string that ends on its line

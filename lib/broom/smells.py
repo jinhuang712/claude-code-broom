@@ -24,17 +24,15 @@ from .clones import Clone, Unused, find_clones, find_unused
 from .config import DEAD_CODE, LIMIT_PAIR, SMELL_LIMITS, SMELL_PRESENCE, repo_config, setting
 from .gate import issue_key
 from .gitutil import ChangedLines, renamed, run_bytes
-from .maintained import Maintained
+from .maintained import GENERATED, Maintained, generated
 from .measure import SMELL_EXTS, Limits, Raw, code_lines
 from .realtree import Budget, Found, find_in_real_tree
 from .rowcache import RowCache
 from .smell import Smell, level, made_worse
+from .testrot import TEST_FILE, skip_rows
 from .touched import old_smells, touched, touches
 from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS
 
-GENERATED = re.compile(r"DO NOT EDIT|@generated")
-TEST_FILE = re.compile(r"(^|/)(tests?|__tests__|Tests)/|_test\.(go|py)$|(^|/)test_[^/]*\.py$|"
-                       r"\.(test|spec)\.[cm]?[jt]sx?$|Tests?\.swift$")
 TEST_BLOCK = re.compile(r"(describe|it|test|suite|context)(\.\w+)?\(")
 GIT_TIMEOUT = 60
 
@@ -191,15 +189,6 @@ def base_texts(repo: Path, base: str, rels: List[str], was: Optional[Dict[str, s
     return texts
 
 
-def generated(path: Path) -> bool:
-    """Whether `path` is generated: "DO NOT EDIT" or "@generated" in its first five lines; False if unreadable."""
-    try:
-        with path.open(errors="replace") as f:
-            return bool(GENERATED.search("".join(f.readline() for _ in range(5))))
-    except OSError:
-        return False
-
-
 def clone_smells(keep: Maintained, clones: List[Clone], scope: set, base: Optional[str],
                  lim: RepoLimits) -> List[Smell]:
     """New duplicate blocks with a side in `scope`, the files measured (every clone when `base` is None), the other
@@ -312,7 +301,9 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str],
             old_rows = before.result()
         else:
             old_rows = [] if base else None
-        rows_now = drop_import_growth(now.result(), now_text, old_text)
+        rows_now = drop_import_growth(now.result(), now_text, old_text) + skip_rows(now_text)
+        if old_rows is not None:
+            old_rows = old_rows + skip_rows(old_text or {})
         found = compare(rows_now, old_rows, lim, repo, off)
         if base:  # the old smells in what the change touches
             found += touched(old_smells(counted(rows_now, off), old_rows, lim.of, repo), base, now_text)

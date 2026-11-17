@@ -38,6 +38,7 @@ LABELS = {
     "missing_docs": "public module(s), class(es) or function(s) with no doc comment",
     "import_cycle": "import(s) that close a cycle between modules",
     "folder_cycle": "import(s) that close a cycle between folders",
+    "skipped_test": "skipped or disabled test(s)",
 }
 LINES_SHOWN = 5
 

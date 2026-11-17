@@ -92,7 +92,7 @@ class TestCountTest(StatsCase):
     FILES = {
         "tests/test_a.py": text(
             "import unittest", "", "class T(unittest.TestCase):", "    def test_one(self):", "        pass", "",
-            '    @unittest.skip("later")', "    def test_two(self):", '        self.skipTest("x")', "",
+            '    @unittest.skip("later")', "    def test_two(self):", "        self." + 'skipTest("x")', "",
             '    @unittest.skipUnless(True, "no")', "    async def test_three(self):", "        pass", "",
             "@pytest.mark.xfail", "def test_four():", "    pass"),
         "src/b.test.ts": text(

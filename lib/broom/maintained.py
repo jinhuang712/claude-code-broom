@@ -8,6 +8,7 @@ silent one. Code the repo marks as legacy is maintained, but on its way out: new
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import List, Optional, Set
 
@@ -25,6 +26,16 @@ GENERATED_DIRS = {"testdata", "Generated", "generated"}
 OUTPUT_DIRS = {"build", "out", "release", "target"}
 MINIFIED = (".min.js", ".d.ts")
 NOTE_DIRS = 5
+GENERATED = re.compile(r"DO NOT EDIT|@generated")  # in the first lines of a file that a tool wrote
+
+
+def generated(path: Path) -> bool:
+    """Whether `path` is generated: "DO NOT EDIT" or "@generated" in its first five lines; False if unreadable."""
+    try:
+        with path.open(errors="replace") as f:
+            return bool(GENERATED.search("".join(f.readline() for _ in range(5))))
+    except OSError:
+        return False
 
 
 def tracked_output(repo: Path) -> Set[str]:
