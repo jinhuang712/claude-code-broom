@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Tuple
 
 from . import __version__
 from .config import CHECKUP, DEAD_CODE, LIMIT_PAIR, REPO_FILE, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, repo_file
+from .dependencies import optional_lines, optional_tools
 from .githook import LINE, hook_path, installed
 from .gitutil import git
 from .needs import LANG_NAMES, LOCKFILES, Diagnosis, Item, settings_files
@@ -93,6 +94,8 @@ def diagnose(repo: Path, projects: Optional[Dict[str, List[Path]]] = None) -> di
         # the same, with JS tools installed machine-wide instead of as devDependencies: once for every repo
         "fix_global": fixes_global, "configure_global": configure_global,
         "healthy": all(i.status == "ok" for i in items),
+        # tools `broom diagnose` uses when installed: no item, so never a gap, a fix, the exit code or a session note
+        "optional": optional_tools(repo, projects),
     }
 
 
@@ -287,7 +290,7 @@ def render_text(result: dict) -> str:
         out.append("\nTo turn formatting on:\n" + "\n".join(f"  {c}" for c in result["configure"]))
     if result["healthy"]:
         out.append("\nAll set.")
-    return "\n".join(out)
+    return "\n".join(out + optional_lines(result.get("optional") or []))
 
 
 # ---------------------------------------------------------------- setup state

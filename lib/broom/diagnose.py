@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 from .checkup import section as checkup_section
+from .dependencies import section as dependencies_section
+from .doctor import scan
 from .gate import note_text
 from .hotspots import CHURN_DAYS, churn_order, rank, repo_files, smell_counts, smell_row
 from .smell import Scan, Smell
@@ -64,4 +66,5 @@ def diagnose(repo: Path, paths: List[Path], top: int, days: int = CHURN_DAYS) ->
             "smells": [smell_row(repo, s) for s in ordered], "duplicate_tests": duplicate_rows(found.duplicate_tests),
             "missing_tools": [note_text(n) for n in notes if n.startswith("missing:")],
             "notes": [note_text(n) for n in notes if not n.startswith("missing:")] + history_notes, "stats": stats,
-            "checkup": checkup_section(repo, facts, smell_counts(repo, found, notes), narrowed=bool(paths))}
+            "checkup": checkup_section(repo, facts, smell_counts(repo, found, notes), narrowed=bool(paths)),
+            "dependencies": dependencies_section(repo, scan(repo), paths)}

@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 from typing import List
 
+from .dependencies import lines as dependency_lines
 from .diagnose import diagnose
 from .gate import display
 from .hotspots import order_text
@@ -122,6 +123,7 @@ def render(data: dict, top: int) -> str:
     out += heading("Smells by language", language_lines(data)) + heading("Hotspots by churn", hotspot_lines(data))
     out += heading("The worst smells", worst_lines(data, top)) + heading("Check-up", checkup_lines(data))
     out += heading("Duplicate tests", duplicate_lines(data, top))
+    out += heading("Dependencies", dependency_lines(data["dependencies"]))
     out += stats_sections(data["stats"])
     return "\n".join(out + ["", f"broom diagnose took {data['summary']['seconds']} s"])
 

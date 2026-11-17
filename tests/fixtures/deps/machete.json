@@ -1,0 +1,1 @@
+{"crates":[{"package_name":"app","manifest_path":"./Cargo.toml","unused":["log"],"ignored_used":[]},{"package_name":"core","manifest_path":"crates/core/Cargo.toml","unused":["serde","anyhow"],"ignored_used":["prost"]}]}
