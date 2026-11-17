@@ -6,6 +6,10 @@
 
 ---
 
+## 0.22.6 — 2026-11-17
+
+---
+
 ### Check-up
 
 - After an update of broom the check-up takes its numbers as the new baseline without a word. Before, a counter that a new version counts more broadly looked as if it had grown.
