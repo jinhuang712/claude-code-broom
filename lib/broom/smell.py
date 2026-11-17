@@ -21,7 +21,7 @@ DESCRIBE = {
     "nested_ternary": "a ternary nests inside another",
     "type_lines": "{key} is {value} lines long",
     "duplicate_lines": "{value} lines repeat {key}",
-    DEAD_CODE: "{key} is never used",
+    DEAD_CODE: "{key} is never used outside tests",  # a test that uses it doesn't count: tests are left out
 }
 LABELS = {
     "suppression": "lint suppression(s) without a reason or rule",

@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP6: Polish and self-test](#cp6-polish-and-self-test). CP2, CP3 and CP4 shipped, and their goals that need use or a fresh session are still open. CP5 ended with 0.22.0, and CP2.2 with 0.22.2.
+**Current checkpoint**: [CP6: Polish and self-test](#cp6-polish-and-self-test). CP2 and CP3 shipped, and their goals that need use are still open. CP5 ended with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
 
 ---
 
@@ -16,7 +16,7 @@ Roadmap
 │   ├── 🟨 CP3.1: Messages that say how to fix
 │   ├── 🟨 CP3.2: Limits told before the work
 │   └── ✅ CP3.3: Old smells in touched code
-├── 🟨 CP4: A refactoring kit — a full diagnosis, the worst places first, the numbers after
+├── ✅ CP4: A refactoring kit — a full diagnosis, the worst places first, the numbers after
 ├── ✅ CP5: A check-up for rot — numbers that speak when they grow
 │   ├── ✅ CP5.1: Counters, dead code and comments
 │   ├── ✅ CP5.2: Tests: coverage, duplicates and skips
@@ -176,9 +176,9 @@ The feature shipped in 0.20.0 on 2026-11-17.
 
 ## CP4: A refactoring kit
 
-**Status**: 🟨
+**Status**: ✅
 
-Everything it delivers shipped by 0.21.0 on 2026-11-17. The goal that a fresh session writes no script is not yet run.
+Everything it delivers shipped by 0.21.0 on 2026-11-17, and a fresh session wrote no script with 0.22.7 that day. The checkpoint ended with 0.23.0.
 
 A refactor starts from numbers: what is in the repo, where it hurts most and whether the work paid off.
 
@@ -195,7 +195,7 @@ A refactor starts from numbers: what is in the repo, where it hurts most and whe
 
 - **Objectives**
   - [O5: A full diagnosis of an old repo](GOALS.md#o5-a-full-diagnosis-of-an-old-repo): ✅ 2026-11-17
-  - [O7: No script to write](GOALS.md#o7-no-script-to-write)
+  - [O7: No script to write](GOALS.md#o7-no-script-to-write): ✅ 2026-11-17
 
 ---
 
@@ -303,7 +303,7 @@ The user asked on 2026-11-17 for a round of polish and self-test once the featur
 - [F1.5: Protection list](../features/F1-setup.md#f15-protection-list)
 - [I10: No fresh session has used broom end to end](ISSUES.md#i10-no-fresh-session-has-used-broom-end-to-end)
 - [I8: A hole in the record](ISSUES.md#i8-a-hole-in-the-record)
-- [I12: A fresh session finishes one of ten answers by hand](ISSUES.md#i12-a-fresh-session-finishes-one-of-ten-answers-by-hand)
+- A fresh session answers ten questions about a repo from broom alone, after five runs and the gaps each one showed, done on 2026-11-17.
 - [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)
 - README and INSTALL say which systems are supported, done on 2026-11-17.
 - An idle turn's end starts git once, where it started it 7 times, and an idle hook loads no check, done on 2026-11-17.
@@ -314,7 +314,7 @@ The user asked on 2026-11-17 for a round of polish and self-test once the featur
 - **Objectives**
   - [O2: Tooling in one conversation](GOALS.md#o2-tooling-in-one-conversation)
   - [O3: Mistakes seen while editing](GOALS.md#o3-mistakes-seen-while-editing)
-  - [O7: No script to write](GOALS.md#o7-no-script-to-write): ❌ 2026-11-17, one of ten answers finished by hand
+  - [O7: No script to write](GOALS.md#o7-no-script-to-write): ✅ 2026-11-17, ten of ten answers from broom and no script
 - **Thresholds**
   - [T2: An idle Python hook costs 50 ms at most](GOALS.md#t2-an-idle-python-hook-costs-50-ms-at-most): ✅ 2026-11-17, 31 ms for an edit and 39 ms for a turn's end
 - **Constraints**

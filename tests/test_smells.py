@@ -103,7 +103,7 @@ class SmellTest(BroomCase):
         found, notes = find_smells(r, [r / "pkg/util.py"], "HEAD")
         self.assertEqual(notes, [])
         self.assertEqual([(s.level, s.text()) for s in found if s.metric == "dead_code"],
-                         [("hint", "export `orphan` is never used")], "_OLD was unused before the change")
+                         [("hint", "export `orphan` is never used outside tests")], "_OLD was unused before the change")
         everything, _ = find_smells(r, [r / "pkg/util.py"], None)
         self.assertEqual(len([s for s in everything if s.metric == "dead_code"]), 2, "a whole-repo sweep lists all")
 

@@ -6,6 +6,16 @@
 
 ---
 
+## 0.23.0 — 2026-11-17
+
+---
+
+### Smells
+
+- A dead-code finding says the code is never used outside tests. Before, it said never used, also of a file its own tests import.
+
+---
+
 ## 0.22.7 — 2026-11-17
 
 ---

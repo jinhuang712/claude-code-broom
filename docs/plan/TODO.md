@@ -85,3 +85,13 @@
 - created: 2026-11-17
 - found: the look for missed rot at the end of CP5
 - related: [F11.1: Counters](../features/F11-checkup.md#f111-counters)
+
+---
+
+### [P2][IDEA] Doc comments that say nothing
+
+- description: A doc comment copied onto many functions meets the rule and tells the reader nothing. A fresh session found one sentence on six functions of a test repo, where broom counted no missing comment. The same text on several functions of a repo could be counted.
+- created: 2026-11-17
+- found: the look for missed rot at the end of CP4
+- related: [F11.5: Missing comments](../features/F11-checkup.md#f115-missing-comments)
+
