@@ -6,6 +6,10 @@
 
 ---
 
+## 0.22.7 — 2026-11-17
+
+---
+
 ### Diagnosis
 
 - A list that `broom diagnose` or `broom compare` cuts short names the command that prints the rest. Before, it pointed at `--json`, which a session then read with a script.
