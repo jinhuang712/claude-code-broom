@@ -53,6 +53,7 @@ SMELL_PRESENCE = {
     "import_cycle": "hint",  # modules that import one another in a ring
     "folder_cycle": "hint",  # folders that do: the layers of the code going the wrong way
     "skipped_test": "hint",  # a test marked skipped or disabled, with no condition behind it
+    "untested_file": "hint",  # a code file of 30 lines or more a change adds, with no test file beside it by name
 }
 PLUGIN_ID = "broom@claude-code-broom"
 

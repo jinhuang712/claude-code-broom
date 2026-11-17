@@ -107,3 +107,81 @@ class SkippedTestTest(SkipCase):
         smells = json.loads(done.stdout)["smells"]
         self.assertEqual([(s["smell"], s["level"], s["line"]) for s in smells], [("skipped_test", "hint", 8)])
         self.assertIn("skipped or disabled test(s)", smells[0]["text"])
+
+
+def lines_of_code(n: int, name: str = "X") -> str:
+    """A Python file of `n` non-blank lines."""
+    return "".join(f"{name}{i} = {i}\n" for i in range(n))
+
+
+class UntestedFileTest(BroomCase):
+    def added(self, files: Dict[str, str], existing: Optional[Dict[str, str]] = None, off: Sequence[str] = (),
+              base: Optional[str] = "HEAD") -> List[Tuple[str, List[int]]]:
+        """The (smell, added lines) of `untested_file` that adding `files` to a repo holding `existing` makes."""
+        r = self.repo({"README.md": "x\n", **(existing or {}), ".broom.json": json.dumps({"smells_off": list(off)})})
+        for rel, body in files.items():
+            (r / rel).parent.mkdir(parents=True, exist_ok=True)
+            (r / rel).write_text(body)
+        found, _ = find_smells(r, [r / rel for rel in files], base)
+        return [(s.metric, s.added) for s in found if s.metric == "untested_file"]
+
+    def test_it_is_a_hint_and_an_occurrence_smell(self) -> None:
+        self.assertEqual(SMELL_PRESENCE["untested_file"], "hint")
+
+    def test_a_code_file_of_30_lines_added_with_no_test_beside_it_is_found(self) -> None:
+        self.assertEqual(self.added({"pkg/fresh.py": lines_of_code(30)}), [("untested_file", [1])])
+        self.assertEqual(self.added({"pkg/fresh.py": lines_of_code(29)}), [], "one line short of it")
+
+    def test_blank_lines_do_not_count(self) -> None:
+        self.assertEqual(self.added({"pkg/fresh.py": lines_of_code(29).replace("\n", "\n\n")}), [])
+
+    def test_a_test_file_named_for_it_anywhere_in_the_repo_settles_it(self) -> None:
+        self.assertEqual(self.added({"pkg/fresh.py": lines_of_code(40)}, {"tests/test_fresh.py": "x = 1\n"}), [])
+        self.assertEqual(self.added({"pkg/fresh.py": lines_of_code(40)}, {"elsewhere/fresh_test.py": "x = 1\n"}), [])
+        self.assertEqual(self.added({"pkg/fresh.py": lines_of_code(40), "tests/test_fresh.py": "x = 1\n"}), [],
+                         "a test added in the same change is beside it")
+
+    def test_the_pairing_goes_by_each_languages_name_form(self) -> None:
+        go = "package a\n" + "".join(f"var V{i} = {i}\n" for i in range(40))
+        ts = "".join(f"export const v{i} = {i};\n" for i in range(40))
+        swift = "".join(f"let v{i} = {i}\n" for i in range(40))
+        self.assertEqual(self.added({"svc/util.go": go}), [("untested_file", [1])])
+        self.assertEqual(self.added({"svc/util.go": go}, {"svc/util_test.go": "package a\n"}), [])
+        self.assertEqual(self.added({"src/lib.ts": ts}), [("untested_file", [1])])
+        self.assertEqual(self.added({"src/lib.ts": ts}, {"src/lib.spec.ts": "x;\n"}), [])
+        self.assertEqual(self.added({"Sources/Thing.swift": swift}), [("untested_file", [1])])
+        self.assertEqual(self.added({"Sources/Thing.swift": swift}, {"Tests/ThingTests.swift": "x\n"}), [])
+
+    def test_languages_the_pairing_does_not_know_get_none(self) -> None:
+        rust = "".join(f"const V{i}: u32 = {i};\n" for i in range(40))
+        css = "".join(f".c{i} {{ color: red; }}\n" for i in range(40))
+        self.assertEqual(self.added({"src/lib.rs": rust, "web/site.css": css}), [])
+
+    def test_a_test_a_package_marker_and_old_files_are_not_found(self) -> None:
+        body = lines_of_code(40)
+        self.assertEqual(self.added({"tests/test_x.py": body, "pkg/__init__.py": body, "pkg/conftest.py": body}), [])
+        self.assertEqual(self.added({"pkg/old.py": lines_of_code(60)}, {"pkg/old.py": lines_of_code(5)}), [],
+                         "a file that grew was not added")
+
+    def test_a_moved_file_is_not_an_added_one(self) -> None:
+        r = self.repo({"pkg/old.py": lines_of_code(40)})
+        self.sh(r, "git", "mv", "pkg/old.py", "pkg/moved.py")
+        found, _ = find_smells(r, [r / "pkg/moved.py"], "HEAD")
+        self.assertEqual([s.metric for s in found if s.metric == "untested_file"], [])
+
+    def test_a_sweep_of_the_whole_repo_finds_none_since_no_change_added_a_file(self) -> None:
+        self.assertEqual(self.added({"pkg/fresh.py": lines_of_code(40)}, base=None), [])
+
+    def test_smells_off_turns_it_off(self) -> None:
+        self.assertEqual(self.added({"pkg/fresh.py": lines_of_code(40)}, off=["untested_file"]), [])
+
+    def test_it_needs_no_tool_and_the_hint_carries_the_fix(self) -> None:
+        r = self.repo({"README.md": "x\n"})
+        (r / "pkg").mkdir()
+        (r / "pkg/fresh.py").write_text(lines_of_code(40))
+        done = self.cli(r, "smells", "--base", "HEAD", "--json", env=self.fake_path())
+        self.assertEqual(done.returncode, 0, done.stderr)
+        smells = json.loads(done.stdout)["smells"]
+        self.assertEqual([(s["file"], s["smell"], s["level"]) for s in smells], [("pkg/fresh.py", "untested_file", "hint")])
+        self.assertIn("no test file beside it by name", smells[0]["text"])
+        self.assertIn("test_name.py", self.cli(r, "fixes", "untested_file").stdout)

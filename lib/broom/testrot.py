@@ -12,7 +12,10 @@ import re
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Pattern, Set, Tuple
 
+from .config import SMELL_PRESENCE
+from .gitutil import git
 from .reading import Raw
+from .smell import Smell
 from .toolchain import lang_of
 
 TEST_FILE = re.compile(r"(^|/)(tests?|__tests__|Tests)/|_test\.(go|py)$|(^|/)test_[^/]*\.py$|"
@@ -63,6 +66,8 @@ def skip_rows(texts: Dict[str, str]) -> List[Raw]:
 PAIRING = {"py": re.compile(r"test_(.+)|(.+)_test"), "go": re.compile(r"(.+)_test"),
            "js": re.compile(r"(.+)\.(?:test|spec)"), "swift": re.compile(r"(.+?)Tests?")}
 NO_TEST_NEEDED = {"__init__.py", "conftest.py"}
+MIN_CODE_LINES = 30  # a smaller file is a glue file, and a test for it would say less than the code
+UNTESTED_FILE = "untested_file"
 
 
 def stem_of(rel: str) -> str:
@@ -87,3 +92,25 @@ def needs_test(rel: str, lang: Optional[str]) -> bool:
     """Whether the file takes part in the pairing: code of a language with a naming form, and not a test or a file
     that holds nothing to test (`__init__.py`, `conftest.py`)."""
     return lang in PAIRING and not TEST_FILE.search(rel) and rel.rsplit("/", 1)[-1] not in NO_TEST_NEEDED
+
+
+def non_blank(text: str) -> int:
+    """How many lines of `text` have something on them."""
+    return sum(1 for row in text.splitlines() if row.strip())
+
+
+def untested_smells(repo: Path, now: Dict[str, str], old: Optional[Dict[str, str]]) -> List[Smell]:
+    """A hint for each code file among `now` (path to text) that `old`, the same files at the base, lacks, that holds at
+    least `MIN_CODE_LINES` non-blank lines and has no test file named for it anywhere in the repo, as the pairing goes.
+    Without a base (`old` is None) a sweep of the whole repo is no change adding a file, so it finds none."""
+    if old is None:
+        return []
+    added = [rel for rel, text in now.items()
+             if rel not in old and needs_test(rel, lang_of(Path(rel))) and non_blank(text) >= MIN_CODE_LINES]
+    if not added:
+        return []
+    listed = (git(["ls-files", "--cached", "--others", "--exclude-standard"], repo) or "").splitlines()
+    named = tested((rel, lang_of(Path(rel))) for rel in listed)
+    return [Smell(repo, repo / rel, 1, UNTESTED_FILE, UNTESTED_FILE, 1, None, "broom", SMELL_PRESENCE[UNTESTED_FILE],
+                  0, [1])
+            for rel in added if (lang_of(Path(rel)), stem_of(rel)) not in named]

@@ -39,6 +39,7 @@ LABELS = {
     "import_cycle": "import(s) that close a cycle between modules",
     "folder_cycle": "import(s) that close a cycle between folders",
     "skipped_test": "skipped or disabled test(s)",
+    "untested_file": "new code file(s) with no test file beside it by name",
 }
 LINES_SHOWN = 5
 

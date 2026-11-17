@@ -29,7 +29,7 @@ from .measure import SMELL_EXTS, Limits, Raw, code_lines
 from .realtree import Budget, Found, find_in_real_tree
 from .rowcache import RowCache
 from .smell import Smell, level, made_worse
-from .testrot import TEST_FILE, skip_rows
+from .testrot import TEST_FILE, UNTESTED_FILE, skip_rows, untested_smells
 from .touched import old_smells, touched, touches
 from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS
 
@@ -275,6 +275,12 @@ def drop_import_growth(rows: List[Raw], now: Dict[str, str], before: Optional[Di
     return [r for r in rows if not (r.metric == "file_lines" and r.rel in steady)]
 
 
+def with_skips(rows: Optional[List[Raw]], texts: Optional[Dict[str, str]]) -> Optional[List[Raw]]:
+    """`rows` and the skipped tests of the files in `texts`; None stays None, as a sweep of the whole repo has no base
+    to set the rows against."""
+    return None if rows is None else rows + skip_rows(texts or {})
+
+
 def find_smells(repo: Path, files: List[Path], base: Optional[str],
                 budget: Optional[float] = None) -> Tuple[List[Smell], List[str]]:
     """Smells in `files` that are new or worse than at `base`; every smell when `base` is None. A file renamed
@@ -297,19 +303,16 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str],
         clones = None if "duplicate_lines" in off else pool.submit(
             find_clones, repo, base, lim.measured["duplicate_lines"][0] + 1, keep.clone_skips(), notes)
         unused = None if DEAD_CODE in off else pool.submit(find_unused, repo, keep.dead_code_skips(), notes)
-        if before:
-            old_rows = before.result()
-        else:
-            old_rows = [] if base else None
+        unmeasured = [] if base else None  # a base with nothing at it: every file is new
+        old_rows = with_skips(before.result() if before else unmeasured, old_text)
         rows_now = drop_import_growth(now.result(), now_text, old_text) + skip_rows(now_text)
-        if old_rows is not None:
-            old_rows = old_rows + skip_rows(old_text or {})
         found = compare(rows_now, old_rows, lim, repo, off)
         if base:  # the old smells in what the change touches
             found += touched(old_smells(counted(rows_now, off), old_rows, lim.of, repo), base, now_text)
         found += clone_smells(keep, clones.result() if clones else [], set(now_text), base, lim)
         found += unused_smells(repo, unused.result() if unused else [], set(now_text), base)
         found += real_tree_smells(repo, real.result(), base, lim, off)
+        found += [] if UNTESTED_FILE in off else untested_smells(repo, now_text, old_text)
     rows.save()
     for s in found:
         s.compared = base is not None

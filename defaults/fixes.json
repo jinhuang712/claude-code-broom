@@ -23,5 +23,6 @@
   "broad_test_asserts": "Assert on the message or the exact error.",
   "broad_catch": "Catch only the errors you expect and let the rest through; where one handler must take all, log the error or re-raise it.",
   "skipped_test": "Unskip it and fix the test, or delete it; if it must wait, say in the skip's reason what it waits on.",
+  "untested_file": "Write the tests beside it: a test file named for it (test_name.py, name_test.go, name.test.ts, NameTests.swift) that checks what it does.",
   "missing_docs": "Write one sentence that says what it is for, not how it works; a private helper (leading underscore, unexported) needs none."
 }
