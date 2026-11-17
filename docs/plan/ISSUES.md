@@ -110,7 +110,7 @@ Issues
 ## I12: A fresh session finishes four of ten answers by hand
 
 - type: fix
-- why: A fresh session asked ten questions on a throwaway repo ran `broom stats` and `broom smells`, and never `broom diagnose`. It ran a linter itself for the doc comments and the deprecated calls. It counted the third to fifth longest functions by hand, since broom lists only the functions past the soft limit. It read each old TODO's date with `git blame`, since broom gives their count per file. It checked the coverage report with a one-line script. The session's note now says what `broom diagnose` holds, and no fresh session has run since.
+- why: A fresh session asked ten questions on a throwaway repo ran `broom stats` and `broom smells`, and never `broom diagnose`. It ran a linter itself for the doc comments and the deprecated calls, counted the third to fifth longest functions by hand, read each old TODO's date with `git blame` and checked the coverage report with a one-line script. Since then the session's note says what `broom diagnose` holds, the longest functions are listed under the limit too, and the oldest TODOs come with their dates. Two things are left: no fresh session has run since, and doc comments missing in TS/JS are not counted.
 - found: the second fresh-session self-test, 2026-11-17
 - touches:
   - [F10.4: Numbers on request](../features/F10-diagnosis.md#f104-numbers-on-request)

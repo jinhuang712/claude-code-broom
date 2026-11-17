@@ -112,13 +112,13 @@ Status: ✅ built · ⬜ planned
 | `--base REV` | only what the changes since REV made worse | off |
 | `--top N` | how many hotspot files and smells to list | 10 |
 | `--by` | `churn` ranks hotspots by smells and changes, `smells` by smells alone | `churn` |
-| `--only SMELL` | keep one kind of smell, and it may repeat | every kind |
+| `--only SMELL` | keep one kind of smell, and it may repeat. With `function_lines` or `type_lines` alone, the list goes on under the limit until `--top` is full | every kind |
 | `--json` | print JSON | off |
 | `--dismiss` | quiet the session note until the severe count grows | off |
 
 **Called by**: a person and the `/broom:clean` skill. Claude runs `--dismiss` when the user says not now.
 
-**Prints**: stdout gets a first line with the counts, then `Hotspots:` and `Worst smells:` blocks and `note:` lines. stderr gets `broom: not inside a git repository` or `broom: unknown revision '<REV>'`.
+**Prints**: stdout gets a first line with the counts, then `Hotspots:` and `Worst smells:` blocks, a `Longest under the limit (not smells):` block when `--only` asks for sizes, and `note:` lines. With `--json` those sizes are under `sizes`, each with `file`, `line`, `name` and `value`. stderr gets `broom: not inside a git repository` or `broom: unknown revision '<REV>'`.
 
 **Fails**: exit 1 outside a repo and for an unknown REV, and exit 2 for an unknown SMELL. It exits 0 whether or not smells are found.
 

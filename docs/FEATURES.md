@@ -79,7 +79,7 @@ Features
 │   ├── ✅ F10.1: Whole-repo diagnosis — an old repo's smells in full, as a report and as data
 │   ├── ✅ F10.2: Hotspots by churn — the files that are both bad and often changed
 │   ├── 🚧 F10.3: Before and after — a tool that fails silently in the base's checkout is not caught
-│   ├── 🚧 F10.4: Numbers on request — the longest functions and types are not listed
+│   ├── 🚧 F10.4: Numbers on request — a test is paired with its code by file name
 │   └── ✅ F10.5: Claude knows what to ask — broom before a script
 └── 🚧 F11: Check-up — Swift is left out of dependencies and deprecated APIs
     ├── ✅ F11.1: Counters — numbers that speak only when they grow

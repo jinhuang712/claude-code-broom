@@ -10,6 +10,8 @@ This part ranks the smells already in a repo and tells Claude when there are sev
 
 With `--base REV` it lists only what the changes since that revision made worse, with each smell's size or count at the revision.
 
+Asked for function or type lengths alone, it measures a second time with that soft limit at 1, so the tools report every function or type. The rows under the real limit fill what `--top` leaves after the smells. The measurement cache keeps rows by the limits they were measured under, so these never reach a check.
+
 ---
 
 ## The session scan

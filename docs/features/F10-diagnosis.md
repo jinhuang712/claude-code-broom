@@ -71,9 +71,11 @@ The base is measured in a temporary checkout, which is removed afterwards. A too
 
 Paths on the command line narrow all four to a file or a folder. A question it can't answer is said so, with what is missing.
 
+The longest functions and types come from `broom smells --only function_lines` and `--only type_lines`. The list goes on under the soft limit until `--top` is full, and what is under the limit is told as a size and counted as no smell.
+
 3 gaps:
 
-- A function or a type under its soft limit is not listed. `broom smells --only function_lines` lists those past it, the longest first.
+- Rust functions and types under their soft limit are not listed.
 - A code file is paired with its test by file name, which misses a test named otherwise.
 - Rust and CSS take no part in the pairing.
 
