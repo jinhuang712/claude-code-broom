@@ -55,7 +55,7 @@ The list grows: each checkpoint's end looks for kinds broom still misses.
 - Duplicate test blocks.
 - Lines no test reaches, by the project's own coverage report.
 
-The first check-up of a repo takes its numbers silently. After that Claude is told once when a counter grew, with the old and the new value and up to three files that added to it, such as `broom check-up: lint suppressions 6 -> 9 (a.py, b.py)`. A counter that fell says nothing.
+The first check-up of a repo takes its numbers silently, and so does the first after an update of broom. After that Claude is told once when a counter grew, with the old and the new value and up to three files that added to it, such as `broom check-up: lint suppressions 6 -> 9 (a.py, b.py)`. A counter that fell says nothing.
 
 `smells_off: ["checkup"]` in `.broom.json` turns it off. A repo of more than 5,000 files gets no check-up at session start, and `broom diagnose` lists its counters instead.
 
@@ -117,11 +117,12 @@ Files, exports and symbols nothing uses are counted across the repo, not only on
 
 `missing_docs` is public code with no comment on what it is for: a module, a class or a function with no doc comment. A change that adds one gets a hint, and the check-up counts them across the repo.
 
-It uses the rule each language's linter already has: ruff's in Python, revive's in Go and SwiftLint's in Swift. A private helper and a test need no comment.
+It uses the rule each language's linter already has: ruff's in Python, revive's in Go and SwiftLint's in Swift. oxlint has none, so in TS/JS a rule of broom's own looks at each exported function and class. Any comment that ends on the line above counts, and a lint directive does not. A private helper and a test need no comment.
 
-1 gap:
+2 gaps:
 
-- TS/JS is not covered, since oxlint has no rule that asks for a doc comment.
+- In TS/JS a re-export, an exported type and a method are not looked at.
+- The TS/JS rule needs Node, like broom's other rules for oxlint.
 
 - **How it works**: [Check-up](../specs/checkup.md)
 

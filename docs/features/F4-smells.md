@@ -80,7 +80,7 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 | `bool_params` | hint | `FBT001` | `broom/bool-params` | `revive` `flag-parameter` | a custom rule |
 | `broad_test_asserts` | hint | `PT011` | `jest/require-to-throw-message` | — | — |
 | `broad_catch` | hint | `BLE001` `E722` | — | — | — |
-| `missing_docs` | hint | `D100` to `D103` | — | `revive` `exported` | `missing_docs` |
+| `missing_docs` | hint | `D100` to `D103` | `broom/missing-docs` | `revive` `exported` | `missing_docs` |
 | `deprecated_api` | hint | `UP` and others | `typescript/no-deprecated` | `staticcheck` `SA1019` | — |
 | `skipped_test` | hint | read by broom | read by broom | read by broom | read by broom |
 | `untested_file` | hint | read by broom | read by broom | read by broom | read by broom |

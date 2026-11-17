@@ -10,7 +10,7 @@ Issues
 │   └── I1: The moved text doesn't meet the wording rules
 ├── refactor
 │   ├── I2: Three paths call the same tools
-│   ├── I5: Four rules sit on an alpha plugin API
+│   ├── I5: Five rules sit on an alpha plugin API
 │   └── I6: The Bash parser guesses what git's hook knows
 └── fix
     ├── I3: The cause of the reported Stop hang is unconfirmed
@@ -52,14 +52,14 @@ Issues
 
 ---
 
-## I5: Four rules sit on an alpha plugin API
+## I5: Five rules sit on an alpha plugin API
 
 - type: refactor
-- why: `bool_params`, `type_lines`, `globals` and `commented_code` in TS/JS come from rules of broom's own, loaded through oxlint's JS plugins. oxlint's docs call that feature alpha, and it needs Node.
+- why: `bool_params`, `type_lines`, `globals`, `commented_code` and `missing_docs` in TS/JS come from rules of broom's own, loaded through oxlint's JS plugins. oxlint's docs call that feature alpha, and it needs Node.
 - found: a review of what broom wrote itself, 2026-11-17
 - touches:
   - [F4.2: Occurrence smells](../features/F4-smells.md#f42-occurrence-smells)
-- next: the fix rate of these four rules, to say whether to move them to another tool or drop them
+- next: the fix rate of these five rules, to say whether to move them to another tool or drop them
 
 ---
 

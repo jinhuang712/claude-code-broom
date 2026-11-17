@@ -78,7 +78,7 @@ A folder cycle is an import that leads into a folder whose files lead back to th
 
 ## broom's own oxlint rules
 
-Four rules of broom's own are loaded as an oxlint JS plugin, an alpha feature, in a second oxlint pass. They need Node. Without it, or with an oxlint that can't load plugins, only these smells go unmeasured, and a note says so. A test loads the plugin with the oxlint installed, so an upgrade that breaks it shows up there. It was tested with oxlint 1.85 and Node 24.
+Five rules of broom's own are loaded as an oxlint JS plugin, an alpha feature, in a second oxlint pass. They need Node. Without it, or with an oxlint that can't load plugins, only these smells go unmeasured, and a note says so. A test loads the plugin with the oxlint installed, so an upgrade that breaks it shows up there. It was tested with oxlint 1.85 and Node 24.
 
 The commented-code rule guesses: a comment that compiles as JS and has code's punctuation, with `Note: x()` skipped as a label. TypeScript syntax in a comment doesn't compile, so it is missed.
 

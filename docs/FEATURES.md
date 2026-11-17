@@ -86,7 +86,7 @@ Features
     ├── 🚧 F11.2: Test coverage — files are listed and functions are not
     ├── ✅ F11.3: Duplicate tests — tests that repeat one another
     ├── ✅ F11.4: Dead code in the whole repo — what nothing uses any more
-    ├── 🚧 F11.5: Missing comments — TS/JS is not covered
+    ├── 🚧 F11.5: Missing comments — in TS/JS only exported functions and classes
     ├── 🚧 F11.6: Dependencies — Rust's tool was never run here
     └── 🚧 F11.7: Deprecated APIs — Swift is not covered, and TS/JS needs tsgolint
 ```

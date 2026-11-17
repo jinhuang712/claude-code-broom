@@ -30,7 +30,7 @@ SEVERE_WEIGHT = 3  # a smell past the hard limit weighs this much against a hint
 ORDERS = {"churn": lambda f: (f["score"], f["severe"], f["hints"]), "smells": lambda f: (f["severe"], f["hints"])}
 # The tools whose findings make up each of the check-up's smell counters: a note that names one of them means the
 # count is short of what the code holds.
-COUNTED_BY = {DEAD_CODE: ("jscpd",), "missing_docs": ("ruff", "golangci-lint", "swiftlint"),
+COUNTED_BY = {DEAD_CODE: ("jscpd",), "missing_docs": ("ruff", "golangci-lint", "swiftlint", "oxlint", "node is missing"),
               "deprecated_api": ("ruff", "golangci-lint", "clippy", "oxlint", "tsgolint")}
 NO_HISTORY = "no commits in the last {days} days, or git log failed: the hotspots are ordered by their smells"
 

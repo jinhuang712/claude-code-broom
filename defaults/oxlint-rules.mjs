@@ -1,5 +1,5 @@
 // oxlint rules of broom's own, for the smells oxlint has no rule for. They load as an oxlint JS plugin (alpha, with
-// an ESLint v9 compatible API) from a pass of their own, so an old oxlint or a missing Node costs these two smells
+// an ESLint v9 compatible API) from a pass of their own, so an old oxlint or a missing Node costs these smells
 // and no others. Messages quote only what broom reads back as a name: no quotes around a parameter.
 
 import vm from "node:vm";
@@ -126,8 +126,40 @@ const commentedCode = {
   },
 };
 
+// Exported functions and classes with no comment on what they are for: `export function f`, `export class C`,
+// `export const f = () => ...` and a default export. A comment that ends on the line above counts, JSDoc or not;
+// a lint directive is no comment on the code.
+const DIRECTIVE = /^\s*\*?\s*(eslint-|oxlint-|@ts-|prettier-|biome-|istanbul |c8 |v8 )/;
+
+// What an export statement declares, when that is a function or a class: its kind and its name.
+function exported(node) {
+  const d = node.declaration;
+  if (!d) return null;
+  if (d.type === "ClassDeclaration" || d.type === "ClassExpression") return { kind: "class", name: d.id?.name ?? "default" };
+  if (FUNCTIONS.includes(d.type)) return { kind: "function", name: d.id?.name ?? "default" };
+  const only = d.type === "VariableDeclaration" && d.declarations.length === 1 ? d.declarations[0] : null;
+  return only && FUNCTIONS.includes(only.init?.type) ? { kind: "function", name: only.id.name } : null;
+}
+
+const missingDocs = {
+  meta: { type: "suggestion", schema: [] },
+  create(context) {
+    const overloaded = new Set(); // a function with overload signatures: its comment sits above the first of them
+    const check = (node) => {
+      if (node.declaration?.type === "TSDeclareFunction") overloaded.add(node.declaration.id?.name);
+      const thing = exported(node);
+      if (!thing || overloaded.has(thing.name)) return;
+      const above = context.sourceCode.getCommentsBefore(node).filter((c) => !DIRECTIVE.test(c.value));
+      const last = above[above.length - 1];
+      if (last && last.loc.end.line >= node.loc.start.line - 1) return;
+      context.report({ node, message: `Exported ${thing.kind} ${thing.name} has no doc comment.` });
+    };
+    return { ExportNamedDeclaration: check, ExportDefaultDeclaration: check };
+  },
+};
+
 export default {
   meta: { name: "broom" },
   rules: { "bool-params": boolParams, "class-lines": classLines, "module-state": moduleState,
-           "commented-code": commentedCode },
+           "commented-code": commentedCode, "missing-docs": missingDocs },
 };

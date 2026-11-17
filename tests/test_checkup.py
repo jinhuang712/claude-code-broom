@@ -74,6 +74,16 @@ class TellingTest(CheckupCase):
         self.assertEqual(self.scan(r, "s3"), "", "and in the next ones")
         self.assertEqual(self.record(r)["suppressions"], {"a.py": 1, "b.py": 2})
 
+    def test_numbers_another_version_of_broom_took_are_no_baseline_to_grow_from(self) -> None:
+        r = self.repo({"a.py": suppressed(1)})
+        self.scan(r, "s1")
+        path = checkup.record_path(r)
+        path.write_text(json.dumps({**json.loads(path.read_text()), "version": "0.0.1"}))
+        self.commit_all(r, {"b.py": suppressed(2)})
+        self.assertEqual(self.scan(r, "s2"), "", "what an older broom counted may be something else: start over")
+        self.commit_all(r, {"c.py": suppressed(1)})
+        self.assertIn("lint suppressions 3 -> 4 (c.py)", self.scan(r, "s3"), "and from then on growth is told")
+
     def test_it_runs_on_the_working_tree_when_the_scan_of_head_is_cached(self) -> None:
         r = self.repo({"a.py": suppressed(1)})
         self.scan(r, "s1")

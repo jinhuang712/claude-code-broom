@@ -111,6 +111,21 @@ class OtherLanguagesTest(NewSmellCase):
         self.assertEqual([m for m, _ in found], ["missing_docs"])
         self.assertEqual(found[0][1], [6])
 
+    @unittest.skipUnless(shutil.which("oxlint") and shutil.which("node"), "oxlint or node missing")
+    def test_an_exported_ts_function_or_class_with_no_comment_counts(self) -> None:
+        before = text("/** Old. */", "export function old(): number {", "  return 1;", "}")
+        after = before + text(
+            "", "export function fresh(): number {", "  return 2;", "}",  # 6: no comment
+            "", "// A line comment says what it is for.", "export const noted = (): number => 3;",
+            "", "export const bare = (): number => 4;",  # 13: no comment
+            "", "// eslint-disable-next-line no-console", "export class Loud {}",  # 16: a directive is no comment
+            "", "function local(): number {", "  return 5;", "}",
+            "", "export function over(a: string): void;", "export function over(a: number): void;",
+            "export function over(a: unknown): void {", "  void a;", "}",  # overloads: left alone
+            "", "export const value = 6;", "export interface Shape {", "  a: number;", "}")
+        self.assertEqual(self.changed("src/a.ts", before, after), [("missing_docs", [6, 13, 16])])
+        self.assertEqual(self.changed("src/a.test.ts", before, after), [], "a test owes no doc comment")
+
     @unittest.skipUnless(HAS_SWIFTLINT, "swiftlint missing")
     def test_a_public_swift_declaration_with_no_comment_counts_and_an_internal_one_does_not(self) -> None:
         before = text("/// Old.", "public func old() {}")
@@ -118,7 +133,7 @@ class OtherLanguagesTest(NewSmellCase):
         self.assertEqual(self.changed("a.swift", before, after), [("missing_docs", [4])])
 
     @unittest.skipUnless(shutil.which("oxlint"), "oxlint missing")
-    def test_ts_has_no_rule_for_either_so_neither_is_found(self) -> None:
-        after = text("export function fresh(a: number): number {", "  try {", "    return a;", "  } catch (e) {",
-                     "    return 0;", "  }", "}")
+    def test_ts_has_no_rule_for_a_broad_catch_so_none_is_found(self) -> None:
+        after = text("/** Fresh. */", "export function fresh(a: number): number {", "  try {", "    return a;",
+                     "  } catch (e) {", "    return 0;", "  }", "}")
         self.assertEqual(self.changed("src/a.ts", "export const x = 1;\n", after), [])

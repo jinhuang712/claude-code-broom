@@ -15,7 +15,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from . import coverage
+from . import __version__, coverage
 from .config import CHECKUP, DEAD_CODE, repo_config, setting
 from .gitutil import CLOCK, main_worktree
 from .state import DATA_ROOT, load_json, short_hash, update_json
@@ -109,7 +109,7 @@ def note_of(rows: List[Row]) -> str:
 
 def check_up(repo: Path, from_smells: Optional[Counted]) -> Optional[str]:
     """Count the repo's rot, compare it with the last check-up, keep the new numbers as the baseline, and return the
-    note for what grew. None the first time, when the numbers became the baseline silently, when nothing grew (a
+    note for what grew. None the first time and after an update of broom, when the numbers became the baseline silently, when nothing grew (a
     number that fell is kept as it is), and when the repo turned the check-up off. A counter that couldn't be
     counted keeps the number it had."""
     if is_off(repo):
@@ -119,11 +119,13 @@ def check_up(repo: Path, from_smells: Optional[Counted]) -> Optional[str]:
 
     def keep(record: dict) -> dict:
         before = record.get("counters")
-        rows = grown(before, now) if before else []
+        # Numbers another version of broom took may count other things (a rule added, a marker narrowed): they
+        # are no measure of what the code did since, so this version's numbers start over as the baseline.
+        rows = grown(before, now) if before and record.get("version") == __version__ else []
         if rows:
             told.append(note_of(rows))
         counted = {name: counts for name, counts in now.items() if counts is not None}
-        return {"at": time.strftime("%Y-%m-%d"), "counters": {**(before or {}), **counted}}
+        return {"at": time.strftime("%Y-%m-%d"), "version": __version__, "counters": {**(before or {}), **counted}}
 
     update_json(record_path(repo), {}, keep)
     return told[0] if told else None

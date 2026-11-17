@@ -6,6 +6,18 @@
 
 ---
 
+### Check-up
+
+- After an update of broom the check-up takes its numbers as the new baseline without a word. Before, a counter that a new version counts more broadly looked as if it had grown.
+
+---
+
+### Smells
+
+- `missing_docs` covers TS/JS: an exported function or class with no comment above it gets a hint when a change adds it, and the check-up counts them. Any comment counts, JSDoc or not. It needs Node.
+
+---
+
 ## 0.22.5 — 2026-11-17
 
 ---
