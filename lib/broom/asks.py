@@ -61,6 +61,9 @@ def add_diagnosis_parsers(sub: argparse._SubParsersAction) -> None:
     d.add_argument("--days", type=int, default=90, help="how far back changes are counted (default: 90)")
     d.add_argument("--json", action="store_true", help="the same as JSON, with every smell")
     d.add_argument("--out", metavar="FILE", help="write the report (or the JSON) to FILE and say where")
+    d.add_argument("--vulnerabilities", action="store_true",
+                   help="also look up known vulnerabilities with osv-scanner, which sends package names and versions "
+                        "to osv.dev")
     d.set_defaults(fn=cmd_diagnose)
     c = sub.add_parser("compare", help="what the work since a revision did to the smells: gone, new, smaller, bigger")
     c.add_argument("base", metavar="BASE", help="the revision to compare with, e.g. v1.2.0 or main~20")

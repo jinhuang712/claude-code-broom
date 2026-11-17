@@ -14,6 +14,7 @@ from .gate import display
 from .hotspots import order_text
 from .state import say
 from .statsview import history_lines, rot_lines, size_lines, table, tests_lines
+from .vulnerabilities import lines as vulnerability_lines
 
 
 def heading(title: str, body: List[str]) -> List[str]:
@@ -123,7 +124,8 @@ def render(data: dict, top: int) -> str:
     out += heading("Smells by language", language_lines(data)) + heading("Hotspots by churn", hotspot_lines(data))
     out += heading("The worst smells", worst_lines(data, top)) + heading("Check-up", checkup_lines(data))
     out += heading("Duplicate tests", duplicate_lines(data, top))
-    out += heading("Dependencies", dependency_lines(data["dependencies"]))
+    deps = data["dependencies"]
+    out += heading("Dependencies", dependency_lines(deps) + vulnerability_lines(deps["vulnerabilities"]))
     out += stats_sections(data["stats"])
     return "\n".join(out + ["", f"broom diagnose took {data['summary']['seconds']} s"])
 
@@ -131,7 +133,8 @@ def render(data: dict, top: int) -> str:
 def run(repo: Path, args: argparse.Namespace) -> int:
     """Diagnose `repo`, narrowed to `args.paths`, as text or as JSON with `--json`: printed, or written to `--out`
     with one line saying where."""
-    data = diagnose(repo, [Path(p).resolve() for p in args.paths], args.top, args.days)
+    data = diagnose(repo, [Path(p).resolve() for p in args.paths], args.top, args.days,
+                    vulnerabilities=args.vulnerabilities)
     text = json.dumps(data, indent=1) if args.json else render(data, args.top)
     if not args.out:
         say(text)

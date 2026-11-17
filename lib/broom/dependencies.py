@@ -26,6 +26,7 @@ GO_TIDY_DIFF = (1, 23)  # the Go version that has `go mod tidy -diff`
 MARKERS = {"js": ("package.json",), "py": ("pyproject.toml", "requirements.txt"), "rust": ("Cargo.toml",),
            "go": ("go.mod",)}
 # deptry reports 5 kinds of violation; only DEP002, a declared dependency nothing imports, is this module's.
+MARKER_FILES = ("package.json", "pyproject.toml", "requirements.txt", "Cargo.toml")
 DEPTRY_OTHERS = "DEP001,DEP003,DEP004,DEP005"
 REMOVED = re.compile(r"^-\s*(?:require\s+)?([^\s()]+)\s+(v\d\S*)(.*)$")  # a go.mod line `go mod tidy` would drop
 
@@ -295,6 +296,8 @@ def lines(data: dict) -> List[str]:
     """The Dependencies section as text: a table of the projects, then each tool that wasn't there."""
     from .statsview import table  # not at the top: the session hook imports this module through the doctor
 
+    if not data["projects"] and not data["not_measured"]:
+        return [f"  no project found: no {', '.join(MARKER_FILES)} or go.mod"]
     rows = [[LANG_NAMES[r["ecosystem"]], r["project"], r["tool"], cell(r)] for r in data["projects"]]
     out = table(["language", "project", "tool", "unused packages"], rows, left=(0, 1, 2, 3))
     for m in data["not_measured"]:

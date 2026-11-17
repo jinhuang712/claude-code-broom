@@ -247,7 +247,8 @@ class ReportTest(DependencyCase):
         text = self.cli(r, "diagnose", env=self.tools(knip="echo '{\"issues\": []}'\nexit 0")).stdout
         self.assertRegex(text, r"\n  TS/JS\s+\.\s+knip\s+none\n")
         bare = self.cli(self.repo({"README.md": "x\n"}), "diagnose", env=self.fake_path()).stdout
-        self.assertIn("## Dependencies\n  none", bare)
+        self.assertIn("## Dependencies\n  no project found: no package.json, pyproject.toml, requirements.txt, "
+                      "Cargo.toml or go.mod\n", bare)
 
 
 class NoHookTest(DependencyCase):
@@ -282,16 +283,17 @@ class DoctorTest(DependencyCase):
         _, bare = self.doctor_of(r, self.fake_path())
         self.assertEqual([(t["tool"], t["installed"], t["install"]) for t in bare["optional"]],
                          [("knip", False, "npm i -g knip"), ("deptry", False, "uv tool install deptry"),
-                          ("cargo-machete", False, "cargo install cargo-machete")])
+                          ("cargo-machete", False, "cargo install cargo-machete"),
+                          ("osv-scanner", False, "brew install osv-scanner")])
         _, some = self.doctor_of(r, self.fake_path(fakes={"knip": "exit 0"}))
-        self.assertEqual([t["installed"] for t in some["optional"]], [True, False, False])
+        self.assertEqual([t["installed"] for t in some["optional"]], [True, False, False, False])
         text = self.cli(r, "doctor", env=self.fake_path()).stdout
         self.assertIn("Optional, for `broom diagnose`", text)
         self.assertIn("○ knip           unused dependencies in TS/JS  install: npm i -g knip", text)
 
     def test_only_the_languages_a_repo_has_get_their_tool(self) -> None:
         _, d = self.doctor_of(self.repo({"go.mod": GO_MOD, "main.go": GO_FREE}), self.fake_path())
-        self.assertEqual([t["tool"] for t in d["optional"] if t["tool"] != "osv-scanner"], [],
+        self.assertEqual([t["tool"] for t in d["optional"]], ["osv-scanner"],
                          "none of the unused-dependency tools serves Go: `go mod tidy -diff` needs no install")
         _, none = self.doctor_of(self.repo({"README.md": "x\n"}), self.fake_path())
         self.assertEqual(none["optional"], [])
@@ -299,7 +301,8 @@ class DoctorTest(DependencyCase):
 
     def test_they_are_no_gap_no_fix_and_no_part_of_the_exit_code(self) -> None:
         r = self.repo({"package.json": "{}\n", "pyproject.toml": PYPROJECT, "Cargo.toml": CARGO})
-        with_tools = self.fake_path(fakes={"knip": "exit 0", "deptry": "exit 0", "cargo-machete": "exit 0"})
+        with_tools = self.fake_path(fakes={"knip": "exit 0", "deptry": "exit 0", "cargo-machete": "exit 0",
+                                           "osv-scanner": "exit 0"})
         bare_done, bare = self.doctor_of(r, self.fake_path())
         done, d = self.doctor_of(r, with_tools)
         self.assertEqual(bare_done.returncode, done.returncode)

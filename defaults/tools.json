@@ -70,5 +70,10 @@
   "cargo-machete": {
     "optional": true, "lang": "rust", "for": "unused dependencies in Rust",
     "install": [["cargo", "cargo install cargo-machete"]]
+  },
+  "osv-scanner": {
+    "optional": true, "lang": "any",
+    "for": "known vulnerabilities in dependencies, only when `broom diagnose --vulnerabilities` asks",
+    "install": [["brew", "brew install osv-scanner"], ["go", "go install github.com/google/osv-scanner/v2/cmd/osv-scanner@latest"]]
   }
 }

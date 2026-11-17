@@ -18,6 +18,7 @@ from .smells import find_smells
 from .stats import collect, report as stats_report
 from .testrot import duplicate_rows
 from .toolchain import lang_of
+from .vulnerabilities import section as vulnerabilities_section
 
 
 def measure(repo: Path, paths: List[Path]) -> Tuple[Scan, List[str]]:
@@ -47,7 +48,7 @@ def by_language(found: List[Smell]) -> List[dict]:
     return sorted(rows, key=lambda r: (-r["severe"], -r["count"], r["language"]))
 
 
-def diagnose(repo: Path, paths: List[Path], top: int, days: int = CHURN_DAYS) -> dict:
+def diagnose(repo: Path, paths: List[Path], top: int, days: int = CHURN_DAYS, *, vulnerabilities: bool = False) -> dict:
     """The diagnosis of the repo, or of `paths`: the smells by kind and by language, the `top` hotspots by churn
     over the last `days` days, every smell, the tools that were missing, the four `stats` sections and the check-up's
     counters. `by` is the order the hotspots really have: by churn needs history."""
@@ -67,4 +68,5 @@ def diagnose(repo: Path, paths: List[Path], top: int, days: int = CHURN_DAYS) ->
             "missing_tools": [note_text(n) for n in notes if n.startswith("missing:")],
             "notes": [note_text(n) for n in notes if not n.startswith("missing:")] + history_notes, "stats": stats,
             "checkup": checkup_section(repo, facts, smell_counts(repo, found, notes), narrowed=bool(paths)),
-            "dependencies": dependencies_section(repo, scan(repo), paths)}
+            "dependencies": {**dependencies_section(repo, scan(repo), paths),
+                             "vulnerabilities": vulnerabilities_section(repo, asked=vulnerabilities)}}
