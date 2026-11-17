@@ -6,6 +6,21 @@
 
 ---
 
+### Fixes
+
+- A commit whose output is redirected is checked. Before, `git commit -m x 2>&1 | tail` and `git commit -m x > /dev/null` passed the commit check unread, and only the turn's end caught what they held. After, they are checked like any commit.
+- A commit that takes its message from a heredoc is checked when the message holds an apostrophe. Before, a `git add` in the same command went unseen and the commit passed unread.
+
+---
+
+### Diagnosis
+
+- `broom diagnose` names a language as `broom stats` does, such as TS/JS.
+- The fix line for dead code names the case of new code that waits for its caller: it is accepted with that as the reason. Before, the line only said to delete it.
+- The note at a session's start says what `broom diagnose` holds: dead code, missing doc comments, calls to deprecated APIs, duplicate tests and unused dependencies.
+
+---
+
 ## 0.22.2 — 2026-11-17
 
 ---

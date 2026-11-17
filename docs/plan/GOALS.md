@@ -15,7 +15,7 @@ Goals
 │   ├── ✅ O4: Nothing passes silently — every pass has a reason the user can see
 │   ├── ✅ O5: A full diagnosis of an old repo — every smell, with no time cut
 │   ├── ✅ O6: A number that got worse is told once — the check-up speaks only then
-│   └── ⬜ O7: No script to write — broom answers what a session would count by hand
+│   └── ❌ O7: No script to write — broom answers what a session would count by hand
 ├── Measures
 │   ├── ⬜ M1: Fix rate — how much of what broom blocks gets fixed
 │   └── ⬜ M2: Check time — the seconds a commit check takes
@@ -51,7 +51,7 @@ Claude's work comes out formatted, lint-clean and type-correct by the project's 
 
 **Acceptance**: The test suite passes. It commits and stops in temporary repos and expects the block.
 
-**Status**: ✅ 2026-11-17, 486 tests with 3 skipped.
+**Status**: ✅ 2026-11-17, 490 tests with 3 skipped.
 
 ---
 
@@ -135,7 +135,7 @@ A session with broom installed gets a repo's numbers from broom.
 
 **Acceptance**: A fresh session is asked ten questions about a repo: its size, its longest functions, its skipped tests, its untested files and each rot counter among them. It answers all ten with broom commands and writes no script.
 
-**Status**: ⬜
+**Status**: ❌ 2026-11-17, in two fresh sessions. On a real TS/JS repo with 0.22.0, nine answers came from broom, no script was written, and coverage had no report to read. On a throwaway repo of three languages with 0.22.2, six answers came from broom alone and four were finished by hand. [I12: A fresh session finishes four of ten answers by hand](ISSUES.md#i12-a-fresh-session-finishes-four-of-ten-answers-by-hand) holds the work.
 
 ---
 

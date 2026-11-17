@@ -298,21 +298,23 @@ The user lifted the hold on Rust's smells on 2026-11-17, and 7 more shipped in 0
 
 The user asked on 2026-11-17 for a round of polish and self-test once the features are in. broom is used end to end in fresh sessions, on throwaway repos and on real ones, and what that finds is fixed.
 
-**Delivers** (6):
+**Delivers** (8):
 
 - [F1.5: Protection list](../features/F1-setup.md#f15-protection-list)
 - [I10: No fresh session has used broom end to end](ISSUES.md#i10-no-fresh-session-has-used-broom-end-to-end)
 - [I8: Two holes in the record](ISSUES.md#i8-two-holes-in-the-record)
+- [I12: A fresh session finishes four of ten answers by hand](ISSUES.md#i12-a-fresh-session-finishes-four-of-ten-answers-by-hand)
 - [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)
 - [I7: The docs don't say which systems are supported](ISSUES.md#i7-the-docs-dont-say-which-systems-are-supported)
 - An idle turn's end starts git once, where it started it 7 times, and an idle hook loads no check, done on 2026-11-17.
+- A commit with a redirection or a heredoc message is checked, where the commit check let it pass unread, done on 2026-11-17.
 
 **Exit criteria** (6):
 
 - **Objectives**
   - [O2: Tooling in one conversation](GOALS.md#o2-tooling-in-one-conversation)
   - [O3: Mistakes seen while editing](GOALS.md#o3-mistakes-seen-while-editing)
-  - [O7: No script to write](GOALS.md#o7-no-script-to-write)
+  - [O7: No script to write](GOALS.md#o7-no-script-to-write): ❌ 2026-11-17, four of ten answers finished by hand
 - **Thresholds**
   - [T2: An idle Python hook costs 50 ms at most](GOALS.md#t2-an-idle-python-hook-costs-50-ms-at-most): ✅ 2026-11-17, 31 ms for an edit and 39 ms for a turn's end
 - **Constraints**

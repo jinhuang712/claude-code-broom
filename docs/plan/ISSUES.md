@@ -16,7 +16,8 @@ Issues
 └── fix
     ├── I3: The cause of the reported Stop hang is unconfirmed
     ├── I8: Two holes in the record
-    └── I10: No fresh session has used broom end to end
+    ├── I10: No fresh session has used broom end to end
+    └── I12: A fresh session finishes four of ten answers by hand
 ```
 
 ---
@@ -97,9 +98,21 @@ Issues
 ## I10: No fresh session has used broom end to end
 
 - type: fix
-- why: Every feature since 0.18.1 is covered by the test suite, which drives the hooks with made-up input. No fresh Claude Code session has yet met the setup offer, the limits card, a block with its fix lines, an accept with a reason, the turn's summary and the check-up in one run, on a throwaway repo and on a real one. The messages may read badly, and the pieces may get in each other's way.
+- why: The test suite drives the hooks with made-up input. On 2026-11-17 a fresh session on a throwaway repo met the limits card, the setup offer, the smell note, a turn-end block with its fix lines, a fix and the turn's summary. Three things are still unmet by a fresh session: an accept with a reason, the check-up after a counter grew, and a change with a commit on a real repo.
 - found: the user's request for a self-test, 2026-11-17
 - touches:
   - [F1.3: /broom:setup](../features/F1-setup.md#f13-broomsetup)
   - [F2.9: Messages that say how to fix](../features/F2-sweep.md#f29-messages-that-say-how-to-fix)
   - [F9.2: Turn summary](../features/F9-record.md#f92-turn-summary)
+
+---
+
+## I12: A fresh session finishes four of ten answers by hand
+
+- type: fix
+- why: A fresh session asked ten questions on a throwaway repo ran `broom stats` and `broom smells`, and never `broom diagnose`. It ran a linter itself for the doc comments and the deprecated calls. It counted the third to fifth longest functions by hand, since broom lists only the functions past the soft limit. It read each old TODO's date with `git blame`, since broom gives their count per file. It checked the coverage report with a one-line script. The session's note now says what `broom diagnose` holds, and no fresh session has run since.
+- found: the second fresh-session self-test, 2026-11-17
+- touches:
+  - [F10.4: Numbers on request](../features/F10-diagnosis.md#f104-numbers-on-request)
+  - [F10.5: Claude knows what to ask](../features/F10-diagnosis.md#f105-claude-knows-what-to-ask)
+  - [F11.5: Missing comments](../features/F11-checkup.md#f115-missing-comments)
