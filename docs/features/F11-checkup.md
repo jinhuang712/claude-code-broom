@@ -44,13 +44,14 @@ The list grows: each checkpoint's end looks for kinds broom still misses.
 
 ## F11.1: Counters
 
-7 counters, none of which needs a tool installed beyond the ones the smells already use:
+8 counters, none of which needs a tool installed beyond the ones the smells already use:
 
 - Lint suppressions in the repo.
 - Skipped tests in the repo.
 - TODO comments older than 180 days.
 - Dead-code findings in the whole repo.
 - Public code with no doc comment.
+- Calls to deprecated APIs.
 - Duplicate test blocks.
 - Lines no test reaches, by the project's own coverage report.
 
@@ -128,14 +129,53 @@ It uses the rule each language's linter already has: ruff's in Python, revive's 
 
 ## F11.6: Dependencies
 
-Known vulnerabilities and unused packages are reported where the user installed a tool for them. Without the tool nothing is measured and nothing nags. `broom doctor` offers the tools.
+`broom diagnose` lists the packages each project declares and nothing imports, by name. It asks the tool each language has for that:
 
-A check that looks a package up on the network is off until the user turns it on.
+| Language | Tool | Comes with |
+|---|---|---|
+| TS/JS | knip | an install |
+| Python | deptry | an install |
+| Rust | cargo-machete | an install |
+| Go | `go mod tidy -diff` | Go 1.23 or later |
+
+A tool that isn't installed is named once in the report with its install command, and its language is not measured. Nothing asks for it at session start or at a commit. `broom doctor` lists these tools as optional, apart from the gaps. They run only in the diagnosis, since they take too long for a check on a change.
+
+`broom diagnose --vulnerabilities` also asks osv-scanner for the known vulnerabilities of the packages in the lockfiles. The report lists each vulnerable package with its version, its worst level, its advisories and the version that fixes it. This sends package names and versions to OSV, a public database, so it runs only with the flag, and the report says what is sent.
+
+2 gaps:
+
+- cargo-machete's output is read as its docs give it and was never run here.
+- Swift has no such tool in broom.
 
 - **Design**: [7. Nothing is installed or set without a yes](../DESIGNS.md#7-nothing-is-installed-or-set-without-a-yes)
+- **Commands**: [broom diagnose](../CLI.md#broom-diagnose) · [broom doctor](../CLI.md#broom-doctor)
+- **How it works**: [Diagnosis](../specs/diagnosis.md)
+- **Why**:
+  - [029: A tool broom can do without is listed and never asked for](../specs/decisions/029-optional-tools.md)
+  - [030: Known vulnerabilities are looked up only on request](../specs/decisions/030-vulnerabilities-on-request.md)
 
 ---
 
 ## F11.7: Deprecated APIs
 
-A call to a deprecated API is reported through the linters broom already runs. It needs no tool installed.
+`deprecated_api` is a call to something its author marked as deprecated. A change that adds one gets a hint, and the hint carries the tool's own words, which usually name what replaced it. The check-up counts them across the repo.
+
+It comes from the tools broom already runs:
+
+| Language | From |
+|---|---|
+| Python | ruff's rules for the standard library, numpy, pandas and pytest |
+| Go | staticcheck's `SA1019` |
+| Rust | rustc's `deprecated` lint |
+| TS/JS | oxlint's `typescript/no-deprecated`, which needs tsgolint |
+
+Python's `typing.List` and its like are not counted, since every codebase older than Python 3.9 holds them and no version has dropped them.
+
+3 gaps:
+
+- Swift is not covered.
+- TS/JS is measured only where tsgolint is installed, and `broom doctor` lists it as optional.
+- Python's own `@deprecated` marks in a project are not seen, since ruff reads no types.
+
+- **How it works**: [Smells](../specs/smells.md)
+- **Why**: [029: A tool broom can do without is listed and never asked for](../specs/decisions/029-optional-tools.md)

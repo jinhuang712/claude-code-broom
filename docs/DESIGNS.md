@@ -116,6 +116,8 @@ The machine and the repo are the user's. Hooks can't ask, so they tell Claude, a
 - **Decisions**:
   - [018: broom offers a cleanup and never starts one](specs/decisions/018-offer-cleanup.md)
   - [022: Setup answers are remembered by kind](specs/decisions/022-answers-by-kind.md)
+  - [029: A tool broom can do without is listed and never asked for](specs/decisions/029-optional-tools.md)
+  - [030: Known vulnerabilities are looked up only on request](specs/decisions/030-vulnerabilities-on-request.md)
 - **How it works**:
   - [Setup](specs/setup.md)
 

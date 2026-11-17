@@ -14,9 +14,28 @@
 
 ---
 
+### Smells
+
+- A new hint, `deprecated_api`, for a change that adds a call to a deprecated API, in Python, Go, Rust and TS/JS. The hint carries the tool's own words, which usually name what replaced it. TS/JS needs tsgolint.
+
+---
+
+### Diagnosis
+
+- `broom diagnose` lists the packages each project declares and nothing imports, with knip, deptry, cargo-machete and `go mod tidy -diff`. A tool that isn't installed is named once and never asked for.
+- `broom diagnose --vulnerabilities` asks osv-scanner for the known vulnerabilities of your dependencies. It sends package names and versions to osv.dev, so it runs only with the flag.
+
+---
+
+### Setup
+
+- `broom doctor` lists the optional tools for the repo's languages after the gaps. None of them is a gap, and none is offered at session start.
+
+---
+
 ### Check-up
 
-- Two more counters: duplicate test blocks, and the lines no test reaches by your coverage report. Claude is told once when either grew.
+- Three more counters: calls to deprecated APIs, duplicate test blocks, and the lines no test reaches by your coverage report. Claude is told once when one grew.
 
 ---
 

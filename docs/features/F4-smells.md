@@ -81,6 +81,9 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 | `broad_test_asserts` | hint | `PT011` | `jest/require-to-throw-message` | — | — |
 | `broad_catch` | hint | `BLE001` `E722` | — | — | — |
 | `missing_docs` | hint | `D100` to `D103` | — | `revive` `exported` | `missing_docs` |
+| `deprecated_api` | hint | `UP` and others | `typescript/no-deprecated` | `staticcheck` `SA1019` | — |
+| `skipped_test` | hint | read by broom | read by broom | read by broom | read by broom |
+| `untested_file` | hint | read by broom | read by broom | read by broom | read by broom |
 
 8 notes on the table:
 
@@ -93,7 +96,7 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 - A function handed to a call is the callee's choice and doesn't count for `bool_params`.
 - `module-state` is a `let` or `var` at module level that a function assigns.
 
-Rust gets 7 of these from clippy and rustc: `suppression` · `swallowed_error` · `unused_params` · `debug_output` · `todo` · `type_escape` · `bool_params`. Its `swallowed_error` is a `Result` dropped with `let _ =`, and it hints, since that can be deliberate. Its `todo` is a `todo!()` or an `unimplemented!()`. Test code is not built, so a test may be long, unwrap and print. CSS, SCSS and Less have no smell tool.
+Rust gets 8 of these from clippy and rustc: `suppression` · `swallowed_error` · `unused_params` · `debug_output` · `todo` · `type_escape` · `bool_params` · `deprecated_api`. Its `skipped_test` is an `#[ignore]`, read by broom. Its `swallowed_error` is a `Result` dropped with `let _ =`, and it hints, since that can be deliberate. Its `todo` is a `todo!()` or an `unimplemented!()`. Test code is not built, so a test may be long, unwrap and print. CSS, SCSS and Less have no smell tool.
 
 The four `broom/` rules need Node. Without it only these smells go unmeasured, and a note says so.
 

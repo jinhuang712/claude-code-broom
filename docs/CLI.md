@@ -71,7 +71,7 @@ Status: ✅ built · ⬜ planned
 
 **Called by**: a person and the `/broom:setup` skill.
 
-**Prints**: stdout gets one line per item with its status, git's pre-commit hook among them, a `To fix:` list, a `To turn formatting on:` list, and `All set.` when healthy. stderr gets `broom: not inside a git repository`.
+**Prints**: stdout gets one line per item with its status, git's pre-commit hook among them, a `To fix:` list, a `To turn formatting on:` list, `All set.` when healthy, and the optional tools with their install commands. stderr gets `broom: not inside a git repository`.
 
 **Fails**: exit 1 when an item is not ok, and outside a repo.
 
@@ -129,7 +129,7 @@ Status: ✅ built · ⬜ planned
 
 **Status**: ✅
 
-`broom diagnose [paths...] [--top N] [--days N] [--json] [--out FILE]` measures a whole repo with no time cut.
+`broom diagnose [paths...] [--top N] [--days N] [--json] [--out FILE] [--vulnerabilities]` measures a whole repo with no time cut.
 
 | Flag | Means | Default |
 |---|---|---|
@@ -138,10 +138,11 @@ Status: ✅ built · ⬜ planned
 | `--days N` | how far back changes are counted | 90 |
 | `--json` | print JSON, with every smell | off |
 | `--out FILE` | write the report to a file and say where | off |
+| `--vulnerabilities` | ask osv-scanner for known vulnerabilities, which sends package names and versions to osv.dev | off |
 
 **Called by**: a person, Claude and the `/broom:clean` skill.
 
-**Prints**: stdout gets a report that also reads as Markdown: a summary, the smells by kind and by language, the hotspots by churn, the worst smells, the check-up's counters, the tests that repeat one another and the four sections of `broom stats`. The last line says how long it took. stderr gets `broom: not inside a git repository`.
+**Prints**: stdout gets a report that also reads as Markdown: a summary, the smells by kind and by language, the hotspots by churn, the worst smells, the check-up's counters, the tests that repeat one another, the unused dependencies and the four sections of `broom stats`. The last line says how long it took. stderr gets `broom: not inside a git repository`.
 
 **Fails**: exit 1 outside a repo.
 
@@ -357,9 +358,9 @@ An uncaught error exits 1 with a traceback.
 
 7 commands print JSON a script relies on:
 
-- **`broom doctor --json`**: `version` · `repo` · `languages` · `items` · `fix` · `configure` · `fix_global` · `configure_global` · `healthy` · `settings`.
+- **`broom doctor --json`**: `version` · `repo` · `languages` · `items` · `fix` · `configure` · `fix_global` · `configure_global` · `healthy` · `optional` · `settings`.
 - **`broom smells --json`**: `repo` · `base` · `total` · `severe` · `hints` · `by` · `hotspots` · `smells` · `notes`.
-- **`broom diagnose --json`**: `repo` · `paths` · `summary` · `by_smell` · `by_language` · `by` · `hotspots` · `smells` · `duplicate_tests` · `missing_tools` · `notes` · `checkup` · `stats`.
+- **`broom diagnose --json`**: `repo` · `paths` · `summary` · `by_smell` · `by_language` · `by` · `hotspots` · `smells` · `duplicate_tests` · `dependencies` · `missing_tools` · `notes` · `checkup` · `stats`.
 - **`broom compare --json`**: the counts per kind, the four lists of smells, the hotspots of the base and the kinds that are not comparable.
 - **`broom stats --json`**: `repo` · `paths` · `files` · `days` · `size` · `tests` · `rot` · `history`. Each section holds a `note` that says what is missing, or null.
 - **`broom fixes --json`**: one key per smell, with its fix line.

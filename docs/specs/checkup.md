@@ -14,17 +14,18 @@ session start ─▶ the smell scan of HEAD (async, cached) ─┐
 
 ## The counters
 
-7 counters, per repo:
+8 counters, per repo:
 
 - Lint suppressions.
 - Skipped tests.
 - TODO comments older than 180 days.
 - Dead-code findings in the whole repo.
 - Public code with no doc comment.
+- Calls to deprecated APIs.
 - Duplicate test blocks.
 - Lines no test reaches.
 
-The first three come from the one pass over the files' text that `broom stats` makes. The next three come from the smell scan's own results. The last comes from the coverage report a test run left, and it is left out when there is none. No tool runs for the check-up.
+The first three come from the one pass over the files' text that `broom stats` makes. The next four come from the smell scan's own results. The last comes from the coverage report a test run left, and it is left out when there is none. No tool runs for the check-up.
 
 The smell scan's jscpd run already finds the clones between two test files. The checks on a change drop them, and the scan keeps them apart for this counter. Each block is counted once, on the side that was written last, since the copy is likelier there.
 

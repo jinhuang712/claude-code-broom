@@ -34,6 +34,19 @@ It names every tool that was missing, since counts without a tool read as cleane
 
 ---
 
+## Dependencies
+
+The unused packages come from each language's own tool, run once per project directory the doctor's scan found. knip reads a whole JS workspace from its root and cargo-machete every crate under a directory, so a project below such a root is left to the run there. Go needs no install: `go mod tidy -diff` prints what it would drop from `go.mod`, and it runs with the proxy off, so it reads the module cache and no network.
+
+Each tool gets five minutes. One that isn't installed is named once with its install command. One that fails is shown with its first error line, so a tool's failure never reads as "none unused".
+
+Known vulnerabilities come from osv-scanner, which sends the names and versions of the packages in the lockfiles to a public database. Nothing starts it but the `--vulnerabilities` flag. A lockfile it gives in several results is one row. A fix that the database names by a commit is left out, since it is no version.
+
+- [029: A tool broom can do without is listed and never asked for](decisions/029-optional-tools.md)
+- [030: Known vulnerabilities are looked up only on request](decisions/030-vulnerabilities-on-request.md)
+
+---
+
 ## Two revisions
 
 The base revision is checked out into a temporary linked worktree in the system's temp directory, measured there and removed, also when something fails. The entry git keeps for it and the measurement rows cached for its path are removed too. Stale worktree entries are pruned only when the removal failed, since pruning drops every worktree whose directory is gone.

@@ -30,9 +30,12 @@ It checks 8 things:
 
 It looks three levels deep and at up to 20 projects per language. It flags unknown keys and values in `.broom.json`.
 
+After the gaps it lists the optional tools for the repo's languages, each with what it finds and its install command. An optional tool is no gap: it is never offered at session start and never changes the exit code.
+
 - **Design**: [7. Nothing is installed or set without a yes](../DESIGNS.md#7-nothing-is-installed-or-set-without-a-yes)
 - **Commands**: [broom doctor](../CLI.md#broom-doctor)
 - **How it works**: [Setup](../specs/setup.md)
+- **Why**: [029: A tool broom can do without is listed and never asked for](../specs/decisions/029-optional-tools.md)
 
 **Stories** (1):
 

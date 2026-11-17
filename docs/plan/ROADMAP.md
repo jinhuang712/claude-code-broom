@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP5: A check-up for rot](#cp5-a-check-up-for-rot). CP2, CP3 and CP4 shipped, and their goals that need use or a fresh session are still open.
+**Current checkpoint**: [CP6: Polish and self-test](#cp6-polish-and-self-test). CP2, CP3 and CP4 shipped, and their goals that need use or a fresh session are still open. CP5 ended with 0.22.0.
 
 ---
 
@@ -17,12 +17,12 @@ Roadmap
 │   ├── 🟨 CP3.2: Limits told before the work
 │   └── ✅ CP3.3: Old smells in touched code
 ├── 🟨 CP4: A refactoring kit — a full diagnosis, the worst places first, the numbers after
-├── 🟨 CP5: A check-up for rot — numbers that speak when they grow
+├── ✅ CP5: A check-up for rot — numbers that speak when they grow
 │   ├── ✅ CP5.1: Counters, dead code and comments
 │   ├── ✅ CP5.2: Tests: coverage, duplicates and skips
-│   ├── ⬜ CP5.3: Dependencies and deprecated APIs
+│   ├── ✅ CP5.3: Dependencies and deprecated APIs
 │   └── ✅ CP5.4: Rust's missing smells
-├── ⬜ CP6: Polish and self-test — every goal run in a real session, every rough edge smoothed
+├── 🟨 CP6: Polish and self-test — every goal run in a real session, every rough edge smoothed
 ├── ⬜ CP7: Lighter — less code, fewer runs, less noise
 │   ├── ⬜ CP7.1: Fewer interruptions
 │   └── ⬜ CP7.2: Fewer runs and less code
@@ -201,7 +201,9 @@ A refactor starts from numbers: what is in the repo, where it hurts most and whe
 
 ## CP5: A check-up for rot
 
-**Status**: 🟨
+**Status**: ✅
+
+Its four sub-checkpoints ended by 0.22.0 on 2026-11-17.
 
 Rot is what gets worse with no one change at fault. The check-up counts it across the repo and speaks when a number grew.
 
@@ -257,7 +259,9 @@ The four features shipped in 0.22.0 on 2026-11-17, with gaps: coverage lists fil
 
 ### CP5.3: Dependencies and deprecated APIs
 
-**Status**: ⬜
+**Status**: ✅
+
+The two features shipped in 0.22.0 on 2026-11-17, with gaps: Swift is left out of both, and Rust's tool for unused packages was never run here.
 
 **Delivers** (2):
 
@@ -267,7 +271,7 @@ The four features shipped in 0.22.0 on 2026-11-17, with gaps: coverage lists fil
 **Exit criteria** (1):
 
 - **Objectives**
-  - [O6: A number that got worse is told once](GOALS.md#o6-a-number-that-got-worse-is-told-once)
+  - [O6: A number that got worse is told once](GOALS.md#o6-a-number-that-got-worse-is-told-once): ✅ 2026-11-17, by `tests/test_deprecated.py`
 
 ---
 
@@ -290,7 +294,7 @@ The user lifted the hold on Rust's smells on 2026-11-17, and 7 more shipped in 0
 
 ## CP6: Polish and self-test
 
-**Status**: ⬜
+**Status**: 🟨
 
 The user asked on 2026-11-17 for a round of polish and self-test once the features are in. broom is used end to end in fresh sessions, on throwaway repos and on real ones, and what that finds is fixed.
 

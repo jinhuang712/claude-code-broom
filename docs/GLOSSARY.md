@@ -30,6 +30,7 @@ Each term has its meaning, the words that lost to it and its name in the code wh
 | Legacy | code a repo marks as on its way out, which new code may repeat | — | `legacy` |
 | Note | a line that says what a check skipped | — | `notes` |
 | Gap | a tool or a config a repo needs and lacks | — | `Item` |
+| Optional tool | a tool broom uses when it is installed and never asks for | — | `optional` |
 | Session scan | the whole-repo smell scan at session start | — | `session-scan` |
 | Ledger | the record of what broom did with each finding | log | `ledger.jsonl` |
 | Fix line | the usual fix of one kind of smell, in one sentence | — | `fixes.json` |

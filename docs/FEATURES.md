@@ -66,7 +66,7 @@ Features
 ├── 🚧 F8: Languages — six, with uneven smell coverage
 │   ├── ✅ F8.1: Go
 │   ├── ✅ F8.2: TS/JS
-│   ├── 🚧 F8.3: Rust — 14 of the smells, and nesting only hints
+│   ├── 🚧 F8.3: Rust — 16 of the smells, and nesting only hints
 │   ├── ✅ F8.4: Python
 │   ├── 🚧 F8.5: CSS, SCSS and Less — file length and duplicates only
 │   └── 🚧 F8.6: Swift — no compile check for Xcode projects
@@ -81,14 +81,14 @@ Features
 │   ├── 🚧 F10.3: Before and after — a tool that fails silently in the base's checkout is not caught
 │   ├── 🚧 F10.4: Numbers on request — the longest functions and types are not listed
 │   └── ✅ F10.5: Claude knows what to ask — broom before a script
-└── 🚧 F11: Check-up — dependencies and deprecated APIs are not built
+└── 🚧 F11: Check-up — Swift is left out of dependencies and deprecated APIs
     ├── ✅ F11.1: Counters — numbers that speak only when they grow
     ├── 🚧 F11.2: Test coverage — files are listed and functions are not
     ├── ✅ F11.3: Duplicate tests — tests that repeat one another
     ├── ✅ F11.4: Dead code in the whole repo — what nothing uses any more
     ├── 🚧 F11.5: Missing comments — TS/JS is not covered
-    ├── ⬜ F11.6: Dependencies — known vulnerabilities and unused packages
-    └── ⬜ F11.7: Deprecated APIs — calls a library's author says to stop using
+    ├── 🚧 F11.6: Dependencies — Rust's tool was never run here
+    └── 🚧 F11.7: Deprecated APIs — Swift is not covered, and TS/JS needs tsgolint
 ```
 
 ---

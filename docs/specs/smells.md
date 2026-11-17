@@ -58,6 +58,8 @@ clippy runs with thresholds from a `clippy.toml` of broom's own, under a config 
 
 clippy takes one threshold per lint, so it gets the soft limit, and the size in its message says whether the finding is a hint or a block. Its nesting lint names no depth, so that smell only hints. rustc's own warnings give dead code and unused parameters, the latter kept only where the unused variable sits in a function's parameter list. `cargo clippy` builds no test code, so tests are left out.
 
+A deprecated call needs types in Go, TS/JS and Rust, so it is found here too: by staticcheck's `SA1019` in the Go run, by rustc's `deprecated` lint in the clippy run, and by oxlint's `typescript/no-deprecated` in the run that finds import cycles. That oxlint run is type-aware only where tsgolint is installed. Python's come from ruff in the scratch copy, where an alias imported from `typing` is dropped. The finding keeps the tool's own words, since they name what replaced the API.
+
 The session scan gives these tools 20 seconds between them. The quick ones go first and clippy last, and a tool the time runs out before is skipped with a note. `broom smells` from the command line has no such limit.
 
 - [015: Tools that need types run in the project's checkout](decisions/015-real-tree-for-typed-tools.md)
