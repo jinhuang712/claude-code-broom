@@ -30,7 +30,7 @@ def list_lines(rows: List[dict], top: int, key: str) -> List[str]:
               r["text"]] for r in rows[:top]]
     head = ["where", "smell", *(["was -> now"] if sizes else []), "text"]
     out = table(head, shown, left=tuple(range(len(head))))
-    return out + ([f"  ... and {len(rows) - top} more; `--json` lists them all"] if len(rows) > top else [])
+    return out + ([f"  ... and {len(rows) - top} more; `--top {len(rows)}` lists them all"] if len(rows) > top else [])
 
 
 def hotspot_lines(data: dict) -> List[str]:

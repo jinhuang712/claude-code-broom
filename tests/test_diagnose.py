@@ -88,7 +88,8 @@ class DiagnoseTest(GitWork):
         self.assertEqual([re.sub(r"\(last .*", "", t).strip() if t.startswith("History") else t for t in titles],
                          [*HEADINGS, "History"])
         self.assertRegex(lines[-1], r"^broom diagnose took \d+(\.\d)? s$")
-        self.assertIn("... and 1 more; `--json` lists them all", done.stdout, "the worst smells are cut at --top")
+        self.assertIn("... and 1 more; `broom smells --top 3` lists them all, `--only KIND` one kind", done.stdout,
+                      "the worst smells are cut at --top, and the rest is one command away, with no JSON to read")
         self.assertNotIn("\x1b[", done.stdout, "no colour")
 
     def test_the_summary_comes_first_with_its_counts(self) -> None:

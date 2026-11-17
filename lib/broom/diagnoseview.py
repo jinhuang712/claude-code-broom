@@ -63,7 +63,8 @@ def worst_lines(data: dict, top: int) -> List[str]:
     rows = [[f"{s['file']}:{s['line']}", s["smell"], s["text"]] for s in data["smells"][:top]]
     out = table(["where", "smell", "text"], rows, left=(0, 1, 2))
     more = len(data["smells"]) - top
-    return out + ([f"  ... and {more} more; `--json` lists them all"] if more > 0 else [])
+    rest = f"  ... and {more} more; `broom smells --top {len(data['smells'])}` lists them all, `--only KIND` one kind"
+    return out + ([rest] if more > 0 else [])
 
 
 def change_of(row: dict) -> str:
@@ -104,7 +105,7 @@ def duplicate_lines(data: dict, top: int) -> List[str]:
                   left=(0, 1))
     more = len(rows) - top
     return [f"  {len(rows)} place(s) where tests repeat one another; the checks on a change leave these out.", *shown,
-            *([f"  ... and {more} more; `--json` lists them all"] if more > 0 else [])]
+            *([f"  ... and {more} more; `--top {len(rows)}` lists them all"] if more > 0 else [])]
 
 
 def stats_sections(stats: dict) -> List[str]:
