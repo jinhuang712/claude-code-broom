@@ -77,8 +77,9 @@ def run_hook(event: str) -> int:
 
 def main(argv: List[str]) -> int:
     """Run `broom <argv>`: a hook from here, anything else through the command line, which is loaded only then."""
-    if len(argv) == 2 and argv[0] == "hook" and argv[1] in EVENTS:
-        return run_hook(argv[1])
+    command, events = argv[:1], argv[1:]
+    if command == ["hook"] and len(events) == 1 and events[0] in EVENTS:
+        return run_hook(events[0])
     from .cli import main as command_line
 
     return command_line(argv)
