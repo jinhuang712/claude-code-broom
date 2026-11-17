@@ -24,6 +24,7 @@ SENDS = ("osv-scanner sends the names and versions of the packages in the lockfi
 HINT = (f"Known vulnerabilities are not looked up: `broom diagnose {FLAG}` asks {TOOL}, which sends package names "
         "and versions to api.osv.dev (OSV, a public database).")
 LEVELS = ("critical", "high", "medium", "low", "unknown")
+IDS_SHOWN = 3  # how many advisory ids a package's row names
 CVSS_FLOORS = ((9.0, "critical"), (7.0, "high"), (4.0, "medium"), (0.1, "low"))  # a score's level, as CVSS bands it
 LABELS = {"CRITICAL": "critical", "HIGH": "high", "MODERATE": "medium", "MEDIUM": "medium", "LOW": "low"}
 
@@ -50,13 +51,15 @@ def record_level(record: dict) -> Optional[str]:
 
 
 def fixed_versions(record: dict, package: dict) -> List[str]:
-    """The versions a record says fix `package`: the `fixed` events of its ranges that affect that package's name."""
+    """The versions a record says fix `package`: the `fixed` events of its ranges that affect that package's name. A
+    range of type GIT names commits, not versions, so it is left out."""
     name = str(package.get("name", "")).lower()
     found = []
     for affected in record.get("affected") or []:
         if str((affected.get("package") or {}).get("name", "")).lower() == name:
             for span in affected.get("ranges") or []:
-                found += [str(e["fixed"]) for e in span.get("events") or [] if e.get("fixed")]
+                if span.get("type") != "GIT":
+                    found += [str(e["fixed"]) for e in span.get("events") or [] if e.get("fixed")]
     return found
 
 
@@ -90,16 +93,19 @@ def package_row(entry: dict) -> dict:
 
 
 def lockfile_rows(repo: Path, data: object) -> List[dict]:
-    """The lockfiles osv-scanner found vulnerable packages in, each with those packages."""
+    """The lockfiles osv-scanner found vulnerable packages in, each with those packages. It can give one lockfile in
+    several results (what the file names, and what those pull in), which are one row here, a package once."""
     results = data.get("results") if isinstance(data, dict) else None
-    out = []
+    out: Dict[str, dict] = {}
     for result in results or []:
         source = result.get("source") or {}
         packages = [package_row(p) for p in result.get("packages") or [] if p.get("vulnerabilities")]
         if packages:
-            out.append({"lockfile": rel(repo, repo / str(source.get("path", ""))), "type": source.get("type", ""),
-                        "packages": packages})
-    return out
+            path = rel(repo, repo / str(source.get("path", "")))
+            row = out.setdefault(path, {"lockfile": path, "type": source.get("type", ""), "packages": []})
+            seen = {(p["name"], p["version"]) for p in row["packages"]}
+            row["packages"] += [p for p in packages if (p["name"], p["version"]) not in seen]
+    return list(out.values())
 
 
 def counts(lockfiles: List[dict]) -> Dict[str, int]:
@@ -159,12 +165,19 @@ def severity_line(data: dict) -> str:
             + ", ".join(shown))
 
 
+def advisories(package: dict) -> str:
+    """One id per vulnerability of a package, the first `IDS_SHOWN` of them, and how many more there are; `--json`
+    has every id and alias."""
+    ids = [v["ids"][0] for v in package["vulnerabilities"] if v["ids"]]
+    more = len(ids) - IDS_SHOWN
+    return ", ".join(ids[:IDS_SHOWN]) + (f" and {more} more" if more > 0 else "")
+
+
 def lockfile_lines(lockfile: dict) -> List[str]:
     """One lockfile's vulnerable packages as a table under its path."""
     from .statsview import table
 
-    rows = [[p["name"], p["version"], p["severity"], ", ".join(i for v in p["vulnerabilities"] for i in v["ids"]),
-             p["fixed_in"] or "-"] for p in lockfile["packages"]]
+    rows = [[p["name"], p["version"], p["severity"], advisories(p), p["fixed_in"] or "-"] for p in lockfile["packages"]]
     body = table(["package", "version", "worst", "advisories", "fixed in"], rows, left=(0, 1, 2, 3, 4))
     return [f"  {lockfile['lockfile']}", *(f"  {row}" for row in body)]
 

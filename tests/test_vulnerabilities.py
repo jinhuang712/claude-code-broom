@@ -71,6 +71,27 @@ class ParseTest(unittest.TestCase):
         self.assertEqual([v["fixed"] for v in row["vulnerabilities"]], [["1.10.0"], ["2.0.1"], ["1.2"]],
                          "a fix below the version is shown only when nothing above it is known")
 
+    def test_a_fix_named_by_a_commit_is_left_out(self) -> None:
+        record = {"id": "A", "affected": [{"package": {"name": "p"}, "ranges": [
+            {"type": "GIT", "events": [{"introduced": "0"}, {"fixed": "c45d7c49ea75133e52ab22a8e9e13173938e36ff"}]},
+            {"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "2.20.0"}]}]}]}
+        row = vuln.package_row({"package": {"name": "p", "version": "2.19.0"}, "vulnerabilities": [record]})
+        self.assertEqual((row["fixed_in"], row["vulnerabilities"][0]["fixed"]), ("2.20.0", ["2.20.0"]))
+
+    def test_a_lockfile_given_in_two_results_is_one_row_with_each_package_once(self) -> None:
+        def result(*names: str) -> dict:
+            return {"source": {"path": "/work/repo/py/requirements.txt", "type": "lockfile"},
+                    "packages": [{"package": {"name": n, "version": "1"}, "vulnerabilities": [{"id": f"X-{n}"}]}
+                                 for n in names]}
+        (row,) = vuln.lockfile_rows(self.repo, {"results": [result("requests"), result("requests", "idna")]})
+        self.assertEqual((row["lockfile"], [p["name"] for p in row["packages"]]),
+                         ("py/requirements.txt", ["requests", "idna"]))
+
+    def test_a_row_names_one_id_per_vulnerability_and_three_at_most(self) -> None:
+        package = {"vulnerabilities": [{"ids": [f"GHSA-{n}", f"PYSEC-{n}"]} for n in range(5)]}
+        self.assertEqual(vuln.advisories(package), "GHSA-0, GHSA-1, GHSA-2 and 2 more")
+        self.assertEqual(vuln.advisories({"vulnerabilities": [{"ids": ["GHSA-0", "PYSEC-0"]}]}), "GHSA-0")
+
     def test_nothing_to_report_is_an_empty_list(self) -> None:
         self.assertEqual(vuln.lockfile_rows(self.repo, {"results": []}), [])
         self.assertEqual(vuln.lockfile_rows(self.repo, {}), [])
