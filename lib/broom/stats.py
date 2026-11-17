@@ -97,7 +97,8 @@ def tests_section(repo: Path, facts: List[Facts], top: int, note: Optional[str])
                   "skipped": sum(f.skipped for f in fs)} for lang, fs in sorted(groups.items())]
     skipped = {f.rel: f.skipped for f in facts if f.skipped}
     checked, bare = untested(facts)
-    return {"files": sum(f.test for f in facts), "cases": sum(f.cases for f in facts), "skipped": sum(skipped.values()),
+    return {"files": sum(f.test for f in facts), "with_cases": sum(1 for f in facts if f.test and f.cases),
+            "cases": sum(f.cases for f in facts), "skipped": sum(skipped.values()),
             "languages": languages, "skipped_files": ranked(skipped, top),
             "untested": {"count": len(bare), "of": checked,
                          "largest": [{"file": f.rel, "lines": f.lines} for f in bare[:top]]},

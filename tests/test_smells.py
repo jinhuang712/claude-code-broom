@@ -121,6 +121,22 @@ class SmellTest(BroomCase):
         self.assertIn("Not all measured, missing: ", first, "missing tools go in the first line")
         self.assertIn("ruff (brew install ruff)", first)
 
+    def test_only_keeps_one_kind_of_smell_so_its_worst_come_first(self) -> None:
+        medium = py_function("medium", 60).replace("+=", "-=")  # not a copy of the other
+        r = self.repo({"b.py": medium, "a.py": py_function("huge", 120), "c.py": "import os\n" * 450})
+        lengths = json.loads(self.cli(r, "smells", "--only", "function_lines", "--json").stdout)
+        self.assertEqual(lengths["only"], ["function_lines"])
+        self.assertEqual([(s["file"], s["smell"]) for s in lengths["smells"]],
+                         [("a.py", "function_lines"), ("b.py", "function_lines")], "the longest function first")
+        self.assertEqual((lengths["total"], lengths["severe"]), (2, 1))
+        both = json.loads(self.cli(r, "smells", "--only", "function_lines", "--only", "file_lines", "--json").stdout)
+        self.assertEqual({s["smell"] for s in both["smells"]}, {"function_lines", "file_lines"})
+        text = self.cli(r, "smells", "--only", "function_lines").stdout
+        self.assertIn("[broom] 2 code smell(s) of function_lines in ", text.splitlines()[0])
+        wrong = self.cli(r, "smells", "--only", "long_things")
+        self.assertEqual(wrong.returncode, 2)
+        self.assertIn("invalid choice", wrong.stderr)
+
     def test_session_note_offers_a_cleanup_until_dismissed(self) -> None:
         r = self.repo({"a.py": py_function("huge", 120)})
         self.assertNotIn("/broom:clean", str(self.session(r, "s5", self.env)), "the first turn doesn't wait for a scan")

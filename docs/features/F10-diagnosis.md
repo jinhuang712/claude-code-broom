@@ -73,7 +73,7 @@ Paths on the command line narrow all four to a file or a folder. A question it c
 
 3 gaps:
 
-- The longest functions and types are not listed. `broom smells` lists those past a limit.
+- A function or a type under its soft limit is not listed. `broom smells --only function_lines` lists those past it, the longest first.
 - A code file is paired with its test by file name, which misses a test named otherwise.
 - Rust and CSS take no part in the pairing.
 

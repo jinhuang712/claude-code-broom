@@ -14,7 +14,7 @@ from typing import List, Optional, Tuple
 from . import __version__, ledger
 from .asks import add_ask_parsers
 from .checks import run_checks
-from .config import SETTINGS, excluded, setting, setting_source
+from .config import SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, excluded, setting, setting_source
 from .fmt import format_files
 from .gate import (
     accept_allowed, accept_blocked, baseline_keys, baseline_remove, baseline_under, display, issue_key, render, select,
@@ -178,13 +178,14 @@ def cmd_init(args: argparse.Namespace) -> int:
 
 def cmd_smells(args: argparse.Namespace) -> int:
     """Run `broom smells`: the repo's code smells, worst first (JSON with --json), or dismiss them; returns 0."""
-    from .hotspots import dismiss, render, report
+    from .hotspots import Ask, dismiss, render, report
 
     repo = repo_or_exit()
     if args.dismiss:
         say(dismiss(repo))
         return 0
-    data = report(repo, [Path(p).resolve() for p in args.paths], args.top, args.base, args.by)
+    ask = Ask(args.top, args.base, args.by, tuple(args.only or ()))
+    data = report(repo, [Path(p).resolve() for p in args.paths], ask)
     say(json.dumps(data, indent=1) if args.json else render(data))
     return 0
 
@@ -349,6 +350,8 @@ def add_issue_parsers(sub: argparse._SubParsersAction) -> None:
     m.add_argument("--top", type=int, default=10, help="how many hotspot files and smells to list (default: 10)")
     m.add_argument("--by", choices=["churn", "smells"], default="churn",
                    help="order the hotspots by smells times recent changes, or by smells alone (default: churn)")
+    m.add_argument("--only", metavar="SMELL", action="append", choices=sorted([*SMELL_LIMITS, *SMELL_PRESENCE]),
+                   help="only this kind of smell, e.g. function_lines for the longest functions; may repeat")
     m.add_argument("--json", action="store_true", help="the same as JSON")
     m.add_argument("--dismiss", action="store_true", help="quiet the session note until severe smells grow")
     m.set_defaults(fn=cmd_smells)

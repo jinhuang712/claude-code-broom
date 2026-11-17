@@ -104,7 +104,7 @@ Status: ✅ built · ⬜ planned
 
 **Status**: ✅
 
-`broom smells [paths...] [--base REV] [--top N] [--json] [--dismiss]` ranks the code smells of the repo or some paths.
+`broom smells [paths...] [--base REV] [--top N] [--by ORDER] [--only SMELL] [--json] [--dismiss]` ranks the code smells of the repo or some paths.
 
 | Flag | Means | Default |
 |---|---|---|
@@ -112,6 +112,7 @@ Status: ✅ built · ⬜ planned
 | `--base REV` | only what the changes since REV made worse | off |
 | `--top N` | how many hotspot files and smells to list | 10 |
 | `--by` | `churn` ranks hotspots by smells and changes, `smells` by smells alone | `churn` |
+| `--only SMELL` | keep one kind of smell, and it may repeat | every kind |
 | `--json` | print JSON | off |
 | `--dismiss` | quiet the session note until the severe count grows | off |
 
@@ -119,7 +120,7 @@ Status: ✅ built · ⬜ planned
 
 **Prints**: stdout gets a first line with the counts, then `Hotspots:` and `Worst smells:` blocks and `note:` lines. stderr gets `broom: not inside a git repository` or `broom: unknown revision '<REV>'`.
 
-**Fails**: exit 1 outside a repo and for an unknown REV. It exits 0 whether or not smells are found.
+**Fails**: exit 1 outside a repo and for an unknown REV, and exit 2 for an unknown SMELL. It exits 0 whether or not smells are found.
 
 **Example**: `broom smells src --top 3` prints `[broom] 12 code smell(s) in ~/code/app` and three files.
 
@@ -359,7 +360,7 @@ An uncaught error exits 1 with a traceback.
 7 commands print JSON a script relies on:
 
 - **`broom doctor --json`**: `version` · `repo` · `languages` · `items` · `fix` · `configure` · `fix_global` · `configure_global` · `healthy` · `optional` · `settings`.
-- **`broom smells --json`**: `repo` · `base` · `total` · `severe` · `hints` · `by` · `hotspots` · `smells` · `notes`.
+- **`broom smells --json`**: `repo` · `base` · `only` · `total` · `severe` · `hints` · `by` · `hotspots` · `smells` · `notes`.
 - **`broom diagnose --json`**: `repo` · `paths` · `summary` · `by_smell` · `by_language` · `by` · `hotspots` · `smells` · `duplicate_tests` · `dependencies` · `missing_tools` · `notes` · `checkup` · `stats`.
 - **`broom compare --json`**: the counts per kind, the four lists of smells, the hotspots of the base and the kinds that are not comparable.
 - **`broom stats --json`**: `repo` · `paths` · `files` · `days` · `size` · `tests` · `rot` · `history`. Each section holds a `note` that says what is missing, or null.

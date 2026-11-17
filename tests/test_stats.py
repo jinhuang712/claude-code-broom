@@ -167,6 +167,14 @@ class RotTest(StatsCase):
         self.assertEqual(t["total"], 5)
         self.assertEqual([(f["file"], f["count"]) for f in t["files"]], [("t.py", 3), ("u.ts", 2)])
 
+    def test_a_todo_is_a_marker_and_not_a_word_in_a_comments_prose(self) -> None:
+        marked = ["# TODO: one", "x = 1  # FIXME later", "# see below. HACK(dev): three", "# XXX"]
+        prose = ["# a TODO in the list stays open", "# TODO.md holds the open questions", "# the FIXME tag is for bugs"]
+        r = self.repo({"a.py": text(*marked, *prose),
+                       "b.ts": text("/*", " * TODO: in a block", " * every TODO has an owner", " */", "export {};")})
+        t = self.report(r)["rot"]["todos"]
+        self.assertEqual([(f["file"], f["count"]) for f in t["files"]], [("a.py", 4), ("b.ts", 1)])
+
     def test_git_blame_tells_the_old_ones_and_skips_files_git_doesnt_know(self) -> None:
         r = self.old_repo()
         self.commit_all(r, {"t.py": (r / "t.py").read_text() + "# TODO newest\n"})
@@ -243,7 +251,8 @@ class ScanTest(StatsCase):
 class CommandTest(StatsCase):
     SECTIONS = {
         "size": {"total", "languages", "folders", "more_folders", "longest", "note"},
-        "tests": {"files", "cases", "skipped", "languages", "skipped_files", "untested", "coverage", "note"},
+        "tests": {"files", "with_cases", "cases", "skipped", "languages", "skipped_files", "untested", "coverage",
+                  "note"},
         "rot": {"suppressions", "todos", "skipped_tests", "note"},
         "history": {"days", "commits", "files", "pairs", "note"},
     }
@@ -264,6 +273,22 @@ class CommandTest(StatsCase):
         self.assertEqual([h.split(" (")[0] for h in headings[1:]], ["Size", "Tests", "Rot", "History"])
         self.assertIn("goes by file name", done.stdout)
         self.assertIn("2 code files read", headings[0])
+
+    def test_a_language_reads_by_its_name_and_the_json_keeps_the_short_one(self) -> None:
+        r = self.repo({"src/a.ts": "export const a = 1;\n", "src/b.py": "x = 1\n"})
+        out = self.cli(r, "stats").stdout
+        self.assertRegex(out, r"\n  TS/JS\s+1\s+1\s+0\s+0\n")
+        self.assertRegex(out, r"\n  Python\s+1\s+1\s+0\s+0\n")
+        self.assertEqual({row["language"] for row in self.json(r)["size"]["languages"]}, {"js", "py"})
+
+    def test_a_helper_under_a_test_folder_is_a_test_file_with_no_test_cases(self) -> None:
+        r = self.repo({"src/a.py": "x = 1\n", "tests/test_a.py": "def test_a():\n    pass\n",
+                       "tests/helpers.py": "def make():\n    return 1\n"})
+        tests = self.json(r)["tests"]
+        self.assertEqual((tests["files"], tests["with_cases"], tests["cases"]), (2, 1, 1))
+        self.assertIn("  2 test files (1 of them hold test cases), 1 test cases, 0 skipped", self.cli(r, "stats").stdout)
+        (r / "tests/helpers.py").unlink()
+        self.assertIn("  1 test files, 1 test cases, 0 skipped", self.cli(r, "stats").stdout)
 
     def test_a_path_narrows(self) -> None:
         r = self.repo({"src/a.py": "x = 1\n", "lib/b.py": "y = 2\nz = 3\n"})

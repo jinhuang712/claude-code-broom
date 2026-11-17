@@ -23,7 +23,9 @@ It needs git and nothing else. No linter runs.
 
 A small scanner follows strings and block comments across lines, so a marker inside a string is told from one in a comment. For each file it gives the non-blank lines, the test cases and skipped tests by each language's own form, the lint suppressions and the TODO comments.
 
-Test cases and skipped tests are read in test files only, except in Rust, where tests sit beside the code. A conditional skip, such as a test that skips when a tool is missing, counts as skipped.
+Test cases and skipped tests are read in test files only, except in Rust, where tests sit beside the code. A conditional skip, such as a test that skips when a tool is missing, counts as skipped. A file under a test folder is a test file whatever its name, so a helper there counts as one, and the output says how many of them hold test cases. The cases are counted from the text, so the number can differ from what a test runner collects.
+
+A TODO counts when the word marks the comment: it opens the comment, or a colon or a bracket follows it. The word in a comment's prose is left out, and so is a file's name such as `TODO.md`.
 
 A code file is paired with a test file by name, anywhere in the repo. Rust and CSS take no part in the pairing.
 

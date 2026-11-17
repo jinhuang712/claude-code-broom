@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Iterable, List, Sequence
 
 from .gate import display
+from .needs import LANG_NAMES
 from .stats import report
 
 PAIRING_TEXT = ["  The pairing goes by file name: foo.py with test_foo.py or foo_test.py, foo.go with foo_test.go,",
@@ -40,6 +41,11 @@ def section(title: str, note: object, blocks: List[List[str]]) -> List[str]:
     return out
 
 
+def language(r: dict) -> str:
+    """A row's language as a person reads it, such as TS/JS for `js`; the JSON keeps the short name."""
+    return LANG_NAMES.get(r["language"], r["language"])
+
+
 def counts(r: dict) -> List[object]:
     """The four numbers of a size row: files and lines, then the same for tests."""
     return [r["files"], r["lines"], r["test_files"], r["test_lines"]]
@@ -49,7 +55,7 @@ def size_lines(d: dict) -> List[str]:
     """The size section: lines by language and by folder, and the longest files."""
     head = ["files", "lines", "test files", "test lines"]
     total = [["total", *counts(d["total"])]]
-    langs = table(["language", *head], [[r["language"], *counts(r)] for r in d["languages"]] + total)
+    langs = table(["language", *head], [[language(r), *counts(r)] for r in d["languages"]] + total)
     folders = table(["folder", *head], [[r["folder"], *counts(r)] for r in d["folders"]])
     if d["more_folders"]:
         folders.append(f"  ... and {d['more_folders']} more folders; `--top N` lists more")
@@ -77,12 +83,13 @@ def tests_lines(d: dict) -> List[str]:
     """The tests section: files, cases and skipped tests by language, the files with most skipped, the code files with no
     test file by name, and the coverage."""
     langs = table(["language", "test files", "cases", "skipped"],
-                  [[r["language"], r["files"], r["cases"], r["skipped"]] for r in d["languages"]])
+                  [[language(r), r["files"], r["cases"], r["skipped"]] for r in d["languages"]])
     skipped = table(["most skipped", "skipped"], [[r["file"], r["count"]] for r in d["skipped_files"]])
     u = d["untested"]
     bare = [f"  {u['count']} of {u['of']} code files have no test file by name.", *PAIRING_TEXT]
     bare += table(["largest of them", "lines"], [[r["file"], r["lines"]] for r in u["largest"]])
-    total = [f"  {d['files']} test files, {d['cases']} test cases, {d['skipped']} skipped"]
+    helpers = "" if d["with_cases"] == d["files"] else f" ({d['with_cases']} of them hold test cases)"
+    total = [f"  {d['files']} test files{helpers}, {d['cases']} test cases, {d['skipped']} skipped"]
     return section("Tests", d["note"], [total, langs, skipped, bare if u["of"] else [], coverage_lines(d["coverage"])])
 
 

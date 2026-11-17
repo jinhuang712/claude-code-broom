@@ -26,6 +26,9 @@ FORMS: Dict[str, Tuple[Pattern[str], Pattern[str]]] = {
     "swift": (rx(r"^[ \t]*(?:@\w+[ \t]+)*func[ \t]+test\w*[ \t]*\(|^[ \t]*@Test\b"), SKIPS["swift"]),
 }
 TODO_WORD = re.compile(r"\b(?:TODO|FIXME|HACK|XXX)\b")
+# The word as a marker in a comment: its first word, or followed by a colon or a bracket. "a TODO in the list" is
+# prose, and so is a file's name such as TODO.md.
+TODO_MARK = re.compile(r"^\W*(?:TODO|FIXME|HACK|XXX)\b(?![./-]\w)|\b(?:TODO|FIXME|HACK|XXX)[ \t]*[:(]")
 STRING = r"\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*'"  # a string that ends on its line
 # What opens a comment or a string that may run past its line, per language: opener -> (closer, is a comment).
 BLOCKS: Dict[str, Dict[str, Tuple[str, bool]]] = {
@@ -97,9 +100,10 @@ class Comments:
 
 
 def todo_lines(lang: str, rows: List[str]) -> List[int]:
-    """The numbers of the lines whose comment holds TODO, FIXME, HACK or XXX; one in a string doesn't count."""
+    """The numbers of the lines whose comment is marked TODO, FIXME, HACK or XXX: the word opens the comment, or a
+    colon or a bracket follows it. One in a string doesn't count, and neither does one in a comment's prose."""
     comments = Comments(lang)
-    return [n for n, row in enumerate(rows, 1) if TODO_WORD.search(comments.of(row))]
+    return [n for n, row in enumerate(rows, 1) if TODO_MARK.search(comments.of(row))]
 
 
 def suppression_kinds(rows: List[str]) -> List[str]:

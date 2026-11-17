@@ -6,6 +6,14 @@
 
 ---
 
+### Diagnosis
+
+- `broom smells --only SMELL` keeps one kind of smell, so `broom smells --only function_lines` lists the longest functions first.
+- `broom stats` names a language as people do, such as TS/JS, and says how many test files hold test cases when helpers sit in a test folder.
+- A TODO in a comment's prose, or in a file's name such as `TODO.md`, no longer counts as a TODO comment. Before, `# every TODO has an owner` counted as one. After, only a marker counts: the word opens the comment, or a colon or a bracket follows it.
+
+---
+
 ## 0.22.0 — 2026-11-17
 
 ---

@@ -8,7 +8,7 @@ background: on a 2,376-file repo it took 13 to 36 seconds, and Claude's first re
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, NamedTuple, Optional, Tuple
 
 from .config import DEAD_CODE, drop_excluded, repo_config, setting
 from .gate import display, note_text
@@ -100,18 +100,29 @@ def smell_row(repo: Path, s: Smell, base: Optional[str] = None) -> dict:
             "text": s.text(), "was": s.was if base else None}
 
 
-def report(repo: Path, paths: List[Path], top: int, base: Optional[str] = None, by: str = "churn") -> dict:
+class Ask(NamedTuple):
+    """What `broom smells` was asked for: how many rows, the revision to compare with, the order of the hotspots
+    ("churn" or "smells"), and the kinds of smell to keep (all when empty)."""
+
+    top: int = 10
+    base: Optional[str] = None
+    by: str = "churn"
+    only: Tuple[str, ...] = ()
+
+
+def report(repo: Path, paths: List[Path], ask: Ask) -> dict:
     """The smells in `paths` (the repo when empty): counts, the `top` hotspot files and the `top` worst smells.
     With `base`, only what the changes since that revision made worse; each smell's `was` is then its size or
-    count at `base`, None for a new one. `by` orders the hotspots, "churn" or "smells"; the `by` returned is the
-    order they really have."""
-    churn, order, history_notes = churn_order(repo, by)
-    found, notes = find_smells(repo, repo_files(repo, paths, base), base)
-    ordered, files = rank(found, churn, order)
-    severe = sum(s.level == "block" for s in found)
-    return {"repo": str(repo), "base": base, "total": len(found), "severe": severe, "hints": len(found) - severe,
-            "by": order, "hotspots": files[:top], "smells": [smell_row(repo, s, base) for s in ordered[:top]],
-            "notes": notes + history_notes}
+    count at `base`, None for a new one. With `only`, the smells of those kinds alone, so the worst of one kind
+    come first: the longest functions, say. The `by` returned is the order the hotspots really have."""
+    churn, order, history_notes = churn_order(repo, ask.by)
+    found, notes = find_smells(repo, repo_files(repo, paths, ask.base), ask.base)
+    kept = [s for s in found if not ask.only or s.metric in ask.only]
+    ordered, files = rank(kept, churn, order)
+    severe = sum(s.level == "block" for s in kept)
+    return {"repo": str(repo), "base": ask.base, "only": list(ask.only), "total": len(kept), "severe": severe,
+            "hints": len(kept) - severe, "by": order, "hotspots": files[:ask.top],
+            "smells": [smell_row(repo, s, ask.base) for s in ordered[:ask.top]], "notes": notes + history_notes}
 
 
 def hotspot_line(f: dict) -> str:
@@ -125,7 +136,8 @@ def render(data: dict) -> str:
     code is."""
     where = f"the changes since {data['base']} made worse" if data["base"] else f"in {display(Path(data['repo']))}"
     missing = [note_text(n) for n in data["notes"] if n.startswith("missing:")]
-    rows = [f"[broom] {data['total']} code smell(s) {where}: {data['severe']} past the hard limit, "
+    kinds = f" of {', '.join(data['only'])}" if data.get("only") else ""
+    rows = [f"[broom] {data['total']} code smell(s){kinds} {where}: {data['severe']} past the hard limit, "
             f"{data['hints']} hints." + (f" Not all measured, missing: {'; '.join(missing)}." if missing else "")]
     if data["hotspots"]:
         rows += ["", f"Hotspots, {order_text(data['by'])}:"] + [hotspot_line(f) for f in data["hotspots"]]
