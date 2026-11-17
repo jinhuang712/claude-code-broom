@@ -6,6 +6,10 @@
 
 ---
 
+## 0.22.3 — 2026-11-17
+
+---
+
 ### Fixes
 
 - A commit whose output is redirected is checked. Before, `git commit -m x 2>&1 | tail` and `git commit -m x > /dev/null` passed the commit check unread, and only the turn's end caught what they held. After, they are checked like any commit.
