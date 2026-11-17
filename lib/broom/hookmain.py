@@ -1,14 +1,14 @@
 """`broom hook <event>`: what Claude Code's hooks and git's pre-commit hook call.
 
-bin/broom comes here without loading the command line (cli), and each event loads only its own handler: an edit or
-a turn's end with nothing to do must cost little more than the start of Python.
+bin/broom comes here first. A hook runs without loading the command line (cli), and each event loads only its own
+handler: an edit or a turn's end with nothing to do must cost little more than the start of Python.
 """
 
 from __future__ import annotations
 
 import os
 import threading
-from typing import Callable
+from typing import Callable, List
 
 from . import ledger
 from .gitutil import CLOCK, HOOK_SECONDS
@@ -73,3 +73,12 @@ def run_hook(event: str) -> int:
         warn(f"broom hook {event}: {e}")
         ledger.errored(e)
     return 0
+
+
+def main(argv: List[str]) -> int:
+    """Run `broom <argv>`: a hook from here, anything else through the command line, which is loaded only then."""
+    if len(argv) == 2 and argv[0] == "hook" and argv[1] in EVENTS:
+        return run_hook(argv[1])
+    from .cli import main as command_line
+
+    return command_line(argv)
