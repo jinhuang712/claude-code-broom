@@ -6,6 +6,10 @@
 
 ---
 
+## 0.22.4 — 2026-11-17
+
+---
+
 ### Diagnosis
 
 - `broom smells --only function_lines --top 5` lists the five longest functions in any repo, and `--only type_lines` the longest types. Before, it listed only those past the soft limit. After, the list goes on under the limit, and those are told as sizes and counted as no smell. Rust is left out.
