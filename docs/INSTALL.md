@@ -1,9 +1,10 @@
 # Install
 
-3 things must be in place first:
+4 things must be in place first:
 
+- macOS, where broom is developed and tested. Linux has what broom needs and has not been run. Windows is not supported: broom locks files and ends process groups in ways only those two have.
 - Claude Code 2.1.271 or later. The language servers are tested on 2.1.280, and Swift's on 2.1.283.
-- Python 3.9 or later as `python3`. macOS's system Python works.
+- Python 3.9 or later as `python3`. macOS's system Python works: the test suite passed on its 3.9.6 on 2026-11-17.
 - git.
 
 ---

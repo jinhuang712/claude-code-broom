@@ -26,7 +26,7 @@ Nothing is installed without the user's yes. A finding passes fixed, or accepted
 /plugin install broom@claude-code-broom
 ```
 
-It needs Claude Code 2.1.271 or later, Python 3.9+ as `python3`, and git. [INSTALL.md](docs/INSTALL.md) has the rest: the shell way, the tools per language, updating and removing.
+It needs macOS, Claude Code 2.1.271 or later, Python 3.9+ as `python3`, and git. Linux is untested, and Windows is not supported. [INSTALL.md](docs/INSTALL.md) has the rest: the shell way, the tools per language, updating and removing.
 
 ---
 

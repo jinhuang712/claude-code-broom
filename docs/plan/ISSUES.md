@@ -7,8 +7,7 @@
 ```
 Issues
 ├── docs
-│   ├── I1: The moved text doesn't meet the wording rules
-│   └── I7: The docs don't say which systems are supported
+│   └── I1: The moved text doesn't meet the wording rules
 ├── refactor
 │   ├── I2: Three paths call the same tools
 │   ├── I5: Four rules sit on an alpha plugin API
@@ -73,14 +72,6 @@ Issues
   - [F2.1: Commit check](../features/F2-sweep.md#f21-commit-check)
   - [F2.4: git's pre-commit hook](../features/F2-sweep.md#f24-gits-pre-commit-hook)
 - next: [F2.4.1: Offered at setup](../features/F2-sweep.md#f241-offered-at-setup)
-
----
-
-## I7: The docs don't say which systems are supported
-
-- type: docs
-- why: broom locks files and ends process groups in ways only macOS and Linux have. README and INSTALL don't say so.
-- found: a review of the install path, 2026-11-17
 
 ---
 

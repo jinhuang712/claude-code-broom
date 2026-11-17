@@ -305,7 +305,7 @@ The user asked on 2026-11-17 for a round of polish and self-test once the featur
 - [I8: Two holes in the record](ISSUES.md#i8-two-holes-in-the-record)
 - [I12: A fresh session finishes four of ten answers by hand](ISSUES.md#i12-a-fresh-session-finishes-four-of-ten-answers-by-hand)
 - [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)
-- [I7: The docs don't say which systems are supported](ISSUES.md#i7-the-docs-dont-say-which-systems-are-supported)
+- README and INSTALL say which systems are supported, done on 2026-11-17.
 - An idle turn's end starts git once, where it started it 7 times, and an idle hook loads no check, done on 2026-11-17.
 - A commit with a redirection or a heredoc message is checked, where the commit check let it pass unread, done on 2026-11-17.
 

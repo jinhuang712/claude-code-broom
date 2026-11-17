@@ -29,7 +29,7 @@ tsc (~/code/app):
 
 ## 安装
 
-**需要：** Claude Code 2.1.271 或更高版本（语言服务器在 2.1.280 上测试过，Swift 的在 2.1.283 上）、Python 3.9+（命令名
+**需要：** macOS（Linux 没有测试过，Windows 不支持）、Claude Code 2.1.271 或更高版本（语言服务器在 2.1.280 上测试过，Swift 的在 2.1.283 上）、Python 3.9+（命令名
 `python3`，macOS 自带的即可）、git。
 
 1. 在 Claude Code 里添加 marketplace 并安装插件：
