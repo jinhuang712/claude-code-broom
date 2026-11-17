@@ -133,6 +133,9 @@ class SmellTest(BroomCase):
         self.assertEqual({s["smell"] for s in both["smells"]}, {"function_lines", "file_lines"})
         text = self.cli(r, "smells", "--only", "function_lines").stdout
         self.assertIn("[broom] 2 code smell(s) of function_lines in ", text.splitlines()[0])
+        dead = self.cli(r, "smells", "--only", "dead_code", "--json")
+        self.assertEqual(dead.returncode, 0, "every kind broom reports can be asked for: " + dead.stderr)
+        self.assertEqual({s["smell"] for s in json.loads(dead.stdout)["smells"]} - {"dead_code"}, set())
         wrong = self.cli(r, "smells", "--only", "long_things")
         self.assertEqual(wrong.returncode, 2)
         self.assertIn("invalid choice", wrong.stderr)

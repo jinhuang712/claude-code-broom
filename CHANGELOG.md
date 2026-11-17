@@ -6,6 +6,12 @@
 
 ---
 
+### Diagnosis
+
+- `broom smells --only dead_code` lists the code nothing uses. Before, it was refused as an unknown kind.
+
+---
+
 ### Record
 
 - A `.broom.json` loosened by a command, such as `sed`, shows in the turn's summary. Before, only a change made with the edit tools did.

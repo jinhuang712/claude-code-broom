@@ -51,7 +51,7 @@ Claude's work comes out formatted, lint-clean and type-correct by the project's 
 
 **Acceptance**: The test suite passes. It commits and stops in temporary repos and expects the block.
 
-**Status**: ✅ 2026-11-17, 499 tests with 3 skipped.
+**Status**: ✅ 2026-11-17, 501 tests with 3 skipped.
 
 ---
 
@@ -135,7 +135,7 @@ A session with broom installed gets a repo's numbers from broom.
 
 **Acceptance**: A fresh session is asked ten questions about a repo: its size, its longest functions, its skipped tests, its untested files and each rot counter among them. It answers all ten with broom commands and writes no script.
 
-**Status**: ❌ 2026-11-17, in two fresh sessions. On a real TS/JS repo with 0.22.0, nine answers came from broom, no script was written, and coverage had no report to read. On a throwaway repo of three languages with 0.22.2, six answers came from broom alone and four were finished by hand. [I12: A fresh session finishes four of ten answers by hand](ISSUES.md#i12-a-fresh-session-finishes-four-of-ten-answers-by-hand) holds the work.
+**Status**: ❌ 2026-11-17, in three fresh sessions. On a real TS/JS repo with 0.22.0, nine answers came from broom, no script was written, and coverage had no report to read. On a throwaway repo of three languages, six answers came from broom alone with 0.22.2 and nine with 0.22.4. The tenth, the public code with no doc comment, was counted by hand in TS/JS, and one script read broom's own JSON for the dead code. [I12: A fresh session finishes one of ten answers by hand](ISSUES.md#i12-a-fresh-session-finishes-one-of-ten-answers-by-hand) holds the work.
 
 ---
 

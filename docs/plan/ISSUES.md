@@ -16,7 +16,7 @@ Issues
     ├── I3: The cause of the reported Stop hang is unconfirmed
     ├── I8: A hole in the record
     ├── I10: No fresh session has used broom end to end
-    └── I12: A fresh session finishes four of ten answers by hand
+    └── I12: A fresh session finishes one of ten answers by hand
 ```
 
 ---
@@ -97,10 +97,10 @@ Issues
 
 ---
 
-## I12: A fresh session finishes four of ten answers by hand
+## I12: A fresh session finishes one of ten answers by hand
 
 - type: fix
-- why: A fresh session asked ten questions on a throwaway repo ran `broom stats` and `broom smells`, and never `broom diagnose`. It ran a linter itself for the doc comments and the deprecated calls, counted the third to fifth longest functions by hand, read each old TODO's date with `git blame` and checked the coverage report with a one-line script. Since then the session's note says what `broom diagnose` holds, the longest functions are listed under the limit too, and the oldest TODOs come with their dates. Two things are left: no fresh session has run since, and doc comments missing in TS/JS are not counted.
+- why: A fresh session asked ten questions on a throwaway repo finished four answers by hand with 0.22.2 and one with 0.22.4. What is left: doc comments missing in TS/JS are not counted, so the session read the source and counted three. `broom smells --only dead_code` was refused then and is taken now, and no fresh session has run since.
 - found: the second fresh-session self-test, 2026-11-17
 - touches:
   - [F10.4: Numbers on request](../features/F10-diagnosis.md#f104-numbers-on-request)

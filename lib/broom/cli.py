@@ -13,7 +13,7 @@ from typing import List, Optional, Tuple
 from . import __version__
 from .asks import add_ask_parsers
 from .checks import run_checks
-from .config import SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, excluded, setting, setting_source
+from .config import DEAD_CODE, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, excluded, setting, setting_source
 from .fmt import format_files
 from .gate import (
     accept_allowed, accept_blocked, baseline_keys, baseline_remove, baseline_under, display, issue_key, render, select,
@@ -314,7 +314,7 @@ def add_issue_parsers(sub: argparse._SubParsersAction) -> None:
     m.add_argument("--top", type=int, default=10, help="how many hotspot files and smells to list (default: 10)")
     m.add_argument("--by", choices=["churn", "smells"], default="churn",
                    help="order the hotspots by smells times recent changes, or by smells alone (default: churn)")
-    m.add_argument("--only", metavar="SMELL", action="append", choices=sorted([*SMELL_LIMITS, *SMELL_PRESENCE]),
+    m.add_argument("--only", metavar="SMELL", action="append", choices=sorted([*SMELL_LIMITS, *SMELL_PRESENCE, DEAD_CODE]),
                    help="only this kind of smell, e.g. function_lines for the longest functions; may repeat")
     m.add_argument("--json", action="store_true", help="the same as JSON")
     m.add_argument("--dismiss", action="store_true", help="quiet the session note until severe smells grow")
