@@ -5,7 +5,8 @@ F4: Smells
 ├── F4.1: Sized smells — a hint past the soft limit, a block past the hard one
 ├── F4.2: Occurrence smells — a change that adds one gets its level
 │   ├── F4.2.1: Broad catch
-│   └── F4.2.2: Skipped test
+│   ├── F4.2.2: Skipped test
+│   └── F4.2.3: Untested file
 ├── F4.3: Duplicate code — a new copy anywhere in the repo
 ├── F4.4: Dead code — code a change adds and nothing uses
 ├── F4.5: Cycles — imports that lead back
@@ -113,6 +114,21 @@ The four `broom/` rules need Node. Without it only these smells go unmeasured, a
 ### F4.2.2: Skipped test
 
 `skipped_test` is a test a change marks as skipped or disabled. It is the shortest way to make a failing suite pass. A change that adds one gets a hint.
+
+It covers Python, TS/JS, Go, Rust and Swift, and it needs no tool: broom reads the test files' text. A skip that a condition decides doesn't count, such as `skipUnless` or a `t.Skip` under an `if`. That is how a suite fits the machine it runs on. `broom stats` and the check-up still count those.
+
+---
+
+### F4.2.3: Untested file
+
+`untested_file` is a code file a change adds with no test file named for it anywhere in the repo, such as `foo.py` with no `test_foo.py`. A change that adds one gets a hint. It needs no tool.
+
+A file of fewer than 30 non-blank lines is left alone. So are `__init__.py` and `conftest.py`.
+
+2 gaps:
+
+- The pairing goes by file name, so a test named otherwise is missed.
+- Rust and CSS take no part, since they have no such naming.
 
 ---
 

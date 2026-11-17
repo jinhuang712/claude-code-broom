@@ -96,6 +96,16 @@ Dead code comes from the same tool in TS/JS and Python, with tests and entry poi
 
 ---
 
+## Tests
+
+Two smells are read from the files with no tool. A skipped test is found by each language's own form in the text of a test file, and it counts like any occurrence: when the change raises the count. A skip whose name states a condition, or that sits behind an `if`, is how a suite fits its machine, so it is left out.
+
+A new code file counts as untested when no test file anywhere in the repo is named for it. The names of all files come from one `git ls-files`, and it runs only when the change adds a code file of 30 lines or more.
+
+- [009: An occurrence counts when the change raises the count](decisions/009-occurrence-by-count.md)
+
+---
+
 ## What is skipped
 
 Paths are judged by directory name before any file is read. Dependencies, environments, build output, generated code, fixtures, minified files and `.d.ts` are skipped. `build`, `out`, `release` and `target` are skipped only where git doesn't track the files. Tracked directories skipped by name are listed in a note.

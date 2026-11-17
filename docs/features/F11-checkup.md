@@ -44,13 +44,15 @@ The list grows: each checkpoint's end looks for kinds broom still misses.
 
 ## F11.1: Counters
 
-5 counters, none of which needs a tool installed beyond the ones the smells already use:
+7 counters, none of which needs a tool installed beyond the ones the smells already use:
 
 - Lint suppressions in the repo.
 - Skipped tests in the repo.
 - TODO comments older than 180 days.
 - Dead-code findings in the whole repo.
 - Public code with no doc comment.
+- Duplicate test blocks.
+- Lines no test reaches, by the project's own coverage report.
 
 The first check-up of a repo takes its numbers silently. After that Claude is told once when a counter grew, with the old and the new value and up to three files that added to it, such as `broom check-up: lint suppressions 6 -> 9 (a.py, b.py)`. A counter that fell says nothing.
 
@@ -63,20 +65,42 @@ The first check-up of a repo takes its numbers silently. After that Claude is to
 
 ## F11.2: Test coverage
 
-broom reads the coverage report a project's own test run already wrote, such as `coverage.xml`, `lcov.info` or Go's cover profile. It doesn't run the tests.
+broom reads the coverage report a project's own test run already wrote. It doesn't run the tests.
+
+It reads 4 forms of report, at the repo's root or in its `coverage` folder:
+
+- Cobertura XML, such as the `coverage.xml` that `coverage xml` writes.
+- lcov, such as `lcov.info`.
+- Go's cover profile, such as `coverage.out`.
+- The JSON of coverage.py, as `coverage.json`.
 
 It reports 2 things:
 
-- Files and functions no test reaches, worst first.
-- Coverage that fell since the last check-up.
+- `broom stats` and `broom diagnose` give the share of lines a test reached and the files with most lines none did, worst first. They say how old the report is and whether it is older than the last commit.
+- The check-up counts the lines no test reaches, so Claude is told once when a newer report shows more of them.
 
-Without a report it says once how to produce one and then stays quiet. A change that adds a code file with no test beside it gets a hint.
+Without a report nothing is counted and nothing is told at session start. `broom stats` then names the command that writes one for each language of the repo. Test files are left out of the numbers.
+
+2 gaps:
+
+- Functions no test reaches are not listed, only files.
+- The JSON that Istanbul writes is not read, and Swift gets no command for a report.
+
+- **Commands**: [broom stats](../CLI.md#broom-stats)
+- **How it works**: [Stats](../specs/stats.md)
 
 ---
 
 ## F11.3: Duplicate tests
 
-Tests that repeat one another are listed in the check-up and the diagnosis, with the lines they share. The checks on a change still leave clones between two test files out.
+Tests that repeat one another are listed by `broom diagnose`, the largest first, with both places and the lines they share. The check-up counts them, each on the file that was written last, and tells Claude once when there are more.
+
+A block counts past the duplicate limit of tests. Generated tests and tests in `legacy` are left out. The checks on a change still leave clones between two test files out.
+
+It needs jscpd. Without it nothing is counted, and the diagnosis says it was not measured.
+
+- **Commands**: [broom diagnose](../CLI.md#broom-diagnose)
+- **How it works**: [Check-up](../specs/checkup.md)
 
 ---
 

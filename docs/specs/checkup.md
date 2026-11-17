@@ -4,9 +4,9 @@ This part looks for rot: numbers that get worse with no one change at fault. It 
 
 ```
 session start ─▶ the smell scan of HEAD (async, cached) ─┐
-                 one pass over the files' text ──────────┼─▶ five counters ─▶ compare with the last check-up
-                                                          │                        │
-                                                          │        grew ───────────┴─▶ one line to Claude, once
+                 one pass over the files' text ──────────┼─▶ the counters ─▶ compare with the last check-up
+                 the coverage report, if there is one ───┤                        │
+                                                          │        grew ──────────┴─▶ one line to Claude, once
                                                           └─▶ the record of this repo, in the data directory
 ```
 
@@ -14,15 +14,19 @@ session start ─▶ the smell scan of HEAD (async, cached) ─┐
 
 ## The counters
 
-5 counters, per repo:
+7 counters, per repo:
 
 - Lint suppressions.
 - Skipped tests.
 - TODO comments older than 180 days.
 - Dead-code findings in the whole repo.
 - Public code with no doc comment.
+- Duplicate test blocks.
+- Lines no test reaches.
 
-The first three come from the one pass over the files' text that `broom stats` makes. The last two come from the smell scan's own results. No tool runs for the check-up.
+The first three come from the one pass over the files' text that `broom stats` makes. The next three come from the smell scan's own results. The last comes from the coverage report a test run left, and it is left out when there is none. No tool runs for the check-up.
+
+The smell scan's jscpd run already finds the clones between two test files. The checks on a change drop them, and the scan keeps them apart for this counter. Each block is counted once, on the side that was written last, since the copy is likelier there.
 
 A counter whose tool is missing, failed or timed out is left out of that check-up: it is neither compared nor recorded. A low count from a tool that didn't run would read as a fall, and then as growth when the tool is back.
 

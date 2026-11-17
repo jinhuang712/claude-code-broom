@@ -19,7 +19,7 @@ It measures the whole repo with no time cut, where the checks on a change take 3
 
 `broom diagnose` measures every code file of a repo, or of the paths given, and gives the result twice: a report a person reads, and with `--json` data a script or Claude reads. `--out FILE` writes it to a file.
 
-The report holds a summary, the smells by kind and by language, the hotspots by churn, the worst smells and the four sections of `broom stats`. It names every tool that was missing, since counts without it read as cleaner than the code is. Its last line says how long it took.
+The report holds a summary, the smells by kind and by language, the hotspots by churn, the worst smells, the check-up's counters, the tests that repeat one another and the four sections of `broom stats`. It names every tool that was missing, since counts without it read as cleaner than the code is. Its last line says how long it took.
 
 It has no time cut and no limit on the number of files. A repo of 5,825 files took 10.4 seconds and one of 18,496 took 49.3, measured on 2026-11-17.
 
@@ -65,7 +65,7 @@ The base is measured in a temporary checkout, which is removed afterwards. A too
 4 kinds of question:
 
 - **Size**: lines of code by language and by folder, with tests counted apart, and the longest files.
-- **Tests**: how many test files and test cases there are, which are skipped, and which code files have no test file by name.
+- **Tests**: how many test files and test cases there are, which are skipped, which code files have no test file by name, and what the project's coverage report says.
 - **Rot**: the lint suppressions by kind, the TODO comments with how many are older than 180 days, and the skipped tests.
 - **History**: the files that changed most in the last 90 days, and the pairs of files that changed together.
 

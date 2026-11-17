@@ -6,6 +6,20 @@
 
 ---
 
+### Tests
+
+- `broom stats` and `broom diagnose` show test coverage, read from the report your own test run wrote: Cobertura XML, lcov, Go's cover profile or the JSON of coverage.py. broom runs no tests. Without a report they name the command that writes one.
+- `broom diagnose` lists the tests that repeat one another, with both places and the lines they share.
+- Two new hints: `skipped_test`, for a change that adds a test marked skipped with no condition behind it, and `untested_file`, for a change that adds a code file of 30 lines or more with no test file named for it.
+
+---
+
+### Check-up
+
+- Two more counters: duplicate test blocks, and the lines no test reaches by your coverage report. Claude is told once when either grew.
+
+---
+
 ## 0.21.2 — 2026-11-17
 
 ---

@@ -12,7 +12,7 @@ BAR = (
     "to 400 (1000), parameters up to 5 (8), nesting up to 4 (6), complexity up to 10 (20). A change is also blocked "
     "when it adds a lint suppression without a reason, a swallowed error or commented-out code. A blocked finding "
     'passes fixed, or with `broom known --accept "<why>"`. For a repo\'s numbers ask broom before writing a script: '
-    "`broom stats` (lines, tests, suppressions, TODOs, what changes most), `broom smells` (smells, ranked), "
+    "`broom stats` (lines, tests, coverage, suppressions, TODOs, what changes most), `broom smells` (smells, ranked), "
     "`broom diagnose` (the whole repo, before a refactor), `broom report` (what was blocked, fixed and let through), "
     "`broom doctor` (tools)."
 )

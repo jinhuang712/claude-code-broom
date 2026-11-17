@@ -18,8 +18,8 @@ Roadmap
 │   └── ✅ CP3.3: Old smells in touched code
 ├── 🟨 CP4: A refactoring kit — a full diagnosis, the worst places first, the numbers after
 ├── 🟨 CP5: A check-up for rot — numbers that speak when they grow
-│   ├── 🟨 CP5.1: Counters, dead code and comments
-│   ├── ⬜ CP5.2: Tests: coverage, duplicates and skips
+│   ├── ✅ CP5.1: Counters, dead code and comments
+│   ├── ✅ CP5.2: Tests: coverage, duplicates and skips
 │   ├── ⬜ CP5.3: Dependencies and deprecated APIs
 │   └── ✅ CP5.4: Rust's missing smells
 ├── ⬜ CP6: Polish and self-test — every goal run in a real session, every rough edge smoothed
@@ -217,7 +217,7 @@ Rot is what gets worse with no one change at fault. The check-up counts it acros
 
 ### CP5.1: Counters, dead code and comments
 
-**Status**: 🟨
+**Status**: ✅
 
 The four features shipped in 0.21.2 on 2026-11-17, with gaps: missing comments are not told in TS/JS, and a broad catch only in Python.
 
@@ -231,24 +231,27 @@ The four features shipped in 0.21.2 on 2026-11-17, with gaps: missing comments a
 **Exit criteria** (1):
 
 - **Objectives**
-  - [O6: A number that got worse is told once](GOALS.md#o6-a-number-that-got-worse-is-told-once)
+  - [O6: A number that got worse is told once](GOALS.md#o6-a-number-that-got-worse-is-told-once): ✅ 2026-11-17
 
 ---
 
 ### CP5.2: Tests: coverage, duplicates and skips
 
-**Status**: ⬜
+**Status**: ✅
 
-**Delivers** (3):
+The four features shipped in 0.22.0 on 2026-11-17, with gaps: coverage lists files and no functions, and a new file is paired with its test by name only.
+
+**Delivers** (4):
 
 - [F11.2: Test coverage](../features/F11-checkup.md#f112-test-coverage)
 - [F11.3: Duplicate tests](../features/F11-checkup.md#f113-duplicate-tests)
 - [F4.2.2: Skipped test](../features/F4-smells.md#f422-skipped-test)
+- [F4.2.3: Untested file](../features/F4-smells.md#f423-untested-file)
 
 **Exit criteria** (1):
 
 - **Objectives**
-  - [O6: A number that got worse is told once](GOALS.md#o6-a-number-that-got-worse-is-told-once)
+  - [O6: A number that got worse is told once](GOALS.md#o6-a-number-that-got-worse-is-told-once): ✅ 2026-11-17, by `tests/test_testrot.py` and `tests/test_coverage.py`
 
 ---
 

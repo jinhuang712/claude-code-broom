@@ -39,7 +39,8 @@ Features
 │   ├── ✅ F4.1: Sized smells — a hint past the soft limit, a block past the hard one
 │   ├── ✅ F4.2: Occurrence smells — a change that adds one gets its level
 │   │   ├── 🚧 F4.2.1: Broad catch — Python only
-│   │   └── ⬜ F4.2.2: Skipped test
+│   │   ├── ✅ F4.2.2: Skipped test
+│   │   └── 🚧 F4.2.3: Untested file — paired by file name only
 │   ├── ✅ F4.3: Duplicate code — a new copy anywhere in the repo
 │   ├── ✅ F4.4: Dead code — code a change adds and nothing uses
 │   ├── 🚧 F4.5: Cycles — Go, Swift and Rust aren't read
@@ -80,10 +81,10 @@ Features
 │   ├── 🚧 F10.3: Before and after — a tool that fails silently in the base's checkout is not caught
 │   ├── 🚧 F10.4: Numbers on request — the longest functions and types are not listed
 │   └── ✅ F10.5: Claude knows what to ask — broom before a script
-└── 🚧 F11: Check-up — coverage, duplicate tests, dependencies and deprecated APIs are not built
+└── 🚧 F11: Check-up — dependencies and deprecated APIs are not built
     ├── ✅ F11.1: Counters — numbers that speak only when they grow
-    ├── ⬜ F11.2: Test coverage — code the tests never reach
-    ├── ⬜ F11.3: Duplicate tests — tests that repeat one another
+    ├── 🚧 F11.2: Test coverage — files are listed and functions are not
+    ├── ✅ F11.3: Duplicate tests — tests that repeat one another
     ├── ✅ F11.4: Dead code in the whole repo — what nothing uses any more
     ├── 🚧 F11.5: Missing comments — TS/JS is not covered
     ├── ⬜ F11.6: Dependencies — known vulnerabilities and unused packages

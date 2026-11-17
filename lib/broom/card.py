@@ -20,8 +20,8 @@ ADDED = (("suppression", "a lint suppression without a reason"), ("swallowed_err
          ("commented_code", "commented-out code"))
 LEAD = "broom's bar in this repo, for the code you write or touch: {}."
 ACCEPT = 'A blocked finding passes fixed, or with `broom known --accept "<why>"`.'
-ASK = ("For a repo's numbers ask broom before writing a script: `broom stats` (lines, tests, suppressions, TODOs, "
-       "what changes most), `broom smells` (smells, ranked), `broom diagnose` (the whole repo, before a refactor), `broom "
+ASK = ("For a repo's numbers ask broom before writing a script: `broom stats` (lines, tests, coverage, suppressions, "
+       "TODOs, what changes most), `broom smells` (smells, ranked), `broom diagnose` (the whole repo, before a refactor), `broom "
        "report` (what was blocked, fixed and let through), `broom doctor` (tools).")
 
 
