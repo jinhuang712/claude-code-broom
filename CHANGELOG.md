@@ -6,6 +6,10 @@
 
 ---
 
+## 0.22.1 — 2026-11-17
+
+---
+
 ### Diagnosis
 
 - `broom smells --only SMELL` keeps one kind of smell, so `broom smells --only function_lines` lists the longest functions first.
