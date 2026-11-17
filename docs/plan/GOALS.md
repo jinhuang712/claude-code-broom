@@ -12,7 +12,7 @@ Goals
 │   ├── ✅ O1: Clean work without asking — Claude's changes meet the project's rules
 │   ├── ⬜ O2: Tooling in one conversation — a bare repo ends with no gap
 │   ├── ⬜ O3: Mistakes seen while editing — a diagnostic after an edit
-│   ├── ⬜ O4: Nothing passes silently — every pass has a reason the user can see
+│   ├── ✅ O4: Nothing passes silently — every pass has a reason the user can see
 │   ├── ✅ O5: A full diagnosis of an old repo — every smell, with no time cut
 │   ├── ✅ O6: A number that got worse is told once — the check-up speaks only then
 │   └── ⬜ O7: No script to write — broom answers what a session would count by hand
@@ -21,14 +21,14 @@ Goals
 │   └── ⬜ M2: Check time — the seconds a commit check takes
 ├── Thresholds
 │   ├── ✅ T1: An idle Bash call costs 15 ms at most
-│   ├── ❌ T2: An idle Python hook costs 50 ms at most
+│   ├── ✅ T2: An idle Python hook costs 50 ms at most
 │   ├── ✅ T3: A hook run takes 30 seconds at most
 │   └── ✅ T4: Content that passed is let through in 100 ms at most
 └── Constraints
     ├── ✅ R1: No old warning blocks Claude
-    ├── ⬜ R2: A false positive costs one round
+    ├── ✅ R2: A false positive costs one round
     ├── ✅ R3: An old smell in untouched code never comes up
-    └── ⬜ R4: Setup asks at most two questions
+    └── ✅ R4: Setup asks at most two questions
 ```
 
 ---
@@ -51,7 +51,7 @@ Claude's work comes out formatted, lint-clean and type-correct by the project's 
 
 **Acceptance**: The test suite passes. It commits and stops in temporary repos and expects the block.
 
-**Status**: ✅ 2026-11-17, 474 tests with 3 skipped.
+**Status**: ✅ 2026-11-17, 486 tests with 3 skipped.
 
 ---
 
@@ -93,7 +93,7 @@ A finding is fixed, or it leaves a reason the user can see.
 
 **Acceptance**: A test lets a finding through by each way broom has. Each way leaves a ledger line with a reason, and the turn's summary names it.
 
-**Status**: ⬜
+**Status**: ✅ 2026-11-17, for the three ways: accepted with a reason and a turn ended with the finding open by `tests/test_ledger.py`, and a turn given up after three blocks by `tests/test_turncheck.py`.
 
 ---
 
@@ -215,7 +215,7 @@ An edit or a turn's end with nothing to check costs one Python start.
 
 **How**: Time `broom hook edit` and `broom hook stop` with nothing to do.
 
-**Status**: ❌ 2026-11-17, on an Apple M5 Pro with Python 3.14: `broom hook edit` took 51 ms and `broom hook stop` 119 ms, each the median of 30 runs. [I11: An idle Stop hook takes 119 ms](ISSUES.md#i11-an-idle-stop-hook-takes-119-ms) holds the work.
+**Status**: ✅ 2026-11-17, on an Apple M5 Pro with Python 3.14: `broom hook edit` took 31 ms and `broom hook stop` 39 ms, each the median of 30 runs. `tests/test_turnhooks.py` and `tests/test_edithook.py` hold what the time rests on: one git call at most and no check loaded.
 
 ---
 
@@ -275,7 +275,7 @@ An edit or a turn's end with nothing to check costs one Python start.
 
 **How**: A test accepts a blocked finding with a reason and commits, and another stops twice and expects the turn to end.
 
-**Status**: ⬜ No test was matched to it in the docs pass of 2026-11-17.
+**Status**: ✅ 2026-11-17, by `tests/test_commit.py`, where a blocked commit passes once accepted with a reason, and by `tests/test_turncheck.py`, where a second stop ends the turn.
 
 ---
 
@@ -303,4 +303,4 @@ An edit or a turn's end with nothing to check costs one Python start.
 
 **How**: Read the skill and count the questions.
 
-**Status**: ⬜
+**Status**: ✅ 2026-11-17, by reading `skills/setup/SKILL.md`: two questions in one call before anything is run, and no setting among them. The offer to disable a conflicting plugin was a third question until that day, and is now one of the commands of the first.

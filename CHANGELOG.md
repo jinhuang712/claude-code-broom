@@ -6,6 +6,24 @@
 
 ---
 
+### Speed
+
+- A turn's end with nothing to check takes about 40 ms, where it took about 100. An edit takes about 30 ms, where it took about 50.
+
+---
+
+### Setup
+
+- `/broom:setup` offers to disable a plugin that serves the same files together with the tools to install. Before, it could ask that as a third question.
+
+---
+
+### Fixes
+
+- A file whose name holds a non-ASCII character is checked like any other. Before, `broom sweep` and the commit check left it out. After, they see it.
+
+---
+
 ## 0.22.1 — 2026-11-17
 
 ---

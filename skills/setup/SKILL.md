@@ -33,6 +33,8 @@ Summarize the gaps in plain words, then ask with AskUserQuestion, in one call, o
    `stylelint-config-recommended-scss` and `-less` stay devDependencies either way: stylelint only finds them in
    the project. The list can also hold `broom install-hook`: it adds git's own pre-commit hook to this repo, so
    commits made outside Claude Code are checked too. It is per repo, so offer it with the tools either way.
+   A `conflict` puts a `claude plugin disable …` command in the list: another plugin serves the same files.
+   Offer it here with the rest, never as a question of its own.
 2. **Turn on formatting where it's off?** Show the `configure` commands (`configure_global` if they picked the
    once-for-every-repo install): `broom init <dir>` adds default configs and never overwrites. Options: yes
    (recommended); yes, and reformat the whole repo now (a large diff); no. Configs live in the repo, so this is
@@ -57,8 +59,7 @@ go to step 4.
   `"exclude"` as globs relative to the repo root, for example `["vendor/**", "**/*.pb.go"]`.
 
 - Whole-repo reformat, if picked: `broom sweep --all --fix`.
-- A `conflict` means another plugin serves the same files. Offer its `claude plugin disable …` command; the
-  change applies after `/reload-plugins`.
+- A `claude plugin disable …` command the user picked applies after `/reload-plugins`: tell them so.
 
 ## 4. Verify and record
 

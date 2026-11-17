@@ -11,7 +11,7 @@ Roadmap
 ├── ✅ CP1: 0.18.1 reaches users — the hook limits and the docs set are released
 ├── 🟨 CP2: Nothing passes silently — every pass leaves a reason the user sees
 │   ├── 🟨 CP2.1: The ledger
-│   └── 🟨 CP2.2: Reasons and self-waivers
+│   └── ✅ CP2.2: Reasons and self-waivers
 ├── 🟨 CP3: Claude knows how to fix — the bar before the work, the fix beside the finding
 │   ├── 🟨 CP3.1: Messages that say how to fix
 │   ├── 🟨 CP3.2: Limits told before the work
@@ -89,9 +89,9 @@ The three features shipped in 0.18.2 on 2026-11-17. The measures get their first
 
 ### CP2.2: Reasons and self-waivers
 
-**Status**: 🟨
+**Status**: ✅
 
-The three features shipped in 0.19.0 on 2026-11-17. The two goals are not yet run as written.
+The three features shipped in 0.19.0 on 2026-11-17, and its two goals were matched to their tests that day.
 
 **Delivers** (3):
 
@@ -102,9 +102,9 @@ The three features shipped in 0.19.0 on 2026-11-17. The two goals are not yet ru
 **Exit criteria** (2):
 
 - **Objectives**
-  - [O4: Nothing passes silently](GOALS.md#o4-nothing-passes-silently)
+  - [O4: Nothing passes silently](GOALS.md#o4-nothing-passes-silently): ✅ 2026-11-17
 - **Constraints**
-  - [R2: A false positive costs one round](GOALS.md#r2-a-false-positive-costs-one-round)
+  - [R2: A false positive costs one round](GOALS.md#r2-a-false-positive-costs-one-round): ✅ 2026-11-17
 
 ---
 
@@ -305,7 +305,7 @@ The user asked on 2026-11-17 for a round of polish and self-test once the featur
 - [I8: Two holes in the record](ISSUES.md#i8-two-holes-in-the-record)
 - [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)
 - [I7: The docs don't say which systems are supported](ISSUES.md#i7-the-docs-dont-say-which-systems-are-supported)
-- [I11: An idle Stop hook takes 119 ms](ISSUES.md#i11-an-idle-stop-hook-takes-119-ms)
+- An idle turn's end starts git once, where it started it 7 times, and an idle hook loads no check, done on 2026-11-17.
 
 **Exit criteria** (6):
 
@@ -314,10 +314,10 @@ The user asked on 2026-11-17 for a round of polish and self-test once the featur
   - [O3: Mistakes seen while editing](GOALS.md#o3-mistakes-seen-while-editing)
   - [O7: No script to write](GOALS.md#o7-no-script-to-write)
 - **Thresholds**
-  - [T2: An idle Python hook costs 50 ms at most](GOALS.md#t2-an-idle-python-hook-costs-50-ms-at-most): ❌ 2026-11-17, 51 ms for an edit and 119 ms for a turn's end
+  - [T2: An idle Python hook costs 50 ms at most](GOALS.md#t2-an-idle-python-hook-costs-50-ms-at-most): ✅ 2026-11-17, 31 ms for an edit and 39 ms for a turn's end
 - **Constraints**
-  - [R2: A false positive costs one round](GOALS.md#r2-a-false-positive-costs-one-round)
-  - [R4: Setup asks at most two questions](GOALS.md#r4-setup-asks-at-most-two-questions)
+  - [R2: A false positive costs one round](GOALS.md#r2-a-false-positive-costs-one-round): ✅ 2026-11-17
+  - [R4: Setup asks at most two questions](GOALS.md#r4-setup-asks-at-most-two-questions): ✅ 2026-11-17
 
 ---
 
