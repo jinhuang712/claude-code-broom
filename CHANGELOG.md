@@ -6,6 +6,10 @@
 
 ---
 
+## 0.22.5 — 2026-11-17
+
+---
+
 ### Diagnosis
 
 - `broom smells --only dead_code` lists the code nothing uses. Before, it was refused as an unknown kind.
