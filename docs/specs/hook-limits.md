@@ -53,7 +53,9 @@ Many hooks run at once. Each read, change and write of the passed record, the kn
 
 ## Work done once
 
-git is asked once per repo for what is tracked and what differs, not once per file. The repo of a directory is found without a process.
+git is asked once per repo for what is tracked and what differs, not once per file. One `git status` gives HEAD and the changed files. The repo of a directory and the main checkout of a worktree are found without a process.
+
+A hook loads only what its event needs. The command line, the linters and the commit gate are loaded when there is code to check, so an edit or a turn's end with nothing to do costs little more than the start of Python.
 
 golangci-lint gets a results cache per module path. The shared cache matches packages by content and replays the file paths it stored, which hands a worktree another directory's findings. Caches of golangci-lint and clippy unused for 7 days are removed.
 

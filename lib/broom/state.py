@@ -15,7 +15,7 @@ import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable, Iterator
+from typing import Callable, Iterator, List
 
 # Resolved from this file, not CLAUDE_PLUGIN_ROOT: that variable is set for hooks but not for `broom` run from Bash.
 PLUGIN_ROOT = Path(__file__).resolve().parents[2]
@@ -111,6 +111,14 @@ def append_line(path: Path, text: str) -> None:
     """Append `text` and a newline to the file at `path`, creating the file when it is missing."""
     with open(path, "a") as f:
         f.write(text + "\n")
+
+
+def read_lines(path: Path) -> List[str]:
+    """The non-empty lines of the file at `path`, or an empty list when it can't be read."""
+    try:
+        return [x for x in path.read_text().splitlines() if x]
+    except OSError:
+        return []
 
 
 def load_json(path: Path, default):

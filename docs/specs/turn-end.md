@@ -15,7 +15,7 @@ stop   ─▶ background work running? ─ yes ─▶ wait for the turn it wakes
 
 ## What the turn changed
 
-Edit and Write are recorded as they happen. A Bash command can rewrite files too, and a wrapper can commit them. An async prompt hook notes the changed code files by modification time and size, and HEAD. The turn's end adds what changed since and what was committed since, and measures it all against that HEAD. A commit made during the turn still shows as the turn's change.
+Edit and Write are recorded as they happen. A Bash command can rewrite files too, and a wrapper can commit them. An async prompt hook notes the changed code files by modification time and size, and HEAD. The turn's end adds what changed since and what was committed since, and measures it all against that HEAD. A commit made during the turn still shows as the turn's change. A turn that changed no code ends after that one look at the tree.
 
 A many-file edit through Serena names no files, so the turn's end takes the repo's changed files instead.
 

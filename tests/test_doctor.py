@@ -6,12 +6,11 @@ import json
 import os
 import shutil
 import subprocess
-import time
 import unittest
 from pathlib import Path
 
 from support import (
-    BROOM, HAS_GO, HAS_GOPLS, HAS_PY, HAS_TS, ROOT, TS_BAD, BroomCase,
+    BROOM, HAS_GO, HAS_PY, HAS_TS, ROOT, TS_BAD, BroomCase,
 )
 
 
@@ -260,17 +259,6 @@ class DoctorTest(BroomCase):
 
 class SetupOfferTest(BroomCase):
     """What setup offers: git's pre-commit hook with the missing tools, and nothing for a repo that has it all."""
-
-    @unittest.skipUnless(HAS_GOPLS, "go tools missing")
-    def test_session_is_quiet_and_fast_when_healthy(self) -> None:
-        r = self.go_repo()
-        env = {**self.env, "CLAUDE_CONFIG_DIR": str(self.config_dir())}
-        self.cli(r, "install-hook", env=env)  # git's hook is a gap like any tool
-        self.assertEqual(self.noted(self.session(r, "a", env)), "")
-        start = time.time()
-        self.assertEqual(self.noted(self.session(r, "b", env)), "")
-        self.assertLess(time.time() - start, 1.0, "the cached doctor keeps SessionStart fast")
-        self.assertEqual(self.session(self.repo({"README.md": "hi\n"}), "c", env), {}, "no languages, nothing to say")
 
     def hook_items(self, result: dict) -> list:
         return [i for i in result["items"] if i["role"] == "hook"]

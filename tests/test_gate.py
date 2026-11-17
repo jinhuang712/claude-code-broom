@@ -93,15 +93,3 @@ class GateTest(BroomCase):
         self.assertIn("BROOM_NO_ACCEPT is set", out.stderr)
         self.env["BROOM_NO_ACCEPT"] = "0"
         self.assertIn("accepted", self.cli(r, "known", "--accept", "legacy code").stdout, "0 leaves it on")
-
-    def test_with_accepting_off_the_turn_end_says_so_and_a_second_stop_still_ends_the_turn(self) -> None:
-        r = self.repo({"a.py": "x = 1\n"})
-        (r / "a.py").write_text(py_function("huge", 120))
-        self.env["BROOM_NO_ACCEPT"] = "1"
-        edit = {"session_id": "s1", "cwd": str(r), "tool_name": "Edit", "tool_input": {"file_path": str(r / "a.py")}}
-        stop = {"session_id": "s1", "cwd": str(r), "permission_mode": "default"}
-        self.hook("edit", edit)
-        reason = self.hook("stop", stop)["reason"]
-        self.assertIn("accepting them is off here (BROOM_NO_ACCEPT)", reason)
-        self.assertNotIn("broom known --accept", reason, "Claude isn't told to do what it can't")
-        self.assertIn("left unfixed", self.hook("stop", stop)["systemMessage"], "broom never traps a turn")

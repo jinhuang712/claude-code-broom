@@ -115,8 +115,9 @@ def run(cmd: List[str], cwd: Path, timeout: float = 90,
 
 
 def git(args: List[str], cwd: Path) -> Optional[str]:
-    """The stdout of `git args` run in `cwd` as text, or None when git fails or times out."""
-    rc, out, _ = run(["git", *args], cwd, timeout=15)
+    """The stdout of `git args` run in `cwd` as text, or None when git fails or times out. File names come as they
+    are: left to itself git quotes and escapes a name with a non-ASCII character, and no file has that name."""
+    rc, out, _ = run(["git", "-c", "core.quotePath=false", *args], cwd, timeout=15)
     return out if rc == 0 else None
 
 
@@ -139,26 +140,59 @@ def git_root(d: Path) -> Optional[Path]:
 _main_roots: Dict[Path, Path] = {}
 
 
+def shared_git_dir(root: Path) -> Optional[Path]:
+    """The git directory the worktree at `root` shares with its main checkout, read from git's own files without
+    starting git: `.git` itself in a main checkout; from a linked worktree, where `.git` is a file that names the
+    worktree's own git directory, what the `commondir` file there points to. None when the files don't say (a
+    submodule has no `commondir`), or when the environment names a git directory of its own."""
+    if os.environ.get("GIT_DIR") or os.environ.get("GIT_COMMON_DIR"):
+        return None
+    dot = root / ".git"
+    if dot.is_dir():
+        return dot.resolve()
+    try:
+        own = root / dot.read_text().split("gitdir:", 1)[1].strip()  # an absolute path stays as it is
+        return (own / (own / "commondir").read_text().strip()).resolve()
+    except (OSError, IndexError):
+        return None
+
+
 def main_worktree(root: Path) -> Path:
     """The root of the main worktree of the repo whose worktree root is `root`: `root` itself in the main checkout,
     the main checkout from a linked worktree (they share the git common directory). Asked once per root and
-    process: it starts git."""
+    process; git is started only where its files don't say (see shared_git_dir)."""
     if root not in _main_roots:
-        common = git(["rev-parse", "--path-format=absolute", "--git-common-dir"], root)
-        main = Path(common.strip()).resolve() if common and common.strip() else None
-        _main_roots[root] = main.parent if main and main.name == ".git" else root
+        shared = shared_git_dir(root)
+        if shared is None:
+            common = git(["rev-parse", "--path-format=absolute", "--git-common-dir"], root)
+            shared = Path(common.strip()).resolve() if common and common.strip() else None
+        _main_roots[root] = shared.parent if shared and shared.name == ".git" else root
     return _main_roots[root]
+
+
+# What comes before the path in an entry of `git status --porcelain=v2`, by the entry's first field: a changed
+# file (1), an unmerged one (u), an untracked one (?). A rename (2) is never listed: the call turns renames off.
+STATUS_FIELDS = {"1": 7, "u": 9, "?": 0}
+
+
+def tree_state(root: Path) -> Tuple[str, List[Path]]:
+    """HEAD's commit ("" before the first one) and the files that differ from it: tracked files changed in the index
+    or the working tree, plus untracked, non-ignored files. One `git status` says all of it, where a `rev-parse`, a
+    `diff` and an `ls-files` each cost a start of git; a turn's end with nothing to check pays for this call alone."""
+    out = git(["status", "--porcelain=v2", "--branch", "-z", "--no-renames", "--untracked-files=all"], root) or ""
+    head, names = "", []
+    for entry in out.split("\0"):
+        kind, _, rest = entry.partition(" ")
+        if kind == "#" and rest.startswith("branch.oid "):
+            head = rest.split(" ", 1)[1].replace("(initial)", "")
+        elif kind in STATUS_FIELDS:
+            names.append(rest.split(" ", STATUS_FIELDS[kind])[-1])
+    return head, [p for p in ((root / n).resolve() for n in names if n) if p.is_file()]
 
 
 def git_changed_files(root: Path) -> List[Path]:
     """Tracked files changed against HEAD plus untracked, non-ignored files."""
-    files: List[str] = []
-    out = git(["diff", "--name-only", "--no-renames", "HEAD"], root)
-    if out is None:  # no commits yet
-        out = git(["diff", "--name-only", "--cached"], root) or ""
-    files += out.splitlines()
-    files += (git(["ls-files", "--others", "--exclude-standard"], root) or "").splitlines()
-    return [p for p in ((root / f).resolve() for f in files if f) if p.is_file()]
+    return tree_state(root)[1]
 
 
 def changed_since(root: Path, base: str) -> Optional[List[Path]]:

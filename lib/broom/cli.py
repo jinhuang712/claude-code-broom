@@ -6,12 +6,11 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import threading
 import time
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from . import __version__, ledger
+from . import __version__
 from .asks import add_ask_parsers
 from .checks import run_checks
 from .config import SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, excluded, setting, setting_source
@@ -20,11 +19,11 @@ from .gate import (
     accept_allowed, accept_blocked, baseline_keys, baseline_remove, baseline_under, display, issue_key, render, select,
 )
 from .gitcmd import staged
-from .hooktrace import watch
-from .gitutil import CLOCK, HOOK_SECONDS, changed_since, ChangedLines, git, git_changed_files, git_root
+from .hookmain import EVENTS, run_hook
+from .gitutil import changed_since, ChangedLines, git, git_changed_files, git_root
 from .scaffold import add_default_configs
 from .smells import find_smells
-from .state import read_hook_input, say, warn
+from .state import say, warn
 from .toolchain import lang_of
 
 
@@ -242,44 +241,9 @@ def cmd_install_hook(_args: argparse.Namespace) -> int:
     return 0
 
 
-def give_up_after(seconds: float, event: str) -> None:
-    """The last resort for what no command's timeout reaches (broom's own reading of files on a huge repo): end
-    the hook without a verdict, which lets the commit, the edit or the stop through, before Claude Code does."""
-    def give_up() -> None:
-        warn(f"broom hook {event}: gave up after {seconds:.0f} s")
-        os._exit(0)
-
-    timer = threading.Timer(seconds, give_up)
-    timer.daemon = True
-    timer.start()
-
-
 def cmd_hook(args: argparse.Namespace) -> int:
-    """Run the check for `broom hook <event>`; an error is warned and let through, so 0 unless pre-commit blocks."""
-    from .commitgate import hook_commit, hook_pre_commit
-    from .hooks import hook_edit, hook_prompt, hook_session, hook_session_scan, hook_stop
-
-    seconds = float(os.environ.get("BROOM_HOOK_SECONDS") or HOOK_SECONDS)  # the variable is for tests
-    CLOCK.start(seconds)
-    give_up_after(seconds + 3, args.event)
-    watch(args.event, os.getcwd())
-    ledger.begin(args.event)
-    if args.event == "pre-commit":
-        try:
-            return hook_pre_commit()
-        except Exception as e:  # noqa: BLE001 - a broken check must never stop a commit
-            warn(f"broom pre-commit: {e}")
-            ledger.errored(e)
-            return 0
-    data = read_hook_input()
-    handlers = {"commit": hook_commit, "edit": hook_edit, "prompt": hook_prompt, "stop": hook_stop,
-                "subagent-stop": hook_stop, "session": hook_session, "session-scan": hook_session_scan}
-    try:
-        handlers[args.event](data)
-    except Exception as e:  # noqa: BLE001 - a broken check must never trap Claude or block its edits
-        warn(f"broom hook {args.event}: {e}")
-        ledger.errored(e)
-    return 0
+    """Run `broom hook <event>`. bin/broom goes to hookmain itself, without loading this module."""
+    return run_hook(args.event)
 
 
 def cmd_lsp(_args: argparse.Namespace) -> int:
@@ -362,8 +326,7 @@ def add_issue_parsers(sub: argparse._SubParsersAction) -> None:
 def add_internal_parsers(sub: argparse._SubParsersAction) -> None:
     """Commands for Claude Code and git, left out of --help."""
     h = sub.add_parser("hook")
-    h.add_argument("event", choices=["commit", "edit", "prompt", "stop", "subagent-stop", "session", "session-scan",
-                                     "pre-commit"])
+    h.add_argument("event", choices=EVENTS)
     h.set_defaults(fn=cmd_hook)
     ls = sub.add_parser("lsp")  # for .lsp.json
     ls.add_argument("language", choices=["typescript"])

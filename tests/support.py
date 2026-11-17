@@ -19,6 +19,8 @@ from broom.toolchain import swift_format_cmd
 ROOT = isolation.ROOT
 BROOM = isolation.BROOM
 
+# What an idle hook has no use for: the command line, the linters and the commit gate, with all they import.
+HEAVY = ("broom.cli", "broom.checks", "broom.commitgate", "broom.smells", "broom.doctor")
 CARD = "broom's bar in this repo"  # how the limits card, told at session start, begins
 GIT_ENV = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
 # The 25 seconds one hook run may take are what a cold swift build uses up when other test files hold the cores: the
@@ -134,6 +136,23 @@ class BroomCase(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(r.stderr.strip(), "", "hook raised")
         return json.loads(r.stdout) if r.stdout.strip() else {}
+
+    def counted(self, event: str, payload: dict, repo: Path) -> tuple:
+        """Run a hook as Claude Code does: the git commands it started, and the modules of broom it loaded."""
+        shim = self.tmp / "shim"
+        shim.mkdir(exist_ok=True)
+        log = self.tmp / "git.log"
+        log.write_text("")
+        (shim / "git").write_text(f'#!/bin/sh\necho "$@" >> "{log}"\nexec "{shutil.which("git")}" "$@"\n')
+        (shim / "git").chmod(0o755)
+        env = {**self.env, "PATH": f"{shim}:{self.env['PATH']}"}
+        r = subprocess.run([sys.executable, "-X", "importtime", str(BROOM), "hook", event], input=json.dumps(payload),
+                           capture_output=True, text=True, env=env, cwd=repo)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        loaded = [row.rsplit("|", 1)[1].strip() for row in r.stderr.splitlines() if row.startswith("import time:")]
+        self.assertEqual([row for row in r.stderr.splitlines() if not row.startswith("import time:")], [], "raised")
+        return log.read_text().splitlines(), [m for m in loaded if m.startswith("broom")]
+
 
     def commit(self, repo: Path, command: str, tool_use_id: str = None, **options: str) -> dict:
         return self.hook("commit", {"session_id": "s1", "cwd": str(repo), "hook_event_name": "PreToolUse",

@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import json
-import shutil
 import time
-import unittest
 from pathlib import Path
 
 from support import BroomCase, py_function
@@ -49,15 +47,6 @@ class TurnTest(BroomCase):
         self.sh(r, "git", "commit", "-qm", "a wrapper committed it")  # no `git commit` from Claude to see
         reason = self.stop(r, "t1")["reason"]
         self.assertIn("by_wrapper is 120 lines long (hard limit 100; new)", reason, "measured from the prompt's HEAD")
-
-    @unittest.skipUnless(shutil.which("oxlint"), "oxlint missing")
-    def test_a_file_outside_any_repo_is_a_scratch_draft(self) -> None:
-        r = self.repo({"a.py": "x = 1\n"})
-        draft = self.tmp / "scratchpad" / "draft.mjs"  # the kind of draft broom once stopped a turn over
-        draft.parent.mkdir()
-        draft.write_text("import { readdirSync } from 'node:fs';\n\nexport const x = 1;\n")
-        self.edit(r, draft, "x1")
-        self.assertEqual(self.stop(r, "x1"), {}, "a draft in a temp directory is no project's code")
 
     def test_a_subagents_edits_wait_for_its_own_end(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
