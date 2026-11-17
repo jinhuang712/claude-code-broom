@@ -66,7 +66,7 @@ The base is measured in a temporary checkout, which is removed afterwards. A too
 
 - **Size**: lines of code by language and by folder, with tests counted apart, and the longest files.
 - **Tests**: how many test files and test cases there are, which are skipped, which code files have no test file by name, and what the project's coverage report says.
-- **Rot**: the lint suppressions by kind, the TODO comments with how many are older than 180 days, and the skipped tests.
+- **Rot**: the lint suppressions by kind, the TODO comments with how many are older than 180 days and the oldest with the day each was written, and the skipped tests.
 - **History**: the files that changed most in the last 90 days, and the pairs of files that changed together.
 
 Paths on the command line narrow all four to a file or a folder. A question it can't answer is said so, with what is missing.

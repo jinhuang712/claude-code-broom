@@ -6,6 +6,12 @@
 
 ---
 
+### Diagnosis
+
+- `broom stats` lists the oldest TODO comments with the day each was written and its age in days. Before, it gave their count per file.
+
+---
+
 ## 0.22.3 — 2026-11-17
 
 ---

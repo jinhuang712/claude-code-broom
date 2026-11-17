@@ -104,12 +104,14 @@ def todo_text(t: dict) -> str:
 
 
 def rot_lines(d: dict) -> List[str]:
-    """The rot section: lint suppressions, TODO comments with their age, skipped tests."""
+    """The rot section: lint suppressions, TODO comments with their age and the oldest of them, skipped tests."""
     s, t = d["suppressions"], d["todos"]
     kinds = ", ".join(f"{k} {n}" for k, n in s["kinds"].items())
     suppressed = [f"  {s['total']} lint suppressions" + (f" ({kinds})" if kinds else "")]
     suppressed += table(["files with most", "count"], [[r["file"], r["count"]] for r in s["files"]])
-    todos = [todo_text(t), *table(["files with most", "count"], [[r["file"], r["count"]] for r in t["files"]])]
+    todos = [todo_text(t), *table(["files with most", "count"], [[r["file"], r["count"]] for r in t["files"]]),
+             *table(["oldest", "written", "days"],
+                    [[f"{r['file']}:{r['line']}", r["written"], r["days"]] for r in t["oldest"]])]
     return section("Rot", d["note"], [suppressed, todos, [f"  {d['skipped_tests']} skipped tests"]])
 
 

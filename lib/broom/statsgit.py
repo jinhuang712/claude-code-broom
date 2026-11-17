@@ -4,11 +4,10 @@ for the lot) and how old some lines are (`git blame`, for a bounded number of th
 from __future__ import annotations
 
 import re
-import time
 from collections import Counter
 from itertools import chain, combinations
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, NamedTuple, Optional, Set, Tuple
 
 from .gitutil import git, run
 
@@ -24,12 +23,21 @@ def top_counts(counts: Dict[object, int], top: int) -> List[Tuple[object, int]]:
     return sorted(counts.items(), key=lambda kv: (-kv[1], str(kv[0])))[:top]
 
 
-def old_lines(repo: Path, files: List[Tuple[str, List[int]]], days: int) -> Tuple[int, int, bool]:
-    """Ask `git blame` when the given lines were written: `files` is (path, line numbers) pairs. Returns how many lines
-    were blamed, how many of those are older than `days` days and whether the cap (`BLAME_LINES`) left lines out. A
-    file git doesn't know (untracked, so new) is not blamed."""
-    cutoff = time.time() - days * DAY
-    blamed = old = 0
+class Blamed(NamedTuple):
+    """What `git blame` said of the lines it was asked about."""
+
+    written: List[Tuple[str, int, int]]  # each line blamed: its file, its number and when it was written (Unix time)
+    capped: bool  # whether the cap (`BLAME_LINES`) left lines out
+
+
+# One line of `git blame --line-porcelain`: the commit, the line's number then and now, and further down its time.
+BLAME_ROW = re.compile(r"^[0-9a-f]{40,64} \d+ (\d+)(?: \d+)?\n(?:.*\n)*?author-time (\d+)$", re.M)
+
+
+def blame(repo: Path, files: List[Tuple[str, List[int]]]) -> Blamed:
+    """Ask `git blame` when the given lines were written: `files` is (path, line numbers) pairs, asked in that order
+    until the cap is reached. A file git doesn't know (untracked, so new) is not blamed."""
+    written: List[Tuple[str, int, int]] = []
     left, cut = BLAME_LINES, False
     for rel, lines in files:
         cut = cut or len(lines) > left
@@ -40,11 +48,9 @@ def old_lines(repo: Path, files: List[Tuple[str, List[int]]], days: int) -> Tupl
         out = git(["blame", "--line-porcelain", *ranges, "--", rel], repo)
         if out is None:
             continue
-        times = [int(t) for t in re.findall(r"^author-time (\d+)$", out, re.M)]
-        blamed += len(times)
-        old += sum(t < cutoff for t in times)
+        written += [(rel, int(line), int(when)) for line, when in BLAME_ROW.findall(out)]
         left -= len(asked)
-    return blamed, old, cut
+    return Blamed(written, cut)
 
 
 def log(repo: Path, days: int, at: Optional[int] = None) -> Optional[List[List[str]]]:

@@ -51,4 +51,4 @@ One `git log` over the period gives the commits per file and the pairs of files 
 
 ## The age of a TODO
 
-`git blame` runs only on the files that hold a TODO comment, on 200 such lines at most, the files with most first. When the cap is hit, the output says so. An untracked file is not blamed.
+`git blame` runs only on the files that hold a TODO comment, on 200 such lines at most, the files with most first. When the cap is hit, the output says so. An untracked file is not blamed. Each blamed line keeps the day it was written, and the oldest are listed with it.

@@ -182,6 +182,16 @@ class RotTest(StatsCase):
         t = self.report(r)["rot"]["todos"]
         self.assertEqual((t["total"], t["blamed"], t["older"], t["older_than_days"]), (7, 6, 5, 180))
         self.assertFalse(t["capped"])
+        old = {(o["file"], o["line"]) for o in t["oldest"] if o["days"] > t["older_than_days"]}
+        self.assertEqual(old, {("t.py", 1), ("t.py", 3), ("t.py", 7), ("u.ts", 1), ("u.ts", 3)}, "the five that are old")
+
+    def test_the_oldest_todos_are_listed_with_the_day_each_was_written(self) -> None:
+        r = self.old_repo()
+        self.commit_all(r, {"t.py": (r / "t.py").read_text() + "# TODO newest\n"})
+        d = self.report(r, top=6)
+        newest = d["rot"]["todos"]["oldest"][-1]
+        self.assertEqual((newest["file"], newest["line"], newest["days"]), ("t.py", 9, 0), "the oldest come first")
+        self.assertRegex(statsview.render(d), r"(?m)^  oldest +written +days\n  [tu]\.\w+:\d +\d{4}-\d\d-\d\d +\d+$")
 
     def test_blame_stops_at_its_cap_and_says_so(self) -> None:
         r = self.old_repo()

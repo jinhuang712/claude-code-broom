@@ -11,6 +11,7 @@ stats` makes, a bounded `git blame`, the coverage report a test run left, and th
 from __future__ import annotations
 
 import time
+from collections import Counter
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -20,7 +21,7 @@ from .gitutil import CLOCK, main_worktree
 from .state import DATA_ROOT, load_json, short_hash, update_json
 from .stats import collect
 from .statscan import Facts
-from .statsgit import BLAME_LINES, OLD_DAYS, old_lines
+from .statsgit import DAY, OLD_DAYS, blame
 from .testrot import DUPLICATE_TESTS
 
 RECORDS = DATA_ROOT / "checkup"
@@ -54,17 +55,11 @@ def is_off(repo: Path) -> bool:
 def old_todos(repo: Path, facts: List[Facts]) -> Optional[Counts]:
     """Per file, the TODO comments git blame dates more than `OLD_DAYS` days back: at most `BLAME_LINES` lines are
     asked, the files with most first. None when the hook's time ran out, as the blame then answered nothing."""
-    left = BLAME_LINES
-    out: Counts = {}
-    for f in sorted((f for f in facts if f.todos), key=lambda f: (-len(f.todos), f.rel)):
-        asked = f.todos[:left]
-        if not asked:
-            break
-        _, old, _ = old_lines(repo, [(f.rel, asked)], OLD_DAYS)
-        left -= len(asked)
-        if old:
-            out[f.rel] = old
-    return None if CLOCK.left() == 0 else out
+    order = sorted((f for f in facts if f.todos), key=lambda f: (-len(f.todos), f.rel))
+    cutoff = time.time() - OLD_DAYS * DAY
+    written = blame(repo, [(f.rel, f.todos) for f in order]).written
+    old: Counts = dict(Counter(rel for rel, _, when in written if when < cutoff))
+    return None if CLOCK.left() == 0 else old
 
 
 def counters(repo: Path, facts: List[Facts], from_smells: Optional[Counted]) -> Counted:

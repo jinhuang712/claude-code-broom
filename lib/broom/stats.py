@@ -6,6 +6,7 @@ bounded `git blame` (statsgit). A question it can't answer comes back with a `no
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+import time
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -13,7 +14,7 @@ from .coverage import section as coverage_section
 from .hotspots import repo_files
 from .maintained import GENERATED, Maintained
 from .statscan import Facts, scan
-from .statsgit import OLD_DAYS, history, old_lines, top_counts
+from .statsgit import DAY, OLD_DAYS, blame, history, top_counts
 from .testrot import needs_test, stem_of, tested
 from .toolchain import lang_of
 
@@ -110,13 +111,18 @@ def tests_section(repo: Path, facts: List[Facts], top: int, note: Optional[str])
 
 def todo_part(repo: Path, facts: List[Facts], top: int) -> dict:
     """TODO, FIXME, HACK and XXX comments: the total, how many of the lines git blame was asked about are past `OLD_DAYS`
-    days, and the `top` files holding most. The files with most go to blame first, as the cap may cut the rest."""
+    days, the `top` oldest of those with the day each was written, and the `top` files holding most. The files with
+    most go to blame first, as the cap may cut the rest."""
     found = {f.rel: f.todos for f in facts if f.todos}
     counts = {rel: len(lines) for rel, lines in found.items()}
-    order = [(rel, found[rel]) for rel, _ in top_counts(counts, len(found))]
-    blamed, old, capped = old_lines(repo, order, OLD_DAYS) if order else (0, 0, False)
-    return {"total": sum(counts.values()), "blamed": blamed, "older": old, "older_than_days": OLD_DAYS,
-            "capped": capped, "files": ranked(counts, top)}
+    blamed = blame(repo, [(rel, found[rel]) for rel, _ in top_counts(counts, len(found))])
+    now = time.time()
+    ages = sorted((when, rel, line) for rel, line, when in blamed.written)
+    oldest = [{"file": rel, "line": line, "written": time.strftime("%Y-%m-%d", time.localtime(when)),
+               "days": int((now - when) // DAY)} for when, rel, line in ages[:top]]
+    return {"total": sum(counts.values()), "blamed": len(ages), "older_than_days": OLD_DAYS,
+            "older": sum(now - when > OLD_DAYS * DAY for when, _, _ in ages), "oldest": oldest,
+            "capped": blamed.capped, "files": ranked(counts, top)}
 
 
 def rot_section(repo: Path, facts: List[Facts], top: int, note: Optional[str]) -> dict:
