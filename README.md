@@ -72,7 +72,7 @@ Claude Code starts one of broom's hooks at a session start, a prompt, a Bash cal
 
 ```
 Claude Code
-  │ SessionStart · UserPromptSubmit · PreToolUse(Bash) · PostToolUse(edit) · Stop · SubagentStop
+  │ SessionStart · UserPromptSubmit · PreToolUse(Bash) · PostToolUse(edit) · PostToolUseFailure(Bash) · Stop · SubagentStop
   ▼
 hooks/hooks.json ──▶ hooks/commit.sh ──▶ bin/broom ──▶ lib/broom/
                                             ▲              │

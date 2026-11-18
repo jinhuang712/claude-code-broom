@@ -311,7 +311,7 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 `broom hook <event>` handles one hook event. It is left out of `--help`.
 
-The 8 events: `commit` · `edit` · `prompt` · `stop` · `subagent-stop` · `session` · `session-scan` · `pre-commit`.
+The 9 events: `commit` · `edit` · `prompt` · `stop` · `subagent-stop` · `session` · `session-scan` · `pre-commit` · `test-failed`.
 
 **Called by**: Claude Code through `hooks/hooks.json`, and git through the pre-commit script.
 

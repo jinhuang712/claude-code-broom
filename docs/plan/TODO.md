@@ -27,20 +27,6 @@
 
 ---
 
-### [P1][DISCUSSION] How a turn shows that tests ran
-
-- description:
-  - The user agreed on 2026-11-18 that a turn which changed code and ran no test has work left over, and that broom looks for a trace and runs no test.
-  - What counts as a trace is open: a test command in the turn's Bash calls · a coverage report newer than the change · a file the project's test run writes.
-  - A repo with no tests must not be blocked for good.
-- created: 2026-11-18
-- status: OPEN
-- found: the talk about what done means, 2026-11-18
-- blocks: [F2.13: A turn that changed code shows that tests ran](../features/F2-sweep.md#f213-a-turn-that-changed-code-shows-that-tests-ran)
-- next: try the three traces in a fresh session and pick the one that can't be faked by text
-
----
-
 ### [P2][DISCUSSION] One open way to ask broom, in place of a flag per question
 
 - description:

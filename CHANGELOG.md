@@ -6,6 +6,13 @@
 
 ---
 
+### Sweep
+
+- A turn that changed code must show that tests ran. Where a repo has tests, a turn's end stops when no test ran after the last change to code, or when the last test run failed. It passes once the tests ran and passed, by an accept that holds for that turn, or by a question to you. broom runs no test: it knows a test run by its command. `test_commands` in `.broom.json` names a runner broom doesn't know, and `smells_off: ["tests_not_run"]` turns the rule off.
+- The note at a session's start tells Claude to run the tests after its last change.
+
+---
+
 ## 0.23.5 — 2026-11-18
 
 ---

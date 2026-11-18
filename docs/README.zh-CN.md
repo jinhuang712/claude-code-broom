@@ -72,7 +72,7 @@ Claude Code 在会话开始、收到提示、调用 Bash、编辑文件和一轮
 
 ```
 Claude Code
-  │ SessionStart · UserPromptSubmit · PreToolUse(Bash) · PostToolUse(edit) · Stop · SubagentStop
+  │ SessionStart · UserPromptSubmit · PreToolUse(Bash) · PostToolUse(edit) · PostToolUseFailure(Bash) · Stop · SubagentStop
   ▼
 hooks/hooks.json ──▶ hooks/commit.sh ──▶ bin/broom ──▶ lib/broom/
                                             ▲              │

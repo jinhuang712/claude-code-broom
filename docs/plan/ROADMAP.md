@@ -299,9 +299,10 @@ The user lifted the hold on Rust's smells on 2026-11-17, and 7 more shipped in 0
 
 The user asked on 2026-11-17 for a round of polish and self-test once the features are in. broom is used end to end in fresh sessions, on throwaway repos and on real ones, and what that finds is fixed.
 
-**Delivers** (12):
+**Delivers** (13):
 
 - [F1.5: Protection list](../features/F1-setup.md#f15-protection-list)
+- [I17: A repo can name any command a test run](ISSUES.md#i17-a-repo-can-name-any-command-a-test-run)
 - [I15: The doctor says all is set while TS/JS smells go unmeasured](ISSUES.md#i15-the-doctor-says-all-is-set-while-tsjs-smells-go-unmeasured)
 - [I16: A CSS formatter that isn't installed goes unseen outside a JS project](ISSUES.md#i16-a-css-formatter-that-isnt-installed-goes-unseen-outside-a-js-project)
 - Fresh sessions used broom end to end on a throwaway repo and on a public Python project, done on 2026-11-18.

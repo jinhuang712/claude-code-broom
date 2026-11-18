@@ -7,7 +7,8 @@ F7: Settings
     ├── F7.2.1: exclude
     ├── F7.2.2: legacy
     ├── F7.2.3: limits and test_limits
-    └── F7.2.4: smells_off
+    ├── F7.2.4: smells_off
+    └── F7.2.5: test_commands
 ```
 
 Settings start at defaults that suit most people and are never asked. The user changes one when they disagree.
@@ -65,3 +66,9 @@ Globs mark code on its way out. New code that repeats it isn't a duplicate, as d
 ### F7.2.4: smells_off
 
 A list turns single smells off, such as `["magic_numbers", "debug_output"]`. The name `checkup` in it turns the check-up off.
+
+---
+
+### F7.2.5: test_commands
+
+A list names the commands that run the project's tests when broom's own list of runners doesn't know them, such as `["just check", "bazel test"]`. broom only recognizes them and never runs one.

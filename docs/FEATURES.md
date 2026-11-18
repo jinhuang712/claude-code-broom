@@ -32,7 +32,7 @@ Features
 │   ├── 🚧 F2.10: Check after an edit — nothing for Go, Rust or a project that lints with ESLint, biome or stylelint alone
 │   ├── ✅ F2.11: Nothing is waved through — a finding ends fixed or accepted with a reason
 │   ├── 🚧 F2.12: A pass is told to the user — no line for the user with `check_on` at `commit`
-│   └── ⬜ F2.13: A turn that changed code shows that tests ran — or that counts as left over
+│   └── 🚧 F2.13: A turn that changed code shows that tests ran — a run in the background or piped counts as passed
 ├── ✅ F3: Formatting — the project's formatter on what changed
 │   ├── ✅ F3.1: When to format — at commit, after every edit, or never
 │   └── ✅ F3.2: How much to format — the scope
@@ -66,7 +66,8 @@ Features
 │       ├── ✅ F7.2.1: exclude
 │       ├── ✅ F7.2.2: legacy
 │       ├── ✅ F7.2.3: limits and test_limits
-│       └── ✅ F7.2.4: smells_off
+│       ├── ✅ F7.2.4: smells_off
+│       └── ✅ F7.2.5: test_commands
 ├── 🚧 F8: Languages — six, with uneven smell coverage
 │   ├── ✅ F8.1: Go
 │   ├── ✅ F8.2: TS/JS

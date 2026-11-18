@@ -1,10 +1,10 @@
 # Architecture
 
-broom is a Claude Code plugin. Claude Code starts one of its hooks at a session start, a prompt, a Bash call, an edit and a turn's end. The hook runs the project's tools on what changed, then exits with a block, a note or nothing.
+broom is a Claude Code plugin. Claude Code starts one of its hooks at a session start, a prompt, a Bash call, a Bash command that failed, an edit and a turn's end. The hook runs the project's tools on what changed, then exits with a block, a note or nothing.
 
 ```
 Claude Code
-  │ SessionStart · UserPromptSubmit · PreToolUse(Bash) · PostToolUse(edit) · Stop · SubagentStop
+  │ SessionStart · UserPromptSubmit · PreToolUse(Bash) · PostToolUse(edit) · PostToolUseFailure(Bash) · Stop · SubagentStop
   ▼
 hooks/hooks.json ──▶ hooks/commit.sh ──▶ bin/broom ──▶ lib/broom/
                                             ▲              │

@@ -15,7 +15,8 @@ Issues
 └── fix
     ├── I3: The cause of the reported Stop hang is unconfirmed
     ├── I15: The doctor says all is set while TS/JS smells go unmeasured
-    └── I16: A CSS formatter that isn't installed goes unseen outside a JS project
+    ├── I16: A CSS formatter that isn't installed goes unseen outside a JS project
+    └── I17: A repo can name any command a test run
 ```
 
 ---
@@ -108,4 +109,17 @@ Issues
 - found: the building of the protection list, 2026-11-18, read from the code and not run
 - touches:
   - [F1.1: Doctor](../features/F1-setup.md#f11-doctor)
+
+---
+
+## I17: A repo can name any command a test run
+
+- type: fix
+- why:
+  - `test_commands` in `.broom.json` says which commands count as a test run.
+  - A change that adds a command such as `ls` to it waves the rule through, and nothing notes that as a self-waiver.
+- found: the building of the rule that a turn shows that tests ran, 2026-11-18
+- touches:
+  - [F2.8: Self-waivers shown](../features/F2-sweep.md#f28-self-waivers-shown)
+  - [F2.13: A turn that changed code shows that tests ran](../features/F2-sweep.md#f213-a-turn-that-changed-code-shows-that-tests-ran)
 

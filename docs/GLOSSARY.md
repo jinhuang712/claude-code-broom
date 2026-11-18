@@ -20,6 +20,7 @@ Each term has its meaning, the words that lost to it and its name in the code wh
 | Touched smell | an old sized smell in a function, a type or a file the change touches | — | `Smell.touched` |
 | Known issue | a finding accepted with a reason, which broom no longer raises | baseline · accepted issue | `baseline.json` |
 | Accept | to record a blocked result as known with a reason | — | `broom known --accept` |
+| Test run | a Bash command broom takes for a run of the project's tests, by its words | — | `testcmd` |
 | Ask | to end a turn with a question to the user about a blocked finding, which passes nothing | — | `broom known --ask` |
 | Base | the revision a change is measured against | — | `base` |
 | Scratch copy | a temporary copy of the changed files where a tool runs under broom's config | scratch tree | `measure` |

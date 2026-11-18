@@ -18,7 +18,7 @@ Bash call ─▶ hooks/commit.sh ─▶ mentions git and commit? ─ no ─▶ e
 
 ## Reading the command
 
-1. The hook sees every Bash call. A shell prefilter leaves unless the input mentions both `git` and `commit`.
+1. The hook sees every Bash call. A shell prefilter leaves unless the input mentions both `git` and `commit`, or the command holds a word a test run could hold, since the same hook notes a test run for the turn's end.
 2. `bin/broom` reads the command and leaves unless it could commit.
    - It follows 6 things: `cd` · `git -C` · variables the command sets · `-a` · `--no-verify` · a `git add` in the same command.
    - The body of a heredoc is left out before the command is read, so a message's words are no flags and its apostrophe is no quote.

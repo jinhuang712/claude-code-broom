@@ -242,8 +242,21 @@ An accepted finding is a debt on record and not a closed case: `broom known` lis
 
 ## F2.13: A turn that changed code shows that tests ran
 
-At a turn's end, a turn that changed code and shows no trace of a test run has work left over, and it is told so like any finding. broom looks for the trace and runs no test itself.
+At a turn's end, a turn that changed code has work left over in 2 cases:
 
-How the trace is found is still open.
+- No test ran after the last change to code.
+- The last test run failed, and the block names its exit code and its command.
+
+It stops the turn's end like any finding, and passes when the tests ran and passed, by an accept with a reason or by a question to the user. An accept holds for that turn only. broom looks for the trace and runs no test itself: it knows a test run by the words of the command, from a list of runners and from what `.broom.json` names in `test_commands`.
+
+It applies where the repo tracks a test file, and at the main session's end only. `smells_off: ["tests_not_run"]` turns it off.
+
+3 gaps:
+
+- A test run in the background, or piped into another command, counts as passed.
+- A runner of a project's own goes unseen until `test_commands` names it.
+- A command that rewrites code and then runs the tests reads as a change after the run.
 
 - **Stance**: [At three moments of Claude's flow](../PHILOSOPHY.md#when-may-a-check-interrupt)
+- **How it works**: [Turn end](../specs/turn-end.md)
+- **Why**: [034: A test run is known by the hook events of its command, and its accept holds for one turn](../specs/decisions/034-test-run-by-hook-events.md)
