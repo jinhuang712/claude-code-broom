@@ -39,6 +39,11 @@ SMELL_LIMITS = {
 DEAD_CODE = "dead_code"
 # The check-up (see checkup) is no smell, but `smells_off` turns it off by this name.
 CHECKUP = "checkup"
+# The turn's end finds when a turn changed code and no test ran after it (see testrun). It is no smell either:
+# `smells_off` holding TESTS_NOT_RUN turns both findings off, and an accept of either holds for its turn only.
+TESTS_TOOL = "tests"
+TESTS_NOT_RUN = "tests_not_run"
+TESTS_FAILED = "tests_failed"
 # Smells that count by occurrence, not by size: a change that adds one gets this level. A smell is a note where it
 # is slight or its detector guesses.
 SMELL_PRESENCE = {

@@ -15,7 +15,7 @@ from .gitutil import CLOCK, HOOK_SECONDS
 from .hooktrace import watch
 from .state import read_hook_input, warn
 
-EVENTS = ("commit", "pre-commit", "edit", "prompt", "stop", "subagent-stop", "session", "session-scan")
+EVENTS = ("commit", "pre-commit", "edit", "prompt", "stop", "subagent-stop", "session", "session-scan", "test-failed")
 
 
 def give_up_after(seconds: float, event: str) -> None:
@@ -38,9 +38,12 @@ def handler(event: str) -> Callable[[dict], None]:
     if event in ("stop", "subagent-stop", "prompt"):
         from .turnhooks import hook_prompt, hook_stop
         return hook_prompt if event == "prompt" else hook_stop
-    if event == "commit":
-        from .commitgate import hook_commit
-        return hook_commit
+    if event == "commit":  # PreToolUse on Bash: it notes a test run, and checks a commit when the command may hold one
+        from .testrun import hook_pre_bash
+        return hook_pre_bash
+    if event == "test-failed":  # PostToolUseFailure on Bash
+        from .testrun import hook_failed
+        return hook_failed
     from .sessionhooks import hook_session, hook_session_scan
     return hook_session if event == "session" else hook_session_scan
 

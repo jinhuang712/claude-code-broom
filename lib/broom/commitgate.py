@@ -249,12 +249,13 @@ def answer(denials: List[str], context: List[str]) -> None:
         emit({"hookSpecificOutput": out})
 
 
-def hook_commit(data: dict) -> None:
-    """Claude Code's PreToolUse hook on Bash: format and check what each `git commit` in the command takes."""
+def hook_commit(data: dict) -> bool:
+    """Claude Code's PreToolUse hook on Bash: format and check what each `git commit` in the command takes. True when it
+    denied the command, which then never runs."""
     cwd = Path(data.get("cwd") or os.getcwd()).resolve()
     ops = parse((data.get("tool_input") or {}).get("command") or "", cwd)
     if not any(op.kind == "commit" for op in ops) or not claim(data.get("tool_use_id")):
-        return
+        return False
     sd = session_dir(data.get("session_id") or "cli")
     ledger.waived(waivers.no_verify_waivers(ops, (data.get("tool_input") or {}).get("command") or ""), sd)
     state = load_json(COMMITS, {})
@@ -271,3 +272,4 @@ def hook_commit(data: dict) -> None:
         denials += [denial] if denial else []
     save_commits(state, {plan.repo for plan in plans})
     answer(denials, context)
+    return bool(denials)

@@ -31,8 +31,10 @@ if sys.argv[1:2] == ["hook"] and not _repo_file():
     if event == ["stop"] and _option("check_on", "stop") != "stop":
         sys.exit(0)
 
-# The commit hook sees every Bash call: Claude Code's `if` patterns can't match commands like
-# `T=~/repo; git -C $T commit`, so broom filters for itself, and anything without both words leaves here.
+# The Bash hook sees every Bash call: Claude Code's `if` patterns can't match commands like
+# `T=~/repo; git -C $T commit`, so broom filters for itself. hooks/commit.sh leaves before Python starts for what can be
+# neither a commit nor a test run; the command is then read in broom.testrun, which loads the commit gate only for a
+# command that may commit.
 def _read_input(wait: float = 10) -> str:
     """What Claude Code sends, read until it parses and not until the end of the input, which a harness may not close."""
     import select
@@ -56,14 +58,7 @@ def _read_input(wait: float = 10) -> str:
 
 
 if sys.argv[1:3] == ["hook", "commit"]:
-    _raw = _read_input()
-    try:
-        _command = str((json.loads(_raw).get("tool_input") or {}).get("command", ""))
-    except (ValueError, AttributeError):
-        _command = ""
-    if "git" not in _command or "commit" not in _command:
-        sys.exit(0)
-    sys.stdin = io.StringIO(_raw)
+    sys.stdin = io.StringIO(_read_input())
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "lib"))
 

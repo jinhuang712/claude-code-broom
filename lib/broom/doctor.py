@@ -11,7 +11,9 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import __version__
-from .config import CHECKUP, DEAD_CODE, LIMIT_PAIR, REPO_FILE, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, repo_file
+from .config import (
+    CHECKUP, DEAD_CODE, LIMIT_PAIR, REPO_FILE, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, TESTS_NOT_RUN, repo_file,
+)
 from .dependencies import optional_lines, optional_tools
 from .githook import LINE, hook_path, installed
 from .gitutil import git
@@ -130,7 +132,15 @@ def limit_problems(limits: object, key: str = "limits") -> List[str]:
     return out
 
 
-REPO_KEYS = ("exclude", "legacy", "limits", "test_limits", "smells_off")  # beside the settings
+def test_command_problems(commands: object) -> List[str]:
+    """.broom.json `test_commands`: a list of command strings, the word sequences a part of a Bash command starts with to
+    count as a test run (`["just check", "bazel test"]`). broom only looks for them; it never runs one."""
+    if commands is None or (isinstance(commands, list) and all(isinstance(c, str) and c.strip() for c in commands)):
+        return []
+    return ["test_commands must be a list of command strings, such as [\"just check\"]"]
+
+
+REPO_KEYS = ("exclude", "legacy", "limits", "test_limits", "smells_off", "test_commands")  # beside the settings
 
 
 def check_repo_file(repo: Path) -> List[Item]:
@@ -153,9 +163,10 @@ def check_repo_file(repo: Path) -> List[Item]:
                  if k in data and not isinstance(data[k], list)]
     problems += limit_problems(data.get("limits")) + limit_problems(data.get("test_limits"), "test_limits")
     off = data.get("smells_off", [])
-    names = set(SMELL_LIMITS) | set(SMELL_PRESENCE) | {DEAD_CODE, CHECKUP}
+    names = set(SMELL_LIMITS) | set(SMELL_PRESENCE) | {DEAD_CODE, CHECKUP, TESTS_NOT_RUN}
     if not isinstance(off, list) or not all(n in names for n in off):
         problems.append(f"smells_off must list smell names from: {', '.join(sorted(names))}")
+    problems += test_command_problems(data.get("test_commands"))
     if problems:
         return [Item("broom", "config", REPO_FILE, "broken", ".", "; ".join(problems))]
     shown = [f"{k}={data[k]}" for k in SETTINGS if k in data]
@@ -164,6 +175,7 @@ def check_repo_file(repo: Path) -> List[Item]:
     shown += [f"limits for {', '.join(data['limits'])}"] if data.get("limits") else []
     shown += [f"test limits for {', '.join(data['test_limits'])}"] if data.get("test_limits") else []
     shown += [f"smells off: {', '.join(data['smells_off'])}"] if data.get("smells_off") else []
+    shown += [f"{len(data['test_commands'])} test command(s)"] if data.get("test_commands") else []
     shown += ["read from the main worktree, as this one has none"] if path.parent != repo else []
     if git(["check-ignore", "-q", str(path)], path.parent) is not None:
         shown.append("ignored by git, so clones don't get it and worktrees read the main worktree's")

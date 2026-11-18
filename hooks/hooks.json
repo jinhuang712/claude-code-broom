@@ -1,5 +1,5 @@
 {
-  "description": "broom: offer setup when a repo has gaps; sweep each git commit (every Bash call is looked at, most leave at once); check what a turn or a subagent changed at its end (see /config)",
+  "description": "broom: offer setup when a repo has gaps; sweep each git commit and note each test run (every Bash call is looked at, most leave at once); check what a turn or a subagent changed at its end (see /config)",
   "hooks": {
     "SessionStart": [
       {
@@ -66,6 +66,18 @@
               "hook",
               "edit"
             ],
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/failed.sh\"",
             "timeout": 30
           }
         ]
