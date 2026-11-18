@@ -15,7 +15,7 @@ import os
 from pathlib import Path
 from typing import List, Optional
 
-from . import ledger
+from . import asked, ledger
 from .config import REPO_FILE, excluded, setting
 from .gitutil import git_changed_files, git_root
 from .state import emit, prune_sessions, read_lines
@@ -36,9 +36,9 @@ def end_turn(d: Path, root: Optional[Path], now: Optional[dict] = None) -> None:
 
 
 def finish(d: Path, root: Optional[Path], tail: str = "", *, now: Optional[dict] = None, lead: str = "") -> None:
-    """End the turn with one message for the user at most: `lead` if there is one, which opens it so that it is not
-    missed, then what the turn let through, then `tail`, what else there is to say. A turn that let nothing through
-    says only the tail, with a `broom:` before it."""
+    """End the turn with one message for the user at most: `lead` if there is one (a question waiting for their answer,
+    a give-up), which opens it so that it is not missed, then what the turn let through, then `tail`, what else there
+    is to say. A turn that let nothing through says only the tail, with a `broom:` before it."""
     summary = ledger.through_line(d)
     end_turn(d, root, now)
     if lead:
@@ -74,7 +74,7 @@ def hook_stop(data: dict) -> None:
         note_config(root / REPO_FILE, d)  # loosened by a command, which no edit hook saw
     files = turn_files(d, since)
     if not files:
-        finish(d, root, now=now)
+        finish(d, root, now=now, lead=asked.lead(asked.rows(d)))  # a question put to the user is told whatever changed
         return
     from .turncheck import Turn, check_turn  # the linters, the smells and the gate: only with code to check
 

@@ -13,7 +13,8 @@ from broom.fixes import NOT_A_FIX, fixes, how_to_fix
 from broom.gate import MAX_CHARS, render
 from broom.smells import Smell, noted_text
 
-WAY_OUT = 'If one predates this change or is a false positive, run `broom known --accept "<why>"`, then commit again.'
+WAY_OUT = ('Accept only for a real reason, such as a false positive or a refactor that comes in a later step: run '
+           '`broom known --accept "<why>"`, then commit again.')
 
 
 def smell_issue(rule: str, n: int = 1, tool: str = "smells") -> Issue:
@@ -122,7 +123,8 @@ class RealBlockTest(BroomCase):
         self.assertRegex(text.splitlines()[0], r"^\[broom\] \d+ issue\(s\) in this turn's changes\. "
                                                r"Fix them before finishing\.$")
         self.assertIn("function_lines: ", text)
-        self.assertTrue(text.endswith('then stop again. After 3 blocks the turn ends, and the user is told what is '
+        self.assertIn('then stop again.', text)
+        self.assertTrue(text.endswith('Block 1 of 3. After 3 blocks the turn ends, and the user is told what is '
                                       'still open.'))
         self.assertIn("Trying again passes nothing", text)
 

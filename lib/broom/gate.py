@@ -155,10 +155,11 @@ def refusal(repo: Path, left: Dict[str, dict]) -> str:
             f"to {sizes} or fewer, or extract what you added")
 
 
-def accept_blocked(repo: Path, why: str) -> Tuple[int, str]:
-    """Record the issues of the last commit or turn end broom blocked in `repo` as known, with the reason. Returns how
-    many, and the hook that blocked them (`commit` when none is recorded). A smell that was past its hard limit and
-    grew can't be accepted: it stays pending, and a line says so; with nothing else to accept the command exits."""
+def accept_blocked(repo: Path, why: str, *, agreed: bool = False) -> Tuple[int, str]:
+    """Record the issues of the last commit or turn end broom blocked in `repo` as known, with the reason, and with
+    `agreed` when the user agreed to leave them. Returns how many, and the hook that blocked them (`commit` when none
+    is recorded). A smell that was past its hard limit and grew can't be accepted: it stays pending, and a line says
+    so; with nothing else to accept the command exits."""
     state = load_json(COMMITS, {})
     prior = state.get(str(repo)) or {}
     pending = prior.get("pending") or {}
@@ -173,7 +174,7 @@ def accept_blocked(repo: Path, why: str) -> Tuple[int, str]:
         now = time.time()
         baseline_add_entries({k: {**v, "t": now, "why": why} for k, v in pending.items()})
         turn = Path(prior["turn"]) if prior.get("turn") else None
-        ledger.let_through(pending, "accept", turn, why=why, where=where)
+        ledger.let_through(pending, "accept", turn, why=why, where=where, agreed=agreed or None)
         if left or prior.get("earlier"):
             state[str(repo)] = {**prior, "pending": left}
         else:

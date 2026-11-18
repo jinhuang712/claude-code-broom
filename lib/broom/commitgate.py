@@ -4,8 +4,9 @@ checks with the same `checked`.
 
 Every finding that stops, lint included and a smell's hint with a smell's block, passes fixed, or after Claude
 accepts it with `broom known --accept "<why>"`, which puts the reason on record: a retry alone lets nothing through.
-A false positive or an issue that predates the change costs one command. A note, a slight smell, is told and stops
-nothing.
+A false positive or a refactor that comes in a later step costs one command, and Claude tells the user what it
+accepted. Where the user must decide, `broom known --ask "<question>"` and then stopping puts the question to them: it
+passes nothing. A note, a slight smell, is told and stops nothing.
 """
 
 from __future__ import annotations
@@ -33,6 +34,10 @@ from .passed import record, staged_blobs, unpassed, worktree_blobs
 from .smells import Smell, gate_smells, noted_text
 from .state import DATA_ROOT, emit, load_json, session_dir, warn
 from .toolchain import lang_of
+
+
+ACCEPT_FLAG = '--accept "<why>"'  # how a block message writes the commands it offers
+ASK_FLAG = '--ask "<what they must decide, and why>"'
 
 
 def claim(tool_use_id: Optional[str]) -> bool:
@@ -102,10 +107,10 @@ def record_passed(files: List[Path], blocking: List[Issue], told: List[Smell], n
         record(repo, [f for f in group if f.resolve() not in found])
 
 
-def accept_command(repos: Iterable[Path], cwd: Path) -> str:
-    """The command that accepts what was blocked in `repos`, as the block messages offer it: `broom known --accept
-    "<why>"` in backticks, with the repo's path where `cwd` isn't the repo. One command for each repo."""
-    return " and ".join("`" + 'broom known --accept "<why>"' + ("" if r == cwd else f" {shlex.quote(str(r))}") + "`"
+def known_command(repos: Iterable[Path], cwd: Path, flag: str) -> str:
+    """The `broom known` command with `flag` (such as `--accept "<why>"`) in backticks, as the block messages offer it,
+    with the repo's path where `cwd` isn't the repo. One command for each repo."""
+    return " and ".join("`" + f"broom known {flag}" + ("" if r == cwd else f" {shlex.quote(str(r))}") + "`"
                         for r in repos)
 
 
@@ -126,11 +131,21 @@ def block_head(count: int) -> str:
 
 def way_out(repos: Iterable[Path], cwd: Path, then: str) -> str:
     """The last of a block's own lines: that trying again passes nothing, and how a finding passes then: fixed, or
-    accepted with a reason and then doing `then` (`commit again`, `stop again`); where accepting is off, only fixed."""
+    accepted with a reason (said to the user) and then doing `then` (`commit again`, `stop again`); or put to the user,
+    who decides, by `broom known --ask` and stopping. Where accepting is off, only a fix passes, or the user's answer."""
+    repos = list(repos)
+    ask = (f"If the user must decide, run {known_command(repos, cwd, ASK_FLAG)} and then stop: that puts the question "
+           "to them.")
     if not accept_allowed():
-        return "Trying again passes nothing. Fixing is the only way out: accepting them is off here (BROOM_NO_ACCEPT)."
-    return (f"Trying again passes nothing: only a fix does, or accepting with a reason. If one predates this change or "
-            f"is a false positive, run {accept_command(repos, cwd)}, then {then}.")
+        return ("Trying again passes nothing. Fixing is the only way out: accepting them is off here (BROOM_NO_ACCEPT).\n"
+                + ask)
+    return "\n".join([
+        "Trying again passes nothing: only a fix does, or accepting with a reason.",
+        f"Accept only for a real reason, such as a false positive or a refactor that comes in a later step: run "
+        f"{known_command(repos, cwd, ACCEPT_FLAG)}, then {then}. Say in your reply to the user what you accepted and "
+        "why.",
+        f"{ask} Add --agreed to --accept only when the user said yes.",
+    ])
 
 
 def entries_of(issues: Iterable[Issue]) -> Dict[str, dict]:

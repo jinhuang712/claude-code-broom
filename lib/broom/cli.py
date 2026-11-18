@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from . import __version__
+from .asked import ask_blocked
 from .asks import add_ask_parsers
 from .checks import run_checks
 from .config import DEAD_CODE, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, excluded, setting, setting_source
@@ -194,25 +195,58 @@ def cmd_smells(args: argparse.Namespace) -> int:
     return 0
 
 
+def known_repo(roots: List[Path]) -> Path:
+    """The repo `broom known --accept` and `--ask` act on: the one the first of `roots` is in; exits outside any."""
+    repo = git_root(roots[0] if roots[0].is_dir() else roots[0].parent)
+    if repo is None:
+        raise SystemExit("broom: not inside a git repository")
+    return repo
+
+
+def known_accept(args: argparse.Namespace, roots: List[Path]) -> int:
+    """Accept the issues of the last blocked commit or turn end with a reason (and with the user's agreement, with
+    `--agreed`); 1 when none is blocked."""
+    if not accept_allowed():
+        raise SystemExit("broom: accepting is off here (BROOM_NO_ACCEPT is set): fix the issues, or ask the user")
+    why = args.accept.strip()
+    if not why:
+        raise SystemExit('broom: say why: broom known --accept "<why>"')
+    repo = known_repo(roots)
+    n, where = accept_blocked(repo, why, agreed=args.agreed)
+    if not n:
+        say(f"broom: no blocked commit or turn end to accept in {display(repo)}")
+        return 1
+    again = "stop again" if where.endswith("stop") else "commit again"
+    say(f"broom: accepted {n} issue(s) as known ({why}); {again}")
+    return 0
+
+
+def known_ask(args: argparse.Namespace, roots: List[Path]) -> int:
+    """Put a question to the user about the issues of the last blocked commit or turn end: they stay blocked and
+    unknown, and the turn's end tells the user instead of blocking. 1 when none is blocked."""
+    question = args.ask.strip()
+    if not question:
+        raise SystemExit('broom: say what the user must decide: broom known --ask "<question>"')
+    repo = known_repo(roots)
+    n = ask_blocked(repo, question)
+    if not n:
+        say(f"broom: no blocked commit or turn end to ask about in {display(repo)}")
+        return 1
+    say(f"broom: {n} issue(s) wait for the user's answer ({question}); nothing is accepted and they stay blocked. "
+        "Stop now: that puts the question to them")
+    return 0
+
+
 def cmd_known(args: argparse.Namespace) -> int:
-    """Run `broom known`: list the known issues here, accept the last blocked ones with a reason, or clear them."""
+    """Run `broom known`: list the known issues here, accept the last blocked ones with a reason, ask the user about
+    them, or clear them."""
     roots = [Path(p).resolve() for p in args.paths] or [repo_or_exit()]
+    if args.agreed and args.accept is None:
+        raise SystemExit("broom: --agreed goes with --accept, to say the user agreed to leave the issues")
     if args.accept is not None:
-        if not accept_allowed():
-            raise SystemExit("broom: accepting is off here (BROOM_NO_ACCEPT is set): fix the issues, or ask the user")
-        why = args.accept.strip()
-        if not why:
-            raise SystemExit('broom: say why: broom known --accept "<why>"')
-        repo = git_root(roots[0] if roots[0].is_dir() else roots[0].parent)
-        if repo is None:
-            raise SystemExit("broom: not inside a git repository")
-        n, where = accept_blocked(repo, why)
-        if not n:
-            say(f"broom: no blocked commit or turn end to accept in {display(repo)}")
-            return 1
-        again = "stop again" if where.endswith("stop") else "commit again"
-        say(f"broom: accepted {n} issue(s) as known ({why}); {again}")
-        return 0
+        return known_accept(args, roots)
+    if args.ask is not None:
+        return known_ask(args, roots)
     entries = baseline_under(roots)
     if args.clear:
         baseline_remove(list(entries))
@@ -309,9 +343,14 @@ def add_setup_parsers(sub: argparse._SubParsersAction) -> None:
 
 def add_issue_parsers(sub: argparse._SubParsersAction) -> None:
     """Add the `known` and `smells` subcommands and their flags to the subparsers `sub`, each with its handler."""
-    k = sub.add_parser("known", help="list, --accept or --clear issues accepted as known")
-    k.add_argument("--accept", metavar="WHY",
-                   help="accept the issues of the last blocked commit or turn end here, with the reason")
+    k = sub.add_parser("known", help="list, --accept, --ask about or --clear issues accepted as known")
+    way = k.add_mutually_exclusive_group()
+    way.add_argument("--accept", metavar="WHY",
+                     help="accept the issues of the last blocked commit or turn end here, with the reason")
+    way.add_argument("--ask", metavar="QUESTION",
+                     help="put a question to the user about those issues: they stay blocked and unaccepted, and "
+                          "the turn's end tells the user instead of blocking; then stop")
+    k.add_argument("--agreed", action="store_true", help="with --accept: the user agreed to leave them")
     k.add_argument("--clear", action="store_true")
     k.add_argument("paths", nargs="*", help="limit to these files or directories (default: the repo)")
     k.set_defaults(fn=cmd_known)

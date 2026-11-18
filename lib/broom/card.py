@@ -20,8 +20,8 @@ ADDED = (("suppression", "a lint suppression without a reason"), ("swallowed_err
          ("commented_code", "commented-out code"))
 LEAD = "broom's bar in this repo, for the code you write or touch: {}."
 ACCEPT = ('A commit and a turn\'s end stop on code past the first number, as on most smells a change adds, until it '
-          'is fixed or accepted with `broom known --accept "<why>"`: trying again passes nothing. Code already past '
-          "its hard limit can't grow.")
+          'is fixed or accepted with `broom known --accept "<why>"`: trying again passes nothing. If the user must '
+          'decide, `broom known --ask "<question>"` and stop. Code already past its hard limit can\'t grow.')
 ASK = ("For a repo's numbers ask broom before writing a script: `broom stats` (lines, tests, coverage, suppressions, "
        "TODOs, what changes most), `broom smells` (smells, ranked; `--only "
        "function_lines` for the longest functions), `broom diagnose` (the whole repo: with those, dead code, missing "

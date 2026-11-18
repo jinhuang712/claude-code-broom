@@ -4,7 +4,8 @@ A finding counts once: the ledger holds a block line each time a commit or a tur
 report counts the distinct findings, (repo, key), each by how it ended last: fixed, let through (with its `how`), or
 still open (blocked, and neither fixed nor let through yet). The fix rate is fixed over fixed plus let through, so a
 finding that hasn't ended doesn't count against a rule. The self-waivers, changes that loosened the bar, are counted by
-kind beside that, with what each `.broom.json` change was.
+kind beside that, with what each `.broom.json` change was. A finding the user was asked about (an `ask` line) is no
+outcome: it stays open until it is fixed or let through, and the report says how many were asked.
 """
 
 from __future__ import annotations
@@ -56,9 +57,12 @@ def window(days: int, repos: Optional[Set[str]], narrow: Dict[str, List[str]]) -
 
 
 def ended(rows: Iterable[dict]) -> Dict[Tuple[str, str], dict]:
-    """Each finding of the rows, by (repo, key), with what it was and how it ended last."""
+    """Each finding of the rows, by (repo, key), with what it was, how it ended last and whether the user was `asked`
+    about it."""
     out: Dict[Tuple[str, str], dict] = {}
     for r in rows:
+        if r.get("event") == "ask" and (str(r.get("repo")), r.get("key")) in out:
+            out[(str(r.get("repo")), r["key"])]["asked"] = True
         if r.get("event") not in OUTCOMES or not r.get("key"):
             continue
         f = out.setdefault((str(r.get("repo")), r["key"]), {"tool": r.get("tool", "?"), "rule": r.get("rule", "?")})
@@ -75,12 +79,12 @@ def rate(fixed: int, through: int) -> Optional[float]:
 
 def tally(found: Iterable[dict]) -> dict:
     """Counts of the findings by how they ended: `blocked` (all of them), `fixed`, `let_through`, `open`, `how` (the
-    let-through ones by `how`) and `fix_rate`."""
+    let-through ones by `how`), `fix_rate` and `asked` (those the user was asked about, whatever became of them)."""
     counts = Counter(f["outcome"] for f in found)
     how = Counter(f["how"] or "?" for f in found if f["outcome"] == "let through")
     fixed, through = counts["fixed"], counts["let through"]
     return {"blocked": sum(counts.values()), "fixed": fixed, "let_through": through, "open": counts["open"],
-            "how": dict(how), "fix_rate": rate(fixed, through)}
+            "how": dict(how), "fix_rate": rate(fixed, through), "asked": sum(1 for f in found if f.get("asked"))}
 
 
 def by_rule(found: Dict[Tuple[str, str], dict]) -> List[dict]:
@@ -183,9 +187,10 @@ def render(data: dict) -> str:
     where = "every repo" if data["repos"] == "all" else ", ".join(display(Path(r)) for r in data["repos"])
     if not (data["blocked"] or data["skips"] or data["seconds"] or data["errors"] or data["waivers"]["count"]):
         return f"broom: nothing recorded for {where} in the last {data['days']} days"
+    asked = f"asked the user {data['asked']}, " if data["asked"] else ""
     out = [f"broom report: {where}, the last {data['days']} days",
            f"blocked {data['blocked']}, fixed {data['fixed']}, let through {data['let_through']}, "
-           f"still open {data['open']}, fix rate {percent(data['fix_rate'])}"]
+           f"still open {data['open']}, {asked}fix rate {percent(data['fix_rate'])}"]
     sections = [("By rule (each finding counts once; fix rate is fixed over fixed plus let through):",
                  [f"  {row}" for row in rule_rows(data["rules"])] if data["rules"] else []),
                 ("Skipped checks, by tool:", skip_rows(data["skips"])),
