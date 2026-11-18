@@ -13,7 +13,7 @@ Features
 ├── ✅ F1: Setup — a repo gets the tools and configs it needs
 │   ├── ✅ F1.1: Doctor — what a repo needs and has
 │   ├── ✅ F1.2: Offer at session start — Claude offers a setup when a repo has gaps
-│   ├── ❔ F1.3: /broom:setup — a skill, not run in this pass
+│   ├── ❔ F1.3: /broom:setup — a skill, run once in a fresh session, where no tool had to be installed
 │   ├── ✅ F1.4: Default configs — added where a project has none
 │   └── ⬜ F1.5: Protection list — which checks run and which don't
 ├── ✅ F2: Sweep — Claude's changes are formatted, checked and held back

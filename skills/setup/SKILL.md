@@ -46,7 +46,8 @@ go to step 4.
 ## 3. Act
 
 - Run the picked commands (`fix` / `configure`, or their `_global` versions) from the repo root, one at a time,
-  and stop on a failure. `xcode-select --install` opens macOS's installer and returns at once: ask the user to
+  and stop on a failure. `broom init` never edits a file that exists: for a `pyproject.toml` without ruff settings
+  it prints the block to add and writes nothing. Add that block to the file as printed, since the user said yes to it. `xcode-select --install` opens macOS's installer and returns at once: ask the user to
   finish it before going on.
 - Change a setting only when the user objects to its default. For all repos:
 

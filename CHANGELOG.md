@@ -6,6 +6,12 @@
 
 ---
 
+### Setup
+
+- `/broom:setup` adds the ruff block `broom init` prints for a `pyproject.toml` without ruff settings. Before, the skill didn't say that `broom init` writes nothing there, and a session had to work it out.
+
+---
+
 ### Record
 
 - A finding that a commit blocked is remembered until a commit takes its file. Before, a commit of other files made broom forget it, and `broom report` kept showing it as open after it was fixed.

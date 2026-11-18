@@ -68,7 +68,7 @@ A repo with no tooling gets working tooling in one short conversation.
 
 **Acceptance**: In a repo with no tools and no configs, one run of `/broom:setup` ends with `broom doctor` printing `All set.`.
 
-**Status**: ⬜
+**Status**: ⬜. On 2026-11-18 a fresh session ran `/broom:setup` in a Python repo with no config and no git hook, and `broom doctor` ended with `All set.`. A repo with no tools was not run, since the tools are installed on the machine that tests.
 
 ---
 
