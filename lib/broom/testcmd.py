@@ -13,7 +13,7 @@ import shlex
 from pathlib import Path
 from typing import List, Optional, Sequence
 
-from .gitcmd import ASSIGNMENT, WRAPPERS, split_commands, without_heredocs, without_redirections
+from .gitcmd import ASSIGNMENT, WRAPPERS, command_dirs, split_commands, without_heredocs, without_redirections
 
 RUNNERS = {"pytest", "py.test", "tox", "nox", "jest", "vitest", "mocha"}  # the program alone runs tests
 SUBCOMMANDS = {  # programs that run tests with one of these subcommands
@@ -173,3 +173,19 @@ def is_test_run(command: str, custom: object = None, *, depth: int = 0) -> bool:
     """Whether the Bash `command` runs tests: any one of its parts does. `custom` is the repo's .broom.json
     `test_commands`, a list of strings; anything else is none."""
     return any(part_runs_tests(words, custom, depth) for words in parts(command))
+
+
+def test_dirs(command: str, cwd: Path, custom: object = None, *, depth: int = 0) -> List[Path]:
+    """The directories the test runs of the Bash `command` run in: `cwd`, or where the `cd`s before the run went. A shell
+    script run by `bash -c` is read into. A line the shell reading can't follow runs everything in `cwd`."""
+    try:
+        commands = command_dirs(command, cwd)
+    except ValueError:
+        commands = [(words, cwd) for words in parts(command)]
+    found: List[Path] = []
+    for words, here in commands:
+        if not part_runs_tests(words, custom, depth):
+            continue
+        script = shell_script(launched(unwrapped(words)))
+        found += (test_dirs(script, here, custom, depth=depth + 1) if script is not None else []) or [here]
+    return list(dict.fromkeys(found))

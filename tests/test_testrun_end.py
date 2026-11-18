@@ -19,7 +19,7 @@ class TurnEndTest(TestRunCase):
         self.assertEqual(out.get("decision"), "block")
         reason = out["reason"]
         self.assertTrue(reason.startswith("[broom] 1 issue(s) in this turn's changes. Fix them before finishing."), reason)
-        self.assertIn(f"tests ({r}):\n  {NOT_RUN_LINE}", reason)
+        self.assertIn(f"tests ({r}):\n  {NOT_RUN_LINE}: a.py", reason)
         self.assertIn("  tests_not_run: Run the project's tests, then stop again.", reason)
         self.assertIn('run `broom known --accept "<why>"`, then stop again.', reason)
         self.assertTrue(reason.endswith("Block 1 of 3. After 3 blocks the turn ends, and the user is told what is "
@@ -40,14 +40,14 @@ class TurnEndTest(TestRunCase):
         self.change(r, "x = 3\n")
         out = self.stop(r)
         self.assertEqual(out.get("decision"), "block")
-        self.assertIn(NOT_RUN_LINE, out["reason"])
+        self.assertIn(f"{NOT_RUN_LINE}: a.py", out["reason"])
         self.assertIn("Block 1 of 3", out["reason"])
 
-    def test_a_test_run_that_started_before_the_first_change_is_no_trace_of_it(self) -> None:
+    def test_a_test_run_on_the_content_before_the_change_is_no_trace_of_it(self) -> None:
         r = self.code_repo()
         self.bash(r, "pytest")
         self.change(r)
-        self.assertIn(NOT_RUN_LINE, self.stop(r)["reason"])
+        self.assertIn(f"{NOT_RUN_LINE}: a.py", self.stop(r)["reason"])
 
     def test_a_failed_test_run_blocks_with_its_exit_code_and_a_later_passing_run_clears_it(self) -> None:
         r = self.code_repo()

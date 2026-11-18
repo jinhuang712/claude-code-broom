@@ -172,12 +172,12 @@ def accept_blocked(repo: Path, why: str, *, agreed: bool = False) -> Tuple[int, 
         say(refusal(repo, left))
     if pending:
         now = time.time()
-        once = [k for k, v in pending.items() if v.get("tool") == TESTS_TOOL]  # no test ran: accepted for this turn only
+        once = {k: v for k, v in pending.items() if v.get("tool") == TESTS_TOOL}  # no test ran: accepted for this turn only
         baseline_add_entries({k: {**v, "t": now, "why": why} for k, v in pending.items() if k not in once})
         turn = Path(prior["turn"]) if prior.get("turn") else None
         ledger.let_through(pending, "accept", turn, why=why, where=where, agreed=agreed or None)
         if turn is not None and once:
-            ledger.note_turn(turn, ledger.ACCEPTED_HERE, [{"key": k} for k in once])
+            ledger.note_turn(turn, ledger.ACCEPTED_HERE, [{"key": k, "rule": v.get("rule")} for k, v in once.items()])
         if left or prior.get("earlier"):
             state[str(repo)] = {**prior, "pending": left}
         else:

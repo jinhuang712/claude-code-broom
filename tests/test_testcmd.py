@@ -7,7 +7,7 @@ import unittest
 from support import BroomCase
 
 from broom import doctor
-from broom.testcmd import is_test_run
+from broom.testcmd import is_test_run, test_dirs
 
 RUNNERS = (
     "pytest", "pytest -q tests/test_a.py", "python3 -m pytest", "python -m unittest discover -s tests", "tox -e py39",
@@ -49,6 +49,18 @@ class RecognizerTest(BroomCase):
             self.assertFalse(is_test_run(command, custom), command)
         self.assertFalse(is_test_run("just check"), "no repo named it")
         self.assertFalse(is_test_run("just check", "just check"), "not a list: no test commands")
+
+    def test_the_directory_of_a_test_run_follows_the_cds_before_it(self) -> None:
+        here, there, third = self.tmp, self.tmp / "a", self.tmp / "b"
+        there.mkdir()
+        third.mkdir()
+        self.assertEqual(test_dirs("pytest", here), [here])
+        self.assertEqual(test_dirs(f"cd {there} && pytest", here), [there])
+        self.assertEqual(test_dirs("cd a; ls; cd ../b && go test ./... && cd .. && npm test", here), [third, here])
+        self.assertEqual(test_dirs("cd a && git status", here), [], "no test run: no directory")
+        self.assertEqual(test_dirs("bash -c 'cd a && pytest'", here), [there], "a script given to a shell is read too")
+        self.assertEqual(test_dirs("cd a && echo 'oops; pytest", here), [here], "a line the shell reading can't follow: here")
+        self.assertEqual(test_dirs("just check", here, ["just check"]), [here])
 
     def test_doctor_checks_test_commands_and_knows_the_rules_name(self) -> None:
         for text, status in (('{"test_commands": ["just check"]}', "ok"), ('{"test_commands": "just check"}', "broken"),

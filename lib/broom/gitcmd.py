@@ -162,19 +162,23 @@ class _Shell:
             toks = toks[1:]
         return toks
 
-    def run(self, toks: List[str]) -> Optional[GitOp]:
-        """Take one command: note what it sets, and return the git add or commit it makes, if it makes one."""
+    def take(self, toks: List[str]) -> List[str]:
+        """Take one command: note what it sets (variables, the directory a `cd` goes to), and give its words, expanded;
+        none for a command that only sets variables or changes directory."""
         if toks[0] == "export":
             toks = toks[1:]
         if self.assigns(toks):
-            return None
+            return []
         toks = self.words(toks)
-        if not toks:
-            return None
-        if toks[0] == "cd" and len(toks) > 1:
+        if toks and toks[0] == "cd" and len(toks) > 1:
             self.here = (self.here / os.path.expanduser(toks[1])).resolve()
-            return None
-        return _git_op(toks, self.here) if Path(toks[0]).name == "git" else None
+            return []
+        return toks
+
+    def run(self, toks: List[str]) -> Optional[GitOp]:
+        """Take one command, and return the git add or commit it makes, if it makes one."""
+        toks = self.take(toks)
+        return _git_op(toks, self.here) if toks and Path(toks[0]).name == "git" else None
 
 
 def parse(command: str, cwd: Path) -> List[GitOp]:
@@ -185,6 +189,19 @@ def parse(command: str, cwd: Path) -> List[GitOp]:
         return _commit_in_unquotable(command, cwd)
     shell = _Shell(cwd)
     return [op for op in (shell.run(toks) for toks in commands) if op]
+
+
+def command_dirs(command: str, cwd: Path) -> List[Tuple[List[str], Path]]:
+    """The commands of a shell line, each as its words with the directory it runs in: `cwd`, or where the `cd`s before
+    it went. A command that only sets variables or changes directory is no entry. A line the shell reading can't follow
+    raises ValueError."""
+    shell = _Shell(cwd)
+    out = []
+    for toks in split_commands(without_heredocs(command)):
+        words = shell.take(toks)
+        if words:
+            out.append((words, shell.here))
+    return out
 
 
 def _short_flags(cluster: str, spec: CommitSpec) -> bool:

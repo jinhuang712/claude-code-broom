@@ -19,7 +19,8 @@ from test_testcmd import NO_RUNNERS
 from broom import ledger
 
 TEST_FILE_TEXT = "def test_a():\n    assert True\n"
-NOT_RUN_LINE = "a.py  tests_not_run  no test ran after the last change to code"
+NOT_RUN_TEXT = "no test ran after the last change to code"
+NOT_RUN_LINE = f"a.py  tests_not_run  {NOT_RUN_TEXT}"
 GIVE_UP = ("broom GAVE UP after 3 blocks: 1 finding(s) left unfixed and unaccepted: a.py tests_not_run; broom let 1 "
            "through this turn: 1 tests_not_run (gave-up)")
 
