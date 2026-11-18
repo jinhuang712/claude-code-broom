@@ -42,6 +42,7 @@ It lives in `lib/broom/`.
 
 - [Commit check](commit-check.md)
 - [Turn end](turn-end.md)
+- [Edit check](edit-check.md)
 - [What counts](what-counts.md)
 - [Smells](smells.md)
 - [Format scopes](format-scopes.md)

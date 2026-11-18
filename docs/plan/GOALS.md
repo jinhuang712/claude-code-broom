@@ -24,7 +24,7 @@ Goals
 │   ├── ✅ T2: An idle Python hook costs 50 ms at most
 │   ├── ✅ T3: A hook run takes 30 seconds at most
 │   ├── ✅ T4: Content that passed is let through in 100 ms at most
-│   └── ⬜ T5: A check after an edit costs 200 ms at most
+│   └── ✅ T5: A check after an edit costs 200 ms at most
 └── Constraints
     ├── ✅ R1: No old warning blocks Claude
     ├── ✅ R2: A false positive costs one round
@@ -56,7 +56,7 @@ Claude's work comes out formatted, lint-clean and type-correct by the project's 
 
 **Acceptance**: The test suite passes. It commits and stops in temporary repos and expects the block.
 
-**Status**: ✅ 2026-11-18, 552 tests with 3 skipped.
+**Status**: ✅ 2026-11-18, 568 tests with 3 skipped.
 
 ---
 
@@ -277,7 +277,7 @@ An edit must not be felt, since Claude makes many in a row.
 
 **How**: Time `broom hook edit` on an edit of one Python file with ruff installed.
 
-**Status**: ⬜
+**Status**: ✅ 2026-11-18, on an Apple M5 Pro with Python 3.14 and other sessions running: the worst case took 146 to 160 ms, the median of 30 runs in each of four batches. The worst case is a formatter that rewrites the file, one new finding and a new session. An edit of a file with nothing to check took about 40 ms.
 
 ---
 

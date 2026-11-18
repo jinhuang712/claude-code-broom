@@ -8,6 +8,7 @@
 
 ### Sweep
 
+- After each edit broom formats the file and tells Claude what a fast linter finds on the lines that changed: ruff, oxlint or SwiftLint. It never blocks, and it tells a finding once. Before, nothing ran after an edit unless `format_on` was `edit`. After, `format_on` starts at `edit`: set it to `commit` to leave files as written until a commit, and `check_on` to `off` to turn the check off.
 - A hint stops a commit. Before, a smell past its soft limit was only told at a commit and blocked the turn's end afterwards, which took one more commit to clean. After, the commit is held back until the smell is fixed or accepted with `broom known --accept "<why>"`.
 - Stopping again passes nothing. Before, a turn's end blocked once and a second stop ended the turn with the finding open. After, each stop blocks while a finding is left, and after three blocks broom gives up and tells you in a line that opens `broom GAVE UP`.
 - A slight smell is a note: it is told and stops nothing. The notes are magic numbers, TODO comments, dead code, a new file with no test and any smell a detector guesses.

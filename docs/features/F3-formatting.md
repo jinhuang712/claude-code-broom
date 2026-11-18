@@ -15,7 +15,7 @@ broom formats Claude's changes with the project's own formatter. JS/TS, CSS, Pyt
 
 ## F3.1: When to format
 
-The `format_on` setting says when. At `commit`, the default, the files a commit takes are formatted and staged again. At `edit`, each file is also formatted after every edit. At `off`, nothing is formatted.
+The `format_on` setting says when. At `edit`, the default, each file is formatted after every edit, and the files a commit takes are formatted and staged again. At `commit`, only the files a commit takes are. At `off`, nothing is formatted.
 
 A formatter's rewrite reaches Claude as the diff Claude Code shows of a changed file. An idle edit hook costs one Python start, 30 to 45 ms measured on macOS.
 

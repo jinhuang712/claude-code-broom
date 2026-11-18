@@ -20,7 +20,7 @@ Four settings sit in `/config`, each with a default.
 
 | Setting | Default | Other values | Why it exists |
 |---|---|---|---|
-| `format_on` | `commit` | `edit` · `off` | some want each edit formatted at once |
+| `format_on` | `edit` | `commit` · `off` | some want a file left as written until a commit |
 | `check_on` | `stop` | `commit` · `off` | a user who commits by hand gets no commit check |
 | `format_scope` | `changed` | `function` · `file` | a one-line fix shouldn't reformat a file |
 | `smells` | `on` | `off` | smells are broom's bar and not the project's |

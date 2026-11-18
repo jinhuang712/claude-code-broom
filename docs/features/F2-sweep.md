@@ -183,11 +183,17 @@ A message holds at most 9,000 characters. Past that it shows fewer findings and 
 
 ## F2.10: Check after an edit
 
-After each edit broom formats the file and runs what can be judged in milliseconds, such as a lint of that one file. It tells Claude what it found and never blocks. A tool that needs a build doesn't run here.
+After each edit broom formats the file and runs what can be judged in milliseconds. It tells Claude what it found on the lines that changed, each finding once, and never blocks. 3 linters run here: ruff · oxlint without its type-aware rules · SwiftLint.
 
-What is told after an edit and still there at the commit is blocked there.
+What is told after an edit and still there at the commit is blocked there. `check_on` at `off` turns the check off, and `format_on` at `commit` or `off` turns the format off.
+
+2 gaps:
+
+- A project that lints with ESLint, biome or stylelint alone gets no check here, since those take too long for an edit.
+- Go and Rust get none, since their linters need a build.
 
 - **Stance**: [At three moments of Claude's flow](../PHILOSOPHY.md#when-may-a-check-interrupt)
+- **How it works**: [Edit check](../specs/edit-check.md)
 - **Why**: [032: After an edit broom formats and runs what is judged in milliseconds](../specs/decisions/032-light-check-after-an-edit.md)
 
 ---
