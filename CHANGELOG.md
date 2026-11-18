@@ -6,9 +6,20 @@
 
 ---
 
+## 0.23.4 — 2026-11-18
+
+---
+
 ### Setup
 
+- `broom doctor --checks` lists what protects a repo: per language, which checks run and with what tool, which don't with the command that turns each on, and where broom has no such check. It also names a missing git hook and what broom checks with no tool installed. `broom doctor --json` holds the same rows under `checks`.
 - `/broom:setup` adds the ruff block `broom init` prints for a `pyproject.toml` without ruff settings. Before, the skill didn't say that `broom init` writes nothing there, and a session had to work it out.
+
+---
+
+### Smells
+
+- The note for a missing Node names all five TS/JS smells that go unmeasured. Before, it named three.
 
 ---
 

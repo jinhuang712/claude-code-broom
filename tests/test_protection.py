@@ -234,7 +234,11 @@ class ProtectionTest(BroomCase):
         self.assertNotIn(BARE_HEADER, plain.stdout)
         self.assertEqual(plain.returncode, 1, "git's hook is missing")
         self.assertEqual(self.cli(r, "doctor", "--checks", env=env).returncode, 1)
+        listed = self.cli(r, "doctor", "--checks", env=env).stdout
+        self.assertIn("Beside the languages:", listed, "a gap that is no check of a language fails the doctor too")
+        self.assertRegex(listed, r"✗ git hook +commits Claude Code's commit hook doesn't see go unchecked  broom install-hook")
         self.assertEqual(self.cli(r, "install-hook", env=env).returncode, 0)
+        self.assertNotIn("Beside the languages:", self.cli(r, "doctor", "--checks", env=env).stdout)
         plain = self.cli(r, "doctor", env=env)
         self.assertEqual(plain.returncode, 0, plain.stdout)
         self.assertIn("All set.", plain.stdout)

@@ -91,6 +91,20 @@ For Swift it adds a `.swift-format` with 4-space indents and 120 columns, where 
 
 ## F1.5: Protection list
 
-The doctor lists, language by language, which checks run in this repo and which don't for lack of a tool, with the command that turns each one on. It also says what broom checks with no tool installed at all.
+`broom doctor --checks` lists what protects a repo. Each language the repo has gets a block with one row per check: format · lint · type check · smells · duplicate and dead code · cycles · diagnostics as Claude edits.
+
+A row takes 1 of 3 forms:
+
+- The check runs, with the tool behind it.
+- The check doesn't run, with the reason and the command that turns it on.
+- broom has no such check for the language, with the reason.
+
+After the languages the list names the gaps of the repo itself, such as a missing git hook. It ends with what broom checks with no tool installed at all. It starts no tool the plain doctor doesn't start, and it exits as the plain doctor does.
+
+1 gap:
+
+- A single smell turned off in `.broom.json` still shows as measured.
 
 - **Stance**: [Say what happened](../PHILOSOPHY.md#what-happens-to-what-was-skipped)
+- **Commands**: [broom doctor](../CLI.md#broom-doctor)
+- **How it works**: [Setup](../specs/setup.md)

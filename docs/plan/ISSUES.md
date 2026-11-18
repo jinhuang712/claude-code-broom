@@ -13,7 +13,9 @@ Issues
 │   ├── I5: Five rules sit on an alpha plugin API
 │   └── I6: The Bash parser guesses what git's hook knows
 └── fix
-    └── I3: The cause of the reported Stop hang is unconfirmed
+    ├── I3: The cause of the reported Stop hang is unconfirmed
+    ├── I15: The doctor says all is set while TS/JS smells go unmeasured
+    └── I16: A CSS formatter that isn't installed goes unseen outside a JS project
 ```
 
 ---
@@ -80,3 +82,30 @@ Issues
   - [F2.1: Commit check](../features/F2-sweep.md#f21-commit-check)
   - [F2.4: git's pre-commit hook](../features/F2-sweep.md#f24-gits-pre-commit-hook)
 - next: [F2.4.1: Offered at setup](../features/F2-sweep.md#f241-offered-at-setup)
+
+---
+
+## I15: The doctor says all is set while TS/JS smells go unmeasured
+
+- type: fix
+- why:
+  - The smell scan needs oxlint at the repo root.
+  - The doctor asks for oxlint only where it is the project's linter, so a project that lints with eslint or biome alone hears nothing of it.
+  - `broom doctor --checks` shows the smells row as off, and the doctor's exit code and its fixes don't.
+- found: the building of the protection list, 2026-11-18, read from the code and not run
+- touches:
+  - [F1.1: Doctor](../features/F1-setup.md#f11-doctor)
+  - [F1.5: Protection list](../features/F1-setup.md#f15-protection-list)
+
+---
+
+## I16: A CSS formatter that isn't installed goes unseen outside a JS project
+
+- type: fix
+- why:
+  - FEATURES says the doctor checks the formatter of tracked CSS files.
+  - The doctor checks it only when formatting is off or inside a JS project.
+- found: the building of the protection list, 2026-11-18, read from the code and not run
+- touches:
+  - [F1.1: Doctor](../features/F1-setup.md#f11-doctor)
+

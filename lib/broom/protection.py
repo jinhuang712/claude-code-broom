@@ -25,6 +25,7 @@ NEEDED = "needed once"  # how the doctor says a tool is wanted only after format
 DASH = "–"
 GAP = "  "  # between the columns of a row
 BARE_HEADER = "With no tool installed, broom still checks:"
+OTHER_HEADER = "Beside the languages:"  # gaps of the repo itself: git's own hook, a broken .broom.json
 
 FORMAT, LINT, TYPES, SMELLS = "format", "lint", "type check", "smells"
 DUPLICATES, CYCLES, SERVER = "duplicate and dead code", "cycles", "diagnostics as Claude edits"
@@ -279,20 +280,23 @@ def bare_rows(languages: List[str], *, smells_on: bool) -> List[Row]:
 class Protection:
     """What protects a repo: a row per check of each language it has, and the checks that need no tool."""
 
-    def __init__(self, repo: Path, rows: List[Row], bare: List[Row]) -> None:
-        self.repo, self.rows, self.bare = repo, rows, bare
+    def __init__(self, repo: Path, rows: List[Row], bare: List[Row], other: List[Row]) -> None:
+        self.repo, self.rows, self.bare, self.other = repo, rows, bare, other
 
     def records(self) -> List[dict]:
-        """The rows as the `checks` of `broom doctor --json`: the language ones, then those that need no tool."""
-        return [asdict(r) for r in self.rows + self.bare]
+        """The rows as the `checks` of `broom doctor --json`: the language ones, the repo's own gaps, then those
+        that need no tool."""
+        return [asdict(r) for r in self.rows + self.other + self.bare]
 
     def text(self) -> str:
         """The list as `broom doctor --checks` prints it: a block per language, then what needs no tool."""
-        width = max([len(r.check) for r in self.rows] or [0])
+        width = max([len(r.check) for r in self.rows + self.other] or [0])
         out = [f"broom doctor --checks: {display(self.repo)}"]
         out += [] if self.rows else ["", "Languages: none found"]
         for lang in unique(r.language for r in self.rows):
             out += ["", LANG_NAMES[lang]] + [row_line(r, width) for r in self.rows if r.language == lang]
+        if self.other:
+            out += ["", OTHER_HEADER] + [row_line(r, width) for r in self.other]
         if self.bare:
             out += ["", BARE_HEADER] + bare_lines(self.bare)
         return "\n".join(out)
@@ -318,6 +322,13 @@ def bare_lines(rows: List[Row]) -> List[str]:
     return [f"  {MARKS['ok']} {check.ljust(width)}{GAP}{', '.join(langs)}" for check, langs in where.items()]
 
 
+def other_rows(items: List[dict]) -> List[Row]:
+    """The doctor's gaps that are no check of a language, such as git's own hook: they fail the doctor too, so the
+    list names them, each as the doctor does."""
+    return [Row(i["lang"], f"{i['lang']} {i['role']}", OFF, i["tool"], i.get("detail") or i["status"], i.get("fix") or "")
+            for i in items if i["lang"] not in SPECS and i["status"] != "ok"]
+
+
 def protection(repo: Path, result: dict) -> Protection:
     """The protection list for `repo` from its doctor `result`: the doctor's items, split by the check each stops and
     added to where a check rests on a tool the doctor doesn't ask about."""
@@ -327,4 +338,4 @@ def protection(repo: Path, result: dict) -> Protection:
     if "js" in languages and smells_on:
         items.append(oxlint_item(repo))
     rows = [r for lang in languages if lang in SPECS for r in language_rows(lang, items, smells_on=smells_on)]
-    return Protection(repo, rows, bare_rows(list(languages), smells_on=smells_on))
+    return Protection(repo, rows, bare_rows(list(languages), smells_on=smells_on), other_rows(result["items"]))

@@ -63,15 +63,16 @@ Status: ✅ built · ⬜ planned
 
 **Status**: ✅
 
-`broom doctor [--json]` lists a repo's languages, tools, configs and conflicts with the commands that fix them.
+`broom doctor [--json] [--checks]` lists a repo's languages, tools, configs and conflicts with the commands that fix them.
 
 | Flag | Means | Default |
 |---|---|---|
 | `--json` | print one JSON object | off |
+| `--checks` | list which checks run and which don't, by language | off |
 
 **Called by**: a person and the `/broom:setup` skill.
 
-**Prints**: stdout gets one line per item with its status, git's pre-commit hook among them, a `To fix:` list, a `To turn formatting on:` list, `All set.` when healthy, and the optional tools with their install commands. stderr gets `broom: not inside a git repository`.
+**Prints**: stdout gets one line per item with its status, git's pre-commit hook among them, a `To fix:` list, a `To turn formatting on:` list, `All set.` when healthy, and the optional tools with their install commands. With `--checks` it gets a block per language with one row per check, the gaps of the repo itself, and the checks that need no tool. stderr gets `broom: not inside a git repository`.
 
 **Fails**: exit 1 when an item is not ok, and outside a repo.
 
@@ -361,13 +362,15 @@ An uncaught error exits 1 with a traceback.
 
 7 commands print JSON a script relies on:
 
-- **`broom doctor --json`**: `version` · `repo` · `languages` · `items` · `fix` · `configure` · `fix_global` · `configure_global` · `healthy` · `optional` · `settings`.
+- **`broom doctor --json`**: `version` · `repo` · `languages` · `items` · `fix` · `configure` · `fix_global` · `configure_global` · `healthy` · `optional` · `settings` · `checks`.
 - **`broom smells --json`**: `repo` · `base` · `only` · `total` · `severe` · `hints` · `by` · `hotspots` · `smells` · `notes` · `sizes` when `--only` asks for sizes.
 - **`broom diagnose --json`**: `repo` · `paths` · `summary` · `by_smell` · `by_language` · `by` · `hotspots` · `smells` · `duplicate_tests` · `dependencies` · `missing_tools` · `notes` · `checkup` · `stats`.
 - **`broom compare --json`**: `repo` · `base` · `base_commit` · `summary` · `kinds` · `gone` · `new` · `shrank` · `grew` · `hotspots` · `not_comparable` · `notes` · `quote` · `seconds`.
 - **`broom stats --json`**: `repo` · `paths` · `files` · `days` · `size` · `tests` · `rot` · `history`. Each section holds a `note` that says what is missing, or null.
 - **`broom fixes --json`**: one key per smell, with its fix line.
 - **`broom report --json`**: `days` · `repos` · `blocked` · `fixed` · `let_through` · `open` · `how` · `fix_rate` · `rules` · `waivers` · `skips` · `seconds` · `errors`.
+
+Each item of `checks` holds 6 keys: `language` · `check` · `status` · `tool` · `why` · `fix`. Its `status` is `on`, `off` or `none`.
 
 Each item of `smells` holds 6 keys: `file` · `line` · `smell` · `level` · `text` · `was`. `was` is null for a new smell.
 

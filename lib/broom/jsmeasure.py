@@ -118,5 +118,5 @@ def measure_js(r: Reader, rels: List[str], lim: Limits, start: Path) -> None:
         read_oxlint(r, run_oxlint(r, exe, "oxlint-rules", broom_rules_config(lim), rels),
                     broom_rule_metric)
     else:
-        r.notes.append("node is missing, so boolean flag parameters, long classes and missing doc comments in TS/JS aren't "
-                       "measured")
+        r.notes.append("node is missing, so boolean flag parameters, long classes, module state, commented-out code and "
+                       "missing doc comments in TS/JS aren't measured")

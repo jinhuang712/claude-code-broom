@@ -24,7 +24,6 @@
     "install": [["npm", "npm i -g typescript-language-server"], ["brew", "brew install typescript-language-server"]]
   },
   "oxlint": {"probe": ["oxlint", "--version"], "dev": "oxlint", "install": [["npm", "npm i -g oxlint"]]},
-  "tsgolint": {"dev": "oxlint-tsgolint", "install": [["npm", "npm i -g oxlint-tsgolint"]]},
   "oxfmt": {"probe": ["oxfmt", "--version"], "dev": "oxfmt", "install": [["npm", "npm i -g oxfmt"]]},
   "stylelint": {
     "probe": ["stylelint", "--version"], "dev": "stylelint",
@@ -63,7 +62,7 @@
   },
   "_comment_optional": "Tools broom uses when they are installed, and only then: `optional` keeps them out of the doctor's gaps, its fixes, its exit code and the session start, which never offer them. `for` says what each finds; `lang` is the language whose projects it serves, `any` for all. They are found by name on PATH, with no probe, so that listing them costs a lookup.",
   "tsgolint": {
-    "optional": true, "lang": "js", "for": "calls to deprecated APIs in TS/JS, in every check",
+    "optional": true, "lang": "js", "for": "calls to deprecated APIs in TS/JS, in every check", "dev": "oxlint-tsgolint",
     "install": [["npm", "npm i -g oxlint-tsgolint"]]
   },
   "knip": {
