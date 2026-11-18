@@ -43,6 +43,14 @@ A note never blocks. The user's line at the turn's end tells it, once.
 
 ---
 
+## Asking the user
+
+Ending the turn is how Claude asks the user anything, so a block would keep a question from being put. `broom known --ask "<question>"` marks what the last block showed as waiting for the user, in the turn it was blocked in. The turn's end leaves those findings out of its block for that turn and opens the user's line with the question. They stay in the repo's last blocked result, so an accept still serves them once the user has answered. At the next turn they block like any other.
+
+- [033: A turn can end with a question to the user, which passes nothing](decisions/033-ask-the-user.md)
+
+---
+
 ## Subagents
 
 Hooks run inside subagents too, with an agent id. A subagent's edits are recorded under it, and its own end checks them. The block goes to the subagent as its next instruction.

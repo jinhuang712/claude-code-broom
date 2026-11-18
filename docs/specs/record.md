@@ -20,11 +20,12 @@ ledger.jsonl ◀─────────────────────�
 
 The ledger is `ledger.jsonl` in the data directory, one JSON object per line. Every line holds the time, the repo, the event and the hook it came from. The repo is the main worktree's root, so a repo and its linked worktrees share one record. A file is given relative to its own worktree's root.
 
-8 events:
+9 events:
 
 - **block**: A finding stopped a commit or a turn's end.
 - **fix**: A finding of an earlier block is gone.
 - **pass**: A finding was let through, with how.
+- **ask**: A question about a blocked finding was put to the user. It is no outcome, and the finding stays open.
 - **hint**: A note, which is a slight smell, was told without a block.
 - **waiver**: A change loosened the bar, with its kind.
 - **skip**: A tool didn't run, with the timeout or missing-tool note.
@@ -33,7 +34,7 @@ The ledger is `ledger.jsonl` in the data directory, one JSON object per line. Ev
 
 A pass says how it went through, in 2 ways:
 
-- **accept**: Claude ran `broom known --accept`, and the line keeps the reason.
+- **accept**: Claude ran `broom known --accept`, and the line keeps the reason. With `--agreed` it also says that the user agreed.
 - **gave-up**: The turn-end check gave up after three blocks. The finding is not known.
 
 Older lines can hold four more: `retry`, `denials` and `stop-again` from before 0.19.0, and `turn-ended` from before 0.23.5.
@@ -69,7 +70,9 @@ A type error in a file outside the checked files is never counted as fixed.
 
 ## The turn summary
 
-Each pass is also noted in the turn's directory. When the turn ends, the notes become one line for the user, grouped by rule and by how, such as `broom let 3 through this turn: 2 bool_params (gave-up), 1 function_lines (accepted: <why>)`. The turn's self-waivers follow on the same line, then what the stop itself left. A turn with only waivers says `broom saw 2 self-waivers this turn: ...`. A turn with neither says what it said before.
+Each pass is also noted in the turn's directory. When the turn ends, the notes become one line for the user, grouped by rule and by how, such as `broom let 3 through this turn: 2 bool_params (gave-up), 1 function_lines (accepted: <why>)`. A finding the user agreed to is shown as `accepted, the user agreed`. The turn's self-waivers follow on the same line, then what the stop itself left.
+
+Three things open the line ahead of the summary, in this order: a question put with `--ask`, a give-up, and 3 or more accepts that Claude made on its own. A turn with only waivers says `broom saw 2 self-waivers this turn: ...`. A turn with neither says what it said before.
 
 The notes are cleared at the next prompt. With `check_on` at `commit` no stop hook ends the turn, so no summary is shown. A pass in git's own pre-commit hook belongs to no turn and is not shown either.
 

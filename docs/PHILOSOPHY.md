@@ -67,6 +67,8 @@ Outside these moments broom costs nothing: a hook with nothing to do exits in mi
 
 There is no third way out. A check that lets Claude carry on after one more try puts Claude's speed before the code, and the user never learns what was left behind. Claude may have a good reason to leave a finding: a refactor that comes in a later step, or a change too large for now. It then tells the user and doesn't keep the reason to itself. What the user agreed to leave, after talking it through, is let through as well. Only what is slight is told and left at that.
 
+Asking the user is no way out for a finding. It ends the turn with the question put, and the finding stays where it is until the user has answered.
+
 ---
 
 ## Who decides what is installed or changed?

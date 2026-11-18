@@ -43,7 +43,7 @@ The files are linted and type-checked, their smells are measured, and the result
 
 The report has a fixed order: what was blocked and what to do, the findings, the usual fix of each kind of smell among them, what is not a fix, the way to accept a finding, and the checks that were skipped. The fix lines come from one data file, which `broom fixes` prints too. The report holds at most 9,000 characters, and findings give way to the rest of it.
 
-A blocked finding passes fixed, or after `broom known --accept "<why>"`, which records the blocked result as known with the reason. Running the same commit again blocks again. `BROOM_NO_ACCEPT` turns accepting off.
+A blocked finding passes fixed, or after `broom known --accept "<why>"`, which records the blocked result as known with the reason. Running the same commit again blocks again. `BROOM_NO_ACCEPT` turns accepting off. `broom known --ask` puts the question to the user and passes nothing, so the commit stays denied.
 
 A hint denies the commit as a block does. A note, which is a slight smell, goes into the commit's context without a denial.
 

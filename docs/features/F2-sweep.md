@@ -218,11 +218,25 @@ What is slight is told and never blocks: magic numbers · TODO comments · dead 
 
 ## F2.12: A pass is told to the user
 
-When Claude accepts a finding, it tells the user what it left and why in its reply, such as a refactor that comes in a later step. The turn's summary names each accepted finding with its reason. A finding the user agreed to leave, after talking it through, is marked as theirs.
+A block tells Claude to accept only for a real reason, such as a refactor that comes in a later step, and to say in its reply what it accepted and why. The turn's summary names each accepted finding with its reason.
 
-An accepted finding is a debt on record and not a closed case: it stays on a list and comes due again. A turn that accepts many says so in words that can't be missed, so a reason never becomes the cheap way out.
+When the user must decide, Claude runs `broom known --ask "<question>"` and stops. That passes nothing: the commit is still denied and the finding stays open. The turn ends, and the user's line opens with `WAITS FOR YOUR ANSWER` and the question. At the next turn the finding blocks again until it is fixed or accepted.
+
+When the user said yes, Claude accepts with `--agreed`, and the summary shows that finding as one the user agreed to. A turn in which Claude accepted 3 findings or more on its own opens the user's line with `Claude ACCEPTED`, so a reason never becomes the cheap way out.
+
+An accepted finding is a debt on record and not a closed case: `broom known` lists it with its reason, and after 30 days it is raised again.
+
+2 gaps:
+
+- With `check_on` at `commit` no turn's end shows the line, so Claude's own reply has to carry the question.
+- A subagent that asks about a denied commit is still blocked at its own end.
 
 - **Stance**: [Fixed, or let through with a reason the user sees](../PHILOSOPHY.md#how-does-a-finding-end)
+- **Commands**: [broom known](../CLI.md#broom-known)
+- **How it works**:
+  - [Turn end](../specs/turn-end.md)
+  - [Record](../specs/record.md)
+- **Why**: [033: A turn can end with a question to the user, which passes nothing](../specs/decisions/033-ask-the-user.md)
 
 ---
 

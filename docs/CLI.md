@@ -201,19 +201,21 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 **Status**: ✅
 
-`broom known [paths...] [--accept WHY] [--clear]` lists, accepts or clears known issues.
+`broom known [paths...] [--accept WHY [--agreed] | --ask QUESTION] [--clear]` lists, accepts or clears known issues, or puts a question to the user.
 
 | Flag | Means | Default |
 |---|---|---|
 | none | list the known issues under `paths` | the repo |
 | `--accept WHY` | accept what the last blocked commit or turn end showed, with the reason | off |
+| `--agreed` | with `--accept`, record that the user agreed | off |
+| `--ask QUESTION` | mark what the last block showed as waiting for the user, and pass nothing | off |
 | `--clear` | remove the known issues under `paths` | off |
 
 **Called by**: a person, and Claude when a block message offers `--accept`.
 
-**Prints**: stdout gets one line per known issue with its location, tool, rule, message, date and reason. Accept prints `broom: accepted N issue(s) as known (WHY); commit again`, or `stop again` after a turn-end block. stderr gets the refusals.
+**Prints**: stdout gets one line per known issue with its location, tool, rule, message, date and reason. Accept prints `broom: accepted N issue(s) as known (WHY); commit again`, or `stop again` after a turn-end block. Ask prints `broom: N issue(s) wait for the user's answer (QUESTION)` and that nothing is accepted. stderr gets the refusals.
 
-**Fails**: exit 1 when there is no blocked commit or turn end to accept, when every finding is one that can't be accepted, when WHY is empty, when `BROOM_NO_ACCEPT` is set and outside a repo.
+**Fails**: exit 1 when there is no blocked commit or turn end to accept or to ask about, when every finding is one that can't be accepted, when WHY or QUESTION is empty, when `BROOM_NO_ACCEPT` is set for an accept and outside a repo. Exit 2 for `--agreed` without `--accept`, and for `--accept` with `--ask`.
 
 **Example**: `broom known --accept "predates this change"` prints `broom: accepted 2 issue(s) as known (predates this change); commit again`.
 
@@ -368,7 +370,7 @@ An uncaught error exits 1 with a traceback.
 - **`broom compare --json`**: `repo` · `base` · `base_commit` · `summary` · `kinds` · `gone` · `new` · `shrank` · `grew` · `hotspots` · `not_comparable` · `notes` · `quote` · `seconds`.
 - **`broom stats --json`**: `repo` · `paths` · `files` · `days` · `size` · `tests` · `rot` · `history`. Each section holds a `note` that says what is missing, or null.
 - **`broom fixes --json`**: one key per smell, with its fix line.
-- **`broom report --json`**: `days` · `repos` · `blocked` · `fixed` · `let_through` · `open` · `how` · `fix_rate` · `rules` · `waivers` · `skips` · `seconds` · `errors`.
+- **`broom report --json`**: `days` · `repos` · `blocked` · `fixed` · `let_through` · `open` · `asked` · `how` · `fix_rate` · `rules` · `waivers` · `skips` · `seconds` · `errors`.
 
 Each item of `checks` holds 6 keys: `language` · `check` · `status` · `tool` · `why` · `fix`. Its `status` is `on`, `off` or `none`.
 
