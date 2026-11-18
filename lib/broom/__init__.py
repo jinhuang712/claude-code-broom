@@ -1,3 +1,3 @@
 """broom: autonomous code hygiene for Claude Code."""
 
-__version__ = "0.23.2"
+__version__ = "0.23.3"

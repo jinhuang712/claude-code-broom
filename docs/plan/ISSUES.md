@@ -14,8 +14,7 @@ Issues
 │   └── I6: The Bash parser guesses what git's hook knows
 └── fix
     ├── I3: The cause of the reported Stop hang is unconfirmed
-    ├── I13: A blocked finding can end with no line or with two
-    └── I14: git's hook misreads a linked worktree
+    └── I13: A blocked finding can end with no line or with two
 ```
 
 ---
@@ -94,16 +93,3 @@ Issues
 - found: the fix of a turn-end block that dropped a commit block's fix line, 2026-11-18
 - touches:
   - [F9.1: Ledger](../features/F9-record.md#f91-ledger)
-
----
-
-## I14: git's hook misreads a linked worktree
-
-- type: fix
-- why:
-  - git sets `GIT_DIR` for its pre-commit hook in a linked worktree, and broom then takes a changed file for a new one.
-  - A change to an old file got the hint for a new file with no test, under a path without its folders.
-  - The same check with the variable unset gave no hint, also none for the unused function the change added.
-- found: a worker's commits in a worktree of this repo, 2026-11-18
-- touches:
-  - [F2.4: git's pre-commit hook](../features/F2-sweep.md#f24-gits-pre-commit-hook)

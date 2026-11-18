@@ -6,6 +6,16 @@
 
 ---
 
+## 0.23.3 — 2026-11-18
+
+---
+
+### Fixes
+
+- git's pre-commit hook checks a commit in a linked worktree as it does in the main checkout. Before, a changed file there was taken for a new one: it got hints meant for new files, under a path without its folders, and duplicate and dead code were looked for in that file's folder alone. A repo used through `git --git-dir` and `--work-tree` had the same fault.
+
+---
+
 ## 0.23.2 — 2026-11-18
 
 ---

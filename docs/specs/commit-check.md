@@ -58,6 +58,8 @@ The PreToolUse hook sees only the command Claude sends. A wrapper that commits h
 
 Where it is installed, it is the commit check, and the PreToolUse hook only formats.
 
+git hands its hook `GIT_DIR` in a linked worktree, and a `GIT_WORK_TREE` of `.` under `--work-tree`. With either set, git takes the directory it runs in for the top of the work tree. So the repo is asked of git once, where the hook runs, and never in a file's own folder. In a work tree with no `.git`, jscpd can't read the base, so clones aren't measured there, with a note.
+
 - [004: git's own hook checks without formatting](decisions/004-git-hook-checks.md)
 
 ---
