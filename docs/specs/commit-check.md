@@ -45,7 +45,7 @@ The report has a fixed order: what was blocked and what to do, the findings, the
 
 A blocked finding passes fixed, or after `broom known --accept "<why>"`, which records the blocked result as known with the reason. Running the same commit again blocks again. `BROOM_NO_ACCEPT` turns accepting off.
 
-A hint goes into the commit's context without a denial.
+A hint denies the commit as a block does. A note, which is a slight smell, goes into the commit's context without a denial.
 
 - [003: Every finding passes fixed or accepted with a reason](decisions/003-reason-for-every-pass.md)
 - [016: A smell past the hard limit blocks like a type error](decisions/016-severe-smells.md)

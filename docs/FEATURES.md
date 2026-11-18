@@ -30,7 +30,7 @@ Features
 │   ├── 🚧 F2.8: Self-waivers shown — a config loosened by a command is missed with `check_on` at `commit`
 │   ├── ✅ F2.9: Messages that say how to fix — the fix beside the finding
 │   ├── ⬜ F2.10: Check after an edit — format and what is judged in milliseconds, told and never blocked
-│   ├── ⬜ F2.11: Nothing is waved through — a finding ends fixed or accepted with a reason
+│   ├── ✅ F2.11: Nothing is waved through — a finding ends fixed or accepted with a reason
 │   ├── ⬜ F2.12: A pass is told to the user — Claude says what it left and why
 │   └── ⬜ F2.13: A turn that changed code shows that tests ran — or that counts as left over
 ├── ✅ F3: Formatting — the project's formatter on what changed
@@ -40,7 +40,7 @@ Features
 │       ├── ✅ F3.2.2: function
 │       └── ✅ F3.2.3: file
 ├── ✅ F4: Smells — one bar for code that is hard to change
-│   ├── ✅ F4.1: Sized smells — a hint past the soft limit, a block past the hard one
+│   ├── ✅ F4.1: Sized smells — stopped past the soft limit, and no growth past the hard one
 │   ├── ✅ F4.2: Occurrence smells — a change that adds one gets its level
 │   │   ├── 🚧 F4.2.1: Broad catch — Python only
 │   │   ├── ✅ F4.2.2: Skipped test

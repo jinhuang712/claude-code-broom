@@ -13,8 +13,9 @@ Each term has its meaning, the words that lost to it and its name in the code wh
 | Occurrence smell | a smell that counts each time it appears | presence smell | `SMELL_PRESENCE` |
 | Soft limit | the size past which a sized smell is a hint | — | `limits[0]` |
 | Hard limit | the size past which a sized smell blocks | — | `limits[1]` |
-| Hint | a finding Claude is told about without a block at commit | — | `level == "hint"` |
-| Block | a finding that stops the commit or the turn's end | denial | `level == "block"` |
+| Hint | a smell below its hard limit that stops a commit and a turn's end until it is fixed or accepted | — | `level == "hint"` |
+| Note | a slight smell, or one a detector guesses, that is told and stops nothing | — | `level == "note"` |
+| Block | the stop of a commit or a turn's end by a finding, and the level of a smell past its hard limit | denial | `level == "block"` |
 | Severe smell | a smell past its hard limit | — | `Issue.severe` |
 | Touched smell | an old sized smell in a function, a type or a file the change touches | — | `Smell.touched` |
 | Known issue | a finding accepted with a reason, which broom no longer raises | baseline · accepted issue | `baseline.json` |

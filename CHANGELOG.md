@@ -6,6 +6,15 @@
 
 ---
 
+### Sweep
+
+- A hint stops a commit. Before, a smell past its soft limit was only told at a commit and blocked the turn's end afterwards, which took one more commit to clean. After, the commit is held back until the smell is fixed or accepted with `broom known --accept "<why>"`.
+- Stopping again passes nothing. Before, a turn's end blocked once and a second stop ended the turn with the finding open. After, each stop blocks while a finding is left, and after three blocks broom gives up and tells you in a line that opens `broom GAVE UP`.
+- A slight smell is a note: it is told and stops nothing. The notes are magic numbers, TODO comments, dead code, a new file with no test and any smell a detector guesses.
+- The note at a session's start tells Claude the new rule.
+
+---
+
 ### Docs
 
 - The docs say what broom is in two halves: a gate the user sets in Claude's flow, and a ruler Claude picks up. broom holds no model, and what needs judgment stays with the coding agent.

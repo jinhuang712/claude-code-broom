@@ -25,19 +25,18 @@ The ledger is `ledger.jsonl` in the data directory, one JSON object per line. Ev
 - **block**: A finding stopped a commit or a turn's end.
 - **fix**: A finding of an earlier block is gone.
 - **pass**: A finding was let through, with how.
-- **hint**: A smell hint was given as context without a block.
+- **hint**: A note, which is a slight smell, was told without a block.
 - **waiver**: A change loosened the bar, with its kind.
 - **skip**: A tool didn't run, with the timeout or missing-tool note.
 - **time**: The seconds one check took in a hook.
 - **error**: A hook failed and let the action through.
 
-A pass says how it went through, in 3 ways:
+A pass says how it went through, in 2 ways:
 
 - **accept**: Claude ran `broom known --accept`, and the line keeps the reason.
-- **turn-ended**: The finding was still there when the turn ended by stopping again. It is not known.
 - **gave-up**: The turn-end check gave up after three blocks. The finding is not known.
 
-Lines written before 0.19.0 can hold three more: `retry`, `denials` and `stop-again`.
+Older lines can hold four more: `retry`, `denials` and `stop-again` from before 0.19.0, and `turn-ended` from before 0.23.5.
 
 A waiver has one of 3 kinds:
 
@@ -70,7 +69,7 @@ A type error in a file outside the checked files is never counted as fixed.
 
 ## The turn summary
 
-Each pass is also noted in the turn's directory. When the turn ends, the notes become one line for the user, grouped by rule and by how, such as `broom let 3 through this turn: 2 magic_numbers (turn-ended), 1 function_lines (accepted: <why>)`. The turn's self-waivers follow on the same line, then what the stop itself left. A turn with only waivers says `broom saw 2 self-waivers this turn: ...`. A turn with neither says what it said before.
+Each pass is also noted in the turn's directory. When the turn ends, the notes become one line for the user, grouped by rule and by how, such as `broom let 3 through this turn: 2 bool_params (gave-up), 1 function_lines (accepted: <why>)`. The turn's self-waivers follow on the same line, then what the stop itself left. A turn with only waivers says `broom saw 2 self-waivers this turn: ...`. A turn with neither says what it said before.
 
 The notes are cleared at the next prompt. With `check_on` at `commit` no stop hook ends the turn, so no summary is shown. A pass in git's own pre-commit hook belongs to no turn and is not shown either.
 
@@ -80,4 +79,4 @@ The notes are cleared at the next prompt. With `check_on` at `commit` no stop ho
 
 `broom report` counts distinct findings by repo and key, each by how it ended last: fixed, let through or still open. A finding blocked three times and then fixed counts once as blocked and once as fixed.
 
-The fix rate is the fixed over the fixed plus the let through, so a finding that hasn't ended counts against no rule. A block of self-waivers gives their count by kind and the notes of the config ones. Hint lines are written and not yet shown.
+The fix rate is the fixed over the fixed plus the let through, so a finding that hasn't ended counts against no rule. A block of self-waivers gives their count by kind and the notes of the config ones. The lines of notes are written and not yet shown.

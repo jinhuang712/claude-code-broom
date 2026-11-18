@@ -12,7 +12,7 @@ A hint can be left unfixed. Some sizes are past what a hint should carry.
 
 ## The choice
 
-Past the hard limit a smell is severe: it blocks the commit, where a smell past the soft limit only hints there.
+Past the hard limit a smell is severe: it blocks the commit like a type error, and one that was there and grew can't be accepted.
 
 ---
 
@@ -24,4 +24,4 @@ Past the hard limit a smell is severe: it blocks the commit, where a smell past 
 
 ## Consequences
 
-Stopping a turn twice leaves severe smells out of the known record, so the commit still stops on them.
+A turn's end that gives up leaves severe smells out of the known record, so the commit still stops on them.

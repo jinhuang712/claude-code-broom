@@ -30,7 +30,7 @@ Goals
     ├── ✅ R2: A false positive costs one round
     ├── ✅ R3: An old smell in untouched code never comes up
     ├── ✅ R4: Setup asks at most two questions
-    └── ⬜ R5: Nothing is waved through
+    └── ✅ R5: Nothing is waved through
 ```
 
 ---
@@ -56,7 +56,7 @@ Claude's work comes out formatted, lint-clean and type-correct by the project's 
 
 **Acceptance**: The test suite passes. It commits and stops in temporary repos and expects the block.
 
-**Status**: ✅ 2026-11-18, 538 tests with 3 skipped.
+**Status**: ✅ 2026-11-18, 552 tests with 3 skipped.
 
 ---
 
@@ -354,4 +354,4 @@ An edit must not be felt, since Claude makes many in a row.
 
 **How**: A test commits a change with a hint and expects the block, and another stops twice and expects the second block.
 
-**Status**: ⬜
+**Status**: ✅ 2026-11-18, by `tests/test_nowave.py`: a commit with a hint is denied, a turn's end blocks three times without an edit, and the fourth stop gives up with the loud line.

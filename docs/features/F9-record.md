@@ -28,7 +28,7 @@ The ledger also notes how many seconds each check took, and each time a hook fai
 
 ## F9.2: Turn summary
 
-When a turn let something through, the user sees one line at its end, such as `broom let 3 through this turn: 2 magic_numbers (turn-ended), 1 function_lines (accepted: <why>)`. A turn that let nothing through says nothing more than before.
+When a turn let something through, the user sees one line at its end, such as `broom let 3 through this turn: 2 bool_params (gave-up), 1 function_lines (accepted: <why>)`. A turn that let nothing through says nothing more than before.
 
 2 gaps:
 
@@ -43,7 +43,7 @@ When a turn let something through, the user sees one line at its end, such as `b
 
 `broom report` prints the record of a repo over a period: findings blocked, fixed and let through with the fix rate, then the same per rule, the skips by tool and the seconds per check. It covers 30 days and this repo unless told otherwise.
 
-A finding counts once, however often it was blocked. Hints given without a block are recorded and not yet shown.
+A finding counts once, however often it was blocked. Notes told without a block are recorded and not yet shown.
 
 - **Commands**: [broom report](../CLI.md#broom-report)
 - **How it works**: [Record](../specs/record.md)

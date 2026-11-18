@@ -12,7 +12,7 @@ broom 是给 Coding Agent 用的工具，自己不带任何模型。它让 Claud
 
 - 🧰 **配置**：在仓库里开会话时，broom 发现缺什么，Claude 就提议帮你安装和配置。
 - 🧹 **清扫**：提交时和每轮对话结束时，它对 Claude 的改动做格式化、lint 和类型检查，问题解决前不放行。
-- 👃 **闻味道**：改动让代码过长、嵌套过深或出现重复时，过软上限就提示，过硬上限就拦。
+- 👃 **闻味道**：改动让代码过长、嵌套过深或出现重复时会被拦住，直到清理干净，或带理由放行。
 - 👀 **看见**：六种语言的语言服务器让 Claude 边改边看到诊断。
 - 📊 **诊断**：`broom diagnose`、`broom stats` 和 `broom compare` 给出整个仓库在重构前后的数字。
 - 🩺 **体检**：会话开始时它数一遍仓库里的腐化，某个数字变大了就告诉 Claude 一次。
@@ -46,7 +46,7 @@ oxlint (~/code/app):
 tsc (~/code/app):
   src/pages/home.tsx:17:9  TS2345  Argument of type 'string' is not assignable to 'number'  [not in the changed files]
 
-If one predates this change or is a false positive, run `broom known --accept "<why>"`, then commit again.
+Trying again passes nothing: only a fix does, or accepting with a reason. If one predates this change or is a false positive, run `broom known --accept "<why>"`, then commit again.
 ```
 
 Claude 修好问题后再次提交。想先看看的话，用自己的话让它清扫：

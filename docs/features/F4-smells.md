@@ -20,7 +20,7 @@ F4: Smells
 
 A smell is code that works and is hard to change. broom measures smells against its own limits in every repo. What a change made worse counts, and so does an old smell in the code it touches. Code a change doesn't touch never comes up.
 
-A hint goes into the commit's context and stops a turn's end once. A block stops the commit and passes only fixed or accepted with a reason. The `smells` setting turns them all off, and `smells_off` in `.broom.json` turns single ones off.
+A smell has 1 of 3 levels. A hint and a block both stop a commit and a turn's end, and pass only fixed or accepted with a reason. A block is past the hard limit, and one that was there and grew can't be accepted. A note is a slight smell, or one a detector guesses: it is told and stops nothing. The `smells` setting turns them all off, and `smells_off` in `.broom.json` turns single ones off.
 
 - **Stance**: [One bar for smells](../PHILOSOPHY.md#whose-bar-measures-a-code-smell)
 - **Design**: [4. A finding counts only where the change made things worse](../DESIGNS.md#4-a-finding-counts-only-where-the-change-made-things-worse)
@@ -72,9 +72,9 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 | `swallowed_error` | block | `S110` | `no-empty` `no-useless-catch` | `revive` `empty-block` | `no_empty_block` |
 | `commented_code` | block | `ERA001` | `broom/commented-code` | `gocritic` `commentedOutCode` | — |
 | `unused_params` | hint | `ARG` | `no-unused-vars` | `revive` `unused-parameter` | `unused_parameter` |
-| `magic_numbers` | hint | `PLR2004` | `no-magic-numbers` | `mnd` | `no_magic_numbers` |
+| `magic_numbers` | note | `PLR2004` | `no-magic-numbers` | `mnd` | `no_magic_numbers` |
 | `debug_output` | hint | `T201` `T203` | `no-console` | `forbidigo` | a custom rule |
-| `todo` | hint | `FIX` | `no-warning-comments` | `godox` | `todo` |
+| `todo` | note | `FIX` | `no-warning-comments` | `godox` | `todo` |
 | `type_escape` | hint | `ANN401` | `no-explicit-any` `no-non-null-assertion` | `revive` `unchecked-type-assertion` | `force_cast` `force_unwrapping` `force_try` |
 | `globals` | hint | `PLW0603` | `broom/module-state` | `gochecknoglobals` | a custom rule |
 | `bool_params` | hint | `FBT001` | `broom/bool-params` | `revive` `flag-parameter` | a custom rule |
@@ -83,11 +83,11 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 | `missing_docs` | hint | `D100` `D101` `D102` `D103` | `broom/missing-docs` | `revive` `exported` | `missing_docs` |
 | `deprecated_api` | hint | `UP` and others | `typescript/no-deprecated` | `staticcheck` `SA1019` | — |
 | `skipped_test` | hint | read by broom | read by broom | read by broom | read by broom |
-| `untested_file` | hint | read by broom | read by broom | read by broom | read by broom |
+| `untested_file` | note | read by broom | read by broom | read by broom | read by broom |
 
 8 notes on the table:
 
-- `commented_code` is a hint in TS/JS and Go, whose detectors guess.
+- `commented_code` is a note in TS/JS and Go, whose detectors guess.
 - TS/JS's `no-unused-vars` counts parameters only.
 - Unused variables and imports stay with the project's linter, which already reports them.
 - Swift's `debug_output` rule finds 4 calls: `print` · `debugPrint` · `NSLog` · `dump`.
@@ -96,7 +96,7 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 - A function handed to a call is the callee's choice and doesn't count for `bool_params`.
 - `module-state` is a `let` or `var` at module level that a function assigns.
 
-Rust gets 8 of these from clippy and rustc: `suppression` · `swallowed_error` · `unused_params` · `debug_output` · `todo` · `type_escape` · `bool_params` · `deprecated_api`. Its `skipped_test` is an `#[ignore]`, read by broom. Its `swallowed_error` is a `Result` dropped with `let _ =`, and it hints, since that can be deliberate. Its `todo` is a `todo!()` or an `unimplemented!()`. Test code is not built, so a test may be long, unwrap and print. CSS, SCSS and Less have no smell tool.
+Rust gets 8 of these from clippy and rustc: `suppression` · `swallowed_error` · `unused_params` · `debug_output` · `todo` · `type_escape` · `bool_params` · `deprecated_api`. Its `skipped_test` is an `#[ignore]`, read by broom. Its `swallowed_error` is a `Result` dropped with `let _ =`, and it is a note, since that can be deliberate. Its `todo` is a `todo!()` or an `unimplemented!()`. Test code is not built, so a test may be long, unwrap and print. CSS, SCSS and Less have no smell tool.
 
 The four `broom/` rules need Node. Without it only these smells go unmeasured, and a note says so.
 
@@ -124,7 +124,7 @@ It covers Python, TS/JS, Go, Rust and Swift, and it needs no tool: broom reads t
 
 ### F4.2.3: Untested file
 
-`untested_file` is a code file a change adds with no test file named for it anywhere in the repo, such as `foo.py` with no `test_foo.py`. A change that adds one gets a hint. It needs no tool.
+`untested_file` is a code file a change adds with no test file named for it anywhere in the repo, such as `foo.py` with no `test_foo.py`. A change that adds one gets a note. It needs no tool.
 
 A file of fewer than 30 non-blank lines is left alone. So are `__init__.py` and `conftest.py`.
 
@@ -155,7 +155,7 @@ It needs jscpd 5, which `broom doctor` checks for.
 
 ## F4.4: Dead code
 
-A file, export, symbol or import that nothing uses gets a hint when the change added it. It covers TS/JS and Python, with tests and entry points left out, unexported code in Go and what rustc calls dead in Rust.
+A file, export, symbol or import that nothing uses gets a note when the change added it. It covers TS/JS and Python, with tests and entry points left out, unexported code in Go and what rustc calls dead in Rust.
 
 What loads dynamically, such as a manifest's scripts or plugins, looks unused too. `smells_off: ["dead_code"]` turns it off per repo.
 
@@ -222,11 +222,11 @@ The numbers are the repo's own, so limits moved in `.broom.json` show, and a sme
 
 ## F4.9: Old smells in touched code
 
-When a change touches a function, a type or a file that already holds a sized smell, Claude is told to clean it in the same change. The finding says `you touched it, clean it up in this change`, so it reads apart from a smell the change made worse. It is a hint: it goes into a commit's context, stops the turn's end once and passes with a reason.
+When a change touches a function, a type or a file that already holds a sized smell, Claude is told to clean it in the same change. The finding says `you touched it, clean it up in this change`, so it reads apart from a smell the change made worse. It is a hint: it stops a commit and a turn's end, and passes with a reason.
 
 A function or a type is touched when a changed line lies inside it. A file is touched when it gained code lines besides imports. Code the change doesn't touch stays quiet, and so does a file that was only renamed.
 
-A function, a type or a file that was already past the hard limit and that the change grew can't be accepted. The block marks that line, and `broom known --accept` leaves it out and says what size to bring it back to. Stopping again still ends the turn. A smell that is newly past the hard limit can be accepted as before.
+A function, a type or a file that was already past the hard limit and that the change grew can't be accepted. The block marks that line, and `broom known --accept` leaves it out and says what size to bring it back to. A smell that is newly past the hard limit can be accepted as before.
 
 1 gap:
 

@@ -8,10 +8,12 @@ from pathlib import Path
 from support import CARD, BroomCase
 
 BAR = (
-    "broom's bar in this repo, for the code you write or touch: functions up to 50 lines (blocked past 100), files up "
+    "broom's bar in this repo, for the code you write or touch: functions up to 50 lines (hard limit 100), files up "
     "to 400 (1000), parameters up to 5 (8), nesting up to 4 (6), complexity up to 10 (20). A change is also blocked "
-    "when it adds a lint suppression without a reason, a swallowed error or commented-out code. A blocked finding "
-    'passes fixed, or with `broom known --accept "<why>"`. For a repo\'s numbers ask broom before writing a script: '
+    "when it adds a lint suppression without a reason, a swallowed error or commented-out code. A commit and a "
+    "turn's end stop on code past the first number, as on most smells a change adds, until it is fixed or accepted "
+    'with `broom known --accept "<why>"`: trying again passes nothing. Code already past its hard limit can\'t grow. '
+    "For a repo's numbers ask broom before writing a script: "
     "`broom stats` (lines, tests, coverage, suppressions, TODOs, what changes most), `broom smells` (smells, ranked; "
     "`--only function_lines` for the longest functions), `broom diagnose` (the whole repo: with those, dead code, "
     "missing doc comments, calls to deprecated APIs, duplicate tests and unused dependencies), `broom report` (what "
@@ -51,15 +53,15 @@ class LimitsCardTest(BroomCase):
     def test_the_cards_numbers_are_the_repos_own(self) -> None:
         r = self.py_repo({"limits": {"function_lines": [30, 60], "file_lines": [200, 500], "params": [3, 6]}})
         card = self.card(r)
-        self.assertIn("functions up to 30 lines (blocked past 60), files up to 200 (500), parameters up to 3 (6), "
+        self.assertIn("functions up to 30 lines (hard limit 60), files up to 200 (500), parameters up to 3 (6), "
                       "nesting up to 4 (6), complexity up to 10 (20).", card)
         r = self.py_repo({"test_limits": {"function_lines": [300, 600]}})
-        self.assertIn("functions up to 50 lines (blocked past 100)", self.card(r), "tests' limits aren't the bar for code")
+        self.assertIn("functions up to 50 lines (hard limit 100)", self.card(r), "tests' limits aren't the bar for code")
 
     def test_a_smell_the_repo_turned_off_is_left_out(self) -> None:
         r = self.py_repo({"smells_off": ["function_lines", "complexity", "commented_code"]})
         card = self.card(r)
-        self.assertIn("files up to 400 (blocked past 1000), parameters up to 5 (8), nesting up to 4 (6).", card)
+        self.assertIn("files up to 400 (hard limit 1000), parameters up to 5 (8), nesting up to 4 (6).", card)
         self.assertNotIn("functions up to", card)
         self.assertNotIn("complexity", card)
         self.assertIn("adds a lint suppression without a reason or a swallowed error.", card)

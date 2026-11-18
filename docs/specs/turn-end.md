@@ -8,7 +8,7 @@ edits  ─▶ record each file, a subagent's under its own id
 stop   ─▶ background work running? ─ yes ─▶ wait for the turn it wakes
               │ no
               ▼
-          the turn's files ─▶ check ─▶ block once, or end the turn
+          the turn's files ─▶ check ─▶ block, or end the turn
 ```
 
 ---
@@ -33,11 +33,13 @@ A turn in plan mode is not checked.
 
 ---
 
-## Blocking once
+## Blocking
 
-Findings block the turn's end with the same report as a commit. A hint blocks here too, once, so Claude cleans up now. The block is also kept as the repo's last blocked result, so `broom known --accept` serves a turn's end as it serves a commit. What a commit blocked before stays behind it in that record, for a later commit to fix.
+Findings block the turn's end with the same report as a commit, a hint with the rest. The block is also kept as the repo's last blocked result, so `broom known --accept` serves a turn's end as it serves a commit. What a commit blocked before stays behind it in that record, for a later commit to fix.
 
-Stopping again without a new edit ends the turn. It records nothing as known: what is left stays open, is written to the record and shows in the turn's summary, and a commit still stops on it. The repo's last blocked result lets go of it then, so a later `broom known --accept` can't pass it a second time. After three blocks the check gives up in the same way.
+Stopping again passes nothing: each stop checks again, with a new edit or without, and blocks while a finding is left. After three blocks the check gives up. It records nothing as known: what is left stays open and is written to the record as `gave-up`, and a commit still stops on it. The repo's last blocked result lets go of it then, so a later `broom known --accept` can't pass it a second time. The user's line opens with `broom GAVE UP after 3 blocks` and names up to five of the findings left.
+
+A note never blocks. The user's line at the turn's end tells it, once.
 
 ---
 

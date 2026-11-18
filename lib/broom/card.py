@@ -19,7 +19,9 @@ SIZED = (("function_lines", "functions", " lines"), ("file_lines", "files", ""),
 ADDED = (("suppression", "a lint suppression without a reason"), ("swallowed_error", "a swallowed error"),
          ("commented_code", "commented-out code"))
 LEAD = "broom's bar in this repo, for the code you write or touch: {}."
-ACCEPT = 'A blocked finding passes fixed, or with `broom known --accept "<why>"`.'
+ACCEPT = ('A commit and a turn\'s end stop on code past the first number, as on most smells a change adds, until it '
+          'is fixed or accepted with `broom known --accept "<why>"`: trying again passes nothing. Code already past '
+          "its hard limit can't grow.")
 ASK = ("For a repo's numbers ask broom before writing a script: `broom stats` (lines, tests, coverage, suppressions, "
        "TODOs, what changes most), `broom smells` (smells, ranked; `--only "
        "function_lines` for the longest functions), `broom diagnose` (the whole repo: with those, dead code, missing "
@@ -34,13 +36,13 @@ def smells_off(repo: Path) -> List[str]:
 
 
 def size_clauses(code: Limits, off: List[str]) -> List[str]:
-    """`functions up to 50 lines (blocked past 100)`, `files up to 400 (1000)` and so on for the sized smells not turned
+    """`functions up to 50 lines (hard limit 100)`, `files up to 400 (1000)` and so on for the sized smells not turned
     off: the first says what the number in brackets is."""
     out: List[str] = []
     for name, noun, unit in SIZED:
         if name not in off:
             soft, hard = code[name]
-            out.append(f"{noun} up to {soft}{unit} ({'' if out else 'blocked past '}{hard})")
+            out.append(f"{noun} up to {soft}{unit} ({'' if out else 'hard limit '}{hard})")
     return out
 
 

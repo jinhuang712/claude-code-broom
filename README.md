@@ -12,7 +12,7 @@ broom is a tool for the coding agent, with no model of its own. It holds Claude'
 
 - 🧰 **Sets up**: When a session opens in a repo, broom notices what's missing and Claude offers to install and configure it.
 - 🧹 **Sweeps**: At a commit and at a turn's end it formats, lints and type-checks Claude's changes and holds them back until they're clean.
-- 👃 **Smells**: A change that makes code too long, nests too deep or repeats itself gets a hint past the soft limit and a block past the hard one.
+- 👃 **Smells**: A change that makes code too long, nests too deep or repeats itself is held back until it is cleaned or accepted with a reason.
 - 👀 **Sees**: Language servers for six languages give Claude diagnostics as it edits.
 - 📊 **Diagnoses**: `broom diagnose`, `broom stats` and `broom compare` give a whole repo's numbers before a refactor and after it.
 - 🩺 **Checks up**: At session start it counts a repo's rot and tells Claude once when a number grew.
@@ -46,7 +46,7 @@ oxlint (~/code/app):
 tsc (~/code/app):
   src/pages/home.tsx:17:9  TS2345  Argument of type 'string' is not assignable to 'number'  [not in the changed files]
 
-If one predates this change or is a false positive, run `broom known --accept "<why>"`, then commit again.
+Trying again passes nothing: only a fix does, or accepting with a reason. If one predates this change or is a false positive, run `broom known --accept "<why>"`, then commit again.
 ```
 
 Claude fixes the findings and commits again. To look first, ask for a sweep in your own words:

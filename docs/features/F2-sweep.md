@@ -46,11 +46,11 @@ A Bash call that isn't a commit costs about 13 ms, or about 60 ms when the comma
 
 ## F2.2: Turn-end check
 
-When Claude stops, broom checks the files the turn changed: files Claude edited, and files changed or committed since the prompt by any means. It blocks the turn's end once, and stopping again ends the turn with what is left still open.
+When Claude stops, broom checks the files the turn changed: files Claude edited, and files changed or committed since the prompt by any means. It blocks the turn's end while a finding is left, and after three blocks it gives up and tells the user.
 
 It applies with `check_on` at `stop`, the default. It waits while background work runs, up to half an hour. A turn in plan mode is not checked. An idle turn end costs one Python start, 30 to 45 ms measured on macOS.
 
-A hint stops the turn here too, once.
+A hint stops the turn here as a block does.
 
 - **Design**: [6. A finding ends fixed or with a reason the user sees](../DESIGNS.md#6-a-finding-ends-fixed-or-with-a-reason-the-user-sees)
 - **How it works**: [Turn end](../specs/turn-end.md)
@@ -116,7 +116,7 @@ A blocked finding passes fixed, or after `broom known --accept "<why>"`, which p
 
 ### F2.5.2: A turn can end with a finding open
 
-Stopping again without a new edit ends the turn, since broom never traps one. Nothing becomes known that way: what is left stays open, shows in the turn's summary and still stops the next commit of that file.
+After three blocks broom gives up, since it never traps a turn for good. Nothing becomes known that way: what is left stays open, the user is told in a line that opens `broom GAVE UP`, and the next commit of that file still stops on it.
 
 ---
 
@@ -174,7 +174,7 @@ A block says first what was blocked and what to do, then lists the findings. Aft
 
 The message then says what is not a fix: a function cut in two at an arbitrary line, a new lint suppression and a looser `.broom.json`. The way to accept a finding comes last.
 
-A message holds at most 9,000 characters. Past that it shows fewer findings and says how many more there are. A hint given at a commit ends with the fix of up to 3 of its kinds.
+A message holds at most 9,000 characters. Past that it shows fewer findings and says how many more there are. A note given at a commit ends with the fix of up to 3 of its kinds.
 
 - **Commands**: [broom fixes](../CLI.md#broom-fixes)
 - **How it works**: [Commit check](../specs/commit-check.md)
@@ -202,7 +202,7 @@ A finding that is more than slight passes only fixed, or accepted with a reason.
 - A turn's end blocks again until what is left is fixed or accepted, so Claude goes back and finishes before it replies.
 - After three blocks broom lets go, and tells the user what is still open in words that can't be missed.
 
-What is slight is told and never blocks.
+What is slight is told and never blocks: magic numbers · TODO comments · dead code · a new file with no test · any smell a detector guesses.
 
 - **Stance**: [Fixed, or let through with a reason the user sees](../PHILOSOPHY.md#how-does-a-finding-end)
 - **Design**: [6. A finding ends fixed or with a reason the user sees](../DESIGNS.md#6-a-finding-ends-fixed-or-with-a-reason-the-user-sees)
