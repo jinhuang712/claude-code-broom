@@ -113,8 +113,9 @@ Features
 
 ## Not planned
 
-7 things the project will not build:
+8 things the project will not build:
 
+- **A model inside broom**: broom holds no model, so what needs judgment stays with Claude, such as whether a name is good.
 - **Running tests**: They are too slow for a commit check, and CI runs them. broom reads a coverage report and doesn't make one.
 - **Replacing pre-commit, lefthook or CI**: broom looks after Claude's work and leaves the user's own commits and CI to them.
 - **A linter or a formatter of its own**: broom runs existing ones.

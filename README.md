@@ -2,7 +2,7 @@
 
 > A ruler for code quality in Claude Code, and a tool for refactoring.
 
-broom holds Claude's changes to the project's own formatter, linter and type checker before they leave the session. It judges a change and the code it touches, never the rest of the repo, so a legacy repo's old warnings don't land on a small fix.
+broom is a tool for the coding agent, with no model of its own. It holds Claude's changes to the project's own formatter, linter and type checker before they leave the session, and it measures a whole repo one way when Claude is asked how the code is doing. At a change it judges that change and the code it touches, never the rest of the repo, so a legacy repo's old warnings don't land on a small fix.
 
 [中文](docs/README.zh-CN.md)
 

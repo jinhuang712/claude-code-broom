@@ -6,6 +6,12 @@
 
 ---
 
+### Docs
+
+- The docs say what broom is in two halves: a gate the user sets in Claude's flow, and a ruler Claude picks up. broom holds no model, and what needs judgment stays with the coding agent.
+
+---
+
 ## 0.23.4 — 2026-11-18
 
 ---

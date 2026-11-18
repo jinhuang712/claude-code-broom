@@ -1,6 +1,6 @@
 # Designs
 
-Claude's edits, commits and turn ends go in. Formatted files, a block with a report or a short note come out. Between the two sit hooks that start, run the project's tools on what changed and exit.
+Claude's edits, commits and turn ends go in. Formatted files, a block with a report or a short note come out. Between the two sit hooks that start, run the project's tools on what changed and exit. Beside the hooks sits the `broom` command, which Claude runs to measure a repo and which never blocks.
 
 broom is designed around 8 guidelines:
 

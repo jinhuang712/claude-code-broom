@@ -35,11 +35,12 @@
   - The want "no script to write" and its goal say a session writes no script, which several of these forms reverse.
   - The user narrowed it that day: the ability sits inside broom, so that the command line needn't cover every case. An export for a script outside broom and a library are out.
   - The user rejected SQL over a database that day.
+  - The user settled the stance behind it that day: broom holds no model, every analysis is the coding agent's, and broom hands the agent facts while it watches the agent for the user. The form of the open way is still open.
 - created: 2026-11-18
 - updated: 2026-11-18
 - status: OPEN
 - found: the user, in the session of 2026-11-18
-- next: say again what broom is and whom it serves, then judge the forms from there
+- next: judge the forms by that stance
 
 ---
 
@@ -51,13 +52,6 @@
   - That argument is about half-finished code, which a line count is not.
 - created: 2026-11-17
 - next: decide with the ledger's numbers
-
----
-
-### [P2][IDEA] A model reviews what no tool can measure
-
-- description: Naming and misplaced responsibility need judgment. A review by a model costs tokens at every turn and gives a different answer twice, so it waits until the measured checks are done.
-- created: 2026-11-17
 
 ---
 

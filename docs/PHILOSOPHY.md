@@ -4,6 +4,29 @@ Less is more. broom does a few things, quietly, and stays out of the way.
 
 ---
 
+## Who does the thinking?
+
+**Claude thinks, broom doesn't.**
+
+broom holds no model. Every analysis happens in the coding agent that uses it: which smell to clean first, whether a name is good, what to ask about a repo. broom hands that agent what it lacks.
+
+4 things a coding agent lacks:
+
+- **Facts**: It counts a repo another way each time, and broom counts one way.
+- **Memory**: Every session starts from nothing, and broom keeps the numbers and the reasons.
+- **A gate**: It can talk itself into leaving a finding, and broom can't be talked round.
+- **The moment**: It doesn't stop before a commit to check its own work, and broom is there.
+
+---
+
+## Whom does broom serve?
+
+**It helps Claude, and it watches Claude for the user.**
+
+These are two relations, and they run opposite ways. Facts and memory are Claude's to ask for, so there broom is a tool Claude picks up. The gate is the user's hold on Claude, so it doesn't wait to be called: hooks put it into the flow, before each commit and at each turn's end. A feature belongs to one of the two.
+
+---
+
 ## Whose rules decide what is clean?
 
 **The project's tools, not ours.**

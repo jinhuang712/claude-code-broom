@@ -6,13 +6,13 @@
 
 ## In short
 
-Claude finishes a change in minutes. The formatter, the linter and the type checker of the project hear of it only when CI runs or a reviewer reads it. broom is one plugin that holds Claude's changes to the project's own rules before they leave the session.
+Claude finishes a change in minutes. The formatter, the linter and the type checker of the project hear of it only when CI runs or a reviewer reads it. Asked how a repo is doing, each session counts it another way. broom is one plugin that holds Claude's changes to the project's own rules before they leave the session, and gives Claude one way to measure a repo.
 
 ---
 
 ## Why it should exist
 
-Claude writes code quickly, and nothing holds that code to the project's formatter, linter and type checker until CI or a human reviewer does. The pieces to fix that exist, but they don't add up.
+Claude writes code quickly, and nothing holds that code to the project's formatter, linter and type checker until CI or a human reviewer does. Claude can analyze a repo too, but it counts another way each time and remembers nothing from the last session. The pieces to fix that exist, but they don't add up.
 
 ---
 
@@ -70,13 +70,12 @@ To learn how long the files are, which tests are skipped or what nothing uses, a
 
 ## The idea
 
-One plugin does three things:
+broom holds no model. Every analysis stays with the coding agent, and broom gives that agent what it lacks, in two ways:
 
-1. **Set up**: It detects what a repo needs, then installs and configures it with the user's consent.
-2. **Sweep**: At the right moments it formats, lints and type-checks Claude's changes and holds them back until they're clean.
-3. **See**: It declares language servers so Claude gets diagnostics as it edits.
+1. **A gate the user sets**: Hooks put broom into Claude's flow. Before each commit and at each turn's end it checks Claude's changes and holds them back until they're clean.
+2. **A ruler Claude picks up**: On request broom measures a whole repo one way and remembers the result: its smells, its numbers and its rot.
 
-Around these three it holds one bar for code smells. Each change is measured against the bar while it is made, and a whole repo is measured against it when someone plans a refactor.
+Both rest on the project's own tools. broom detects what a repo needs and sets it up with the user's consent, and it declares language servers so Claude gets diagnostics as it edits. It holds one bar for code smells: each change is measured against it while it is made, and a whole repo when someone plans a refactor.
 
 ---
 
@@ -98,19 +97,20 @@ Around these three it holds one bar for code smells. Each change is measured aga
 
 ## What we don't want
 
-5 things the project refuses to become:
+6 things the project refuses to become:
 
 - **A replacement for pre-commit, lefthook or CI**: broom looks after Claude's work and leaves the user's own commits and CI to them.
 - **A linter or a formatter**: broom runs existing ones.
 - **A style**: Defaults exist only where a project has none.
 - **A test runner**: Tests are too slow for a commit check, and CI runs them. broom reads the coverage report a project's own run wrote.
 - **A part of another plugin**: broom stands alone.
+- **A model that judges code**: broom holds no model, and what needs judgment stays with the coding agent.
 
 ---
 
 ## Who it is for
 
-A developer who lets Claude Code change a repo and wants those changes to meet the repo's rules without watching each one. The same developer, the day they take over an old repo and plan its refactor.
+A developer who lets Claude Code change a repo and wants those changes to meet the repo's rules without watching each one. The same developer, the day they take over an old repo and plan its refactor. broom speaks to Claude on that developer's behalf: its blocks, its fix lines and its numbers are written for Claude to act on.
 
 ---
 

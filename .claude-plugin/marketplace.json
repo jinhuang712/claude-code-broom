@@ -11,7 +11,7 @@
     {
       "name": "broom",
       "source": "./",
-      "description": "Sets up formatters, linters and language servers, and sweeps when it should",
+      "description": "Holds Claude's changes to the project's rules, and measures a repo's smells and rot",
       "category": "development",
       "tags": ["format", "lint", "pre-commit", "lsp", "quality"]
     }
