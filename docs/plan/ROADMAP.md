@@ -336,11 +336,12 @@ The user asked on 2026-11-17 for a round of polish and self-test once the featur
 
 The user set this on 2026-11-18: a check that lets Claude carry on puts Claude's speed before the code. Three moments get their own weight, and a finding ends fixed or with a reason the user sees.
 
-**Delivers** (3):
+**Delivers** (4):
 
 - [F2.10: Check after an edit](../features/F2-sweep.md#f210-check-after-an-edit)
 - [F2.11: Nothing is waved through](../features/F2-sweep.md#f211-nothing-is-waved-through)
 - [F2.12: A pass is told to the user](../features/F2-sweep.md#f212-a-pass-is-told-to-the-user)
+- [F2.13: A turn that changed code shows that tests ran](../features/F2-sweep.md#f213-a-turn-that-changed-code-shows-that-tests-ran)
 
 **Exit criteria** (2):
 

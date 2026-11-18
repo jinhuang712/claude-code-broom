@@ -16,7 +16,8 @@ F2: Sweep
 ├── F2.9: Messages that say how to fix — the fix beside the finding
 ├── F2.10: Check after an edit — format and what is judged in milliseconds
 ├── F2.11: Nothing is waved through — a finding ends fixed or accepted with a reason
-└── F2.12: A pass is told to the user — Claude says what it left and why
+├── F2.12: A pass is told to the user — Claude says what it left and why
+└── F2.13: A turn that changed code shows that tests ran — or that counts as left over
 ```
 
 A sweep formats, lints and type-checks Claude's changes and holds them back until they're clean. It uses the project's own tools and configs.
@@ -213,4 +214,16 @@ What is slight is told and never blocks.
 
 When Claude accepts a finding, it tells the user what it left and why in its reply, such as a refactor that comes in a later step. The turn's summary names each accepted finding with its reason. A finding the user agreed to leave, after talking it through, is marked as theirs.
 
+An accepted finding is a debt on record and not a closed case: it stays on a list and comes due again. A turn that accepts many says so in words that can't be missed, so a reason never becomes the cheap way out.
+
 - **Stance**: [Fixed, or let through with a reason the user sees](../PHILOSOPHY.md#how-does-a-finding-end)
+
+---
+
+## F2.13: A turn that changed code shows that tests ran
+
+At a turn's end, a turn that changed code and shows no trace of a test run has work left over, and it is told so like any finding. broom looks for the trace and runs no test itself.
+
+How the trace is found is still open.
+
+- **Stance**: [At three moments of Claude's flow](../PHILOSOPHY.md#when-may-a-check-interrupt)
