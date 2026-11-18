@@ -8,7 +8,7 @@ This part finds what a repo needs and lacks, and remembers what the user answere
 
 `broom doctor` scans for marker files such as `go.mod`, `package.json`, `Cargo.toml` and `pyproject.toml`, three levels deep and at up to 20 projects per language. It lists the tools each language needs and runs each one to prove it works. That catches a rustup proxy without its component, and macOS's `swift` shim without Xcode or the Command Line Tools.
 
-CSS has no marker file. It goes by the `.css`, `.scss` and `.less` files git tracks at any depth, each counted with its nearest `package.json`, else the repo root. Swift goes by its files too, since an Xcode app has no `Package.swift`. One `git ls-files` lists both.
+CSS has no marker file. It goes by the `.css`, `.scss` and `.less` files git tracks at any depth, each counted with its nearest `package.json`, else the repo root. Swift goes by its files too, since an Xcode app has no `Package.swift`. So does Python, since a repo of scripts has no `pyproject.toml`: a `.py` file counts with its nearest `pyproject.toml`, `setup.py` or `requirements.txt`, else the repo root. One `git ls-files` lists all three.
 
 Untracked files are left out: listing them walks the working tree, about 160 ms on a 6,000-file repo against 25 ms for tracked files.
 

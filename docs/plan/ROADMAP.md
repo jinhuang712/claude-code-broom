@@ -301,7 +301,7 @@ The user asked on 2026-11-17 for a round of polish and self-test once the featur
 **Delivers** (8):
 
 - [F1.5: Protection list](../features/F1-setup.md#f15-protection-list)
-- [I10: No fresh session has used broom end to end](ISSUES.md#i10-no-fresh-session-has-used-broom-end-to-end)
+- Fresh sessions used broom end to end, on a throwaway repo and on a public Python project: the limits card, the setup offer, a block with its fix lines, a fix, an accept with a reason, the turn's summary, the check-up's line and a checked commit, done on 2026-11-18.
 - [I8: A hole in the record](ISSUES.md#i8-a-hole-in-the-record)
 - A fresh session answers ten questions about a repo from broom alone, after five runs and the gaps each one showed, done on 2026-11-17.
 - [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)

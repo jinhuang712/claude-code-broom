@@ -6,6 +6,16 @@
 
 ---
 
+## 0.23.1 — 2026-11-18
+
+---
+
+### Setup
+
+- `broom doctor` finds Python by the `.py` files git tracks, also in a repo with no `pyproject.toml`, `setup.py` or `requirements.txt`. Before, such a repo was told `Languages: none found` and `All set.`, so a missing ruff or a missing git hook was never offered, while its commits were linted all the same.
+
+---
+
 ### Check-up
 
 - The line that says a counter grew ends with the command that shows where the number sits, `broom diagnose`. Before, a session that doubted the number counted again by hand and got another one.

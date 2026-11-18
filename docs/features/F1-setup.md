@@ -28,7 +28,7 @@ It checks 8 things:
 - No other plugin starts a language server for the same files.
 - `.broom.json` is valid.
 
-It looks three levels deep and at up to 20 projects per language. It flags unknown keys and values in `.broom.json`.
+It looks three levels deep and at up to 20 projects per language. Python files git tracks count as Python also where no project file sits above them. It flags unknown keys and values in `.broom.json`.
 
 After the gaps it lists the optional tools for the repo's languages, each with what it finds and its install command. An optional tool is no gap: it is never offered at session start and never changes the exit code.
 

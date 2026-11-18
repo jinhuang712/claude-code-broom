@@ -95,3 +95,12 @@
 - found: the look for missed rot at the end of CP4
 - related: [F11.5: Missing comments](../features/F11-checkup.md#f115-missing-comments)
 
+---
+
+### [P2][IDEA] A Python type check in the sweep
+
+- description: Python has no type check at a commit or a turn's end, so a type error reaches Claude only through pyright as it edits. A project that configures mypy or pyright already says which checker it wants. Either would add seconds to each check.
+- created: 2026-11-18
+- found: a fresh session's commit on a public Python project that configures both, where the commit check ran ruff alone
+- related: [F8.4: Python](../features/F8-languages.md#f84-python)
+

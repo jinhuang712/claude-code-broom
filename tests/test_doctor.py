@@ -29,6 +29,15 @@ class DoctorTest(BroomCase):
         (r / ".broom.json").write_text('{"smells": "off"}')
         self.assertNotIn("node", self.tools(r, self.fake_path()), "nothing here needs Node once smells are off")
 
+    def test_python_with_no_project_file_is_found_by_its_tracked_files(self) -> None:
+        r = self.repo({"tools/sync.py": "print(1)\n", "lib/pkg/pyproject.toml": "", "lib/pkg/a.py": "A = 1\n",
+                       "venv/x.py": "X = 1\n"})
+        result = self.doctor(r, self.fake_path())
+        self.assertEqual(sorted(result["languages"]["py"]), [".", "lib/pkg"],
+                         "a script takes the root, a file under a pyproject.toml its folder, and an environment none")
+        missing = {i["tool"] for i in result["items"] if i["lang"] == "py" and i["status"] == "missing"}
+        self.assertIn("ruff", missing, "a repo of scripts is told its linter is missing")
+
     def test_doctor_reports_missing_tools_with_install_commands(self) -> None:
         r = self.go_repo()
         result = self.doctor(r, self.fake_path(keep=("go", "gofmt")))

@@ -30,10 +30,13 @@ CONFIG_NAMES = (*GOLANGCI_CFG, *BIOME_CFG, *OXFMT_CFG, *PRETTIER_CFG, *OXLINT_CF
                 *STYLELINT_CFG, SWIFTLINT_CFG, SWIFT_FORMAT_CFG, SWIFTFORMAT_CFG, "Package.swift", *MARKERS,
                 *(lock for lock, _ in LOCKFILES))
 MAX_PROJECTS = 20
+PY_MARKERS = tuple(name for name, lang in MARKERS.items() if lang == "py")
+TRACKED = ("*.css", "*.scss", "*.less", "*.swift", "*.py")
 
 
 def scan(root: Path, max_depth: int = 3) -> Dict[str, List[Path]]:
-    """Project directories per language, from marker files up to `max_depth` below the root, and CSS's and Swift's."""
+    """Project directories per language, from marker files up to `max_depth` below the root, and those of the
+    languages found by their tracked files (see `tracked_projects`)."""
     found: Dict[str, List[Path]] = {}
     base = len(root.parts)
     for d, dirs, files in os.walk(root):
@@ -43,35 +46,48 @@ def scan(root: Path, max_depth: int = 3) -> Dict[str, List[Path]]:
             projects = found.setdefault(lang, [])
             if name in files and Path(d) not in projects and len(projects) < MAX_PROJECTS:
                 projects.append(Path(d))
-    found.update(tracked_projects(root))
-    return {lang: dirs for lang, dirs in found.items() if dirs}
+    for lang, dirs in tracked_projects(root).items():
+        projects = found.setdefault(lang, [])
+        projects.extend(d for d in dirs if d not in projects)
+    return {lang: dirs[:MAX_PROJECTS] for lang, dirs in found.items() if dirs}
+
+
+def home_markers(rel: Path) -> Tuple[str, ...]:
+    """The project files that mark the home of a tracked file, by its language."""
+    if rel.suffix == ".swift":
+        return ("Package.swift",)
+    return PY_MARKERS if rel.suffix == ".py" else ("package.json",)
+
+
+def langs_of(rel: Path) -> Tuple[str, ...]:
+    """The languages a tracked file counts for: a dialect of CSS counts for CSS too."""
+    if rel.suffix in (".swift", ".py"):
+        return ("swift" if rel.suffix == ".swift" else "py",)
+    return ("css", rel.suffix[1:]) if rel.suffix in DIALECT_DEFAULTS else ("css",)
 
 
 def tracked_projects(root: Path) -> Dict[str, List[Path]]:
-    """`css`, plus `scss` and `less` for those dialects, and `swift`: the projects holding such files, a CSS file's
-    being its nearest package.json and a Swift file's its nearest Package.swift, else the root. Neither language
-    has a project file to find everywhere (an Xcode app has no Package.swift), so this goes by the files git tracks,
+    """`css`, plus `scss` and `less` for those dialects, `swift` and `py`: the projects holding such files, a CSS
+    file's being its nearest package.json, a Swift file's its nearest Package.swift and a Python file's its nearest
+    pyproject.toml, setup.py or requirements.txt, else the root. None of them has a project file to find everywhere
+    (an Xcode app has no Package.swift, a repo of scripts no pyproject.toml), so this goes by the files git tracks,
     at any depth; generated and vendored ones don't count. Untracked files would need a walk of the working tree:
     160 ms instead of 25 on a 6,000-file repo, too slow for SessionStart."""
-    out = git(["ls-files", "--cached", "--", "*.css", "*.scss", "*.less", "*.swift"], root) or ""
-    homes: Dict[Tuple[Path, str], Path] = {}
-    found: Dict[str, List[Path]] = {"css": [], "scss": [], "less": [], "swift": []}
+    out = git(["ls-files", "--cached", "--", *TRACKED], root) or ""
+    homes: Dict[Tuple[Path, Tuple[str, ...]], Path] = {}
+    found: Dict[str, List[Path]] = {"css": [], "scss": [], "less": [], "swift": [], "py": []}
     for name in out.splitlines():
         rel = Path(name)
         if name.endswith(".min.css") or any(p in SKIP_DIRS or p.startswith(".") for p in rel.parts[:-1]):
             continue
         d = (root / rel).parent
-        marker = "Package.swift" if rel.suffix == ".swift" else "package.json"
-        if (d, marker) not in homes:
-            project = find_up(d, [marker], root)
-            homes[d, marker] = project.parent if project else root
-        if rel.suffix == ".swift":
-            langs: Tuple[str, ...] = ("swift",)
-        else:
-            langs = ("css", rel.suffix[1:]) if rel.suffix in DIALECT_DEFAULTS else ("css",)
-        for lang in langs:
-            if homes[d, marker] not in found[lang] and len(found[lang]) < MAX_PROJECTS:
-                found[lang].append(homes[d, marker])
+        markers = home_markers(rel)
+        if (d, markers) not in homes:
+            project = find_up(d, list(markers), root)
+            homes[d, markers] = project.parent if project else root
+        for lang in langs_of(rel):
+            if homes[d, markers] not in found[lang] and len(found[lang]) < MAX_PROJECTS:
+                found[lang].append(homes[d, markers])
     return found
 
 
