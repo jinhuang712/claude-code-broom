@@ -30,8 +30,12 @@ It reads commands written as `git -C dir commit`, `T=dir; git -C $T commit` and 
 
 A Bash call that isn't a commit costs about 13 ms, or about 60 ms when the command mentions git and commit without committing.
 
-- **Design**: [2. An idle hook exits in milliseconds](../DESIGNS.md#2-an-idle-hook-exits-in-milliseconds) · [4. A finding counts only where the change made things worse](../DESIGNS.md#4-a-finding-counts-only-where-the-change-made-things-worse)
-- **How it works**: [Commit check](../specs/commit-check.md) · [What counts](../specs/what-counts.md)
+- **Design**:
+  - [2. An idle hook exits in milliseconds](../DESIGNS.md#2-an-idle-hook-exits-in-milliseconds)
+  - [4. A finding counts only where the change made things worse](../DESIGNS.md#4-a-finding-counts-only-where-the-change-made-things-worse)
+- **How it works**:
+  - [Commit check](../specs/commit-check.md)
+  - [What counts](../specs/what-counts.md)
 - **Why**: [002: The commit hook reads every Bash call](../specs/decisions/002-every-bash-call.md)
 
 ---
@@ -118,7 +122,9 @@ Stopping again without a new edit ends the turn, since broom never traps one. No
 
 `broom sweep` does the same from the command line. A sweep of the whole repo only reports unless `--fix` is given.
 
-- **Commands**: [broom sweep](../CLI.md#broom-sweep) · [broom fmt](../CLI.md#broom-fmt)
+- **Commands**:
+  - [broom sweep](../CLI.md#broom-sweep)
+  - [broom fmt](../CLI.md#broom-fmt)
 
 ---
 
@@ -130,7 +136,9 @@ A commit or a stop that a tool kept from finishing is never blocked for it. A ch
 
 A hook still running after 20 seconds writes `hook-trace.log` in broom's data directory.
 
-- **Design**: [3. A hook run ends within 30 seconds](../DESIGNS.md#3-a-hook-run-ends-within-30-seconds) · [5. A tool that is missing or fails never blocks](../DESIGNS.md#5-a-tool-that-is-missing-or-fails-never-blocks)
+- **Design**:
+  - [3. A hook run ends within 30 seconds](../DESIGNS.md#3-a-hook-run-ends-within-30-seconds)
+  - [5. A tool that is missing or fails never blocks](../DESIGNS.md#5-a-tool-that-is-missing-or-fails-never-blocks)
 - **How it works**: [Hook limits](../specs/hook-limits.md)
 - **Why**:
   - [024: Tools are kept to a quarter of the cores](../specs/decisions/024-thread-caps.md)
@@ -152,6 +160,7 @@ A change that loosens the bar is listed in the turn's summary and in the record.
 A `.broom.json` loosened by a command, such as `sed`, is seen at the turn's end. With `check_on` at `commit` no turn's end looks, and such a change is missed when the content of every committed file had already passed.
 
 - **Stance**: [Say what happened](../PHILOSOPHY.md#what-happens-to-what-was-skipped)
+- **How it works**: [Record](../specs/record.md)
 
 ---
 

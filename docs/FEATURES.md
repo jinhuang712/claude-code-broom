@@ -116,7 +116,7 @@ Features
 7 things the project will not build:
 
 - **Running tests**: They are too slow for a commit check, and CI runs them. broom reads a coverage report and doesn't make one.
-- **Replacing pre-commit, lefthook or CI**: broom looks after Claude's work, and the user's own commits and CI stay theirs.
+- **Replacing pre-commit, lefthook or CI**: broom looks after Claude's work and leaves the user's own commits and CI to them.
 - **A linter or a formatter of its own**: broom runs existing ones.
 - **A style**: Defaults exist only where a project has none.
 - **Layering rules without a project's own**: Layers differ per project, and none of the author's repos declares any.

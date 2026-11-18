@@ -16,6 +16,8 @@ Settings start at defaults that suit most people and are never asked. The user c
 
 ## F7.1: User settings
 
+Four settings sit in `/config`, each with a default.
+
 | Setting | Default | Other values | Why it exists |
 |---|---|---|---|
 | `format_on` | `commit` | `edit` · `off` | some want each edit formatted at once |

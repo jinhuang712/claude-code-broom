@@ -22,15 +22,20 @@ Issues
 ## I1: The moved text doesn't meet the wording rules
 
 - type: docs
-- why: The docs pass moved text into the new docs and kept much of its wording. Bullets with several commas remain. CHANGELOG's sections are dated and not yet grouped by area. README has no hero image and no architecture diagram.
+- why:
+  - The changelog's sections before 0.18.2 keep their old wording, with long bullets of several commas.
+  - README has no hero image.
 - found: the docs pass, 2026-11-17
+- next: [A hero image for the README](TODO.md#p1discussion-a-hero-image-for-the-readme)
 
 ---
 
 ## I2: Three paths call the same tools
 
 - type: refactor
-- why: The lint check, the scratch copy and the real tree each start the same linters on the same files. A cache keeps the base of a change from being measured twice, and the rest still runs more than once.
+- why:
+  - The lint check, the scratch copy and the real tree each start the same linters on the same files.
+  - A cache keeps the base of a change from being measured twice, and the rest still runs more than once.
 - found: a review of the hooks' cost, 2026-11-16
 - touches:
   - [F2.1: Commit check](../features/F2-sweep.md#f21-commit-check)
@@ -42,7 +47,10 @@ Issues
 ## I3: The cause of the reported Stop hang is unconfirmed
 
 - type: fix
-- why: A Stop hook ran until Claude Code ended it at its timeout, 18 times in one session. 0.18.1 removed every wait that had no bound, and the hang didn't reproduce here, so the cause on that machine is not known.
+- why:
+  - A Stop hook ran until Claude Code ended it at its timeout, 18 times in one session.
+  - 0.18.1 removed every wait that had no bound.
+  - The hang didn't reproduce here, so the cause on that machine is not known.
 - found: a user's report, 2026-11-16
 - touches:
   - [F2.7: Time limit](../features/F2-sweep.md#f27-time-limit)
@@ -53,7 +61,10 @@ Issues
 ## I5: Five rules sit on an alpha plugin API
 
 - type: refactor
-- why: `bool_params`, `type_lines`, `globals`, `commented_code` and `missing_docs` in TS/JS come from rules of broom's own, loaded through oxlint's JS plugins. oxlint's docs call that feature alpha, and it needs Node.
+- why:
+  - 5 smells in TS/JS come from rules of broom's own: `bool_params` · `type_lines` · `globals` · `commented_code` · `missing_docs`.
+  - They load through oxlint's JS plugins, which oxlint's docs call alpha.
+  - They need Node.
 - found: a review of what broom wrote itself, 2026-11-17
 - touches:
   - [F4.2: Occurrence smells](../features/F4-smells.md#f42-occurrence-smells)

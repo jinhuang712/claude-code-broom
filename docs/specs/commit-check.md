@@ -19,7 +19,10 @@ Bash call ─▶ hooks/commit.sh ─▶ mentions git and commit? ─ no ─▶ e
 ## Reading the command
 
 1. The hook sees every Bash call. A shell prefilter leaves unless the input mentions both `git` and `commit`.
-2. `bin/broom` reads the command and leaves unless it could commit. It follows `cd`, `git -C`, variables the command sets, `-a`, `--no-verify` and a `git add` in the same command. The body of a heredoc is left out before the command is read, so a message's words are no flags and its apostrophe is no quote. A redirection such as `2>&1` or `> file` is no path of the commit.
+2. `bin/broom` reads the command and leaves unless it could commit.
+   - It follows 6 things: `cd` · `git -C` · variables the command sets · `-a` · `--no-verify` · a `git add` in the same command.
+   - The body of a heredoc is left out before the command is read, so a message's words are no flags and its apostrophe is no quote.
+   - A redirection such as `2>&1` or `> file` is no path of the commit.
 3. It works out the files the commit takes. The hook runs before the command, so for `git add . && git commit` it predicts what that add will stage.
 
 A commit with `--no-verify` or `--dry-run` is not checked.

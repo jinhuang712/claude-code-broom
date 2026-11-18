@@ -64,10 +64,10 @@ The base is measured in a temporary checkout, which is removed afterwards. A too
 
 4 kinds of question:
 
-- **Size**: lines of code by language and by folder, with tests counted apart, and the longest files.
-- **Tests**: how many test files and test cases there are, which are skipped, which code files have no test file by name, and what the project's coverage report says.
-- **Rot**: the lint suppressions by kind, the TODO comments with how many are older than 180 days and the oldest with the day each was written, and the skipped tests.
-- **History**: the files that changed most in the last 90 days, and the pairs of files that changed together.
+- **Size**: lines of code by language and by folder with tests counted apart · the longest files.
+- **Tests**: the number of test files and test cases · the skipped ones · the code files with no test file by name · what the project's coverage report says.
+- **Rot**: the lint suppressions by kind · the TODO comments with how many are older than 180 days · the oldest TODO comments with the day each was written · the skipped tests.
+- **History**: the files that changed most in the last 90 days · the pairs of files that changed together.
 
 Paths on the command line narrow all four to a file or a folder. A question it can't answer is said so, with what is missing.
 
@@ -87,3 +87,5 @@ The longest functions and types come from `broom smells --only function_lines` a
 ## F10.5: Claude knows what to ask
 
 At the start of a session Claude is told in a line which broom command answers a question about the repo, so it asks broom before it writes a script. The line is the end of the limits card. `/broom:clean` names the commands for a cleanup: the diagnosis first, the comparison at the end.
+
+- **How it works**: [Setup](../specs/setup.md)

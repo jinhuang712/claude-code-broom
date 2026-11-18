@@ -28,7 +28,7 @@ The ledger also notes how many seconds each check took, and each time a hook fai
 
 ## F9.2: Turn summary
 
-When a turn let something through, the user sees one line at its end, such as `broom let 3 through this turn: 2 magic_numbers (retry), 1 function_lines (accepted: <why>)`. A turn that let nothing through says nothing more than before.
+When a turn let something through, the user sees one line at its end, such as `broom let 3 through this turn: 2 magic_numbers (turn-ended), 1 function_lines (accepted: <why>)`. A turn that let nothing through says nothing more than before.
 
 2 gaps:
 

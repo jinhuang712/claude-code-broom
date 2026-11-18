@@ -47,7 +47,10 @@ Claude's work comes out formatted, lint-clean and type-correct by the project's 
 
 **Want**: clean work without asking.
 
-**Checks**: [F2.1: Commit check](../features/F2-sweep.md#f21-commit-check) · [F2.2: Turn-end check](../features/F2-sweep.md#f22-turn-end-check)
+**Checks**:
+
+- [F2.1: Commit check](../features/F2-sweep.md#f21-commit-check)
+- [F2.2: Turn-end check](../features/F2-sweep.md#f22-turn-end-check)
 
 **Acceptance**: The test suite passes. It commits and stops in temporary repos and expects the block.
 
@@ -89,7 +92,11 @@ A finding is fixed, or it leaves a reason the user can see.
 
 **Want**: nothing passes silently.
 
-**Checks**: [F9.1: Ledger](../features/F9-record.md#f91-ledger) · [F9.2: Turn summary](../features/F9-record.md#f92-turn-summary) · [F2.5.1: A reason for every pass](../features/F2-sweep.md#f251-a-reason-for-every-pass)
+**Checks**:
+
+- [F9.1: Ledger](../features/F9-record.md#f91-ledger)
+- [F9.2: Turn summary](../features/F9-record.md#f92-turn-summary)
+- [F2.5.1: A reason for every pass](../features/F2-sweep.md#f251-a-reason-for-every-pass)
 
 **Acceptance**: A test lets a finding through by each way broom has. Each way leaves a ledger line with a reason, and the turn's summary names it.
 
@@ -131,7 +138,10 @@ A session with broom installed gets a repo's numbers from broom.
 
 **Want**: no script to write.
 
-**Checks**: [F10.4: Numbers on request](../features/F10-diagnosis.md#f104-numbers-on-request) · [F10.5: Claude knows what to ask](../features/F10-diagnosis.md#f105-claude-knows-what-to-ask)
+**Checks**:
+
+- [F10.4: Numbers on request](../features/F10-diagnosis.md#f104-numbers-on-request)
+- [F10.5: Claude knows what to ask](../features/F10-diagnosis.md#f105-claude-knows-what-to-ask)
 
 **Acceptance**: A fresh session is asked ten questions about a repo: its size, its longest functions, its skipped tests, its untested files and each rot counter among them. It answers all ten with broom commands and writes no script.
 
@@ -149,7 +159,10 @@ How much of what broom blocks gets fixed. A low rate for one rule means the rule
 
 **Want**: a ruler in everyday work.
 
-**Checks**: [F9.3: Report](../features/F9-record.md#f93-report) · [F9.4: Tiers by fix rate](../features/F9-record.md#f94-tiers-by-fix-rate)
+**Checks**:
+
+- [F9.3: Report](../features/F9-record.md#f93-report)
+- [F9.4: Tiers by fix rate](../features/F9-record.md#f94-tiers-by-fix-rate)
 
 **How**: The ledger of the author's machine over 30 days.
 
@@ -159,7 +172,7 @@ How much of what broom blocks gets fixed. A low rate for one rule means the rule
 M1 = findings fixed after a block / findings blocked        per rule, and over all rules
 ```
 
-**Last value**: open, since broom keeps no record of fixes yet.
+**Last value**: open, since the ledger began on 2026-11-17 and holds too few days of use.
 
 ---
 
@@ -223,7 +236,10 @@ An edit or a turn's end with nothing to check costs one Python start.
 
 **Want**: nothing to pay when idle.
 
-**Checks**: [3. A hook run ends within 30 seconds](../DESIGNS.md#3-a-hook-run-ends-within-30-seconds) · [F2.7: Time limit](../features/F2-sweep.md#f27-time-limit)
+**Checks**:
+
+- [3. A hook run ends within 30 seconds](../DESIGNS.md#3-a-hook-run-ends-within-30-seconds)
+- [F2.7: Time limit](../features/F2-sweep.md#f27-time-limit)
 
 **Limit**: 30 seconds.
 

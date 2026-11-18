@@ -59,7 +59,7 @@ Without a project linter, stylelint runs with broom's defaults, which report err
 
 - The defaults accept Tailwind's directives and functions at v3 and v4, and CSS modules.
 - They skip build output and `*.min.css`.
-- The SCSS and Less configs must be installed in the project, or those files aren't linted, with a note.
+- Without the SCSS and Less configs installed in the project those files aren't linted, with a note.
 - Sass's indented syntax and Stylus aren't covered.
 - `<style>` blocks in `.vue` or `.svelte` files and CSS-in-JS aren't covered.
 - In Less, each detached ruleset call such as `@r();` draws a false positive from the hex rule.
@@ -72,7 +72,7 @@ SwiftLint runs with the project's `.swiftlint.yml`, else with broom's defaults. 
 
 4 limits:
 
-- The compile check covers SwiftPM packages only, since an Xcode project needs `xcodebuild`, a scheme and minutes.
+- The compile check covers SwiftPM packages only, since an Xcode project needs `xcodebuild` with a scheme and minutes.
 - It counts errors only, because SwiftPM prints warnings just for the files it recompiles.
-- With macOS's Command Line Tools and no Xcode, the check builds the sources and leaves the tests out, with a note.
+- With macOS's Command Line Tools and no Xcode the check builds the sources and leaves the tests out, with a note.
 - A cold `swift build` can time out.

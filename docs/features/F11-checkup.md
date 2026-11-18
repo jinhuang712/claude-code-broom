@@ -15,7 +15,9 @@ A check-up looks for rot: things that get worse without any one change being at 
 
 The same numbers go into the whole-repo diagnosis, where every one is listed whether it grew or not.
 
-- **Stance**: [Clean as you go](../PHILOSOPHY.md#when-is-a-smell-cleaned) · [Never in the way](../PHILOSOPHY.md#when-may-a-check-interrupt)
+- **Stance**:
+  - [Clean as you go](../PHILOSOPHY.md#when-is-a-smell-cleaned)
+  - [Never in the way](../PHILOSOPHY.md#when-may-a-check-interrupt)
 
 ---
 
@@ -29,16 +31,16 @@ The list grows: each checkpoint's end looks for kinds broom still misses.
 | Copies of code | [F4.3: Duplicate code](F4-smells.md#f43-duplicate-code) |
 | Modules that import one another | [F4.5: Cycles](F4-smells.md#f45-cycles) |
 | Files that are bad and often changed | [F10.2: Hotspots by churn](F10-diagnosis.md#f102-hotspots-by-churn) |
-| Lint suppressions that pile up | F11.1 |
-| Skipped tests that pile up | F11.1 |
-| TODO comments nobody comes back to | F11.1 |
-| Code the tests never reach | F11.2 |
-| Tests that repeat one another | F11.3 |
-| Code nothing uses | F11.4 |
-| Public code with no comment | F11.5 |
-| Dependencies with known vulnerabilities | F11.6 |
-| Packages nothing imports | F11.6 |
-| Calls to deprecated APIs | F11.7 |
+| Lint suppressions that pile up | [F11.1: Counters](#f111-counters) |
+| Skipped tests that pile up | [F11.1: Counters](#f111-counters) |
+| TODO comments nobody comes back to | [F11.1: Counters](#f111-counters) |
+| Code the tests never reach | [F11.2: Test coverage](#f112-test-coverage) |
+| Tests that repeat one another | [F11.3: Duplicate tests](#f113-duplicate-tests) |
+| Code nothing uses | [F11.4: Dead code in the whole repo](#f114-dead-code-in-the-whole-repo) |
+| Public code with no comment | [F11.5: Missing comments](#f115-missing-comments) |
+| Dependencies with known vulnerabilities | [F11.6: Dependencies](#f116-dependencies) |
+| Packages nothing imports | [F11.6: Dependencies](#f116-dependencies) |
+| Calls to deprecated APIs | [F11.7: Deprecated APIs](#f117-deprecated-apis) |
 
 ---
 
@@ -149,7 +151,9 @@ A tool that isn't installed is named once in the report with its install command
 - Swift has no such tool in broom.
 
 - **Design**: [7. Nothing is installed or set without a yes](../DESIGNS.md#7-nothing-is-installed-or-set-without-a-yes)
-- **Commands**: [broom diagnose](../CLI.md#broom-diagnose) · [broom doctor](../CLI.md#broom-doctor)
+- **Commands**:
+  - [broom diagnose](../CLI.md#broom-diagnose)
+  - [broom doctor](../CLI.md#broom-doctor)
 - **How it works**: [Diagnosis](../specs/diagnosis.md)
 - **Why**:
   - [029: A tool broom can do without is listed and never asked for](../specs/decisions/029-optional-tools.md)
@@ -165,7 +169,7 @@ It comes from the tools broom already runs:
 
 | Language | From |
 |---|---|
-| Python | ruff's rules for the standard library, numpy, pandas and pytest |
+| Python | ruff's rules for the standard library · numpy · pandas · pytest |
 | Go | staticcheck's `SA1019` |
 | Rust | rustc's `deprecated` lint |
 | TS/JS | oxlint's `typescript/no-deprecated`, which needs tsgolint |

@@ -44,12 +44,12 @@ The other docs are read when the work needs them.
 
 8 facts:
 
-- The root holds `README.md` · `AGENTS.md` · `CHANGELOG.md`.
+- The root holds 3 files: `README.md` · `AGENTS.md` · `CHANGELOG.md`.
 - `.claude/CLAUDE.md` only loads this file.
 - [docs/](docs/) holds the reasons and the contract: PROPOSAL · PHILOSOPHY · DESIGNS · FEATURES · CLI · INSTALL · GLOSSARY · CONTRIBUTING.
 - [docs/features/](docs/features/) holds one file per feature group.
 - [docs/specs/](docs/specs/) holds how each part works, with [docs/specs/decisions/](docs/specs/decisions/) under it.
-- [docs/plan/](docs/plan/) holds GOALS · ROADMAP · ISSUES · TODO.
+- [docs/plan/](docs/plan/) holds 4 docs: GOALS · ROADMAP · ISSUES · TODO.
 - `report/` holds work records and the ratchet's numbers, and git ignores it through `.git/info/exclude`.
 - `docs/README.zh-CN.md` is the Chinese copy of README and changes with it.
 
@@ -197,5 +197,9 @@ The user rejected 4 rules of the what-we-build skill on 2026-11-17, for details 
 The agent narrowed 1 rule on 2026-11-17 under that delegation:
 
 - "give a doc to a subagent to read" is allowed as the brief for code work. A subagent still never writes a doc and never decides from one.
+
+---
+
+## How we work
 
 The user gives the direction, and the agent settles the details and reports afterwards. A direction is a new want, a new stance or a thing broom refuses to become. A direction still goes to the user first.

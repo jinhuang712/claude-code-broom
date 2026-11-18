@@ -20,7 +20,9 @@ The `format_on` setting says when. At `commit`, the default, the files a commit 
 A formatter's rewrite reaches Claude as the diff Claude Code shows of a changed file. An idle edit hook costs one Python start, 30 to 45 ms measured on macOS.
 
 - **Stance**: [The project's tools, not ours](../PHILOSOPHY.md#whose-rules-decide-what-is-clean)
-- **How it works**: [Commit check](../specs/commit-check.md) · [Format scopes](../specs/format-scopes.md)
+- **How it works**:
+  - [Commit check](../specs/commit-check.md)
+  - [Format scopes](../specs/format-scopes.md)
 
 ---
 

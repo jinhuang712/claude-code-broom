@@ -112,9 +112,11 @@ Status: ✅ built · ⬜ planned
 | `--base REV` | only what the changes since REV made worse | off |
 | `--top N` | how many hotspot files and smells to list | 10 |
 | `--by` | `churn` ranks hotspots by smells and changes, `smells` by smells alone | `churn` |
-| `--only SMELL` | keep one kind of smell, and it may repeat. With `function_lines` or `type_lines` alone, the list goes on under the limit until `--top` is full | every kind |
+| `--only SMELL` | keep one kind of smell, repeatable | every kind |
 | `--json` | print JSON | off |
 | `--dismiss` | quiet the session note until the severe count grows | off |
+
+With `--only function_lines` or `--only type_lines` alone, the list goes on under the limit until `--top` is full.
 
 **Called by**: a person and the `/broom:clean` skill. Claude runs `--dismiss` when the user says not now.
 
@@ -360,14 +362,14 @@ An uncaught error exits 1 with a traceback.
 7 commands print JSON a script relies on:
 
 - **`broom doctor --json`**: `version` · `repo` · `languages` · `items` · `fix` · `configure` · `fix_global` · `configure_global` · `healthy` · `optional` · `settings`.
-- **`broom smells --json`**: `repo` · `base` · `only` · `total` · `severe` · `hints` · `by` · `hotspots` · `smells` · `notes`.
+- **`broom smells --json`**: `repo` · `base` · `only` · `total` · `severe` · `hints` · `by` · `hotspots` · `smells` · `notes` · `sizes` when `--only` asks for sizes.
 - **`broom diagnose --json`**: `repo` · `paths` · `summary` · `by_smell` · `by_language` · `by` · `hotspots` · `smells` · `duplicate_tests` · `dependencies` · `missing_tools` · `notes` · `checkup` · `stats`.
-- **`broom compare --json`**: the counts per kind, the four lists of smells, the hotspots of the base and the kinds that are not comparable.
+- **`broom compare --json`**: `repo` · `base` · `base_commit` · `summary` · `kinds` · `gone` · `new` · `shrank` · `grew` · `hotspots` · `not_comparable` · `notes` · `quote` · `seconds`.
 - **`broom stats --json`**: `repo` · `paths` · `files` · `days` · `size` · `tests` · `rot` · `history`. Each section holds a `note` that says what is missing, or null.
 - **`broom fixes --json`**: one key per smell, with its fix line.
 - **`broom report --json`**: `days` · `repos` · `blocked` · `fixed` · `let_through` · `open` · `how` · `fix_rate` · `rules` · `waivers` · `skips` · `seconds` · `errors`.
 
-Each item of `smells` holds `file` · `line` · `smell` · `level` · `text` · `was`. `was` is null for a new smell.
+Each item of `smells` holds 6 keys: `file` · `line` · `smell` · `level` · `text` · `was`. `was` is null for a new smell.
 
 ---
 

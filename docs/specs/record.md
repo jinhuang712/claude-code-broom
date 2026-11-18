@@ -41,7 +41,7 @@ Lines written before 0.19.0 can hold three more: `retry`, `denials` and `stop-ag
 
 A waiver has one of 3 kinds:
 
-- **config**: The repo's `.broom.json` is looser than at the base: a smell turned off, a glob added to `exclude` or `legacy`, a limit raised, or `check_on` or `smells` set to off.
+- **config**: The repo's `.broom.json` is looser than at the base in 1 of 4 ways: a smell turned off · a glob added to `exclude` or `legacy` · a limit raised · `check_on` or `smells` set to off.
 - **suppression**: A line the change added holds a lint suppression after a comment sign, with a reason or without.
 - **no-verify**: Claude ran `git commit --no-verify`.
 
@@ -57,7 +57,8 @@ A finding is fixed when it was in the last block of the same repo, or of the sam
 
 - Its file is not among the files this check covered, as when the next commit takes other files.
 - A timeout or missing-tool note covers the tool that found it.
-- Another finding of the same file, tool and rule is new: the finding changed its key and is still there, as a function cut from 120 lines to 110.
+- Another finding with the same file, tool and rule is new: the old one changed its key and is still there.
+  - A function cut from 120 lines to 110 is such a case.
 - The same run saw a looser `.broom.json`, which may only have hidden it.
 
 A type error in a file outside the checked files is never counted as fixed.
@@ -66,7 +67,7 @@ A type error in a file outside the checked files is never counted as fixed.
 
 ## The turn summary
 
-Each pass is also noted in the turn's directory. When the turn ends, the notes become one line for the user, grouped by rule and by how, such as `broom let 3 through this turn: 2 magic_numbers (retry), 1 function_lines (accepted: <why>)`. The turn's self-waivers follow on the same line, then what the stop itself left. A turn with only waivers says `broom saw 2 self-waivers this turn: ...`. A turn with neither says what it said before.
+Each pass is also noted in the turn's directory. When the turn ends, the notes become one line for the user, grouped by rule and by how, such as `broom let 3 through this turn: 2 magic_numbers (turn-ended), 1 function_lines (accepted: <why>)`. The turn's self-waivers follow on the same line, then what the stop itself left. A turn with only waivers says `broom saw 2 self-waivers this turn: ...`. A turn with neither says what it said before.
 
 The notes are cleared at the next prompt. With `check_on` at `commit` no stop hook ends the turn, so no summary is shown. A pass in git's own pre-commit hook belongs to no turn and is not shown either.
 

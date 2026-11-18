@@ -22,7 +22,10 @@ Work in a worktree of this repo, commit in small steps and land by fast-forward 
 
 ## Checks
 
-2 checks must pass:
+3 checks must pass:
 
-- `python3 tests/run.py` runs the test suite, each file in a process of its own. It takes about 40 seconds and writes nothing into your own broom data. `python3 -m unittest discover -s tests` runs the same tests one after another.
+- `python3 tests/run.py` runs the test suite, each file in a process of its own.
+  - It takes about a minute and writes nothing into your own broom data.
+  - `python3 -m unittest discover -s tests` runs the same tests one after another.
+- `bin/broom smells` must count 0 code smells, and `bin/broom sweep --all --check` must end clean.
 - `claude plugin validate .` checks the plugin's manifest and parts.

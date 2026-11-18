@@ -82,7 +82,7 @@ Five rules of broom's own are loaded as an oxlint JS plugin, an alpha feature, i
 
 The commented-code rule guesses: a comment that compiles as JS and has code's punctuation, with `Note: x()` skipped as a label. TypeScript syntax in a comment doesn't compile, so it is missed.
 
-oxlint's own rule list, read in full in 2026-11, has nothing for these four smells, bar Jest's `require-to-throw-message`.
+oxlint's own rule list, read in full in 2026-11, has nothing for these five smells, bar Jest's `require-to-throw-message`.
 
 ---
 

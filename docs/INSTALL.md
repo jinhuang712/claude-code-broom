@@ -50,7 +50,7 @@ Tools install machine-wide once. A gap the user leaves alone isn't raised again 
 
 ## Other language-server plugins
 
-Don't also enable `gopls-lsp` · `typescript-lsp` · `rust-analyzer-lsp` · `pyright-lsp` · `swift-lsp`. broom's servers already do what they do. When two plugins serve the same files, only one language server starts. `broom doctor` says when that happens.
+Don't also enable these 5 plugins: `gopls-lsp` · `typescript-lsp` · `rust-analyzer-lsp` · `pyright-lsp` · `swift-lsp`. broom's servers already do what they do. When two plugins serve the same files, only one language server starts. `broom doctor` says when that happens.
 
 ---
 

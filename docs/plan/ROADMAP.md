@@ -301,13 +301,15 @@ The user asked on 2026-11-17 for a round of polish and self-test once the featur
 **Delivers** (8):
 
 - [F1.5: Protection list](../features/F1-setup.md#f15-protection-list)
-- Fresh sessions used broom end to end, on a throwaway repo and on a public Python project: the limits card, the setup offer, a block with its fix lines, a fix, an accept with a reason, the turn's summary, the check-up's line and a checked commit, done on 2026-11-18.
+- Fresh sessions used broom end to end on a throwaway repo and on a public Python project, done on 2026-11-18.
+  - They met 8 things: the limits card · the setup offer · a block with its fix lines · a fix · an accept with a reason · the turn's summary · the check-up's line · a checked commit.
 - [I8: A hole in the record](ISSUES.md#i8-a-hole-in-the-record)
-- A fresh session answers ten questions about a repo from broom alone, after five runs and the gaps each one showed, done on 2026-11-17.
+- A fresh session answers ten questions about a repo from broom alone after five runs, done on 2026-11-17.
 - [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)
 - README and INSTALL say which systems are supported, done on 2026-11-17.
-- An idle turn's end starts git once, where it started it 7 times, and an idle hook loads no check, done on 2026-11-17.
-- A commit with a redirection or a heredoc message is checked, where the commit check let it pass unread, done on 2026-11-17.
+- An idle turn's end starts git once where it started it 7 times, done on 2026-11-17.
+  - An idle hook loads no check.
+- A commit with a redirection or a heredoc message is checked where it passed unread before, done on 2026-11-17.
 
 **Exit criteria** (6):
 
@@ -358,7 +360,7 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 **Delivers** (4):
 
-- The test suite runs each file in a process of its own and takes about 40 seconds, where it took 150, done on 2026-11-17.
+- The test suite runs each file in a process of its own and takes about 40 seconds where it took 150, done on 2026-11-17.
 - [I2: Three paths call the same tools](ISSUES.md#i2-three-paths-call-the-same-tools)
 - [I5: Five rules sit on an alpha plugin API](ISSUES.md#i5-five-rules-sit-on-an-alpha-plugin-api)
 - [I6: The Bash parser guesses what git's hook knows](ISSUES.md#i6-the-bash-parser-guesses-what-gits-hook-knows)

@@ -1,110 +1,106 @@
 # broom 🧹
 
-**Claude Code 里的代码质量标尺，也是重构时的工具。** broom 为仓库配好需要的格式化工具、lint 工具、类型检查和语言服务器，然后在
-该清扫的时候把 Claude 的改动清扫一遍：按项目自己的规则，格式整齐、没有 lint 问题、类型正确。
+> Claude Code 里的代码质量标尺，也是重构时的工具。
+
+broom 让 Claude 的改动在离开会话之前，先过一遍项目自己的格式化工具、lint 工具和类型检查。它只评判一次改动和这次改动碰到的代码，不管仓库的其余部分，所以老仓库里的旧警告不会压到一个小修复上。
 
 [English](../README.md)
 
+---
+
 ## 它做什么
 
-- **配置**：在仓库里开会话时发现缺什么，让 Claude 提议帮你安装和配置。没有你的同意，什么都不装。
-- **清扫**：该清扫的时候，broom 对 Claude 的改动做格式化、lint 和类型检查，问题解决前不放行。
-- **闻味道**：改动让函数、文件或类型变长、参数变多、嵌套变深、复杂度变高，或写出嵌套三元、重复代码时，过软上限就提示，
-  过硬上限就拦。新加的无理由 lint 屏蔽、吞掉的错误、注释掉的代码会被拦；新加的魔法数字、调试输出、TODO、类型逃生口、
-  没人用的代码等会被提示。改动没碰到的旧代码不会被提起。
-- **看见**：为 Go、TS/JS、Rust、Python、Swift、CSS（含 SCSS、Less）提供语言服务器，Claude 边改边看到诊断。
+- 🧰 **配置**：在仓库里开会话时，broom 发现缺什么，Claude 就提议帮你安装和配置。
+- 🧹 **清扫**：提交时和每轮对话结束时，它对 Claude 的改动做格式化、lint 和类型检查，问题解决前不放行。
+- 👃 **闻味道**：改动让代码过长、嵌套过深或出现重复时，过软上限就提示，过硬上限就拦。
+- 👀 **看见**：六种语言的语言服务器让 Claude 边改边看到诊断。
+- 📊 **诊断**：`broom diagnose`、`broom stats` 和 `broom compare` 给出整个仓库在重构前后的数字。
+- 🩺 **体检**：会话开始时它数一遍仓库里的腐化，某个数字变大了就告诉 Claude 一次。
 
-它用你项目自己的工具和配置，只看改动的部分。
-被拦下的问题要么修好，要么带着记录在案的理由接受。
+没有你的同意，什么都不装。被拦下的问题要么修好，要么带着记录在案的理由放行。
+
+---
+
+## 安装
 
 ```text
-[broom] Commit blocked: 2 issue(s) in the files being committed. Fix them and commit again. If one predates this
-change or is a false positive, run `broom known --accept "<why>"`, then commit again.
+/plugin marketplace add jinhuang712/claude-code-broom
+/plugin install broom@claude-code-broom
+```
+
+需要 macOS、Claude Code 2.1.271 或更高版本、Python 3.9+（命令名 `python3`）和 git。Linux 没有测试过，Windows 不支持。其余内容在 [INSTALL.md](INSTALL.md)（英文）：终端里的装法、每种语言的工具、更新和卸载。
+
+---
+
+## 怎么用
+
+在某个仓库里开一个会话。缺工具或缺配置时，Claude 会提议运行 `/broom:setup`，它最多问两个问题。
+
+然后让 Claude 干活。它提交的改动违反规则时，提交会被拦下，并附上一份报告：
+
+```text
+[broom] Commit blocked: 2 issue(s) in the files being committed. Fix them and commit again.
 
 oxlint (~/code/app):
   src/api/client.ts:42:5  typescript(no-floating-promises)  Promises must be awaited
 tsc (~/code/app):
   src/pages/home.tsx:17:9  TS2345  Argument of type 'string' is not assignable to 'number'  [not in the changed files]
+
+If one predates this change or is a false positive, run `broom known --accept "<why>"`, then commit again.
 ```
 
-## 安装
-
-**需要：** macOS（Linux 没有测试过，Windows 不支持）、Claude Code 2.1.271 或更高版本（语言服务器在 2.1.280 上测试过，Swift 的在 2.1.283 上）、Python 3.9+（命令名
-`python3`，macOS 自带的即可）、git。
-
-1. 在 Claude Code 里添加 marketplace 并安装插件：
-
-   ```text
-   /plugin marketplace add jinhuang712/claude-code-broom
-   /plugin install broom@claude-code-broom
-   ```
-
-   或者在终端里：
-
-   ```bash
-   claude plugin marketplace add jinhuang712/claude-code-broom
-   claude plugin install broom@claude-code-broom
-   ```
-
-2. 在某个仓库里开一个会话。缺东西时 Claude 会提议运行 `/broom:setup`，接受即可，也可以自己运行。它最多问两个问题：
-   装不装缺的工具、加不加格式化配置。然后安装你选的工具，再检查一遍结果。它从不让你挑设置，设置一开始就是默认值。
-   只需设置一次：工具装在本机全局，你放着不管的缺口在任何仓库都不会再被提起。新仓库只会问你还没回答过的那类缺口（通常只是缺格式化配置）。
-
-3. 可选：不同意某个默认值时，在 `/config` 里改掉它。
-
-想自己装工具的话，broom 用的是这些：
-
-| 语言 | 安装 |
-|---|---|
-| Go | `brew install golangci-lint` · `go install golang.org/x/tools/gopls@latest` |
-| TS/JS | 在项目里 `npm i -D oxlint oxlint-tsgolint oxfmt` · `npm i -g typescript-language-server`（语言服务器） |
-| Rust | `rustup component add clippy rustfmt rust-analyzer` |
-| Python | `brew install ruff` · `npm i -g pyright` |
-| CSS、SCSS、Less | 在项目里 `npm i -D stylelint`，有 SCSS 再加 `stylelint-config-recommended-scss`，有 Less 再加 `stylelint-config-recommended-less` · `npm i -g vscode-langservers-extracted` |
-| Swift | Xcode 16+ 或 Swift 6+ 工具链（自带 swift-format 和 sourcekit-lsp） · `brew install swiftlint` |
-
-不要同时启用 `gopls-lsp`、`typescript-lsp`、`rust-analyzer-lsp`、`pyright-lsp` 或 `swift-lsp`：broom 的语言服务器已经做了它们做的事
-（TypeScript 用的也是 typescript-language-server，并使用项目自己的 TypeScript）；而且两个插件服务同一类文件时，只有一个
-语言服务器会启动。出现这种情况 `broom doctor` 会告诉你。
-
-**更新：** `claude plugin marketplace update claude-code-broom && claude plugin update broom@claude-code-broom`
-**卸载：** `claude plugin uninstall broom@claude-code-broom`
-
-## 使用
-
-大多数时候不用管：broom 会自己清扫。想先看看的话，用自己的话让它清扫：
+Claude 修好问题后再次提交。想先看看的话，用自己的话让它清扫：
 
 ```text
-/broom:sweep
 /broom:sweep 我暂存的改动
 /broom:sweep 最近 3 个提交
-/broom:sweep 整个仓库
 ```
 
-想清理已有的问题，就让它清理：`/broom:clean`（或 `/broom:clean src/layout`）把坏味道按严重程度排好，从最坏的开始，
-小步、有测试地清理。仓库里有超过硬上限的坏味道时，broom 会在会话开始时告诉 Claude，Claude 在合适的时机向你提出清理；
-你说"先不用"，它就不再提，直到情况变得更糟。
+想清理已有的问题，就运行 `/broom:clean`，它把坏味道从最坏的排起，小步、带测试地清理。
 
-| 设置 | 默认 | 可选 |
-|---|---|---|
-| `format_on` | `commit` | `edit`（每次编辑后也格式化）、`off` |
-| `check_on` | `stop`（每轮对话结束时检查，提交时也检查） | `commit`（只在提交时检查）、`off` |
-| `format_scope` | `changed` | `function`（整个改动过的函数；CSS 里是整条规则；Swift 里也包括计算属性）、`file` |
-| `smells` | `on` | `off` |
+---
 
-仓库根目录的 `.broom.json` 可以为单个仓库覆盖这些设置，还能排除路径、标出新代码可以重复的待删旧代码、调整坏味道的上限（测试文件可单独设）：
+## 配置
 
-```json
-{ "format_scope": "function", "exclude": ["vendor/**", "**/*.pb.go"], "limits": { "function_lines": [60, 120] } }
+`/config` 里的四个设置都从默认值开始，从不询问。仓库根目录的 `.broom.json` 可以为单个仓库覆盖它们，还能排除路径、调整坏味道的上限。[F7: Settings](features/F7-settings.md)（英文）列出了全部设置。
+
+---
+
+## 架构
+
+Claude Code 在会话开始、收到提示、调用 Bash、编辑文件和一轮对话结束时启动 broom 的某个钩子。钩子对改动的部分运行项目自己的工具，然后以拦截、一条说明或什么都不说退出。
+
+```
+Claude Code
+  │ SessionStart · UserPromptSubmit · PreToolUse(Bash) · PostToolUse(edit) · Stop · SubagentStop
+  ▼
+hooks/hooks.json ──▶ hooks/commit.sh ──▶ bin/broom ──▶ lib/broom/
+                                            ▲              │
+git pre-commit hook ────────────────────────┘              ├──▶ the project's tools (formatters, linters, type checkers)
+skills/ (setup · sweep · clean) ───▶ bin/broom             ├──▶ defaults/ (configs where a project has none)
+.lsp.json ──▶ language servers                             └──▶ the data directory (state shared by every hook)
 ```
 
-`broom` 命令也在 PATH 上：`broom sweep`、`broom smells`、`broom doctor`、`broom known`。包装脚本或手动做的提交不经过
-Claude Code 的提交钩子，`broom install-hook` 会为它们加上 git 自己的 pre-commit 钩子。详见 [Features](FEATURES.md)。
+---
 
 ## 文档（英文）
 
-[Philosophy](PHILOSOPHY.md) · [Goals](plan/GOALS.md) · [Proposal](PROPOSAL.md) · [Designs](DESIGNS.md) ·
-[Features](FEATURES.md) · [Changelog](../CHANGELOG.md)
+- [PROPOSAL.md](PROPOSAL.md) 说明 broom 为什么存在。
+- [PHILOSOPHY.md](PHILOSOPHY.md) 记录它的立场。
+- [DESIGNS.md](DESIGNS.md) 记录每个设计都必须满足的承诺。
+- [FEATURES.md](FEATURES.md) 列出它做什么。
+- [CLI.md](CLI.md) 描述 `broom` 命令。
+- [INSTALL.md](INSTALL.md) 讲安装、更新和卸载。
+- [GLOSSARY.md](GLOSSARY.md) 固定术语。
+- [ARCHITECTURE.md](specs/ARCHITECTURE.md) 画出各个部分。
+- [GOALS.md](plan/GOALS.md) 记录检查什么。
+- [ROADMAP.md](plan/ROADMAP.md) 说明接下来做什么。
+- [ISSUES.md](plan/ISSUES.md) 和 [TODO.md](plan/TODO.md) 记录未完成的工作和未回答的问题。
+- [CONTRIBUTING.md](CONTRIBUTING.md) 说明怎么修改 broom。
+- [AGENTS.md](../AGENTS.md) 记录在这个项目上工作的 agent 要守的规则。
+- [CHANGELOG.md](../CHANGELOG.md) 列出每个版本。
+
+---
 
 ## 许可证
 

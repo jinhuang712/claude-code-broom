@@ -73,7 +73,7 @@ To learn how long the files are, which tests are skipped or what nothing uses, a
 One plugin does three things:
 
 1. **Set up**: It detects what a repo needs, then installs and configures it with the user's consent.
-2. **Sweep**: At the right moments it formats, lints and type-checks Claude's changes, and holds them back until they're clean.
+2. **Sweep**: At the right moments it formats, lints and type-checks Claude's changes and holds them back until they're clean.
 3. **See**: It declares language servers so Claude gets diagnostics as it edits.
 
 Around these three it holds one bar for code smells. Each change is measured against the bar while it is made, and a whole repo is measured against it when someone plans a refactor.
@@ -100,7 +100,7 @@ Around these three it holds one bar for code smells. Each change is measured aga
 
 5 things the project refuses to become:
 
-- **A replacement for pre-commit, lefthook or CI**: broom looks after Claude's work, and the user's own commits and CI stay theirs.
+- **A replacement for pre-commit, lefthook or CI**: broom looks after Claude's work and leaves the user's own commits and CI to them.
 - **A linter or a formatter**: broom runs existing ones.
 - **A style**: Defaults exist only where a project has none.
 - **A test runner**: Tests are too slow for a commit check, and CI runs them. broom reads the coverage report a project's own run wrote.

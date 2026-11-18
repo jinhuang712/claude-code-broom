@@ -23,7 +23,7 @@ It checks 8 things:
 - The TypeScript language server gives Claude diagnostics.
 - The project's configured tools resolve, or its dependencies need installing.
 - Formatter configs exist, with one fix at the root of a monorepo.
-- CSS, SCSS and Less files git tracks get their linter, formatter and language server checked.
+- Tracked CSS, SCSS and Less files get 3 tools checked: linter · formatter · language server.
 - Swift files get the same, in SwiftPM packages and Xcode projects alike.
 - No other plugin starts a language server for the same files.
 - `.broom.json` is valid.
@@ -71,7 +71,10 @@ The 2 questions:
 Settings aren't asked: they start at defaults. JS/TS and CSS tools install machine-wide by default, with devDependencies as the alternative.
 
 - **Stance**: [Ask, don't assume](../PHILOSOPHY.md#who-decides-what-is-installed-or-changed)
-- **Commands**: [broom doctor](../CLI.md#broom-doctor) · [broom init](../CLI.md#broom-init) · [broom setup](../CLI.md#broom-setup)
+- **Commands**:
+  - [broom doctor](../CLI.md#broom-doctor)
+  - [broom init](../CLI.md#broom-init)
+  - [broom setup](../CLI.md#broom-setup)
 
 ---
 

@@ -6,9 +6,33 @@
 
 ---
 
+### [P1][DISCUSSION] A hero image for the README
+
+- description: The README opens with no image. Which image stands for broom is the user's pick, from options shown side by side.
+- created: 2026-11-18
+- status: OPEN
+- found: the docs pass of 2026-11-18
+- blocks: [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)
+- next: draw a few options and show them on one sheet
+
+---
+
+### [P2][DISCUSSION] Where a contributor asks first
+
+- description: CONTRIBUTING states the bar for a change and names no place to ask before starting one.
+- created: 2026-11-18
+- status: OPEN
+- found: the docs pass of 2026-11-18
+- next: the user names the place, such as the repo's GitHub issues
+
+---
+
 ### [P2][IDEA] A hint at the edit for a signal that is cheap and certain
 
-- description: A file that just passed 1,000 lines could be told at the edit, before more is written into it. PROPOSAL argues against a lint after every edit, and that argument is about half-finished code, which a line count is not.
+- description:
+  - A file that just passed 1,000 lines could be told at the edit, before more is written into it.
+  - PROPOSAL argues against a lint after every edit.
+  - That argument is about half-finished code, which a line count is not.
 - created: 2026-11-17
 - next: decide with the ledger's numbers
 
@@ -31,7 +55,11 @@
 
 ### [P2][IDEA] One measurer for sized smells in every language
 
-- description: lizard measures function length, complexity, parameters and nesting in Go, TS/JS, Python, Rust and Swift. It could fill Rust's and Swift's gaps with one tool. Its parsers are partial, so it needs a run beside the current measurers first.
+- description:
+  - lizard measures 4 sizes: function length · complexity · parameters · nesting.
+  - It covers 5 languages: Go · TS/JS · Python · Rust · Swift.
+  - It could fill Rust's and Swift's gaps with one tool.
+  - Its parsers are partial, so it needs a run beside the current measurers first.
 - created: 2026-11-17
 - related: [F8.3: Rust](../features/F8-languages.md#f83-rust)
 
@@ -46,7 +74,9 @@
 
 ### [P2][IDEA] Dependencies that fell far behind
 
-- description: A package many major versions behind is rot the unused-package tools don't see. Finding it asks a registry, so it would run only on request, like the vulnerability lookup.
+- description:
+  - A package many major versions behind is rot the unused-package tools don't see.
+  - Finding it asks a registry, so it would run only on request like the vulnerability lookup.
 - created: 2026-11-17
 - found: the look for missed rot at the end of CP5
 - related: [030: Known vulnerabilities are looked up only on request](../specs/decisions/030-vulnerabilities-on-request.md)
@@ -81,7 +111,9 @@
 
 ### [P2][IDEA] Type escapes as a counter
 
-- description: `any`, a forced cast and the like are hinted when a change adds one, and nothing counts them across the repo. A counter would tell when typing got looser over a month.
+- description:
+  - A type escape such as `any` or a forced cast is hinted when a change adds one, and nothing counts them across the repo.
+  - A counter would tell when typing got looser over a month.
 - created: 2026-11-17
 - found: the look for missed rot at the end of CP5
 - related: [F11.1: Counters](../features/F11-checkup.md#f111-counters)

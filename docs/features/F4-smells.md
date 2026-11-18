@@ -49,7 +49,7 @@ A sized smell counts when the change pushed it past a limit, or grew it while pa
 5 notes on the table:
 
 - `file_lines` and `duplicate_lines` count in Rust and CSS too.
-- Rust gets 4 of them from clippy: `function_lines` from `too_many_lines`, `params` from `too_many_arguments`, `complexity` from `cognitive_complexity` and `nesting` from `excessive_nesting`.
+- Rust gets 4 of them from clippy: `function_lines` from `too_many_lines` · `params` from `too_many_arguments` · `complexity` from `cognitive_complexity` · `nesting` from `excessive_nesting`.
 - Rust's `nesting` only hints, since clippy names no depth.
 - Swift has no control-flow nesting rule, and complexity covers it.
 - Swift's nested-ternary rule finds two ternary operators on one line.
@@ -80,7 +80,7 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 | `bool_params` | hint | `FBT001` | `broom/bool-params` | `revive` `flag-parameter` | a custom rule |
 | `broad_test_asserts` | hint | `PT011` | `jest/require-to-throw-message` | — | — |
 | `broad_catch` | hint | `BLE001` `E722` | — | — | — |
-| `missing_docs` | hint | `D100` to `D103` | `broom/missing-docs` | `revive` `exported` | `missing_docs` |
+| `missing_docs` | hint | `D100` `D101` `D102` `D103` | `broom/missing-docs` | `revive` `exported` | `missing_docs` |
 | `deprecated_api` | hint | `UP` and others | `typescript/no-deprecated` | `staticcheck` `SA1019` | — |
 | `skipped_test` | hint | read by broom | read by broom | read by broom | read by broom |
 | `untested_file` | hint | read by broom | read by broom | read by broom | read by broom |
@@ -90,7 +90,7 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 - `commented_code` is a hint in TS/JS and Go, whose detectors guess.
 - TS/JS's `no-unused-vars` counts parameters only.
 - Unused variables and imports stay with the project's linter, which already reports them.
-- Swift's `debug_output` rule finds `print`, `debugPrint`, `NSLog` and `dump`.
+- Swift's `debug_output` rule finds 4 calls: `print` · `debugPrint` · `NSLog` · `dump`.
 - Swift's `globals` rule finds a `var` at file level, `main.swift` aside.
 - Swift's `bool_params` rule finds an unlabeled `_ flag: Bool`.
 - A function handed to a call is the callee's choice and doesn't count for `bool_params`.
@@ -110,7 +110,7 @@ The four `broom/` rules need Node. Without it only these smells go unmeasured, a
 
 1 gap:
 
-- Only Python is covered, since the tools broom runs have no such rule for TS/JS, Go and Swift.
+- Only Python is covered, since the tools broom runs have no such rule in the other languages.
 
 ---
 
@@ -230,7 +230,9 @@ A function, a type or a file that was already past the hard limit and that the c
 
 1 gap:
 
-- Outside Python, a touched function with too many parameters, too much nesting or too high a complexity is not told, since the tools give no range for those. In Rust a touched function that is too long is told.
+- Outside Python a touched function is told its length only, since the tools give no range for the other sized smells.
+
+In Rust a touched function that is too long is told.
 
 - **Stance**: [Clean as you go](../PHILOSOPHY.md#when-is-a-smell-cleaned)
 - **How it works**: [Smells](../specs/smells.md)

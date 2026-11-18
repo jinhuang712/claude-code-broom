@@ -23,7 +23,7 @@ One plugin sets a repo up, sweeps Claude's changes and declares language servers
 - **SonarQube plugin**: It needs a SonarQube account and Docker, and per-edit analysis is a SonarQube Cloud feature.
 - **Semgrep Guardian**: It scans for security only and needs a login.
 - **claudekit**: It is built around ESLint and tsc, and installs by editing `settings.json`.
-- **A hand-written PostToolUse hook, as in Oxc's docs**: It runs on every edit, covers TS only and knows nothing of the project's other tools.
+- **A hand-written PostToolUse hook as in Oxc's docs**: It runs on every edit, covers TS only and knows nothing of the project's other tools.
 - **pre-commit or lefthook**: They are not aware of Claude: no changed-line scoping, no memory of accepted findings and no setup.
 
 ---
