@@ -56,4 +56,4 @@ A rule that is let through far more often than it is fixed is told to Claude wit
 
 It applies to hints only. A type error and a severe smell never change tier.
 
-- **Design**: [6. A false positive costs one round](../DESIGNS.md#6-a-false-positive-costs-one-round)
+- **Design**: [6. A finding ends fixed or with a reason the user sees](../DESIGNS.md#6-a-finding-ends-fixed-or-with-a-reason-the-user-sees)

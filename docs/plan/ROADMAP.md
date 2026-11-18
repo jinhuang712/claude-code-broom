@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP6: Polish and self-test](#cp6-polish-and-self-test). CP2 and CP3 shipped, and their goals that need use are still open. CP5 ended with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
+**Current checkpoint**: [CP7: Nothing is waved through](#cp7-nothing-is-waved-through), which the user put first on 2026-11-18, with [CP6: Polish and self-test](#cp6-polish-and-self-test) still open beside it. CP2 and CP3 shipped, and their goals that need use are still open. CP5 ended with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
 
 ---
 
@@ -23,10 +23,11 @@ Roadmap
 │   ├── ✅ CP5.3: Dependencies and deprecated APIs
 │   └── ✅ CP5.4: Rust's missing smells
 ├── 🟨 CP6: Polish and self-test — every goal run in a real session, every rough edge smoothed
-├── ⬜ CP7: Lighter — less code, fewer runs, less noise
-│   ├── ⬜ CP7.1: Fewer interruptions
-│   └── ⬜ CP7.2: Fewer runs and less code
-└── ⬜ CP8: Waits for a need
+├── ⬜ CP7: Nothing is waved through — three moments in Claude's flow, and no pass without a reason
+├── ⬜ CP8: Lighter — less code, fewer runs, less noise
+│   ├── ⬜ CP8.1: Fewer interruptions
+│   └── ⬜ CP8.2: Fewer runs and less code
+└── ⬜ CP9: Waits for a need
 ```
 
 ---
@@ -329,7 +330,28 @@ The user asked on 2026-11-17 for a round of polish and self-test once the featur
 
 ---
 
-## CP7: Lighter
+## CP7: Nothing is waved through
+
+**Status**: ⬜
+
+The user set this on 2026-11-18: a check that lets Claude carry on puts Claude's speed before the code. Three moments get their own weight, and a finding ends fixed or with a reason the user sees.
+
+**Delivers** (3):
+
+- [F2.10: Check after an edit](../features/F2-sweep.md#f210-check-after-an-edit)
+- [F2.11: Nothing is waved through](../features/F2-sweep.md#f211-nothing-is-waved-through)
+- [F2.12: A pass is told to the user](../features/F2-sweep.md#f212-a-pass-is-told-to-the-user)
+
+**Exit criteria** (2):
+
+- **Thresholds**
+  - [T5: A check after an edit costs 200 ms at most](GOALS.md#t5-a-check-after-an-edit-costs-200-ms-at-most)
+- **Constraints**
+  - [R5: Nothing is waved through](GOALS.md#r5-nothing-is-waved-through)
+
+---
+
+## CP8: Lighter
 
 **Status**: ⬜
 
@@ -338,12 +360,12 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 **Exit criteria** (2):
 
 - **Sub-checkpoints**
-  - [CP7.1: Fewer interruptions](#cp71-fewer-interruptions) is met.
-  - [CP7.2: Fewer runs and less code](#cp72-fewer-runs-and-less-code) is met.
+  - [CP8.1: Fewer interruptions](#cp81-fewer-interruptions) is met.
+  - [CP8.2: Fewer runs and less code](#cp82-fewer-runs-and-less-code) is met.
 
 ---
 
-### CP7.1: Fewer interruptions
+### CP8.1: Fewer interruptions
 
 **Status**: ⬜
 
@@ -358,7 +380,7 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 ---
 
-### CP7.2: Fewer runs and less code
+### CP8.2: Fewer runs and less code
 
 **Status**: ⬜
 
@@ -378,7 +400,7 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 ---
 
-## CP8: Waits for a need
+## CP9: Waits for a need
 
 **Status**: ⬜
 

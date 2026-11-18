@@ -12,7 +12,7 @@ A linter can be wrong, and a finding can predate the change, so a block needs a 
 
 ## The choice
 
-A blocking finding passes fixed, or after `broom known --accept "<why>"`, which records it as known with the reason. Stopping again still ends a turn, and records nothing as known: what is left stays open and shows in the turn's summary.
+A blocking finding passes fixed, or after `broom known --accept "<why>"`, which records it as known with the reason.
 
 ---
 
@@ -20,10 +20,9 @@ A blocking finding passes fixed, or after `broom known --accept "<why>"`, which 
 
 - **A lint result passes on an unchanged retry**: It costs nothing and leaves no reason. Before type errors were taken out of it, a subagent committed 167 tsc errors by running the same commit twice.
 - **Nothing passes without a fix**: A false positive would then trap Claude in a loop.
-- **Stopping again never ends the turn**: A turn that can't end is worse than a finding left open, and Claude Code ends it anyway after eight continuations.
 
 ---
 
 ## Consequences
 
-A false positive costs one command and one sentence. `BROOM_NO_ACCEPT` turns accepting off where agents must fix what they break, as in one migration workers accepted their own blocks against their instructions. A turn can end with a finding open, and the next commit of that file stops on it.
+A false positive costs one command and one sentence. `BROOM_NO_ACCEPT` turns accepting off where agents must fix what they break, as in one migration workers accepted their own blocks against their instructions.

@@ -13,7 +13,10 @@ F2: Sweep
 ├── F2.6: Sweep on request — a scope in the user's own words
 ├── F2.7: Time limit — a hook run takes at most 30 seconds
 ├── F2.8: Self-waivers shown — a loosened bar never goes unseen
-└── F2.9: Messages that say how to fix — the fix beside the finding
+├── F2.9: Messages that say how to fix — the fix beside the finding
+├── F2.10: Check after an edit — format and what is judged in milliseconds
+├── F2.11: Nothing is waved through — a finding ends fixed or accepted with a reason
+└── F2.12: A pass is told to the user — Claude says what it left and why
 ```
 
 A sweep formats, lints and type-checks Claude's changes and holds them back until they're clean. It uses the project's own tools and configs.
@@ -48,7 +51,7 @@ It applies with `check_on` at `stop`, the default. It waits while background wor
 
 A hint stops the turn here too, once.
 
-- **Design**: [6. A false positive costs one round](../DESIGNS.md#6-a-false-positive-costs-one-round)
+- **Design**: [6. A finding ends fixed or with a reason the user sees](../DESIGNS.md#6-a-finding-ends-fixed-or-with-a-reason-the-user-sees)
 - **How it works**: [Turn end](../specs/turn-end.md)
 - **Why**:
   - [019: The turn-end check waits for background work](../specs/decisions/019-wait-for-background.md)
@@ -95,7 +98,7 @@ It never replaces another tool's hook and prints the line to add to it instead. 
 
 A finding Claude accepted with a reason is known and not raised again for 30 days. `broom known` lists and clears them.
 
-- **Design**: [6. A false positive costs one round](../DESIGNS.md#6-a-false-positive-costs-one-round)
+- **Design**: [6. A finding ends fixed or with a reason the user sees](../DESIGNS.md#6-a-finding-ends-fixed-or-with-a-reason-the-user-sees)
 - **Commands**: [broom known](../CLI.md#broom-known)
 - **How it works**: [What counts](../specs/what-counts.md)
 - **Why**: [003: Every finding passes fixed or accepted with a reason](../specs/decisions/003-reason-for-every-pass.md)
@@ -174,3 +177,40 @@ A message holds at most 9,000 characters. Past that it shows fewer findings and 
 
 - **Commands**: [broom fixes](../CLI.md#broom-fixes)
 - **How it works**: [Commit check](../specs/commit-check.md)
+
+---
+
+## F2.10: Check after an edit
+
+After each edit broom formats the file and runs what can be judged in milliseconds, such as a lint of that one file. It tells Claude what it found and never blocks. A tool that needs a build doesn't run here.
+
+What is told after an edit and still there at the commit is blocked there.
+
+- **Stance**: [At three moments of Claude's flow](../PHILOSOPHY.md#when-may-a-check-interrupt)
+- **Why**: [032: After an edit broom formats and runs what is judged in milliseconds](../specs/decisions/032-light-check-after-an-edit.md)
+
+---
+
+## F2.11: Nothing is waved through
+
+A finding that is more than slight passes only fixed, or accepted with a reason. Trying again passes nothing.
+
+3 things follow:
+
+- A hint blocks a commit, so no smell enters the repo for a later commit to clean.
+- A turn's end blocks again until what is left is fixed or accepted, so Claude goes back and finishes before it replies.
+- After three blocks broom lets go, and tells the user what is still open in words that can't be missed.
+
+What is slight is told and never blocks.
+
+- **Stance**: [Fixed, or let through with a reason the user sees](../PHILOSOPHY.md#how-does-a-finding-end)
+- **Design**: [6. A finding ends fixed or with a reason the user sees](../DESIGNS.md#6-a-finding-ends-fixed-or-with-a-reason-the-user-sees)
+- **Why**: [031: Trying again passes nothing, and three blocks end in a loud give-up](../specs/decisions/031-no-pass-on-a-second-try.md)
+
+---
+
+## F2.12: A pass is told to the user
+
+When Claude accepts a finding, it tells the user what it left and why in its reply, such as a refactor that comes in a later step. The turn's summary names each accepted finding with its reason. A finding the user agreed to leave, after talking it through, is marked as theirs.
+
+- **Stance**: [Fixed, or let through with a reason the user sees](../PHILOSOPHY.md#how-does-a-finding-end)

@@ -9,7 +9,7 @@ broom is designed around 8 guidelines:
 3. **A hook run ends within 30 seconds**: A slow tool is cut off, never waited for.
 4. **A finding counts only where the change made things worse**: Old code a change doesn't touch never comes up.
 5. **A tool that is missing or fails never blocks**: The check goes ahead without it and says so.
-6. **A false positive costs one round**: Nothing traps Claude in a loop.
+6. **A finding ends fixed or with a reason the user sees**: Nothing is waved through, and nothing traps Claude for good.
 7. **Nothing is installed or set without a yes**: A hook tells Claude, and Claude asks the user.
 8. **A repo's config holds choices, never commands**: Honoring it in an untrusted repo is safe.
 
@@ -21,7 +21,7 @@ broom is built from hooks, skills, settings, `bin/` and `.lsp.json`, on Python 3
 
 **Ask**: Does it need a process that outlives the hook, or a package the user must install for broom itself?
 
-- **Stance**: [Never in the way](PHILOSOPHY.md#when-may-a-check-interrupt)
+- **Stance**: [At three moments of Claude's flow](PHILOSOPHY.md#when-may-a-check-interrupt)
 - **Decisions**:
   - [001: One plugin of its own](specs/decisions/001-own-plugin.md)
 - **How it works**:
@@ -35,7 +35,7 @@ Every Bash call, edit and turn end starts a hook, and most have nothing to check
 
 **Ask**: What does it cost on a call where it has nothing to do?
 
-- **Stance**: [Never in the way](PHILOSOPHY.md#when-may-a-check-interrupt)
+- **Stance**: [At three moments of Claude's flow](PHILOSOPHY.md#when-may-a-check-interrupt)
 - **Decisions**:
   - [002: The commit hook reads every Bash call](specs/decisions/002-every-bash-call.md)
 - **How it works**:
@@ -49,7 +49,7 @@ A hook that runs long makes the session feel stuck, and a tool left compiling ta
 
 **Ask**: What does it start, and what ends it when the time is up?
 
-- **Stance**: [Never in the way](PHILOSOPHY.md#when-may-a-check-interrupt)
+- **Stance**: [At three moments of Claude's flow](PHILOSOPHY.md#when-may-a-check-interrupt)
 - **Decisions**:
   - [024: Tools are kept to a quarter of the cores](specs/decisions/024-thread-caps.md)
   - [025: A command writes to files](specs/decisions/025-files-not-pipes.md)
@@ -90,15 +90,16 @@ A check that can't run isn't Claude's mistake. The cost is that a missing tool l
 
 ---
 
-## 6. A false positive costs one round
+## 6. A finding ends fixed or with a reason the user sees
 
-A linter can be wrong, and an issue can predate the change. Every finding passes fixed, or accepted with one command and a reason that stays on record. A turn's end never blocks twice without a new edit. The cost is one more step for a finding that was wrong, and a turn that can end with a finding still open.
+A linter can be wrong, an issue can predate the change, and a refactor can belong to a later step. So every finding that is more than slight passes fixed, or accepted with one command and a reason, and the reason reaches the user. Trying again is no way out, at a commit or at a turn's end. Where no way out is left, broom lets go after three blocks and tells the user what is still open. The cost is more rounds for each task, and one more step for a finding that was wrong.
 
-**Ask**: What does Claude do when the finding is wrong, and how many rounds does that take?
+**Ask**: Can Claude get past it without a fix or a reason the user sees?
 
-- **Stance**: [Never in the way](PHILOSOPHY.md#when-may-a-check-interrupt)
+- **Stance**: [Fixed, or let through with a reason the user sees](PHILOSOPHY.md#how-does-a-finding-end)
 - **Decisions**:
   - [003: Every finding passes fixed or accepted with a reason](specs/decisions/003-reason-for-every-pass.md)
+  - [031: Trying again passes nothing, and three blocks end in a loud give-up](specs/decisions/031-no-pass-on-a-second-try.md)
   - [016: A smell past the hard limit blocks like a type error](specs/decisions/016-severe-smells.md)
 - **How it works**:
   - [Commit check](specs/commit-check.md)

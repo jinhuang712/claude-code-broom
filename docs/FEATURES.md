@@ -28,7 +28,10 @@ Features
 │   ├── ✅ F2.6: Sweep on request — a scope in the user's own words
 │   ├── 🚧 F2.7: Time limit — a cold build can be cut off and go unchecked
 │   ├── 🚧 F2.8: Self-waivers shown — a config loosened by a command is missed with `check_on` at `commit`
-│   └── ✅ F2.9: Messages that say how to fix — the fix beside the finding
+│   ├── ✅ F2.9: Messages that say how to fix — the fix beside the finding
+│   ├── ⬜ F2.10: Check after an edit — format and what is judged in milliseconds, told and never blocked
+│   ├── ⬜ F2.11: Nothing is waved through — a finding ends fixed or accepted with a reason
+│   └── ⬜ F2.12: A pass is told to the user — Claude says what it left and why
 ├── ✅ F3: Formatting — the project's formatter on what changed
 │   ├── ✅ F3.1: When to format — at commit, after every edit, or never
 │   └── ✅ F3.2: How much to format — the scope

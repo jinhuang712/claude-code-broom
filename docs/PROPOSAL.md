@@ -50,6 +50,12 @@ A repo doesn't rot in a day. Each smell was cheap to fix on the day it appeared,
 
 ---
 
+#### A hint Claude may ignore constrains nothing
+
+A check that only tells, or that passes on a second try, lets an agent that is after speed run to the end. The user learns what it skipped only by asking. On the machine that tests, nearly every hint given at a commit left no trace of whether it was fixed.
+
+---
+
 #### Nobody can say what was let through
 
 A finding that passes on a second try leaves no reason, and a finding that was fixed leaves no trace. So nobody can say whether the checks work.

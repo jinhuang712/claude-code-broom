@@ -23,12 +23,14 @@ Goals
 │   ├── ✅ T1: An idle Bash call costs 15 ms at most
 │   ├── ✅ T2: An idle Python hook costs 50 ms at most
 │   ├── ✅ T3: A hook run takes 30 seconds at most
-│   └── ✅ T4: Content that passed is let through in 100 ms at most
+│   ├── ✅ T4: Content that passed is let through in 100 ms at most
+│   └── ⬜ T5: A check after an edit costs 200 ms at most
 └── Constraints
     ├── ✅ R1: No old warning blocks Claude
     ├── ✅ R2: A false positive costs one round
     ├── ✅ R3: An old smell in untouched code never comes up
-    └── ✅ R4: Setup asks at most two questions
+    ├── ✅ R4: Setup asks at most two questions
+    └── ⬜ R5: Nothing is waved through
 ```
 
 ---
@@ -263,6 +265,22 @@ An edit or a turn's end with nothing to check costs one Python start.
 
 ---
 
+#### T5: A check after an edit costs 200 ms at most
+
+An edit must not be felt, since Claude makes many in a row.
+
+**Want**: clean work without asking.
+
+**Checks**: [F2.10: Check after an edit](../features/F2-sweep.md#f210-check-after-an-edit)
+
+**Limit**: 200 ms, set on 2026-11-18 from a Python start of about 30 ms and a lint of one file by ruff in about 10 ms.
+
+**How**: Time `broom hook edit` on an edit of one Python file with ruff installed.
+
+**Status**: ⬜
+
+---
+
 ### Constraints
 
 ---
@@ -285,13 +303,13 @@ An edit or a turn's end with nothing to check costs one Python start.
 
 **Want**: clean work without asking.
 
-**Checks**: [6. A false positive costs one round](../DESIGNS.md#6-a-false-positive-costs-one-round)
+**Checks**: [6. A finding ends fixed or with a reason the user sees](../DESIGNS.md#6-a-finding-ends-fixed-or-with-a-reason-the-user-sees)
 
-**Condition**: A finding that is wrong passes with one command, and a turn's end never blocks twice without a new edit.
+**Condition**: A finding that is wrong passes with one command and a reason.
 
-**How**: A test accepts a blocked finding with a reason and commits, and another stops twice and expects the turn to end.
+**How**: A test accepts a blocked finding with a reason and commits.
 
-**Status**: ✅ 2026-11-17, by `tests/test_commit.py`, where a blocked commit passes once accepted with a reason, and by `tests/test_turncheck.py`, where a second stop ends the turn.
+**Status**: ✅ 2026-11-17, by `tests/test_commit.py`, where a blocked commit passes once accepted with a reason. Until 2026-11-18 the condition also held that a turn's end never blocks twice without a new edit. The user took that clause out, and [R5: Nothing is waved through](#r5-nothing-is-waved-through) holds the opposite.
 
 ---
 
@@ -320,3 +338,20 @@ An edit or a turn's end with nothing to check costs one Python start.
 **How**: Read the skill and count the questions.
 
 **Status**: ✅ 2026-11-17, by reading `skills/setup/SKILL.md`: two questions in one call before anything is run, and no setting among them. The offer to disable a conflicting plugin was a third question until that day, and is now one of the commands of the first.
+
+---
+
+#### R5: Nothing is waved through
+
+**Want**: nothing passes silently.
+
+**Checks**:
+
+- [6. A finding ends fixed or with a reason the user sees](../DESIGNS.md#6-a-finding-ends-fixed-or-with-a-reason-the-user-sees)
+- [F2.11: Nothing is waved through](../features/F2-sweep.md#f211-nothing-is-waved-through)
+
+**Condition**: A finding that is more than slight passes a commit or a turn's end only fixed or accepted with a reason. Trying again passes nothing, until broom lets go after three blocks and tells the user what is still open.
+
+**How**: A test commits a change with a hint and expects the block, and another stops twice and expects the second block.
+
+**Status**: ⬜

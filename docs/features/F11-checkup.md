@@ -17,7 +17,7 @@ The same numbers go into the whole-repo diagnosis, where every one is listed whe
 
 - **Stance**:
   - [Clean as you go](../PHILOSOPHY.md#when-is-a-smell-cleaned)
-  - [Never in the way](../PHILOSOPHY.md#when-may-a-check-interrupt)
+  - [At three moments of Claude's flow](../PHILOSOPHY.md#when-may-a-check-interrupt)
 
 ---
 
