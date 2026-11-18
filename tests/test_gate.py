@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import os
 import subprocess
+import uuid
 from pathlib import Path
 
 from support import BroomCase, py_function
+
+from broom import githook
 
 
 class GateTest(BroomCase):
@@ -93,3 +96,59 @@ class GateTest(BroomCase):
         self.assertIn("BROOM_NO_ACCEPT is set", out.stderr)
         self.env["BROOM_NO_ACCEPT"] = "0"
         self.assertIn("accepted", self.cli(r, "known", "--accept", "legacy code").stdout, "0 leaves it on")
+
+    # git's hook where git names the work tree its own way: a linked worktree (GIT_DIR alone), `--work-tree` (GIT_WORK_TREE)
+
+    OLD_FILE = "".join(f"x{i} = {i}\n" for i in range(40))  # old, with the lines an untested-file hint asks for
+
+    def hinted_commit(self, checkout: Path, how: str, git: tuple = ("git",)) -> str:
+        """What git's hook says of a commit in `checkout` that adds a 60-line function to the old file pkg/sub/old.py,
+        made as `how` says: `staged`, `all` (`git commit -a`) or `path` (`git commit pkg/sub/old.py`), the last two with
+        the temporary index git then hands the hook. Each gets a data directory of its own, so a note one was shown
+        isn't held back from the next."""
+        env = {**self.env, "CLAUDE_PLUGIN_DATA": str(self.tmp / f"data-{uuid.uuid4().hex[:6]}")}
+        old = checkout / "pkg/sub/old.py"
+        old.write_text(old.read_text() + "\n\n" + py_function("grown", 60))
+        if how == "staged":
+            self.sh(checkout, *git, "add", "pkg/sub/old.py")
+        extra = {"staged": [], "all": ["-a"], "path": ["pkg/sub/old.py"]}[how]
+        out = subprocess.run([*git, "commit", "-q", "-m", "x", *extra], cwd=checkout, env=env, capture_output=True,
+                             text=True)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        return out.stderr
+
+    @staticmethod
+    def smell_lines(stderr: str) -> list:
+        """The hook's lines without its notes on skipped tools: jscpd takes a work tree with no `.git` for no repo and
+        says so, which is its own limit, not git's."""
+        return [row for row in stderr.splitlines() if not row.startswith("broom skipped:")]
+
+    def test_git_pre_commit_reads_a_commit_in_a_linked_worktree_as_it_does_in_the_main_checkout(self) -> None:
+        for how in ("staged", "all", "path"):
+            r = self.repo({"pkg/sub/old.py": self.OLD_FILE})
+            self.install(r)  # the hook is in the common git directory: every worktree runs it
+            linked = self.tmp / f"linked-{how}"
+            self.sh(r, "git", "worktree", "add", "-q", str(linked), "-b", f"side-{how}")
+            in_main, in_linked = self.hinted_commit(r, how), self.hinted_commit(linked, how)
+            self.assertIn("pkg/sub/old.py:", in_main, f"{how}: the hint names the file by its path in the repo")
+            self.assertIn("grown is 60 lines long", in_main, how)
+            self.assertNotIn("new code file", in_linked, f"{how}: the file is old")
+            self.assertEqual(in_linked, in_main, f"{how}: a linked worktree gets what the main checkout gets")
+
+    def test_git_pre_commit_reads_a_repo_used_through_git_dir_and_work_tree_as_it_does_any_repo(self) -> None:
+        store, work = self.tmp / "store.git", self.tmp / "work"
+        (work / "pkg/sub").mkdir(parents=True)
+        (work / "pkg/sub/old.py").write_text(self.OLD_FILE)
+        git = ("git", f"--git-dir={store}", f"--work-tree={work}")
+        self.sh(self.tmp, "git", "init", "-q", "--bare", str(store))
+        self.sh(work, *git, "add", "-A")
+        self.sh(work, *git, "commit", "-qm", "init")
+        hook = store / "hooks/pre-commit"  # no `.git` marks the work tree: git's variables are all there is
+        hook.write_text(githook.script())
+        hook.chmod(0o755)
+        plain = self.repo({"pkg/sub/old.py": self.OLD_FILE})
+        self.install(plain)
+        in_plain = self.hinted_commit(plain, "staged")
+        in_work = self.hinted_commit(work, "staged", git)
+        self.assertIn("grown is 60 lines long", in_plain)
+        self.assertEqual(self.smell_lines(in_work), self.smell_lines(in_plain))

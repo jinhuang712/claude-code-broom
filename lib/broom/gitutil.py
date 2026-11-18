@@ -124,13 +124,33 @@ def git(args: List[str], cwd: Path) -> Optional[str]:
 _git_roots: Dict[Path, Optional[Path]] = {}
 
 
+def toplevel(d: Path) -> Optional[Path]:
+    """The top of the work tree git finds when it runs in `d`, or None when it finds none."""
+    out = git(["rev-parse", "--show-toplevel"], d)
+    return Path(out.strip()).resolve() if out and out.strip() else None
+
+
+def asked_root(d: Path) -> Optional[Path]:
+    """The repo `d` is in, when the environment points git somewhere (GIT_DIR, GIT_WORK_TREE), asked of git where
+    the process runs, as git's own hook runs it: in the top of the work tree. Without a GIT_WORK_TREE git takes the
+    directory it runs in for that top, and a GIT_WORK_TREE of `.` (what `--work-tree` hands a hook) names it, so
+    asked in a folder below, git would call that folder the top and every file in it new. A folder outside that
+    top is asked about itself."""
+    if not d.is_dir():
+        return None
+    start = Path.cwd().resolve()
+    if start not in _git_roots:
+        _git_roots[start] = toplevel(start)
+    top = _git_roots[start]
+    return top if top and d.resolve().is_relative_to(top) else toplevel(d)
+
+
 def git_root(d: Path) -> Optional[Path]:
     """The repo `d` is in: the nearest directory above it with a `.git`, without starting git, which a check asks
-    once per directory of every file it looks at. With GIT_DIR or GIT_WORK_TREE set, git is asked."""
+    once per directory of every file it looks at. With GIT_DIR or GIT_WORK_TREE set, git is asked (asked_root)."""
     if d not in _git_roots:
         if os.environ.get("GIT_DIR") or os.environ.get("GIT_WORK_TREE"):
-            out = git(["rev-parse", "--show-toplevel"], d) if d.is_dir() else None
-            _git_roots[d] = Path(out.strip()).resolve() if out else None
+            _git_roots[d] = asked_root(d)
         else:
             here = d.resolve() if d.is_dir() else None
             _git_roots[d] = next((p for p in (here, *here.parents) if (p / ".git").exists()), None) if here else None

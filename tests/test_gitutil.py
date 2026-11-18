@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from support import BroomCase
@@ -25,6 +26,26 @@ class GitUtilTests(BroomCase):
                 mock.patch.object(gitutil, "git", return_value=f"{r.resolve()}\n") as asked:
             self.assertEqual(git_root(r), r.resolve())
             asked.assert_called_once()
+
+    def test_a_folder_is_in_the_repo_git_names_by_its_git_dir_alone_as_git_runs_its_hooks(self) -> None:
+        r = self.repo({"pkg/sub/a.py": "x = 1\n"})
+        linked = self.tmp / "linked"
+        self.sh(r, "git", "worktree", "add", "-q", str(linked), "-b", "side")
+        # A hook runs in the top of its work tree, with the worktree's own git directory and nothing else: git run in
+        # a folder below would take that folder for the top.
+        with mock.patch.dict("os.environ", {"GIT_DIR": self.sh(linked, "git", "rev-parse", "--absolute-git-dir").strip()}), \
+                mock.patch.object(gitutil, "_git_roots", {}), mock.patch.object(Path, "cwd", return_value=linked):
+            self.assertEqual(git_root(linked), linked)
+            self.assertEqual(git_root(linked / "pkg" / "sub"), linked, "not the folder git was asked in")
+
+    def test_a_folder_is_in_the_work_tree_git_names_relative_to_the_directory_it_runs_in(self) -> None:
+        store, work = self.tmp / "store.git", self.tmp / "work"
+        (work / "pkg").mkdir(parents=True)
+        self.sh(self.tmp, "git", "init", "-q", "--bare", str(store))
+        # `git --git-dir=<store> --work-tree=<work>` hands its hooks GIT_WORK_TREE=. and runs them in <work>.
+        with mock.patch.dict("os.environ", {"GIT_DIR": str(store), "GIT_WORK_TREE": "."}), \
+                mock.patch.object(gitutil, "_git_roots", {}), mock.patch.object(Path, "cwd", return_value=work):
+            self.assertEqual(git_root(work / "pkg"), work, "`.` names the directory the hook runs in, not this folder")
 
     def test_changed_lines_asks_git_per_repo_not_per_file(self) -> None:
         names = {f"f{i}.py": f"x = {i}\n" for i in range(20)}
