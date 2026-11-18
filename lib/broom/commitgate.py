@@ -22,8 +22,8 @@ from .findings import Issue
 from .config import excluded, setting
 from .fmt import format_files
 from .gate import (
-    COMMITS, accept_allowed, baseline_keys, issue_entry, issue_key, new_notes, note_text, open_findings, render,
-    save_commits, select, setup_hint,
+    COMMITS, accept_allowed, baseline_keys, issue_entry, issue_key, kept_blocks, last_block, new_notes, note_text,
+    open_findings, render, save_commits, select, setup_hint,
 )
 from .gitcmd import CommitPlan, GitOp, parse, parse_commit, plan_commit, staged
 from .githook import installed
@@ -150,21 +150,23 @@ def skip_context(sd: Path, notes: List[str], repo: Path) -> List[str]:
 def gate_files(repo: Path, files: List[Path], sd: Path, cwd: Path, state: dict) -> Tuple[Optional[str], List[str]]:
     """Check what a commit takes from `repo`: the denial when it must stop (else None), and lines of context.
     `state` holds each repo's last blocked commit, for `broom known --accept` and the ledger: what it found, which
-    hook and which turn saw it."""
+    hook and which turn saw it. What an earlier commit blocked in files this one didn't take stays in it, for the
+    commit that does."""
     files = sorted(f for f in files if lang_of(f))
     blocking, hints, notes = checked(files, turn=sd)
     context = [hint_text(hints)] if hints else []
     ledger.hinted(entries_of(s.issue() for s in hints))
-    key = str(repo)
-    found = entries_of(blocking)
-    earlier = open_findings(state.get(key, {}))
-    if earlier:
-        ledger.fixes(earlier, found, baseline_keys(), files, notes)
-    if not blocking:
+    key, found, known = str(repo), entries_of(blocking), baseline_keys()
+    prior = open_findings(state.get(key, {}))
+    ended = ledger.fixes(prior, found, known, files, notes) if prior else set()
+    kept = kept_blocks(state.get(key), known, {*found, *ended})
+    if blocking or kept:
+        state[key] = last_block(found, kept, sd)
+    else:
         state.pop(key, None)
+    if not blocking:
         return None, context + skip_context(sd, notes, repo)
     ledger.blocked(found)
-    state[key] = {"pending": found, "where": ledger.HOOK.where, "turn": str(sd)}
     return render(block_head(len(blocking)), blocking, new_notes(sd / "notes.json", notes, repo), set(files),
                   way_out([repo], cwd, "commit again")), context
 

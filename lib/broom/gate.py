@@ -23,6 +23,7 @@ from .state import DATA_ROOT, load_json, say, short_hash, update_json
 
 BASELINE = DATA_ROOT / "baseline.json"
 COMMITS = DATA_ROOT / "commits.json"  # per repo: what the last commit or turn end blocked, by which hook
+STOPS = ("stop", "subagent-stop")  # the hooks of a turn's end, as the ledger and commits.json name them
 BASELINE_DAYS = 30
 MAX_SHOWN = 40
 MAX_CHARS = 9000  # what a block message holds at most: findings give way to the rest of it
@@ -113,6 +114,32 @@ def open_findings(record: dict) -> Dict[str, dict]:
     commit blocks' that a turn-end block replaced as the last (`earlier`). Only `pending` can be accepted; both can be
     fixed."""
     return {**(record.get("earlier") or {}), **(record.get("pending") or {})}
+
+
+def commit_blocks(record: object) -> Dict[str, dict]:
+    """What commits blocked in a repo and no check has ended, from the repo's last-blocked `record`: its `earlier`, and
+    its `pending` unless a turn's end blocked last. A turn-end block is no part of it: the turn's gate.json holds it,
+    and the turn's own end writes its outcome."""
+    if not isinstance(record, dict):
+        return {}
+    last = {} if record.get("where") in STOPS else record.get("pending") or {}
+    return {**(record.get("earlier") or {}), **last}
+
+
+def kept_blocks(record: object, known: Set[str], settled: Iterable[str]) -> Dict[str, dict]:
+    """What commits blocked before and a check leaves open, for the repo's `earlier`: `commit_blocks` less what the check
+    `settled` (found again, which the new block holds, or ended), what was accepted since (`known`) and what is in a file
+    that is gone. A finding stays until it is fixed, accepted or its file is gone, so the record never grows past
+    what is open."""
+    done = set(settled)
+    return {k: e for k, e in commit_blocks(record).items()
+            if k not in done and k not in known and Path(str(e.get("file") or "")).is_file()}
+
+
+def last_block(shown: Dict[str, dict], earlier: Dict[str, dict], turn: Path) -> dict:
+    """A repo's last-blocked record: what the check just run `shown`, the hook and the `turn` it came from, and the
+    commit blocks that stay behind it as `earlier`."""
+    return {"pending": shown, "where": ledger.HOOK.where, "turn": str(turn), **({"earlier": earlier} if earlier else {})}
 
 
 def accept_allowed() -> bool:

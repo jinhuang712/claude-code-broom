@@ -13,21 +13,25 @@ from typing import Dict, List, NamedTuple, Optional
 from . import ledger
 from .commitgate import checked, entries_of, issues_by_repo, way_out
 from .findings import Issue
-from .gate import COMMITS, baseline_keys, new_notes, note_text, render, save_commits, setup_hint, verdict
+from .gate import (
+    COMMITS, STOPS, baseline_keys, kept_blocks, last_block, new_notes, note_text, render, save_commits, setup_hint,
+    verdict,
+)
 from .state import emit, load_json, save_json
 from .turnhooks import finish
 from .turns import turn_base
 
 MAX_BLOCKS = 3  # how often a turn's end blocks before it gives up
-STOPS = ("stop", "subagent-stop")  # the hooks of a turn's end, as the ledger and commits.json name them
 
 
 def stop_again(d: Path, root: Optional[Path], gate: dict) -> None:
     """Claude stopped again without editing: the turn ends. Nothing becomes known: what is left, less what was
-    accepted since, stays open, and is noted as let through with how `turn-ended`."""
+    accepted since, stays open, and is noted as let through with how `turn-ended`. That is its outcome, so the
+    repo's last-blocked record lets go of it: a later `broom known --accept` would pass it a second time."""
     known = baseline_keys()
     left = {k: e for k, e in (gate.get("blocked") or {}).items() if k not in known}
     ledger.let_through(left, "turn-ended", d)
+    forget_turn_blocks(d)
     finish(d, root, f"{len(left)} issue(s) left unfixed" if left else "")
 
 
@@ -43,25 +47,16 @@ def turn_way_out(repos: List[Path], cwd: Path) -> str:
     return f"{way_out(repos or [cwd], cwd, 'stop again')} {leave}"
 
 
-def commit_blocked(record: object, shown: Dict[str, dict]) -> Dict[str, dict]:
-    """What a commit blocked in a repo and no check has ended, from the repo's last-blocked `record` (commits.json):
-    a turn-end block takes the place of the last block, and these findings stay behind it as `earlier`, since no
-    turn-end check covers their files and the commit that fixes them still has their fix lines to write. What this
-    block `shown` again is its own to end. An earlier turn-end block is no part of it: its turn's gate.json holds it."""
-    if not isinstance(record, dict):
-        return {}
-    last = {} if record.get("where") in STOPS else record.get("pending") or {}
-    return {k: e for k, e in {**(record.get("earlier") or {}), **last}.items() if k not in shown}
-
-
 def note_turn_block(d: Path, groups: Dict[Path, List[Issue]]) -> None:
     """Keep what a turn-end block showed in each repo's last-blocked record (commits.json), where `broom known
-    --accept` finds it, as it does what a commit blocked; what a commit blocked before stays in it as `earlier`."""
-    state = load_json(COMMITS, {})
+    --accept` finds it, as it does what a commit blocked. A turn-end block takes the place of the last block, and what
+    a commit blocked before stays in it as `earlier`: no turn-end check covers their files, and the commit that fixes
+    them still has their fix lines to write. What this block shows again is its own to end. An earlier turn-end block
+    is no part of it: its turn's gate.json holds it."""
+    state, known = load_json(COMMITS, {}), baseline_keys()
     for repo, issues in groups.items():
         shown = entries_of(issues)
-        state[str(repo)] = {"pending": shown, "where": ledger.HOOK.where, "turn": str(d),
-                            "earlier": commit_blocked(state.get(str(repo)), shown)}
+        state[str(repo)] = last_block(shown, kept_blocks(state.get(str(repo)), known, shown), d)
     save_commits(state, groups)
 
 

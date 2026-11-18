@@ -184,14 +184,16 @@ def let_through(entries: Dict[str, dict], how: str, turn: Optional[Path] = None,
         note_through(turn, rows)
 
 
-def fixes(prior: Dict[str, dict], now: Dict[str, dict], known: Set[str], files: List[Path], notes: List[str]) -> None:
-    """Findings of an earlier block that are gone, and really fixed. `now` holds what blocks now, `known` what was
-    accepted as known since: neither is gone. Anything else stays open: a commit of other files, a tool that didn't
-    run, a finding whose key changed because its message or its line did and that is still there under the new key
-    (a function cut from 120 lines to 110). That last case is told by the group: each finding of a file, tool and
-    rule that is new now takes the place of one that is gone."""
+def fixes(prior: Dict[str, dict], now: Dict[str, dict], known: Set[str], files: List[Path], notes: List[str]
+          ) -> Set[str]:
+    """Findings of an earlier block that are gone, and really fixed; the keys of `prior` this check is done with
+    come back: the fixed and the replaced, never the ones that stay open. `now` holds what blocks now, `known` what
+    was accepted as known since: neither is gone. Anything else stays open: a commit of other files, a tool that
+    didn't run, a finding whose key changed because its message or its line did and that is still there under the
+    new key (a function cut from 120 lines to 110). That last case is told by the group: each finding of a file,
+    tool and rule that is new now takes the place of one that is gone."""
     if HOOK.loosened:
-        return  # a finding the looser config hides is gone and not fixed: every one stays open
+        return set()  # a finding the looser config hides is gone and not fixed: every one stays open
     covered = {f.resolve() for f in files}
     skipped = [n for n in notes if n.startswith(SKIP_PREFIXES)]
     gone = {k: e for k, e in prior.items()
@@ -205,6 +207,7 @@ def fixes(prior: Dict[str, dict], now: Dict[str, dict], known: Set[str], files: 
         else:
             out[k] = e
     write(not_fixed_yet([finding("fix", k, e) for k, e in out.items()]))
+    return set(gone)
 
 
 def not_fixed_yet(rows: List[dict]) -> List[dict]:
