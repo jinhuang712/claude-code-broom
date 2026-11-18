@@ -53,7 +53,7 @@ Writing is one append under a lock. It never raises into a hook. Over 2 MB the l
 
 ## When a fix counts
 
-A finding is fixed when it was in the last block of the same repo, or of the same turn, and is gone from the current result. Four things keep a gone finding open instead:
+A finding is fixed when a block of the same repo or of the same turn held it, no check has ended it and it is gone from the current result. A turn-end block takes the place of the repo's last block, and what a commit blocked before stays behind it until a commit covers its file. A fix is written once: a commit and a turn's end that both see a finding gone write one line between them. Four things keep a gone finding open instead:
 
 - Its file is not among the files this check covered, as when the next commit takes other files.
 - A timeout or missing-tool note covers the tool that found it.

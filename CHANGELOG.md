@@ -6,6 +6,17 @@
 
 ---
 
+## 0.23.2 — 2026-11-18
+
+---
+
+### Record
+
+- A finding that a commit blocked keeps its fix line when the turn's end blocks something else in between. Before, the later block took the earlier one's place, and `broom report` kept showing the first finding as open after it was fixed.
+- A finding that a commit and the turn's end both see gone counts as fixed once. Before, it could get two fix lines.
+
+---
+
 ### Docs
 
 - The README shows a block message as broom words it today, names the diagnosis and the check-up, and carries the architecture diagram. The Chinese README follows it again.

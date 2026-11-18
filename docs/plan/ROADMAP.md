@@ -298,12 +298,14 @@ The user lifted the hold on Rust's smells on 2026-11-17, and 7 more shipped in 0
 
 The user asked on 2026-11-17 for a round of polish and self-test once the features are in. broom is used end to end in fresh sessions, on throwaway repos and on real ones, and what that finds is fixed.
 
-**Delivers** (8):
+**Delivers** (10):
 
 - [F1.5: Protection list](../features/F1-setup.md#f15-protection-list)
 - Fresh sessions used broom end to end on a throwaway repo and on a public Python project, done on 2026-11-18.
   - They met 8 things: the limits card · the setup offer · a block with its fix lines · a fix · an accept with a reason · the turn's summary · the check-up's line · a checked commit.
-- [I8: A hole in the record](ISSUES.md#i8-a-hole-in-the-record)
+- A turn-end block no longer takes a commit block's fix line with it, done on 2026-11-18.
+- [I13: A blocked finding can end with no line or with two](ISSUES.md#i13-a-blocked-finding-can-end-with-no-line-or-with-two)
+- [I14: git's hook misreads a linked worktree](ISSUES.md#i14-gits-hook-misreads-a-linked-worktree)
 - A fresh session answers ten questions about a repo from broom alone after five runs, done on 2026-11-17.
 - [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)
 - README and INSTALL say which systems are supported, done on 2026-11-17.
