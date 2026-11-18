@@ -244,10 +244,10 @@ An accepted finding is a debt on record and not a closed case: `broom known` lis
 
 At a turn's end, a turn that changed code has work left over in 2 cases:
 
-- No test ran after the last change to code.
+- A code file the turn changed holds content that no test run tested, and the block names up to three such files.
 - The last test run failed, and the block names its exit code and its command.
 
-It stops the turn's end like any finding, and passes when the tests ran and passed, by an accept with a reason or by a question to the user. An accept holds for that turn only. broom looks for the trace and runs no test itself: it knows a test run by the words of the command, from a list of runners and from what `.broom.json` names in `test_commands`.
+It stops the turn's end like any finding, and passes when the tests ran and passed, by an accept with a reason or by a question to the user. An accept holds for that turn only. broom looks for the trace and runs no test itself. It judges by content and not by time, so code tested in a worktree and merged afterwards counts as tested. It knows a test run by the words of the command, from a list of runners and from what `.broom.json` names in `test_commands`.
 
 It applies where the repo tracks a test file, and at the main session's end only. `smells_off: ["tests_not_run"]` turns it off.
 

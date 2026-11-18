@@ -45,11 +45,13 @@ A note never blocks. The user's line at the turn's end tells it, once.
 
 ## Tests ran
 
-A turn that changed code has work left over when no test ran after the last change, or when the last test run failed. The turn's end raises it as one finding, where the repo tracks a test file.
+A turn that changed code has work left over when a code file it changed holds content no test run tested, or when the last test run failed. The turn's end raises it as one finding, where the repo tracks a test file.
 
 The trace comes from two hooks. The hook before each Bash command notes a command that is a test run, with the time. A hook on the event Claude Code fires after a command that didn't exit 0 notes one that failed, with the first line of its error. A test run with no failure after it counts as passed. Both notes sit in the session's directory, so a subagent's test run counts for the main session.
 
-The time of the last test run is set against the modification times of the turn's code files. An accept of the finding is kept in the turn's directory and not among the known issues, so it holds for that turn only.
+A test run's note holds what it tested: the commit of the repo it ran in, and the blob of each code file that differed from that commit. A file the turn changed counts as tested when a run that didn't fail tested its content as it is now. So a file tested in a linked worktree and then merged into the main checkout counts, and so does a file that was only touched. The finding names up to three files that are not tested. A file the turn deleted needs no test.
+
+An accept of the finding is kept in the turn's directory and not among the known issues, so it holds for that turn only.
 
 - [034: A test run is known by the hook events of its command, and its accept holds for one turn](decisions/034-test-run-by-hook-events.md)
 

@@ -15,7 +15,8 @@ Goals
 │   ├── ✅ O4: Nothing passes silently — every pass has a reason the user can see
 │   ├── ✅ O5: A full diagnosis of an old repo — every smell, with no time cut
 │   ├── ✅ O6: A number that got worse is told once — the check-up speaks only then
-│   └── ✅ O7: No script to write — broom answers what a session would count by hand
+│   ├── ✅ O7: No script to write — broom answers what a session would count by hand
+│   └── ⬜ O8: Done means tests ran — a turn that changed code ends with its tests run
 ├── Measures
 │   ├── ⬜ M1: Fix rate — how much of what broom blocks gets fixed
 │   └── ⬜ M2: Check time — the seconds a commit check takes
@@ -56,7 +57,7 @@ Claude's work comes out formatted, lint-clean and type-correct by the project's 
 
 **Acceptance**: The test suite passes. It commits and stops in temporary repos and expects the block.
 
-**Status**: ✅ 2026-11-18, 590 tests with 3 skipped.
+**Status**: ✅ 2026-11-18, 656 tests with 3 skipped.
 
 ---
 
@@ -148,6 +149,20 @@ A session with broom installed gets a repo's numbers from broom.
 **Acceptance**: A fresh session is asked ten questions about a repo: its size, its longest functions, its skipped tests, its untested files and each rot counter among them. It answers all ten with broom commands and writes no script.
 
 **Status**: ✅ 2026-11-17, in the fifth fresh session on a throwaway repo of three languages, with 0.22.7: the numbers of all ten answers came from `broom stats`, `broom smells` and `broom diagnose`, and no script was written. The session checked samples of them with grep, `git log` and `git blame`, and they agreed. Four earlier sessions that day finished one to four answers by hand, and each gap was closed. On a real TS/JS repo with 0.22.0, nine answers came from broom and coverage had no report to read.
+
+---
+
+#### O8: Done means tests ran
+
+A turn that changed code doesn't end before the project's tests ran on that code.
+
+**Want**: clean work without asking.
+
+**Checks**: [F2.13: A turn that changed code shows that tests ran](../features/F2-sweep.md#f213-a-turn-that-changed-code-shows-that-tests-ran)
+
+**Acceptance**: A fresh session is asked for a change to code and told that it need not write tests. Its turn ends only after it ran the repo's tests on the changed code, or after it accepted the finding with a reason or asked the user.
+
+**Status**: ⬜
 
 ---
 

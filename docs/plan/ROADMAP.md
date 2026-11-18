@@ -344,12 +344,14 @@ The user set this on 2026-11-18: a check that lets Claude carry on puts Claude's
 - [F2.12: A pass is told to the user](../features/F2-sweep.md#f212-a-pass-is-told-to-the-user)
 - [F2.13: A turn that changed code shows that tests ran](../features/F2-sweep.md#f213-a-turn-that-changed-code-shows-that-tests-ran)
 
-**Exit criteria** (2):
+**Exit criteria** (3):
 
+- **Objectives**
+  - [O8: Done means tests ran](GOALS.md#o8-done-means-tests-ran)
 - **Thresholds**
-  - [T5: A check after an edit costs 200 ms at most](GOALS.md#t5-a-check-after-an-edit-costs-200-ms-at-most)
+  - [T5: A check after an edit costs 200 ms at most](GOALS.md#t5-a-check-after-an-edit-costs-200-ms-at-most): ✅ 2026-11-18, 146 to 160 ms in the worst case
 - **Constraints**
-  - [R5: Nothing is waved through](GOALS.md#r5-nothing-is-waved-through)
+  - [R5: Nothing is waved through](GOALS.md#r5-nothing-is-waved-through): ✅ 2026-11-18
 
 ---
 
