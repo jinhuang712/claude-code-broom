@@ -18,6 +18,10 @@ SETTINGS = {
     "format_scope": ("changed", ("changed", "function", "file")),
     "smells": ("on", ("on", "off")),
 }
+# The levels of a finding: "block" and "hint" both stop a commit and a turn's end until the finding is fixed or
+# accepted with a reason (a block is past a hard limit, and one that grew there can't be accepted); NOTE is told to
+# Claude and never stops anything.
+NOTE = "note"
 # Code smell limits, (soft, hard): past soft is a hint, past hard a block. SwiftLint's own warning and error
 # defaults, except nesting; .broom.json `limits` moves them per repo.
 LIMIT_PAIR = 2  # a limit in .broom.json is [soft, hard]
@@ -31,19 +35,20 @@ SMELL_LIMITS = {
     "type_lines": (250, 1_000_000),  # a hint only: whether to split a type is a design call
     "duplicate_lines": (10, 30),  # a block of code repeated elsewhere
 }
-# Code nothing uses, found across the repo (JS/TS/Python): a hint only, as dynamic loading looks unused too.
+# Code nothing uses, found across the repo (JS/TS/Python): a note only, as dynamic loading looks unused too.
 DEAD_CODE = "dead_code"
 # The check-up (see checkup) is no smell, but `smells_off` turns it off by this name.
 CHECKUP = "checkup"
-# Smells that count by occurrence, not by size: a change that adds one gets this level.
+# Smells that count by occurrence, not by size: a change that adds one gets this level. A smell is a note where it
+# is slight or its detector guesses.
 SMELL_PRESENCE = {
     "suppression": "block",  # a lint suppression without a reason or a rule
     "swallowed_error": "block",  # an empty block or catch, or a catch that only rethrows
     "commented_code": "block",
     "unused_params": "hint",
-    "magic_numbers": "hint",
+    "magic_numbers": NOTE,
     "debug_output": "hint",
-    "todo": "hint",
+    "todo": NOTE,
     "type_escape": "hint",  # any, force casts and unwraps, non-null assertions
     "globals": "hint",
     "bool_params": "hint",
@@ -53,7 +58,7 @@ SMELL_PRESENCE = {
     "import_cycle": "hint",  # modules that import one another in a ring
     "folder_cycle": "hint",  # folders that do: the layers of the code going the wrong way
     "skipped_test": "hint",  # a test marked skipped or disabled, with no condition behind it
-    "untested_file": "hint",  # a code file of 30 lines or more a change adds, with no test file beside it by name
+    "untested_file": NOTE,  # a code file of 30 lines or more a change adds, with no test file beside it by name
     "deprecated_api": "hint",  # a call to something its author marked deprecated
 }
 # Presence smells whose text carries what the tool said of the first finding: a deprecation note names what replaced it.

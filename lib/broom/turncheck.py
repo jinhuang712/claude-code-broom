@@ -1,8 +1,9 @@
 """The check at a turn's end, for a turn that changed code (turnhooks decides that, and loads this module only then).
 
-A turn's end blocks like a commit, once: accept what is left with `broom known --accept "<why>"` and stop again.
-Stopping again without that still ends the turn, as broom never traps one, but records nothing as known: what is
-left stays open and shows in the turn's summary.
+A turn's end blocks like a commit, and stopping again passes nothing: what is left, a hint with the rest, is fixed, or
+accepted with `broom known --accept "<why>"`. After MAX_BLOCKS blocks broom gives up, as it never traps a turn: the
+turn ends, what is left is on record as `gave-up`, and the user is told in a line that opens `broom GAVE UP`. A note,
+a slight smell, never blocks: the user's line at the turn's end tells it, once.
 """
 
 from __future__ import annotations
@@ -14,25 +15,16 @@ from . import ledger
 from .commitgate import checked, entries_of, issues_by_repo, way_out
 from .findings import Issue
 from .gate import (
-    COMMITS, STOPS, baseline_keys, kept_blocks, last_block, new_notes, note_text, render, save_commits, setup_hint,
-    verdict,
+    COMMITS, STOPS, baseline_keys, kept_blocks, last_block, new_notes, note_text, rel, render, save_commits,
+    setup_hint,
 )
+from .smells import Smell
 from .state import emit, load_json, save_json
 from .turnhooks import finish
 from .turns import turn_base
 
 MAX_BLOCKS = 3  # how often a turn's end blocks before it gives up
-
-
-def stop_again(d: Path, root: Optional[Path], gate: dict) -> None:
-    """Claude stopped again without editing: the turn ends. Nothing becomes known: what is left, less what was
-    accepted since, stays open, and is noted as let through with how `turn-ended`. That is its outcome, so the
-    repo's last-blocked record lets go of it: a later `broom known --accept` would pass it a second time."""
-    known = baseline_keys()
-    left = {k: e for k, e in (gate.get("blocked") or {}).items() if k not in known}
-    ledger.let_through(left, "turn-ended", d)
-    forget_turn_blocks(d)
-    finish(d, root, f"{len(left)} issue(s) left unfixed" if left else "")
+SHOWN = 5  # the findings a line for the user names before "and N more"
 
 
 def turn_head(count: int) -> str:
@@ -41,10 +33,24 @@ def turn_head(count: int) -> str:
 
 
 def turn_way_out(repos: List[Path], cwd: Path) -> str:
-    """The last of a turn-end block's own lines: accept what is left with a reason and stop again, or stop again and
-    leave it open."""
-    leave = "Stopping again ends the turn, but leaves the issues open: a commit still stops on them."
+    """The last of a turn-end block's own lines: stopping again passes nothing, so fix what is left or accept it with a
+    reason; and after MAX_BLOCKS blocks the turn ends with the user told what is still open."""
+    leave = f"After {MAX_BLOCKS} blocks the turn ends, and the user is told what is still open."
     return f"{way_out(repos or [cwd], cwd, 'stop again')} {leave}"
+
+
+def names(issues: List[Issue]) -> str:
+    """The first SHOWN of `issues` as `a.py:12 function_lines, b.py:3 skipped_test`, with how many more."""
+    ordered = sorted(issues, key=lambda i: (str(i.file), i.line))
+    where = [f"{rel(i.file, i.root)}:{i.line}" if i.line else rel(i.file, i.root) for i in ordered]
+    shown = [f"{w} {i.rule}" for w, i in zip(where, ordered)][:SHOWN]
+    return ", ".join(shown) + (f", and {len(ordered) - SHOWN} more" if len(ordered) > SHOWN else "")
+
+
+def gave_up_line(blocking: List[Issue]) -> str:
+    """The line the user sees when broom gives up: it opens so that it can't be missed, and names what is left."""
+    return (f"broom GAVE UP after {MAX_BLOCKS} blocks: {len(blocking)} finding(s) left unfixed and unaccepted: "
+            f"{names(blocking)}")
 
 
 def note_turn_block(d: Path, groups: Dict[Path, List[Issue]]) -> None:
@@ -61,8 +67,9 @@ def note_turn_block(d: Path, groups: Dict[Path, List[Issue]]) -> None:
 
 
 def forget_turn_blocks(d: Path) -> None:
-    """The turn's end found nothing to block: drop what its blocks left in commits.json, so a later `broom known
-    --accept` doesn't accept what is gone. What a commit blocked before them stays, to be fixed."""
+    """The turn's end is done with what its blocks left in commits.json (nothing to block, or it gave up): drop it, so
+    a later `broom known --accept` doesn't accept what is gone or pass it a second time. What a commit blocked before
+    them stays, to be fixed."""
     state = load_json(COMMITS, {})
     mine = [k for k, v in state.items() if isinstance(v, dict) and v.get("turn") == str(d) and v.get("where") in STOPS]
     for k in mine:
@@ -75,11 +82,11 @@ def forget_turn_blocks(d: Path) -> None:
 
 
 def block_turn(d: Path, blocking: List[Issue], progress: dict, reason: str) -> None:
-    """Block the turn's end with `reason`, and note what Claude was shown: in gate.json, so that stopping again ends
-    the turn, and in commits.json, for `broom known --accept`."""
+    """Block the turn's end with `reason`, and note what Claude was shown: in gate.json, with the count of blocks in
+    `progress`, and in commits.json, for `broom known --accept`."""
     found = entries_of(blocking)
     ledger.blocked(found)
-    save_json(d / "gate.json", {"verdict": verdict(blocking), "count": len(blocking), **progress, "blocked": found})
+    save_json(d / "gate.json", {**progress, "blocked": found})
     note_turn_block(d, issues_by_repo(blocking))
     emit({"decision": "block", "reason": reason})
 
@@ -90,32 +97,47 @@ class Turn(NamedTuple):
     d: Path  # where its records are
     root: Optional[Path]  # the session's repo; None for a subagent
     cwd: Path  # where the hook runs
-    mark: str  # changes whenever one of the turn's files does: the same as at the last block means no new edit
+
+
+def end_tail(d: Path, notes: List[str], files: List[Path], told: List[Smell]) -> str:
+    """What a turn's end adds to the user's line besides what was let through: the checks that didn't run, which are
+    told once a session, and the notes (slight smells), which the turn's end tells once since it ends the turn."""
+    skipped = new_notes(d / "notes.json", notes, files[0])
+    parts = []
+    if skipped:
+        parts.append("; ".join(note_text(n) for n in skipped) + (" (run /broom:setup)" if setup_hint(skipped) else ""))
+    if told:
+        parts.append(f"{len(told)} slight smell(s) noted: {names([s.issue() for s in told])}")
+    return "; ".join(parts)
+
+
+def give_up(turn: Turn, blocking: List[Issue], tail: str) -> None:
+    """The turn has been blocked MAX_BLOCKS times and still has findings: end it. What is left is on record as
+    `gave-up`, not known; the repo's last-blocked record lets go of it, so a later `broom known --accept` can't pass it
+    a second time; and the user's line opens with `gave_up_line`, ahead of the rest of the turn's summary."""
+    ledger.let_through(entries_of(blocking), "gave-up", turn.d)
+    forget_turn_blocks(turn.d)
+    finish(turn.d, turn.root, tail, lead=gave_up_line(blocking))
 
 
 def check_turn(turn: Turn, files: List[Path]) -> None:
-    """Check the code `files` the turn changed: block its end once, or end it."""
-    d, root = turn.d, turn.root
+    """Check the code `files` the turn changed: block its end while a finding is left, up to MAX_BLOCKS times, then
+    give up; or end it. Stopping again re-checks, with or without an edit: nothing but a fix, or an accepted
+    reason, passes."""
+    d = turn.d
     gate = load_json(d / "gate.json", {})
-    if gate.get("verdict") and gate.get("edits_at") == turn.mark:
-        stop_again(d, root, gate)
-        return
-    blocking, hints, notes = checked(files, turn_base(d, root), d)
-    blocking += [s.issue() for s in hints]  # at a turn's end a hint stops Claude once: it cleans up now
+    blocking, told, notes = checked(files, turn_base(d, turn.root), d)
     if gate.get("blocked"):
         ledger.fixes(gate["blocked"], entries_of(blocking), baseline_keys(), files, notes)
     if not blocking:
         forget_turn_blocks(d)
-        fresh = new_notes(d / "notes.json", notes, files[0])
-        tail = "; ".join(note_text(n) for n in fresh) + (" (run /broom:setup)" if setup_hint(fresh) else "")
-        finish(d, root, tail if fresh else "")
+        finish(d, turn.root, end_tail(d, notes, files, told))
         return
     blocks = int(gate.get("blocks", 0)) + 1
     if blocks > MAX_BLOCKS:
-        ledger.let_through(entries_of(blocking), "gave-up", d)
-        finish(d, root, f"gave up after {MAX_BLOCKS} rounds, {len(blocking)} issue(s) left")
+        give_up(turn, blocking, end_tail(d, notes, files, told))
         return
     groups = issues_by_repo(blocking)
     reason = render(turn_head(len(blocking)), blocking, new_notes(d / "notes.json", notes, files[0]), set(files),
                     turn_way_out(list(groups), turn.cwd))
-    block_turn(d, blocking, {"edits_at": turn.mark, "blocks": blocks}, reason)
+    block_turn(d, blocking, {"blocks": blocks}, reason)

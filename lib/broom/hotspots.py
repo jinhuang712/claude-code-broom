@@ -88,7 +88,7 @@ def rank(smells: List[Smell], churn: Dict[str, int], by: str = "churn") -> Tuple
     files = []
     for f, rows in by_file.items():
         rel = str(f.relative_to(rows[0].repo))
-        severe, hints = sum(s.level == "block" for s in rows), sum(s.level == "hint" for s in rows)
+        severe, hints = sum(s.level == "block" for s in rows), sum(s.level != "block" for s in rows)
         changes = churn.get(rel, 0)
         files.append({"file": rel, "severe": severe, "hints": hints, "changes": changes,
                       "score": score(severe, hints, changes), "worst": rows[0].text()})

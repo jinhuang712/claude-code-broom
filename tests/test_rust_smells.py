@@ -130,15 +130,15 @@ class RustSmellTest(BroomCase):
         found = self.smells(r)
         self.assertEqual(sorted((s.level, s.metric, s.key) for s in found if s.metric not in {"todo", "unused_params"}),
                          [("block", "complexity", "branchy_hard"), ("block", "function_lines", "long_hard"),
-                          ("hint", "complexity", "branchy_soft"), ("hint", "dead_code", "never_called"),
-                          ("hint", "function_lines", "long_soft"), ("hint", "nesting", "function"),
-                          ("hint", "swallowed_error", "swallowed_error")])
+                          ("hint", "complexity", "branchy_soft"), ("hint", "function_lines", "long_soft"),
+                          ("hint", "nesting", "function"), ("note", "dead_code", "never_called"),
+                          ("note", "swallowed_error", "swallowed_error")])
         lines = (CLEAN + "\n" + SMELLY).splitlines()
         by = {s.metric: s for s in found if s.metric in {"todo", "unused_params"}}
         self.assertEqual([lines[n - 1].strip() for n in by["todo"].added], ["todo!()", 'unimplemented!("nope")'])
         self.assertEqual([lines[n - 1].strip() for n in by["unused_params"].added],
                          ["pub fn ignores(used: i32, spare: i32) -> i32 {"], "the unused local is not one")
-        self.assertTrue(all(s.level == "hint" for s in by.values()))
+        self.assertEqual({metric: s.level for metric, s in by.items()}, {"todo": "note", "unused_params": "hint"})
 
     def test_what_the_change_did_not_add_stays_quiet_and_a_long_function_it_edits_is_told_as_touched(self) -> None:
         text = CLEAN + "\n" + SMELLY

@@ -7,9 +7,9 @@ record), `event`, `where` (the hook: commit, pre-commit, stop, subagent-stop) an
 - block: a finding stopped a commit or a turn's end. `key` is the finding's key from gate.issue_key, `tool`, `rule`
   and `file` (relative to its own worktree's root) say which.
 - fix: a block's finding is gone, and the check that found it ran over its file with its tool.
-- pass: a finding was let through, with `how`: accept (with `why`), turn-ended or gave-up. Older lines also hold
-  retry, denials and stop-again, which no longer occur.
-- hint: a smell hint was given as context, without a block.
+- pass: a finding was let through, with `how`: accept (with `why`) or gave-up. Older lines also hold retry,
+  denials, stop-again and turn-ended, which no longer occur.
+- hint: a note, a slight smell, was given as context, without a block.
 - skip: a tool didn't run (`note` is the timeout or missing note, `tool` the tool).
 - time: seconds one check (`check`) took in a hook.
 - error: a hook failed and let the action through.
@@ -171,8 +171,8 @@ def blocked(entries: Dict[str, dict]) -> None:
 
 
 def hinted(entries: Dict[str, dict]) -> None:
-    """Log a `hint` line for each finding in `entries` (key to entry): each was given to Claude as context, not as a
-    block."""
+    """Log a `hint` line for each finding in `entries` (key to entry): each was a note given to Claude as context, not
+    a block."""
     write([finding("hint", k, e) for k, e in entries.items()])
 
 

@@ -58,11 +58,6 @@ def issue_entry(i: Issue) -> Dict[str, object]:
     return entry
 
 
-def verdict(issues: List[Issue]) -> str:
-    """A short id for a set of issues: the same issues in any order give the same id, and no issues give a fixed one."""
-    return short_hash("".join(sorted(issue_key(i) for i in issues)))
-
-
 # ---------------------------------------------------------------- known issues
 
 

@@ -39,12 +39,12 @@ def by_smell(repo: Path, ordered: List[Smell]) -> List[dict]:
 
 
 def by_language(found: List[Smell]) -> List[dict]:
-    """Per language: the smells, how many are past the hard limit and how many are hints."""
+    """Per language: the smells, how many are past the hard limit and how many are hints (a note counts as one)."""
     groups: Dict[str, List[Smell]] = {}
     for s in found:
         groups.setdefault(lang_of(s.file) or s.file.suffix, []).append(s)
     rows = [{"language": lang, "count": len(rows), "severe": sum(s.level == "block" for s in rows),
-             "hints": sum(s.level == "hint" for s in rows)} for lang, rows in groups.items()]
+             "hints": sum(s.level != "block" for s in rows)} for lang, rows in groups.items()]
     return sorted(rows, key=lambda r: (-r["severe"], -r["count"], r["language"]))
 
 

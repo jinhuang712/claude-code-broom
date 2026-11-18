@@ -28,7 +28,7 @@ class SmellTest(BroomCase):
         self.assertEqual(len(compare_occurrences([todo(5), todo(5)], [], self.tmp)[0].added), 1, "once per line")
 
     @unittest.skipUnless(HAS_PY, "ruff missing")
-    def test_a_swallowed_error_blocks_and_a_print_hints(self) -> None:
+    def test_a_swallowed_error_and_a_print_both_stop_a_commit(self) -> None:
         r = self.repo({"a.py": "def f(x):\n    return x\n"})
         (r / "a.py").write_text("def f(x):\n    try:\n        return int(x)\n    except Exception:\n        pass\n")
         self.sh(r, "git", "add", "a.py")
@@ -37,8 +37,7 @@ class SmellTest(BroomCase):
         self.assertIn("broom known --accept", reason)
         (r / "a.py").write_text('def f(x):\n    print("x is", x)\n    return x\n')
         self.sh(r, "git", "add", "a.py")
-        out = self.commit(r, "git commit -m x")
-        self.assertIn("1 more debug print(s)", out["hookSpecificOutput"]["additionalContext"])
+        self.assertIn("1 more debug print(s)", self.denied(self.commit(r, "git commit -m x")))
         (r / ".broom.json").write_text('{"smells_off": ["debug_output"]}')
         self.assertNotIn("debug print", str(self.commit(r, "git commit -m x")))
         (r / ".broom.json").write_text('{"smells_off": ["debug"]}')
@@ -95,7 +94,7 @@ class SmellTest(BroomCase):
         self.assertEqual([s for s in found if s.metric == "duplicate_lines"], [], "a copy already there is old")
 
     @unittest.skipUnless(shutil.which("jscpd"), "jscpd missing")
-    def test_code_a_change_adds_and_nothing_uses_hints(self) -> None:
+    def test_code_a_change_adds_and_nothing_uses_is_a_note(self) -> None:
         util = "def helper():\n    return 1\n\n\n_OLD = 3\n"
         r = self.repo({"main.py": "from pkg.util import helper\n\nprint(helper())\n", "pkg/__init__.py": "",
                        "pkg/util.py": util})
@@ -103,7 +102,7 @@ class SmellTest(BroomCase):
         found, notes = find_smells(r, [r / "pkg/util.py"], "HEAD")
         self.assertEqual(notes, [])
         self.assertEqual([(s.level, s.text()) for s in found if s.metric == "dead_code"],
-                         [("hint", "export `orphan` is never used outside tests")], "_OLD was unused before the change")
+                         [("note", "export `orphan` is never used outside tests")], "_OLD was unused before the change")
         everything, _ = find_smells(r, [r / "pkg/util.py"], None)
         self.assertEqual(len([s for s in everything if s.metric == "dead_code"]), 2, "a whole-repo sweep lists all")
 
@@ -178,7 +177,7 @@ class SmellTest(BroomCase):
         return self.hook("stop", {"session_id": session, "cwd": str(repo), "permission_mode": "default"})
 
     @unittest.skipUnless(HAS_PY, "ruff missing")
-    def test_a_new_long_function_blocks_and_a_shorter_one_hints(self) -> None:
+    def test_a_new_long_function_stops_a_commit_past_either_limit(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
         (r / "a.py").write_text(py_function("long_one", 120))
         self.sh(r, "git", "add", "a.py")
@@ -187,18 +186,18 @@ class SmellTest(BroomCase):
         self.assertIn("broom known --accept", reason, "a severe smell doesn't pass on a retry")
         (r / "a.py").write_text(py_function("long_one", 60))
         self.sh(r, "git", "add", "a.py")
-        out = self.commit(r, "git commit -m x")
-        self.assertEqual(self.denied(out), "")
-        self.assertIn("long_one is 60 lines long (over 50; new)", out["hookSpecificOutput"]["additionalContext"])
+        reason = self.denied(self.commit(r, "git commit -m x"))
+        self.assertIn("long_one is 60 lines long (over 50; new)", reason)
+        self.assertIn("broom known --accept", reason, "a hint doesn't pass on a retry either")
 
     @unittest.skipUnless(HAS_PY, "ruff missing")
     def test_smells_count_only_what_the_change_made_worse(self) -> None:
         r = self.repo({"a.py": py_function("legacy", 150)})
         (r / "a.py").write_text(py_function("legacy", 150).replace("x += 3\n", "x += 333\n"))
         self.sh(r, "git", "add", "a.py")
-        out = self.commit(r, "git commit -m same-size")
-        self.assertEqual(self.denied(out), "", "a legacy function of the same size is no block")
-        self.assertIn("legacy is 150 lines long (over 50; was 150: you touched it", str(out), "but it is a hint now")
+        reason = self.denied(self.commit(r, "git commit -m same-size"))
+        self.assertNotIn("hard limit", reason, "a legacy function of the same size is no block")
+        self.assertIn("legacy is 150 lines long (over 50; was 150: you touched it", reason, "but it is a hint, which stops")
         (r / "a.py").write_text(py_function("legacy", 155))
         self.sh(r, "git", "add", "a.py")
         reason = self.denied(self.commit(r, "git commit -m x"))
@@ -216,13 +215,14 @@ class SmellTest(BroomCase):
         self.assertEqual(item["status"], "ok", "smells and limits are known keys")
 
     @unittest.skipUnless(HAS_PY, "ruff missing")
-    def test_turn_end_hints_once_and_severe_smells_still_stop_the_commit(self) -> None:
+    def test_turn_end_blocks_a_hint_again_and_stopping_twice_doesnt_excuse_a_smell_at_the_commit(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
         (r / "a.py").write_text(py_function("medium", 60))
         out = self.stop_turn(r, r / "a.py", "s3")
         self.assertEqual(out.get("decision"), "block")
         self.assertIn("medium is 60 lines long (over 50; new)", out["reason"])
-        self.assertIn("left unfixed", self.hook("stop", {"session_id": "s3", "cwd": str(r)}).get("systemMessage", ""))
+        again = self.hook("stop", {"session_id": "s3", "cwd": str(r)})
+        self.assertEqual(again.get("decision"), "block", "stopping again passes nothing")
         (r / "a.py").write_text(py_function("huge", 120))
         self.assertIn("huge is 120 lines long", self.stop_turn(r, r / "a.py", "s4")["reason"])
         self.hook("stop", {"session_id": "s4", "cwd": str(r)})

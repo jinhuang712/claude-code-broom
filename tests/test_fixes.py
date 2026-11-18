@@ -11,7 +11,7 @@ from broom.config import DEAD_CODE, SMELL_LIMITS, SMELL_PRESENCE
 from broom.findings import Issue
 from broom.fixes import NOT_A_FIX, fixes, how_to_fix
 from broom.gate import MAX_CHARS, render
-from broom.smells import Smell, hint_text
+from broom.smells import Smell, noted_text
 
 WAY_OUT = 'If one predates this change or is a false positive, run `broom known --accept "<why>"`, then commit again.'
 
@@ -122,8 +122,9 @@ class RealBlockTest(BroomCase):
         self.assertRegex(text.splitlines()[0], r"^\[broom\] \d+ issue\(s\) in this turn's changes\. "
                                                r"Fix them before finishing\.$")
         self.assertIn("function_lines: ", text)
-        self.assertTrue(text.endswith('then stop again. Stopping again ends the turn, but leaves the issues open: '
-                                      'a commit still stops on them.'))
+        self.assertTrue(text.endswith('then stop again. After 3 blocks the turn ends, and the user is told what is '
+                                      'still open.'))
+        self.assertIn("Trying again passes nothing", text)
 
     def test_with_accepting_off_the_way_out_says_there_is_none(self) -> None:
         r = self.huge()
@@ -135,13 +136,14 @@ class RealBlockTest(BroomCase):
         self.assertNotIn("broom known --accept", text)
 
 
-class HintTextTest(BroomCase):
-    def hint(self, metric: str, n: int) -> Smell:
-        return Smell(self.tmp, self.tmp / f"a{n}.py", n, metric, metric, 3, None, "t", "hint", 0, [n])
+class NoteTextTest(BroomCase):
+    def note(self, metric: str, n: int) -> Smell:
+        return Smell(self.tmp, self.tmp / f"a{n}.py", n, metric, metric, 3, None, "t", "note", 0, [n])
 
-    def test_a_hint_ends_with_the_fix_lines_of_its_first_three_kinds(self) -> None:
+    def test_a_note_ends_with_the_fix_lines_of_its_first_three_kinds(self) -> None:
         kinds = ["todo", "debug_output", "todo", "globals", "magic_numbers"]
-        text = hint_text([self.hint(k, n) for n, k in enumerate(kinds, 1)])
+        text = noted_text([self.note(k, n) for n, k in enumerate(kinds, 1)])
         rows = text.splitlines()
-        self.assertTrue(rows[0].startswith("broom: 5 code smell(s) this change made worse; clean them up now: "))
+        self.assertTrue(rows[0].startswith("broom: 5 slight code smell(s) this change made worse; nothing stops on "
+                                           "them: "))
         self.assertEqual(rows[1:], ["How to fix:", *[f"  {k}: {fixes()[k]}" for k in ("todo", "debug_output", "globals")]])

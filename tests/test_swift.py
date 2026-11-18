@@ -74,7 +74,7 @@ class SwiftTest(BroomCase):
         reason = self.denied(self.commit(r, "git commit -m app"))
         self.assertIn("App/Sources/Parse.swift:2:15  force_cast", reason)
         self.assertIn("App/Sources/Parse.swift:3:8  identical_operands", reason)
-        self.assertIn("blocked: 2 issue(s)", reason, "no naming rules, and nothing from Pods")
+        self.assertIn("blocked: 3 issue(s)", reason, "two lints and a type_escape; no naming rules, nothing from Pods")
 
     @unittest.skipUnless(HAS_SWIFTLINT, "swiftlint missing")
     def test_a_projects_swiftlint_config_replaces_the_defaults(self) -> None:

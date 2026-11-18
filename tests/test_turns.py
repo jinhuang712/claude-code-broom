@@ -40,7 +40,7 @@ class TurnTest(BroomCase):
         self.hook("prompt", {"session_id": "t1", "cwd": str(r)})
         (r / "a.py").write_text(py_function("by_sed", 120))  # no Edit: a Bash command wrote it
         self.assertIn("by_sed is 120 lines long", self.stop(r, "t1")["reason"])
-        self.assertIn("left unfixed", self.stop(r, "t1").get("systemMessage", ""), "stopping again ends the turn")
+        self.assertIn("by_sed is 120 lines long", self.stop(r, "t1")["reason"], "stopping again passes nothing")
         self.hook("prompt", {"session_id": "t1", "cwd": str(r)})
         (r / "b.py").write_text(py_function("by_wrapper", 120).replace("+=", "-="))
         self.sh(r, "git", "add", "b.py")

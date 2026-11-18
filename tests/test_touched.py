@@ -132,11 +132,10 @@ class AcceptTest(TouchedCase):
         self.assertIn("1 can't be accepted", again.stderr)
         (r / "a.py").write_text(py_function("legacy", 140))  # back under its old size: a touched old smell, a hint
         self.sh(r, "git", "add", "a.py")
-        out = self.commit(r, "git commit -m x")
-        self.assertEqual(self.denied(out), "")
-        self.assertIn(f"legacy is 140 lines long (over 50; was 150: {TOUCHED})", str(out))
+        self.assertIn(f"legacy is 140 lines long (over 50; was 150: {TOUCHED})",
+                      self.denied(self.commit(r, "git commit -m x")), "a hint stops the commit too")
 
-    def test_stopping_again_ends_the_turn_with_the_grown_smell_open_and_the_next_commit_stops_on_it(self) -> None:
+    def test_giving_up_ends_the_turn_with_the_grown_smell_open_and_the_next_commit_stops_on_it(self) -> None:
         r = self.repo({"a.py": py_function("legacy", 150)})
         (r / "a.py").write_text(py_function("legacy", 155))
         self.edit(r, "a.py")
@@ -145,22 +144,24 @@ class AcceptTest(TouchedCase):
         out = self.cli(r, "known", "--accept", "just this once")
         self.assertEqual(out.returncode, 1)
         self.assertIn("1 can't be accepted", out.stderr)
+        for _ in range(2):
+            self.assertEqual(self.stop(r).get("decision"), "block", "stopping again passes nothing")
         self.assertEqual(self.stop(r)["systemMessage"],
-                         "broom let 1 through this turn: 1 function_lines (turn-ended); 1 issue(s) left unfixed")
+                         "broom GAVE UP after 3 blocks: 1 finding(s) left unfixed and unaccepted: a.py:1 "
+                         "function_lines; broom let 1 through this turn: 1 function_lines (gave-up)")
         self.assertEqual(self.cli(r, "known").stdout.strip(), "broom: no known issues here")
         self.sh(r, "git", "add", "a.py")
         self.assertIn("legacy is 155", self.denied(self.commit(r, "git commit -m x")))
 
 
 class HintFlowTest(TouchedCase):
-    def test_a_touched_hint_goes_into_the_commit_stops_a_turn_once_and_passes_with_a_reason(self) -> None:
+    def test_a_touched_hint_stops_a_commit_and_a_turn_and_passes_with_a_reason(self) -> None:
         r = self.repo({"a.py": py_function("middling", 70)})
         (r / "a.py").write_text(py_function("middling", 70).replace("x += 3\n", "x += 333\n"))
         self.sh(r, "git", "add", "a.py")
-        context = self.commit(r, "git commit -m x")["hookSpecificOutput"]["additionalContext"]
-        self.assertIn("1 code smell(s) this change made worse or touched", context)
-        self.assertIn(f"a.py:1 middling is 70 lines long (over 50; was 70: {TOUCHED})", context)
-        self.assertIn("  function_lines: Extract", context, "its usual fix line, like any hint")
+        denial = self.denied(self.commit(r, "git commit -m x"))
+        self.assertIn(f"a.py:1:0  function_lines  middling is 70 lines long (over 50; was 70: {TOUCHED})", denial)
+        self.assertIn("  function_lines: Extract", denial, "its usual fix line, like any block")
         self.edit(r, "a.py")
         reason = self.stop(r)["reason"]
         self.assertIn(f"middling is 70 lines long (over 50; was 70: {TOUCHED})", reason)

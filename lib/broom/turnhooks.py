@@ -13,12 +13,12 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 from . import ledger
 from .config import REPO_FILE, excluded, setting
 from .gitutil import git_changed_files, git_root
-from .state import emit, prune_sessions, read_lines, short_hash
+from .state import emit, prune_sessions, read_lines
 from .toolchain import lang_of
 from .turns import DEFERRED, changed_since_snapshot, note_config, paused, snapshot, tree, turn_dir, waiting
 
@@ -35,26 +35,27 @@ def end_turn(d: Path, root: Optional[Path], now: Optional[dict] = None) -> None:
         snapshot(d, root, now)
 
 
-def finish(d: Path, root: Optional[Path], tail: str = "", *, now: Optional[dict] = None) -> None:
-    """End the turn with one message for the user at most: what the turn let through, then `tail`, what else there
-    is to say. A turn that let nothing through says only the tail, with a `broom:` before it."""
+def finish(d: Path, root: Optional[Path], tail: str = "", *, now: Optional[dict] = None, lead: str = "") -> None:
+    """End the turn with one message for the user at most: `lead` if there is one, which opens it so that it is not
+    missed, then what the turn let through, then `tail`, what else there is to say. A turn that let nothing through
+    says only the tail, with a `broom:` before it."""
     summary = ledger.through_line(d)
     end_turn(d, root, now)
-    if summary or tail:
+    if lead:
+        emit({"systemMessage": "; ".join(part for part in (lead, summary, tail) if part)})
+    elif summary or tail:
         emit({"systemMessage": f"{summary}; {tail}" if summary and tail else summary or f"broom: {tail}"})
 
 
-def turn_files(d: Path, since: List[Path]) -> Tuple[List[Path], str]:
+def turn_files(d: Path, since: List[Path]) -> List[Path]:
     """The code files the turn changed: recorded edits, a whole repo after a many-file Serena edit, and `since`, what
-    changed or was committed since the prompt. And a mark that changes whenever any of them does."""
+    changed or was committed since the prompt."""
     recorded = read_lines(d / "edits.txt")
     scans = read_lines(d / "scan.txt")
     files = [Path(p) for p in recorded]
     for repo in dict.fromkeys(scans):
         files += git_changed_files(Path(repo))
-    mark = short_hash(f"{len(recorded)}|{len(scans)}|{sorted((str(f), f.stat().st_mtime_ns) for f in since)}")
-    files = [f for f in dict.fromkeys(files + since) if lang_of(f) and f.is_file() and not excluded(f)]
-    return files, mark
+    return [f for f in dict.fromkeys(files + since) if lang_of(f) and f.is_file() and not excluded(f)]
 
 
 def hook_stop(data: dict) -> None:
@@ -71,13 +72,13 @@ def hook_stop(data: dict) -> None:
     since = changed_since_snapshot(d, root, now) if root and now else []
     if root and root / REPO_FILE in since:
         note_config(root / REPO_FILE, d)  # loosened by a command, which no edit hook saw
-    files, mark = turn_files(d, since)
+    files = turn_files(d, since)
     if not files:
         finish(d, root, now=now)
         return
     from .turncheck import Turn, check_turn  # the linters, the smells and the gate: only with code to check
 
-    check_turn(Turn(d, root, cwd, mark), files)
+    check_turn(Turn(d, root, cwd), files)
 
 
 def hook_prompt(data: dict) -> None:

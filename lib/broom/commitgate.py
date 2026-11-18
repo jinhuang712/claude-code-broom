@@ -2,9 +2,10 @@
 git's own pre-commit hook, which `broom install-hook` adds for commits that hook never sees. The turn-end gate
 checks with the same `checked`.
 
-Every blocking finding, lint included, passes fixed, or after Claude accepts it with `broom known --accept "<why>"`,
-which puts the reason on record: a retry alone lets nothing through. A false positive or an issue that predates the
-change costs one command.
+Every finding that stops, lint included and a smell's hint with a smell's block, passes fixed, or after Claude
+accepts it with `broom known --accept "<why>"`, which puts the reason on record: a retry alone lets nothing through.
+A false positive or an issue that predates the change costs one command. A note, a slight smell, is told and stops
+nothing.
 """
 
 from __future__ import annotations
@@ -29,7 +30,7 @@ from .gitcmd import CommitPlan, GitOp, parse, parse_commit, plan_commit, staged
 from .githook import installed
 from .gitutil import ChangedLines, git, git_root
 from .passed import record, staged_blobs, unpassed, worktree_blobs
-from .smells import Smell, gate_smells, hint_text
+from .smells import Smell, gate_smells, noted_text
 from .state import DATA_ROOT, emit, load_json, session_dir, warn
 from .toolchain import lang_of
 
@@ -67,10 +68,10 @@ def by_repo(files: List[Path]) -> Dict[Path, List[Path]]:
 
 def checked(files: List[Path], base: str = "HEAD", turn: Optional[Path] = None
             ) -> Tuple[List[Issue], List[Smell], List[str]]:
-    """What blocks (lint and type issues not yet known, smells past the hard limit), the smell hints, and notes,
-    for what changed since `base`. Content that passed before isn't checked again; content that passes now is
-    recorded. What the change loosens (a suppression it adds, a looser .broom.json) is noted for `turn`, the
-    directory of the turn it belongs to."""
+    """What stops (lint and type issues not yet known, smells past a limit: blocks and hints), the smell notes that
+    are only told, and the tool notes, for what changed since `base`. Content that passed before isn't checked
+    again; content that passes now is recorded. What the change loosens (a suppression it adds, a looser
+    .broom.json) is noted for `turn`, the directory of the turn it belongs to."""
     files = [f for repo, group in by_repo(files).items() for f in unpassed(repo, group, worktree_blobs(repo, group))]
     if not files:
         return [], [], []
@@ -78,25 +79,25 @@ def checked(files: List[Path], base: str = "HEAD", turn: Optional[Path] = None
     known = baseline_keys()
     changed, groups = ChangedLines(base), by_repo(files)
     blocking = select(issues, set(files), known, changed)
-    hints: List[Smell] = []
+    told: List[Smell] = []
     for repo, group in groups.items():
-        smell_blocks, smell_hints, smell_notes = gate_smells(repo, group, known, base)
-        blocking += smell_blocks
-        hints += smell_hints
+        smell_stops, smell_told, smell_notes = gate_smells(repo, group, known, base)
+        blocking += smell_stops
+        told += smell_told
         notes += smell_notes
     ledger.waived(waivers.detect(groups, changed, base), turn)
-    record_passed(files, blocking, hints, notes)
-    return blocking, hints, notes
+    record_passed(files, blocking, told, notes)
+    return blocking, told, notes
 
 
-def record_passed(files: List[Path], blocking: List[Issue], hints: List[Smell], notes: List[str]) -> None:
-    """Record each file nothing stopped and nothing hinted, so one file with a finding doesn't make the rest run
+def record_passed(files: List[Path], blocking: List[Issue], told: List[Smell], notes: List[str]) -> None:
+    """Record each file nothing stopped and nothing noted, so one file with a finding doesn't make the rest run
     again at the next try. A timeout, or a finding outside these files (a type error in a file they affect),
     records nothing: what it kept from finishing may concern any of them."""
     mine = {f.resolve() for f in files}
     if any(n.startswith("timeout:") for n in notes) or any(i.file.resolve() not in mine for i in blocking):
         return
-    found = {i.file.resolve() for i in blocking} | {s.file.resolve() for s in hints}
+    found = {i.file.resolve() for i in blocking} | {s.file.resolve() for s in told}
     for repo, group in by_repo(files).items():
         record(repo, [f for f in group if f.resolve() not in found])
 
@@ -124,12 +125,12 @@ def block_head(count: int) -> str:
 
 
 def way_out(repos: Iterable[Path], cwd: Path, then: str) -> str:
-    """The last of a block's own lines: how a finding passes without a fix, by accepting it with a reason and then
-    doing `then` (`commit again`, `stop again`), or that nothing does where accepting is off."""
+    """The last of a block's own lines: that trying again passes nothing, and how a finding passes then: fixed, or
+    accepted with a reason and then doing `then` (`commit again`, `stop again`); where accepting is off, only fixed."""
     if not accept_allowed():
-        return "Fixing is the only way out: accepting them is off here (BROOM_NO_ACCEPT)."
-    return (f"If one predates this change or is a false positive, run {accept_command(repos, cwd)}, then "
-            f"{then}.")
+        return "Trying again passes nothing. Fixing is the only way out: accepting them is off here (BROOM_NO_ACCEPT)."
+    return (f"Trying again passes nothing: only a fix does, or accepting with a reason. If one predates this change or "
+            f"is a false positive, run {accept_command(repos, cwd)}, then {then}.")
 
 
 def entries_of(issues: Iterable[Issue]) -> Dict[str, dict]:
@@ -153,9 +154,9 @@ def gate_files(repo: Path, files: List[Path], sd: Path, cwd: Path, state: dict) 
     hook and which turn saw it. What an earlier commit blocked in files this one didn't take stays in it, for the
     commit that does."""
     files = sorted(f for f in files if lang_of(f))
-    blocking, hints, notes = checked(files, turn=sd)
-    context = [hint_text(hints)] if hints else []
-    ledger.hinted(entries_of(s.issue() for s in hints))
+    blocking, told, notes = checked(files, turn=sd)
+    context = [noted_text(told)] if told else []
+    ledger.hinted(entries_of(s.issue() for s in told))
     key, found, known = str(repo), entries_of(blocking), baseline_keys()
     prior = open_findings(state.get(key, {}))
     ended = ledger.fixes(prior, found, known, files, notes) if prior else set()
@@ -221,13 +222,13 @@ def format_commit(plan: CommitPlan) -> List[str]:
 
 
 def answer(denials: List[str], context: List[str]) -> None:
-    """Emit the PreToolUse answer: a deny with its reasons, else the context as a hint; nothing if neither."""
+    """Emit the PreToolUse answer: a deny with its reasons, else the context as a note; nothing if neither."""
     out: dict = {"hookEventName": "PreToolUse"}
     if denials:
         out["permissionDecision"] = "deny"
         out["permissionDecisionReason"] = "\n\n".join(denials + context)
     elif context:
-        # A hint carries lines of its own (how to fix): they go on separate lines, not run on after a semicolon.
+        # A note carries lines of its own (how to fix): they go on separate lines, not run on after a semicolon.
         out["additionalContext"] = ("\n" if any("\n" in c for c in context) else "; ").join(context)
     if len(out) > 1:
         emit({"hookSpecificOutput": out})

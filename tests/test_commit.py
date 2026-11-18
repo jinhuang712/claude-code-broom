@@ -15,6 +15,8 @@ from support import (
 
 from broom.gitcmd import GitOp, parse, parse_commit
 
+NO_DOCS = '{"smells_off": ["missing_docs"]}'  # these tests are about formatting and old lint, not doc comments
+
 
 class CommitTest(BroomCase):
     # command parsing
@@ -206,6 +208,7 @@ class CommitTest(BroomCase):
     @unittest.skipUnless(HAS_GO, "go tools missing")
     def test_go_formatted_and_restaged(self) -> None:
         r = self.go_repo()
+        (r / ".broom.json").write_text(NO_DOCS)  # a public function with no doc comment stops a commit now
         (r / "internal/util/z.go").write_text("package util\nfunc  Z( ) {  }\n")
         self.sh(r, "git", "add", "internal/util/z.go")
         out = self.commit(r, "git commit -m z")
@@ -218,6 +221,7 @@ class CommitTest(BroomCase):
     @unittest.skipUnless(HAS_GO, "go tools missing")
     def test_partially_staged_file_is_not_formatted(self) -> None:
         r = self.go_repo()
+        (r / ".broom.json").write_text(NO_DOCS)
         bad = "package util\nfunc  Z( ) {  }\n"
         (r / "internal/util/z.go").write_text(bad)
         self.sh(r, "git", "add", "internal/util/z.go")
@@ -239,7 +243,7 @@ class CommitTest(BroomCase):
 
     @unittest.skipUnless(HAS_GO, "go tools missing")
     def test_go_old_issue_on_untouched_line_is_ignored(self) -> None:
-        r = self.repo({"go.mod": "module example.com/m\n\ngo 1.26\n",
+        r = self.repo({"go.mod": "module example.com/m\n\ngo 1.26\n", ".broom.json": NO_DOCS,
                        "a.go": 'package m\n\nimport "os"\n\nfunc A() {\n\tos.Remove("x")\n}\n'})
         (r / "a.go").write_text((r / "a.go").read_text() + "\nfunc B() int { return 1 }\n")
         self.sh(r, "git", "add", "a.go")

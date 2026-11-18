@@ -109,30 +109,37 @@ class RecordTest(LedgerCase):
                          "broom let 1 through this turn: 1 function_lines (accepted: legacy code)")
         self.assertEqual(self.stop(r), {}, "the turn is over: its summary is said once")
 
-    def test_stopping_again_ends_the_turn_and_the_ledger_and_the_summary_say_what_was_left(self) -> None:
+    def test_giving_up_ends_the_turn_and_the_ledger_and_the_summary_say_what_was_left(self) -> None:
         r = self.repo({"a.py": "x = 1\n", "b.py": "y = 1\n"})
-        (r / "a.py").write_text(py_function("medium", 60))  # past the soft limit: a hint, which stops a turn once
+        (r / "a.py").write_text(py_function("medium", 60))  # past the soft limit: a hint, which stops a turn too
         (r / "b.py").write_text(py_function("huge", 120).replace("+=", "-="))  # not a copy of a.py's
         for name in ("a.py", "b.py"):
             self.edit(r, name)
         self.assertIn("issue(s) in this turn's changes", self.stop(r)["reason"])
         self.assertEqual(sorted((x["file"], x["where"]) for x in lines("block")), [("a.py", "stop"), ("b.py", "stop")])
+        for _ in range(2):
+            self.assertEqual(self.stop(r).get("decision"), "block", "stopping again passes nothing")
         self.assertEqual(self.stop(r)["systemMessage"],
-                         "broom let 2 through this turn: 2 function_lines (turn-ended); 2 issue(s) left unfixed")
+                         "broom GAVE UP after 3 blocks: 2 finding(s) left unfixed and unaccepted: a.py:1 "
+                         "function_lines, b.py:1 function_lines; "
+                         "broom let 2 through this turn: 2 function_lines (gave-up)")
         self.assertEqual(sorted((x["file"], x["how"]) for x in lines("pass")),
-                         [("a.py", "turn-ended"), ("b.py", "turn-ended")])
+                         [("a.py", "gave-up"), ("b.py", "gave-up")])
 
     @unittest.skipUnless(HAS_PY, "ruff missing")
-    def test_stopping_again_leaves_a_lint_finding_open_and_not_known(self) -> None:
+    def test_giving_up_leaves_a_lint_finding_open_and_not_known(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
         (r / "a.py").write_text("import os\n")
         self.edit(r, "a.py")
         reason = self.stop(r)["reason"]
         self.assertIn("F401", reason)
         self.assertIn('run `broom known --accept "<why>"`, then stop again', reason)
+        for _ in range(2):
+            self.assertIn("F401", self.stop(r)["reason"], "stopping again passes nothing")
         self.assertEqual(self.stop(r)["systemMessage"],
-                         "broom let 1 through this turn: 1 F401 (turn-ended); 1 issue(s) left unfixed")
-        self.assertEqual([x["how"] for x in lines("pass")], ["turn-ended"])
+                         "broom GAVE UP after 3 blocks: 1 finding(s) left unfixed and unaccepted: a.py:1 F401; "
+                         "broom let 1 through this turn: 1 F401 (gave-up)")
+        self.assertEqual([x["how"] for x in lines("pass")], ["gave-up"])
         self.assertEqual(self.cli(r, "known").stdout.strip(), "broom: no known issues here")
         self.sh(r, "git", "add", "a.py")
         self.assertIn("F401", self.denied(self.commit(r, "git commit -m x")), "the commit still stops on it")
@@ -177,12 +184,12 @@ class RecordTest(LedgerCase):
         (block,), (fix,) = lines("block"), lines("fix")
         self.assertEqual((fix["key"], fix["where"]), (block["key"], "stop"))
 
-    def test_a_hint_at_a_commit_is_noted_and_blocks_nothing(self) -> None:
+    def test_a_note_at_a_commit_is_noted_and_blocks_nothing(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
-        (r / "a.py").write_text(py_function("medium", 60))
+        (r / "a.py").write_text("x = 1  # TODO: later\n")
         self.sh(r, "git", "add", "a.py")
         self.assertEqual(self.denied(self.commit(r, "git commit -m x")), "")
-        self.assertEqual([(x["rule"], x["file"]) for x in lines("hint")], [("function_lines", "a.py")])
+        self.assertEqual([(x["rule"], x["file"]) for x in lines("hint")], [("todo", "a.py")])
         self.assertEqual(lines("block"), [])
 
     def test_a_tool_that_didnt_run_leaves_a_skip_and_a_fix_waits_for_it(self) -> None:

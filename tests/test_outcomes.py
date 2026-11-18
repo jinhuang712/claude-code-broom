@@ -109,16 +109,17 @@ class OutcomeTest(LedgerCase):
         self.assertEqual([x["event"] for x in lines() if x["event"] in ("block", "fix")],
                          ["block", "fix", "block", "fix"])
 
-    def test_stopping_again_leaves_nothing_for_a_later_accept_to_pass_a_second_time(self) -> None:
+    def test_giving_up_leaves_nothing_for_a_later_accept_to_pass_a_second_time(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
         (r / "a.py").write_text(py_function("huge", 120))
         self.edit(r, "a.py")
-        self.assertIn("huge is 120", self.stop(r)["reason"])
-        self.assertIn("1 issue(s) left unfixed", self.stop(r)["systemMessage"])
-        self.assertEqual([x["how"] for x in lines("pass")], ["turn-ended"])
+        for _ in range(3):
+            self.assertIn("huge is 120", self.stop(r)["reason"])
+        self.assertIn("1 finding(s) left unfixed and unaccepted", self.stop(r)["systemMessage"])
+        self.assertEqual([x["how"] for x in lines("pass")], ["gave-up"])
         out = self.cli(r, "known", "--accept", "late")
         self.assertEqual(out.returncode, 1, "the turn ended: its finding is let through already")
-        self.assertEqual([x["how"] for x in lines("pass")], ["turn-ended"], "one outcome for the one block")
+        self.assertEqual([x["how"] for x in lines("pass")], ["gave-up"], "one outcome for the one block")
         self.assertEqual(self.cli(r, "known").stdout.strip(), "broom: no known issues here")
 
     def test_a_clean_commit_of_other_files_keeps_a_blocked_finding_for_the_commit_that_covers_it(self) -> None:
@@ -173,7 +174,9 @@ class OutcomeTest(LedgerCase):
         self.assertIn("huge is 120", self.stop(r)["reason"])
         self.take_alone(r, "b.py", py_function("huge", 120).replace("+=", "-="))  # not a copy of a.py's
         self.assertIn("huge is 120", self.denied(self.commit(r, "git commit -m x")))
-        self.assertEqual(self.stop(r)["systemMessage"].count("turn-ended"), 1, "a.py's finding ends with the turn")
+        for _ in range(2):
+            self.assertEqual(self.stop(r).get("decision"), "block", "stopping again passes nothing")
+        self.assertEqual(self.stop(r)["systemMessage"].count("gave-up"), 1, "a.py's finding ends with the turn")
         self.take_alone(r, "b.py", "y = 2\n")
         self.sh(r, "git", "add", "b.py")
         (r / "a.py").write_text(SMALL)

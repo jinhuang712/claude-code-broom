@@ -99,13 +99,14 @@ class GateTest(BroomCase):
 
     # git's hook where git names the work tree its own way: a linked worktree (GIT_DIR alone), `--work-tree` (GIT_WORK_TREE)
 
-    OLD_FILE = "".join(f"x{i} = {i}\n" for i in range(40))  # old, with the lines an untested-file hint asks for
+    OLD_FILE = "".join(f"x{i} = {i}\n" for i in range(40))  # old, with the lines an untested-file note asks for
 
     def hinted_commit(self, checkout: Path, how: str, git: tuple = ("git",)) -> str:
         """What git's hook says of a commit in `checkout` that adds a 60-line function to the old file pkg/sub/old.py,
         made as `how` says: `staged`, `all` (`git commit -a`) or `path` (`git commit pkg/sub/old.py`), the last two with
-        the temporary index git then hands the hook. Each gets a data directory of its own, so a note one was shown
-        isn't held back from the next."""
+        the temporary index git then hands the hook. The function is a hint, which stops the commit: the denial is
+        what comes back, with the checkout's path in it made `<repo>`. Each gets a data directory of its own, so a
+        note one was shown isn't held back from the next."""
         env = {**self.env, "CLAUDE_PLUGIN_DATA": str(self.tmp / f"data-{uuid.uuid4().hex[:6]}")}
         old = checkout / "pkg/sub/old.py"
         old.write_text(old.read_text() + "\n\n" + py_function("grown", 60))
@@ -114,14 +115,16 @@ class GateTest(BroomCase):
         extra = {"staged": [], "all": ["-a"], "path": ["pkg/sub/old.py"]}[how]
         out = subprocess.run([*git, "commit", "-q", "-m", "x", *extra], cwd=checkout, env=env, capture_output=True,
                              text=True)
-        self.assertEqual(out.returncode, 0, out.stderr)
-        return out.stderr
+        self.assertEqual(out.returncode, 1, out.stderr)
+        return out.stderr.replace(str(checkout), "<repo>")
 
     @staticmethod
     def smell_lines(stderr: str) -> list:
-        """The hook's lines without its notes on skipped tools: jscpd takes a work tree with no `.git` for no repo and
-        says so, which is its own limit, not git's."""
-        return [row for row in stderr.splitlines() if not row.startswith("broom skipped:")]
+        """The hook's lines without its notes on skipped tools (`broom skipped:` in the context, `Skipped:` in a
+        denial, and the blank line before it): jscpd takes a work tree with no `.git` for no repo and says so, which is
+        its own limit, not git's."""
+        rows = [row for row in stderr.splitlines() if not row.startswith(("broom skipped:", "Skipped:"))]
+        return rows[:-1] if rows and rows[-1] == "" else rows
 
     def test_git_pre_commit_reads_a_commit_in_a_linked_worktree_as_it_does_in_the_main_checkout(self) -> None:
         for how in ("staged", "all", "path"):

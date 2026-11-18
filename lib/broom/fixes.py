@@ -1,5 +1,5 @@
 """The usual fix of each code smell, one sentence each: the one home of those lines. They come from
-defaults/fixes.json and reach Claude in three places: the block messages, the hint given as commit context, and
+defaults/fixes.json and reach Claude in three places: the block messages, the notes given as commit context, and
 `broom fixes`, which the clean skill calls. A smell without a line gets none; a test keeps the file whole."""
 
 from __future__ import annotations
