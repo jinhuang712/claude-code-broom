@@ -6,6 +6,10 @@
 
 ---
 
+## 0.23.5 — 2026-11-18
+
+---
+
 ### Sweep
 
 - After each edit broom formats the file and tells Claude what a fast linter finds on the lines that changed: ruff, oxlint or SwiftLint. It never blocks, and it tells a finding once. Before, nothing ran after an edit unless `format_on` was `edit`. After, `format_on` starts at `edit`: set it to `commit` to leave files as written until a commit, and `check_on` to `off` to turn the check off.
