@@ -131,8 +131,10 @@ def repo_or_exit() -> Path:
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
-    """Run `broom doctor`: the repo's tools and configs with their fixes, as JSON with --json; 1 when not healthy."""
+    """Run `broom doctor`: the repo's tools and configs with their fixes, as JSON with --json, or with --checks the
+    checks that run and those that don't; 1 when not healthy."""
     from .doctor import answered_kinds, diagnose, gap_kind, render_text
+    from .protection import protection
 
     repo = repo_or_exit()
     result = diagnose(repo)
@@ -141,7 +143,10 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         for i in result["items"]:  # answered in some repo already: setup doesn't raise it again
             i["answered"] = i["status"] != "ok" and gap_kind(i) in known
         result["settings"] = {name: dict(zip(("value", "source"), setting_source(name, repo))) for name in SETTINGS}
-    say(json.dumps(result, indent=1) if args.json else render_text(result))
+        result["checks"] = protection(repo, result).records()
+        say(json.dumps(result, indent=1))
+    else:
+        say(protection(repo, result).text() if args.checks else render_text(result))
     return 0 if result["healthy"] else 1
 
 
@@ -287,6 +292,8 @@ def add_setup_parsers(sub: argparse._SubParsersAction) -> None:
     """Add the `doctor` and `setup` subcommands and their flags to the subparsers `sub`, each with its handler."""
     d = sub.add_parser("doctor", help="languages, tools, configs and conflicts for this repo, with fixes")
     d.add_argument("--json", action="store_true")
+    d.add_argument("--checks", action="store_true",
+                   help="which checks run in this repo and which don't for lack of a tool, with the fix for each")
     d.set_defaults(fn=cmd_doctor)
     st = sub.add_parser("setup", help="record that setup is done, or declined; the answer holds in every repo")
     st_mode = st.add_mutually_exclusive_group(required=True)
