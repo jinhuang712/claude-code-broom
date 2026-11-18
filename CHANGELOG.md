@@ -6,6 +6,18 @@
 
 ---
 
+### Check-up
+
+- The line that says a counter grew ends with the command that shows where the number sits, `broom diagnose`. Before, a session that doubted the number counted again by hand and got another one.
+
+---
+
+### Sweep
+
+- The fix line for a skipped test says how a test that must wait passes: it is accepted with what it waits on as the reason. Before, the line said to write that in the skip's reason, and the turn's end blocked all the same.
+
+---
+
 ## 0.23.0 — 2026-11-17
 
 ---

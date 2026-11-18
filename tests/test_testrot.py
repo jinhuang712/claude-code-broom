@@ -193,7 +193,7 @@ class UntestedFileTest(BroomCase):
 
 HAS_JSCPD = shutil.which("jscpd") is not None
 BODY = py_function("one", 40).split("\n", 1)[1]  # 39 lines: the same text in two test files is a clone
-TELL = "At a natural point tell the user; don't interrupt their task."
+TELL = "At a natural point tell the user; don't interrupt their task. `broom diagnose` shows where each number sits."
 
 
 def test_with_body(name: str) -> str:

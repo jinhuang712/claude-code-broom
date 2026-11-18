@@ -87,7 +87,7 @@ Issues
 ## I10: No fresh session has used broom end to end
 
 - type: fix
-- why: The test suite drives the hooks with made-up input. On 2026-11-17 a fresh session on a throwaway repo met the limits card, the setup offer, the smell note, a turn-end block with its fix lines, a fix and the turn's summary. Three things are still unmet by a fresh session: an accept with a reason, the check-up after a counter grew, and a change with a commit on a real repo.
+- why: The test suite drives the hooks with made-up input. On 2026-11-17 a fresh session on a throwaway repo met the limits card, the setup offer, the smell note, a turn-end block with its fix lines, a fix and the turn's summary. On 2026-11-18 two more met a commit block accepted with a reason and the check-up's line after a counter grew. One thing is still unmet by a fresh session: a change with a commit on a real repo.
 - found: the user's request for a self-test, 2026-11-17
 - touches:
   - [F1.3: /broom:setup](../features/F1-setup.md#f13-broomsetup)

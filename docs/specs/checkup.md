@@ -37,7 +37,7 @@ A counter whose tool is missing, failed or timed out is left out of that check-u
 
 The check-up runs in the async session scan, after the smell scan, also when the scan of HEAD was cached. The first numbers of a repo are taken silently as its baseline, and so are the first after an update of broom, since another version may count other things. A repo and its linked worktrees share one record.
 
-When a counter is higher than at the last check-up, Claude is told once, in one line, with the old and the new value and up to three files that added to it. The new numbers then become the record, so the same growth is told once. A counter that fell is recorded silently.
+When a counter is higher than at the last check-up, Claude is told once, in one line, with the old and the new value, up to three files that added to it and the command that shows where each number sits. The new numbers then become the record, so the same growth is told once. A counter that fell is recorded silently.
 
 A hook with less than 6 seconds left skips the check-up until the next session. A repo of more than 5,000 files is not scanned at session start, so it gets no check-up there.
 

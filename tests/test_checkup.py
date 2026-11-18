@@ -17,7 +17,7 @@ from broom import checkup
 from broom.gitutil import CLOCK
 
 NOQA = "# no" + "qa: E501"
-TELL = "At a natural point tell the user; don't interrupt their task."
+TELL = "At a natural point tell the user; don't interrupt their task. `broom diagnose` shows where each number sits."
 
 
 def text(*rows: str) -> str:

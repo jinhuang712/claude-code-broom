@@ -34,7 +34,7 @@ LABELS = {"suppressions": "lint suppressions", "skipped_tests": "skipped tests",
           DUPLICATE_TESTS: "duplicate test blocks", UNCOVERED: "lines no test reaches, by the coverage report"}
 # Counted by the smell scan, not by the pass over the files.
 SMELL_COUNTERS = (DEAD_CODE, "missing_docs", "deprecated_api", DUPLICATE_TESTS)
-TELL = "At a natural point tell the user; don't interrupt their task."
+TELL = "At a natural point tell the user; don't interrupt their task. `broom diagnose` shows where each number sits."
 
 Counts = Dict[str, int]  # per file: the files that hold any, by path from the repo root
 Counted = Dict[str, Optional[Counts]]  # per counter; None for one that couldn't be counted
