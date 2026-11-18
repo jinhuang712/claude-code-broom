@@ -261,17 +261,33 @@ class ChangedLines:
             self._cache[f] = self._compute(f)
         return self._cache[f]
 
+    def forget(self, f: Path) -> None:
+        """Ask again about `f`, a file rewritten (by a formatter) since it was asked about. What git said of the repo
+        and of the tracked files stays, which spares the calls that cost most: `f` is taken for a file that differs
+        from the base, so its own diff is read, which says the truth either way."""
+        self._cache.pop(f, None)
+        self._renames.clear()
+        root = git_root(f.parent)
+        repo = self._repos.get(root) if root else None
+        if root and repo:
+            try:
+                repo[1].add((f.parent.resolve() / f.name).relative_to(root).as_posix())
+            except ValueError:
+                pass  # outside the repo's work tree: it was never asked about
+
     def _repo(self, root: Path) -> Optional[Tuple[Set[str], Set[str]]]:
         """The files git tracks in `root` and those that differ from the base, each asked of git once, not once per
         file; None when the base isn't a revision there."""
         if root not in self._repos:
+            from concurrent.futures import ThreadPoolExecutor  # only where git is asked: a hook that asks nothing skips it
+
             mode = ["--cached"] if self.cached else []
-            if git(["rev-parse", "--verify", "-q", self.base], root) is None:
-                self._repos[root] = None
-            else:
-                tracked = (git(["ls-files", "-z"], root) or "").split("\0")
-                differ = (git(["diff", "--name-only", "-z", "-M", *mode, self.base], root) or "").split("\0")
-                self._repos[root] = (set(tracked), set(differ))
+            asks = [["rev-parse", "--verify", "-q", self.base], ["ls-files", "-z"],
+                    ["diff", "--name-only", "-z", "-M", *mode, self.base]]
+            with ThreadPoolExecutor(max_workers=len(asks)) as pool:  # three processes at once, not one after another
+                base, tracked, differ = pool.map(lambda args: git(args, root), asks)
+            self._repos[root] = None if base is None else (set((tracked or "").split("\0")),
+                                                           set((differ or "").split("\0")))
         return self._repos[root]
 
     def _compute(self, f: Path) -> Optional[Set[int]]:

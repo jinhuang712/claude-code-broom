@@ -1,8 +1,9 @@
-"""The edit hook (PostToolUse on Edit, Write and Serena's edit tools): format per edit when format_on=edit, and record
-the file for the turn's end when check_on=stop, a subagent's edit for that subagent's own end.
+"""The edit hook (PostToolUse on Edit, Write and Serena's edit tools): format per edit when format_on=edit, tell Claude
+what a fast linter finds on the lines it changed unless check_on=off, and record the file for the turn's end when
+check_on=stop, a subagent's edit for that subagent's own end.
 
 It runs after every edit, and most edits leave it nothing but a line to append. So what only some edits need (the
-formatter) is loaded where it is used, not when the module is."""
+formatter, the linter) is loaded where it is used, not when the module is."""
 
 from __future__ import annotations
 
@@ -52,7 +53,8 @@ def edited_path(data: dict, sd: Path) -> Optional[Path]:
 
 
 def hook_edit(data: dict) -> None:
-    """The edit hook: list the file a tool call changed for the stop check, and format it if format_on is edit."""
+    """The edit hook: list the file a tool call changed for the stop check, format it if format_on is edit, and tell
+    Claude what the fast linter finds on its changed lines unless check_on is off (see editcheck)."""
     sd = turn_dir(data)
     path = edited_path(data, sd)
     if path is None or not path.is_file():
@@ -64,10 +66,11 @@ def hook_edit(data: dict) -> None:
         return
     if path.name == REPO_FILE:
         note_config(path, sd)
-    if setting("check_on", path) == "stop" and lang_of(path):
+    format_on, check_on = setting("format_on", path), setting("check_on", path)
+    if check_on == "stop" and lang_of(path):
         append_line(sd / "edits.txt", str(path))
-    if setting("format_on", path) == "edit":
-        from .fmt import format_files  # the formatters, only for those who format at every edit
+    if format_on == "edit" or check_on != "off":
+        from .editcheck import after_edit
 
-        # Claude Code shows Claude the diff of a file changed on disk since its last read, so no message here.
-        format_files([path], final=False, scope=setting("format_scope", path))
+        # Claude Code shows Claude the diff of a file changed on disk since its last read, so a format says nothing.
+        after_edit(path, sd, format_it=format_on == "edit", check_it=check_on != "off")

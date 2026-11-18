@@ -35,7 +35,7 @@
         "edit",
         "off"
       ],
-      "default": "commit"
+      "default": "edit"
     },
     "format_scope": {
       "type": "string",

@@ -139,13 +139,16 @@ def ruff_issues(root: Path, out: str) -> List[Issue]:
             for d in found if isinstance(d, dict) and d.get("filename") and d.get("location")]
 
 
-def check_python(root: Path, files: List[Path], *, whole: bool = False) -> Findings:
+RUFF_SECONDS = 60  # what a run of ruff may take, unless the caller wants it sooner
+
+
+def check_python(root: Path, files: List[Path], *, whole: bool = False, timeout: float = RUFF_SECONDS) -> Findings:
     """Run ruff over `files` under `root` and return its issues; a missing ruff or a timeout is only a note."""
     ruff = shutil.which("ruff")
     if not ruff:
         return [], ["missing:ruff (brew install ruff)"]
     rc, out, err = run([ruff, "check", "--output-format", "json", "--no-fix", "--force-exclude",
-                        *targets(files, whole=whole)], root, timeout=60)
+                        *targets(files, whole=whole)], root, timeout=timeout)
     if rc is None:
         return [], [f"timeout:ruff in {root}"]
     issues = ruff_issues(root, out)
@@ -168,7 +171,11 @@ def swift_vendored(f: Path, root: Path) -> bool:
     return bool(SWIFT_VENDORED & set(parts[:-1]))
 
 
-def check_swiftlint(cfg_dir: Path, files: List[Path], *, defaults: bool, whole: bool = False) -> Findings:
+SWIFTLINT_SECONDS = 90
+
+
+def check_swiftlint(cfg_dir: Path, files: List[Path], *, defaults: bool, whole: bool = False,
+                    timeout: float = SWIFTLINT_SECONDS) -> Findings:
     """Run SwiftLint over `files`: with broom's default config when `defaults`, else the project's in `cfg_dir`."""
     exe = shutil.which("swiftlint")
     if not exe:
@@ -182,7 +189,7 @@ def check_swiftlint(cfg_dir: Path, files: List[Path], *, defaults: bool, whole: 
     else:  # the project's `excluded` holds even for files named on the command line
         cmd.append("--force-exclude")
         paths = targets(files, whole=whole)
-    rc, out, err = run(cmd + paths, cfg_dir, timeout=90)
+    rc, out, err = run(cmd + paths, cfg_dir, timeout=timeout)
     if rc is None:
         return [], [f"timeout:swiftlint in {cfg_dir}"]
     if rc == 1 and "No lintable files found" in err:  # the project's config excludes all of them

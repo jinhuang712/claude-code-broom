@@ -13,7 +13,7 @@ from .gitutil import git_root, main_worktree
 from .state import read_jsonc
 
 SETTINGS = {
-    "format_on": ("commit", ("commit", "edit", "off")),
+    "format_on": ("edit", ("commit", "edit", "off")),
     "check_on": ("stop", ("commit", "stop", "off")),
     "format_scope": ("changed", ("changed", "function", "file")),
     "smells": ("on", ("on", "off")),

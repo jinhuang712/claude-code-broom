@@ -26,7 +26,7 @@ def _repo_file() -> bool:
 # loading anything, so an idle hook costs one interpreter start. The defaults mirror SETTINGS in broom.config.
 if sys.argv[1:2] == ["hook"] and not _repo_file():
     event = sys.argv[2:3]
-    if event == ["edit"] and _option("format_on", "commit") != "edit" and _option("check_on", "stop") != "stop":
+    if event == ["edit"] and _option("format_on", "edit") != "edit" and _option("check_on", "stop") == "off":
         sys.exit(0)
     if event == ["stop"] and _option("check_on", "stop") != "stop":
         sys.exit(0)

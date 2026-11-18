@@ -196,7 +196,7 @@ class DoctorTest(BroomCase):
             "options": {"check_on": "stop"}}}}))
         (r / ".broom.json").write_text('{"format_scope": "file"}\n')
         out = self.doctor(r, env)
-        self.assertEqual(out["settings"], {"format_on": {"value": "commit", "source": "default"},
+        self.assertEqual(out["settings"], {"format_on": {"value": "edit", "source": "default"},
                                            "check_on": {"value": "stop", "source": "user"},
                                            "format_scope": {"value": "file", "source": "repo"},
                                            "smells": {"value": "on", "source": "default"}})

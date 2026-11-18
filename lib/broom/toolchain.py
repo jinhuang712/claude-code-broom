@@ -244,6 +244,12 @@ def swift_linter(path: Path, stop: Path) -> Tuple[str, Path]:
     return "swiftlint-default", pkg.parent if pkg else stop
 
 
+def py_root(path: Path, stop: Path) -> Path:
+    """The folder a Python file's ruff run starts in: that of the nearest project marker up to `stop`, else `stop`."""
+    marker = find_up(path.parent, PY_ROOT_MARKERS, stop)
+    return marker.parent if marker else stop
+
+
 def ruff_configured(path: Path, stop: Path) -> bool:
     """Whether ruff is set up for `path`: a ruff config up to `stop`, or a [tool.ruff] table in pyproject.toml."""
     if find_up(path.parent, RUFF_CFG, stop):

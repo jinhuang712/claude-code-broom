@@ -16,20 +16,30 @@ from .toolchain import DIALECT_DEFAULTS, find_up, in_node_modules, pkg_scripts_m
 # ---------------------------------------------------------------- JS / TS
 
 
-def check_oxlint(cfg_dir: Path, files: List[Path], stop: Path, *, defaults: bool, whole: bool = False) -> Findings:
-    """Run oxlint over `files`: broom's defaults when `defaults` is set, else the project's; no oxlint is a note."""
+OXLINT_SECONDS = 90
+
+
+def oxlint_command(cfg_dir: Path, stop: Path, *, defaults: bool, type_aware: bool = True) -> Optional[List[str]]:
+    """The oxlint command for the project at `cfg_dir`, before the files: broom's defaults when `defaults` is set,
+    else the project's; None without oxlint. `type_aware` False leaves out the rules that need the type checker, which
+    broom's defaults ask for in a project with a tsconfig.json, and a project's own scripts by naming them."""
     exe = resolve_bin("oxlint", cfg_dir, stop)
     if not exe:
-        return [], ["missing:oxlint (npm i -g oxlint oxlint-tsgolint)"]
+        return None
     cmd = [exe, "--format", "json", "--no-error-on-unmatched-pattern"]
     if defaults:
         cmd += ["-c", str(DEFAULTS / "oxlintrc.json")]
-        type_aware = find_up(cfg_dir, ["tsconfig.json"], stop) is not None
+        asked = find_up(cfg_dir, ["tsconfig.json"], stop) is not None
     else:  # a configured project gets type-aware rules only if its own scripts ask for them
-        type_aware = pkg_scripts_mention(cfg_dir, "--type-aware") or pkg_scripts_mention(stop, "--type-aware")
-    if type_aware and resolve_bin("tsgolint", cfg_dir, stop):
+        asked = pkg_scripts_mention(cfg_dir, "--type-aware") or pkg_scripts_mention(stop, "--type-aware")
+    if asked and type_aware and resolve_bin("tsgolint", cfg_dir, stop):
         cmd.append("--type-aware")
-    rc, out, err = run(cmd + targets(files, whole=whole), cfg_dir, timeout=90)
+    return cmd
+
+
+def run_oxlint(cmd: List[str], cfg_dir: Path, timeout: float) -> Findings:
+    """Run the oxlint `cmd` from `cfg_dir`, cut off after `timeout` seconds; a timeout is only a note."""
+    rc, out, err = run(cmd, cfg_dir, timeout=timeout)
     if rc is None:
         return [], [f"timeout:oxlint in {cfg_dir}"]
     try:
@@ -42,6 +52,14 @@ def check_oxlint(cfg_dir: Path, files: List[Path], stop: Path, *, defaults: bool
         issues.append(Issue("oxlint", cfg_dir, resolve_in(cfg_dir, d.get("filename", "")), int(span.get("line", 0)),
                             int(span.get("column", 0)), d.get("code", ""), d.get("message", "")))
     return issues, []
+
+
+def check_oxlint(cfg_dir: Path, files: List[Path], stop: Path, *, defaults: bool, whole: bool = False) -> Findings:
+    """Run oxlint over `files`: broom's defaults when `defaults` is set, else the project's; no oxlint is a note."""
+    cmd = oxlint_command(cfg_dir, stop, defaults=defaults)
+    if cmd is None:
+        return [], ["missing:oxlint (npm i -g oxlint oxlint-tsgolint)"]
+    return run_oxlint(cmd + targets(files, whole=whole), cfg_dir, OXLINT_SECONDS)
 
 
 ESLINT_FATAL = 2  # the exit code when ESLint stops on an option or a config it can't use

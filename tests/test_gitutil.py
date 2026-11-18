@@ -67,6 +67,29 @@ class GitUtilTests(BroomCase):
         self.assertIsNone(got["new.py"], "untracked: all of it is new")
         self.assertLessEqual(len(calls), 6, calls)  # not 3 per file, 63 for 21 files
 
+    def test_a_file_a_formatter_rewrote_is_asked_about_again_and_the_repo_is_not(self) -> None:
+        r = self.repo({"a.py": "x = 1\ny = 2\n", "b.py": "z = 1\n"})
+        (r / "a.py").write_text("x = 1\ny = 3\n")
+        changed = ChangedLines()
+        self.assertEqual(changed.get(r / "a.py"), {2})
+        self.assertEqual(changed.get(r / "b.py"), set())
+        (r / "a.py").write_text("w = 0\nx = 1\ny = 3\n")  # rewritten, lines moved down
+        (r / "b.py").write_text("z = 2\n")  # a file that was as HEAD has it, and is not
+        self.assertEqual(changed.get(r / "a.py"), {2}, "what was asked stays until it is forgotten")
+        calls: list = []
+        real = gitutil.run
+
+        def counting(cmd, *args, **kw):
+            calls.append(cmd[3])  # after `git -c core.quotePath=false`
+            return real(cmd, *args, **kw)
+
+        with mock.patch.object(gitutil, "run", counting):
+            changed.forget(r / "a.py")
+            changed.forget(r / "b.py")
+            self.assertEqual(changed.get(r / "a.py"), {1, 3})
+            self.assertEqual(changed.get(r / "b.py"), {1})
+        self.assertEqual(sorted(set(calls)), ["diff"], "no rev-parse, no ls-files: only the diffs of the two files")
+
     def test_the_main_checkout_of_a_worktree_is_found_without_starting_git(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
         linked = self.tmp / "linked"

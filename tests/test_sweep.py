@@ -17,14 +17,14 @@ class SweepTest(BroomCase):
     # edit and stop modes
 
     @unittest.skipUnless(HAS_GO, "go tools missing")
-    def test_edit_hook_is_idle_unless_enabled(self) -> None:
+    def test_edit_hook_formats_unless_format_on_says_otherwise(self) -> None:
         r = self.go_repo()
         f = r / "internal/util/z.go"
         f.write_text("package util\nfunc  Z( ) {  }\n")
         payload = {"session_id": "s1", "cwd": str(r), "tool_name": "Write", "tool_input": {"file_path": str(f)}}
-        self.assertEqual(self.hook("edit", payload), {})
+        self.assertEqual(self.hook("edit", payload, format_on="commit"), {})
         self.assertIn("func  Z", f.read_text())
-        self.assertEqual(self.hook("edit", payload, format_on="edit"), {})
+        self.assertEqual(self.hook("edit", payload), {})
         self.assertEqual(f.read_text(), "package util\n\nfunc Z() {}\n")
 
     @unittest.skipUnless(HAS_PY, "ruff missing")

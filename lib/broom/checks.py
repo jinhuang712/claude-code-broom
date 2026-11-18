@@ -12,7 +12,7 @@ from . import ledger
 from .findings import Findings, Issue
 from .langlint import check_go, check_python, check_rust, check_swift_build, check_swiftlint
 from .state import DATA_ROOT, load_json, update_json
-from .toolchain import PY_ROOT_MARKERS, boundary, css_linters, find_up, js_linters, lang_of, swift_linter
+from .toolchain import boundary, css_linters, find_up, js_linters, lang_of, py_root, swift_linter
 from .weblint import check_biome, check_eslint, check_oxlint, check_stylelint, check_tsc, ts_projects
 
 
@@ -65,8 +65,7 @@ class Plan:
 
     def add_py(self, f: Path, stop: Path) -> None:
         """Add a Python file to the ruff run of its project root: the nearest marker up to `stop`, or `stop` itself."""
-        marker = find_up(f.parent, PY_ROOT_MARKERS, stop)
-        self.py.setdefault((marker.parent if marker else stop, stop), []).append(f)
+        self.py.setdefault((py_root(f, stop), stop), []).append(f)
 
     def add_css(self, f: Path, stop: Path) -> None:
         """Add a CSS file to the linters that check it."""

@@ -36,6 +36,7 @@ def golangci_formatters(path: Path, stop: Path) -> Optional[Path]:
         return None
 
 
+FORMAT_SECONDS = 30  # what a formatter may take, unless the caller wants it sooner
 Command = Tuple[str, List[str], Path]  # tool name, the command, the directory it runs in
 
 
@@ -122,16 +123,17 @@ def keep_hunks(before: str, after: str, changed: Set[int]) -> str:
     return "".join(out)
 
 
-def format_file(path: Path, *, final: bool = True, lines: Optional[Set[int]] = None) -> Optional[str]:
+def format_file(path: Path, *, final: bool = True, lines: Optional[Set[int]] = None,
+                timeout: float = FORMAT_SECONDS) -> Optional[str]:
     """Format in place; the tool's name when it changed the file. With `lines`, only the formatter's edits that
-    touch those lines stay (None formats the whole file)."""
+    touch those lines stay (None formats the whole file). A formatter that takes longer than `timeout` is cut off."""
     found = formatter_cmd(path, final=final)
     if not found:
         return None
     tool, cmd, cwd = found
     try:
         before = path.read_text()
-        run(cmd, cwd, timeout=30)
+        run(cmd, cwd, timeout=timeout)
         after = path.read_text()
         if lines is not None and after != before:
             kept = keep_hunks(before, after, lines)

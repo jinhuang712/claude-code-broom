@@ -18,6 +18,12 @@ class EditHookTest(BroomCase):
             self.assertEqual(git, [], name)
             self.assertEqual([m for m in loaded if m in HEAVY], [], name)
 
+    def test_with_the_format_and_the_check_switched_off_an_edit_loads_nothing_of_broom(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        self.env.update({"CLAUDE_PLUGIN_OPTION_FORMAT_ON": "commit", "CLAUDE_PLUGIN_OPTION_CHECK_ON": "off"})
+        payload = {"session_id": "idle", "cwd": str(r), "tool_name": "Edit", "tool_input": {"file_path": str(r / "a.py")}}
+        self.assertEqual(self.counted("edit", payload, r), ([], []))
+
     @unittest.skipUnless(shutil.which("oxlint"), "oxlint missing")
     def test_a_file_outside_any_repo_is_a_scratch_draft(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
