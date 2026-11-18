@@ -33,10 +33,13 @@
   - The user asked on 2026-11-18 for two things: a scope, excludes and limits that a call can set, and a way to ask broom anything, as Code Mode lets a model write code against an API.
   - The forms on the table: more flags · a full export of the measurements for a script outside broom · SQL over a database broom fills · one JSON query · a script that broom runs · a library to import.
   - The want "no script to write" and its goal say a session writes no script, which several of these forms reverse.
+  - The user narrowed it that day: the ability sits inside broom, so that the command line needn't cover every case. An export for a script outside broom and a library are out.
+  - The user rejected SQL over a database that day.
 - created: 2026-11-18
+- updated: 2026-11-18
 - status: OPEN
 - found: the user, in the session of 2026-11-18
-- next: the user picks the forms to look at closer
+- next: say again what broom is and whom it serves, then judge the forms from there
 
 ---
 
