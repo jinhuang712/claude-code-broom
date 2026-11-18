@@ -16,7 +16,7 @@ Goals
 │   ├── ✅ O5: A full diagnosis of an old repo — every smell, with no time cut
 │   ├── ✅ O6: A number that got worse is told once — the check-up speaks only then
 │   ├── ✅ O7: No script to write — broom answers what a session would count by hand
-│   └── ⬜ O8: Done means tests ran — a turn that changed code ends with its tests run
+│   └── ✅ O8: Done means tests ran — a turn that changed code ends with its tests run
 ├── Measures
 │   ├── ⬜ M1: Fix rate — how much of what broom blocks gets fixed
 │   └── ⬜ M2: Check time — the seconds a commit check takes
@@ -162,7 +162,7 @@ A turn that changed code doesn't end before the project's tests ran on that code
 
 **Acceptance**: A fresh session is asked for a change to code and told that it need not write tests. Its turn ends only after it ran the repo's tests on the changed code, or after it accepted the finding with a reason or asked the user.
 
-**Status**: ⬜
+**Status**: ✅ 2026-11-18, in two fresh sessions on a throwaway repo with 0.23.5 and this rule. The first ran the repo's tests on its own after the change, and its turn ended with no block. The second was told to run no test: its turn's end was blocked with `tests_not_run`, and it ended the turn with `broom known --ask`, which put the question to the user.
 
 ---
 

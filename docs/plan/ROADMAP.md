@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP7: Nothing is waved through](#cp7-nothing-is-waved-through), which the user put first on 2026-11-18, with [CP6: Polish and self-test](#cp6-polish-and-self-test) still open beside it. CP2 and CP3 shipped, and their goals that need use are still open. CP5 ended with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
+**Current checkpoint**: [CP6: Polish and self-test](#cp6-polish-and-self-test). CP7 was put first by the user on 2026-11-18 and ended that day with 0.24.0. CP2 and CP3 shipped, and their goals that need use are still open. CP5 ended with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
 
 ---
 
@@ -23,7 +23,7 @@ Roadmap
 │   ├── ✅ CP5.3: Dependencies and deprecated APIs
 │   └── ✅ CP5.4: Rust's missing smells
 ├── 🟨 CP6: Polish and self-test — every goal run in a real session, every rough edge smoothed
-├── ⬜ CP7: Nothing is waved through — three moments in Claude's flow, and no pass without a reason
+├── ✅ CP7: Nothing is waved through — three moments in Claude's flow, and no pass without a reason
 ├── ⬜ CP8: Lighter — less code, fewer runs, less noise
 │   ├── ⬜ CP8.1: Fewer interruptions
 │   └── ⬜ CP8.2: Fewer runs and less code
@@ -333,7 +333,9 @@ The user asked on 2026-11-17 for a round of polish and self-test once the featur
 
 ## CP7: Nothing is waved through
 
-**Status**: ⬜
+**Status**: ✅
+
+The four features shipped in 0.23.5 and 0.24.0 on 2026-11-18, and the checkpoint ended with 0.24.0.
 
 The user set this on 2026-11-18: a check that lets Claude carry on puts Claude's speed before the code. Three moments get their own weight, and a finding ends fixed or with a reason the user sees.
 
@@ -347,7 +349,7 @@ The user set this on 2026-11-18: a check that lets Claude carry on puts Claude's
 **Exit criteria** (3):
 
 - **Objectives**
-  - [O8: Done means tests ran](GOALS.md#o8-done-means-tests-ran)
+  - [O8: Done means tests ran](GOALS.md#o8-done-means-tests-ran): ✅ 2026-11-18, in two fresh sessions
 - **Thresholds**
   - [T5: A check after an edit costs 200 ms at most](GOALS.md#t5-a-check-after-an-edit-costs-200-ms-at-most): ✅ 2026-11-18, 146 to 160 ms in the worst case
 - **Constraints**
