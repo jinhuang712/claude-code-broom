@@ -7,7 +7,7 @@ from pathlib import Path
 
 from support import BroomCase, py_function
 
-from broom.config import DEAD_CODE, SMELL_LIMITS, SMELL_PRESENCE
+from broom.config import DEAD_CODE, SMELL_LIMITS, SMELL_PRESENCE, TESTS_FAILED, TESTS_NOT_RUN
 from broom.findings import Issue
 from broom.fixes import NOT_A_FIX, fixes, how_to_fix
 from broom.gate import MAX_CHARS, render
@@ -23,7 +23,7 @@ def smell_issue(rule: str, n: int = 1, tool: str = "smells") -> Issue:
 
 class FixLinesTest(BroomCase):
     def test_every_smell_has_a_fix_line_under_160_characters(self) -> None:
-        names = {*SMELL_LIMITS, *SMELL_PRESENCE, DEAD_CODE}
+        names = {*SMELL_LIMITS, *SMELL_PRESENCE, DEAD_CODE, TESTS_NOT_RUN, TESTS_FAILED}  # the last two: no test ran
         self.assertEqual(sorted(names - set(fixes())), [], "a smell without a fix line")
         self.assertEqual(sorted(set(fixes()) - names), [], "a fix line for no smell")
         for name, line in fixes().items():

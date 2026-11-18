@@ -25,5 +25,7 @@
   "skipped_test": "Unskip it and fix the test, or delete it. A test that must wait says what it waits on in the skip's reason, and is accepted with that as the reason.",
   "untested_file": "Write the tests beside it: a test file named for it (test_name.py, name_test.go, name.test.ts, NameTests.swift) that checks what it does.",
   "missing_docs": "Write one sentence that says what it is for, not how it works; a private helper (leading underscore, unexported) needs none.",
-  "deprecated_api": "Call what replaced it: the deprecation note in the message usually names it; where it names none, read the API's docs for the successor."
+  "deprecated_api": "Call what replaced it: the deprecation note in the message usually names it; where it names none, read the API's docs for the successor.",
+  "tests_not_run": "Run the project's tests, then stop again.",
+  "tests_failed": "Fix what fails; if it fails for a reason outside this change, say so to the user."
 }

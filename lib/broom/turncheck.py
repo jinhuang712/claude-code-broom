@@ -21,6 +21,7 @@ from .gate import (
 )
 from .smells import Smell
 from .state import emit, load_json, save_json
+from .testrun import accepted_here, findings as test_findings
 from .turnhooks import finish
 from .turns import turn_base
 
@@ -145,7 +146,7 @@ def settle_asks(d: Path, gate: dict, blocking: List[Issue], files: List[Path], n
     waits for the user's answer: asked about in this turn, and neither fixed nor accepted since."""
     waiting = asked.rows(d)
     prior = {**held(d), **asked.entries(waiting), **(gate.get("blocked") or {})}
-    known = baseline_keys()
+    known = baseline_keys() | accepted_here(d)  # what was accepted for this turn only is as good as known in it
     gone = ledger.fixes(prior, entries_of(blocking), known, files, notes) if prior else set()
     return [r for r in waiting if r["key"] not in gone and r["key"] not in known]
 
@@ -157,6 +158,7 @@ def check_turn(turn: Turn, files: List[Path]) -> None:
     d = turn.d
     gate = load_json(d / "gate.json", {})
     blocking, told, notes = checked(files, turn_base(d, turn.root), d)
+    blocking += test_findings(d, turn.root, files)  # a main session's turn only
     waiting = settle_asks(d, gate, blocking, files, notes)
     asked_keys = {r["key"] for r in waiting}
     blocking = [i for i in blocking if issue_key(i) not in asked_keys]

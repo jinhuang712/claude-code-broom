@@ -16,7 +16,7 @@ from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from . import ledger
 from .findings import Issue
-from .config import OPTIONAL_NOTE, excluded
+from .config import OPTIONAL_NOTE, TESTS_TOOL, excluded
 from .fixes import how_to_fix
 from .gitutil import ChangedLines
 from .state import DATA_ROOT, load_json, say, short_hash, update_json
@@ -172,9 +172,12 @@ def accept_blocked(repo: Path, why: str, *, agreed: bool = False) -> Tuple[int, 
         say(refusal(repo, left))
     if pending:
         now = time.time()
-        baseline_add_entries({k: {**v, "t": now, "why": why} for k, v in pending.items()})
+        once = [k for k, v in pending.items() if v.get("tool") == TESTS_TOOL]  # no test ran: accepted for this turn only
+        baseline_add_entries({k: {**v, "t": now, "why": why} for k, v in pending.items() if k not in once})
         turn = Path(prior["turn"]) if prior.get("turn") else None
         ledger.let_through(pending, "accept", turn, why=why, where=where, agreed=agreed or None)
+        if turn is not None and once:
+            ledger.note_turn(turn, ledger.ACCEPTED_HERE, [{"key": k} for k in once])
         if left or prior.get("earlier"):
             state[str(repo)] = {**prior, "pending": left}
         else:
@@ -296,7 +299,7 @@ def guidance(entries: List[Tuple[Issue, List[str]]], way_out: Optional[str]) -> 
     report that isn't a block."""
     if way_out is None:
         return []
-    fix = how_to_fix(i.rule for i, _ in entries if i.tool == "smells")
+    fix = how_to_fix(i.rule for i, _ in entries if i.tool in ("smells", TESTS_TOOL))
     return (["\n" + "\n".join(fix)] if fix else []) + ["\n" + way_out]
 
 
