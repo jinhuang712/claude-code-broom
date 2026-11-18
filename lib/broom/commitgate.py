@@ -22,8 +22,8 @@ from .findings import Issue
 from .config import excluded, setting
 from .fmt import format_files
 from .gate import (
-    COMMITS, accept_allowed, baseline_keys, issue_entry, issue_key, new_notes, note_text, render, save_commits,
-    select, setup_hint,
+    COMMITS, accept_allowed, baseline_keys, issue_entry, issue_key, new_notes, note_text, open_findings, render,
+    save_commits, select, setup_hint,
 )
 from .gitcmd import CommitPlan, GitOp, parse, parse_commit, plan_commit, staged
 from .githook import installed
@@ -157,9 +157,9 @@ def gate_files(repo: Path, files: List[Path], sd: Path, cwd: Path, state: dict) 
     ledger.hinted(entries_of(s.issue() for s in hints))
     key = str(repo)
     found = entries_of(blocking)
-    prior = state.get(key, {})
-    if prior.get("pending"):
-        ledger.fixes(prior["pending"], found, baseline_keys(), files, notes)
+    earlier = open_findings(state.get(key, {}))
+    if earlier:
+        ledger.fixes(earlier, found, baseline_keys(), files, notes)
     if not blocking:
         state.pop(key, None)
         return None, context + skip_context(sd, notes, repo)

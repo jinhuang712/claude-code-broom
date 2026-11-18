@@ -43,22 +43,38 @@ def turn_way_out(repos: List[Path], cwd: Path) -> str:
     return f"{way_out(repos or [cwd], cwd, 'stop again')} {leave}"
 
 
+def commit_blocked(record: object, shown: Dict[str, dict]) -> Dict[str, dict]:
+    """What a commit blocked in a repo and no check has ended, from the repo's last-blocked `record` (commits.json):
+    a turn-end block takes the place of the last block, and these findings stay behind it as `earlier`, since no
+    turn-end check covers their files and the commit that fixes them still has their fix lines to write. What this
+    block `shown` again is its own to end. An earlier turn-end block is no part of it: its turn's gate.json holds it."""
+    if not isinstance(record, dict):
+        return {}
+    last = {} if record.get("where") in STOPS else record.get("pending") or {}
+    return {k: e for k, e in {**(record.get("earlier") or {}), **last}.items() if k not in shown}
+
+
 def note_turn_block(d: Path, groups: Dict[Path, List[Issue]]) -> None:
     """Keep what a turn-end block showed in each repo's last-blocked record (commits.json), where `broom known
-    --accept` finds it, as it does what a commit blocked."""
+    --accept` finds it, as it does what a commit blocked; what a commit blocked before stays in it as `earlier`."""
     state = load_json(COMMITS, {})
     for repo, issues in groups.items():
-        state[str(repo)] = {"pending": entries_of(issues), "where": ledger.HOOK.where, "turn": str(d)}
+        shown = entries_of(issues)
+        state[str(repo)] = {"pending": shown, "where": ledger.HOOK.where, "turn": str(d),
+                            "earlier": commit_blocked(state.get(str(repo)), shown)}
     save_commits(state, groups)
 
 
 def forget_turn_blocks(d: Path) -> None:
     """The turn's end found nothing to block: drop what its blocks left in commits.json, so a later `broom known
-    --accept` doesn't accept what is gone."""
+    --accept` doesn't accept what is gone. What a commit blocked before them stays, to be fixed."""
     state = load_json(COMMITS, {})
     mine = [k for k, v in state.items() if isinstance(v, dict) and v.get("turn") == str(d) and v.get("where") in STOPS]
     for k in mine:
-        state.pop(k)
+        if state[k].get("earlier"):
+            state[k] = {**state[k], "pending": {}}
+        else:
+            state.pop(k)
     if mine:
         save_commits(state, mine)
 

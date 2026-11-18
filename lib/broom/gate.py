@@ -108,6 +108,13 @@ def save_commits(state: dict, repos: Iterable[Path]) -> None:
     update_json(COMMITS, {}, put)
 
 
+def open_findings(record: dict) -> Dict[str, dict]:
+    """The findings a repo's last-blocked record holds that no check has ended: the last block's (`pending`) and the
+    commit blocks' that a turn-end block replaced as the last (`earlier`). Only `pending` can be accepted; both can be
+    fixed."""
+    return {**(record.get("earlier") or {}), **(record.get("pending") or {})}
+
+
 def accept_allowed() -> bool:
     """Whether `broom known --accept` works here: `BROOM_NO_ACCEPT` (set to anything but 0) turns it off, for
     agents that must fix what they break instead of accepting it."""
@@ -145,7 +152,7 @@ def accept_blocked(repo: Path, why: str) -> Tuple[int, str]:
         baseline_add_entries({k: {**v, "t": now, "why": why} for k, v in pending.items()})
         turn = Path(prior["turn"]) if prior.get("turn") else None
         ledger.let_through(pending, "accept", turn, why=why, where=where)
-        if left:
+        if left or prior.get("earlier"):
             state[str(repo)] = {**prior, "pending": left}
         else:
             state.pop(str(repo), None)

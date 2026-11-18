@@ -41,6 +41,7 @@ WAIVED = "waivers.jsonl"  # in a turn's directory: the self-waivers it saw, for 
 TURN_NOTES = (THROUGH, WAIVED)
 SHOWN_GROUPS = 5
 SKIP_PREFIXES = ("timeout:", "missing:")
+OUTCOME_EVENTS = ("block", "fix", "pass")  # the lines that tell where a finding stands
 
 
 class Hook:
@@ -203,7 +204,16 @@ def fixes(prior: Dict[str, dict], now: Dict[str, dict], known: Set[str], files: 
             replaced[group(e)] -= 1
         else:
             out[k] = e
-    write([finding("fix", k, e) for k, e in out.items()])
+    write(not_fixed_yet([finding("fix", k, e) for k, e in out.items()]))
+
+
+def not_fixed_yet(rows: List[dict]) -> List[dict]:
+    """The fix `rows` of findings whose last block, fix or pass line in the ledger isn't a fix already: a commit and a
+    turn's end that both see a finding gone write its one fix line between them."""
+    if not rows:
+        return rows
+    last = {(r.get("repo"), r.get("key")): r["event"] for r in read(LEDGER) if r.get("event") in OUTCOME_EVENTS}
+    return [r for r in rows if last.get((r["repo"], r["key"])) != "fix"]
 
 
 def group(entry: dict) -> Tuple[object, object, object]:
