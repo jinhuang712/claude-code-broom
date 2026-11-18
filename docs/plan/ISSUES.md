@@ -13,8 +13,7 @@ Issues
 │   ├── I5: Five rules sit on an alpha plugin API
 │   └── I6: The Bash parser guesses what git's hook knows
 └── fix
-    ├── I3: The cause of the reported Stop hang is unconfirmed
-    └── I13: A blocked finding can end with no line or with two
+    └── I3: The cause of the reported Stop hang is unconfirmed
 ```
 
 ---
@@ -81,15 +80,3 @@ Issues
   - [F2.1: Commit check](../features/F2-sweep.md#f21-commit-check)
   - [F2.4: git's pre-commit hook](../features/F2-sweep.md#f24-gits-pre-commit-hook)
 - next: [F2.4.1: Offered at setup](../features/F2-sweep.md#f241-offered-at-setup)
-
----
-
-## I13: A blocked finding can end with no line or with two
-
-- type: fix
-- why:
-  - A commit that passes clean drops the repo's whole record, so a blocked finding in a file that commit didn't take never gets its fix line.
-  - A turn ended by stopping again writes a pass and keeps the record, so a later accept may write a second line for the same finding. That was read from the code and not run.
-- found: the fix of a turn-end block that dropped a commit block's fix line, 2026-11-18
-- touches:
-  - [F9.1: Ledger](../features/F9-record.md#f91-ledger)

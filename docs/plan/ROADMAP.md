@@ -304,7 +304,7 @@ The user asked on 2026-11-17 for a round of polish and self-test once the featur
 - Fresh sessions used broom end to end on a throwaway repo and on a public Python project, done on 2026-11-18.
   - They met 8 things: the limits card · the setup offer · a block with its fix lines · a fix · an accept with a reason · the turn's summary · the check-up's line · a checked commit.
 - A turn-end block no longer takes a commit block's fix line with it, done on 2026-11-18.
-- [I13: A blocked finding can end with no line or with two](ISSUES.md#i13-a-blocked-finding-can-end-with-no-line-or-with-two)
+- A blocked finding ends with one line in the record: none is lost at a commit of other files, done on 2026-11-18.
 - git's own hook reads a linked worktree as it reads the main checkout, done on 2026-11-18.
 - A fresh session answers ten questions about a repo from broom alone after five runs, done on 2026-11-17.
 - [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)

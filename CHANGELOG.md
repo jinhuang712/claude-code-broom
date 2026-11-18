@@ -6,6 +6,13 @@
 
 ---
 
+### Record
+
+- A finding that a commit blocked is remembered until a commit takes its file. Before, a commit of other files made broom forget it, and `broom report` kept showing it as open after it was fixed.
+- After a turn ended by stopping again, `broom known --accept` has nothing left to accept. Before, it could pass the same finding a second time.
+
+---
+
 ## 0.23.3 — 2026-11-18
 
 ---
