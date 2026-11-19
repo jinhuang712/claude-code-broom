@@ -1,6 +1,6 @@
 ---
 name: sweep
-description: Sweep code with broom on request - format, lint and type-check a scope the user describes in their own words (uncommitted changes, what's staged, the last few commits, this branch, some folders, or the whole repo) and report what is left. Use for /broom:sweep, or when asked to clean up, format, lint or check code.
+description: Sweep code with broom on request - format, lint and type-check a scope the user describes in their own words (uncommitted changes, what's staged, the last few commits, this branch, some folders, or the whole repo) and report what is left. Use for /broom:sweep, or when asked to format, lint or check code. A request to clean up or refactor code is /broom:clean's.
 argument-hint: "[what to sweep, in your words]"
 ---
 

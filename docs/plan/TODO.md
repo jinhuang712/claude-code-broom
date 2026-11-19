@@ -157,3 +157,16 @@
 - created: 2026-11-19
 - found: the look for missed rot at the end of CP6
 - related: [F11.1: Counters](../features/F11-checkup.md#f111-counters)
+
+---
+
+### [P2][DISCUSSION] Whether /broom:sweep still earns its place
+
+- description:
+  - The hooks now check Claude's work after each edit, at each commit and at each turn's end, so a sweep of "my changes" repeats what already ran.
+  - `/broom:status` sums up the whole repo, which `broom sweep --all` partly did.
+  - What only a sweep does is check a scope no hook saw, such as a branch before a pull request or commits made outside Claude.
+  - `/broom:clean` is another job: it rewrites code to clear old smells, in batches the user agrees to.
+- created: 2026-11-19
+- found: the user asked whether sweep and clean repeat each other
+- next: the user decides whether to keep it, fold it into `/broom:status` or drop it

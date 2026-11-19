@@ -6,6 +6,16 @@
 
 ---
 
+## 0.25.2 — 2026-11-19
+
+---
+
+### Sweep
+
+- Asking Claude to clean up or refactor code goes to `/broom:clean`. Before, `/broom:sweep` also claimed that request, and a cleanup could end as a lint report.
+
+---
+
 ## 0.25.1 — 2026-11-19
 
 ---
