@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from .config import repo_config, setting
+from .depcruise import READS_NO_TS
 from .doctor import MARKS
 from .gate import display
 from .needs import DEFAULTS_DETAIL, LANG_NAMES, Diagnosis, Item, install_command, tools_db
@@ -187,6 +188,8 @@ def phrase(need: Need, item: dict) -> str:
         text = f"{tool} {detail}"
     elif status == "broken":
         text = f"{tool} doesn't run" + (f": {detail}" if detail else "")
+    elif detail.startswith(READS_NO_TS):  # installed, but it can't read here: its reason is the whole news
+        text = detail
     else:  # what the check loses says more than the doctor's detail, and the defaults' is no news
         shown = detail not in ("", DEFAULTS_DETAIL) and not need.lost
         text = f"{tool} is not installed" + (f" ({detail})" if shown else "")

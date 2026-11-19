@@ -4,8 +4,8 @@ imports `auth`, however the files in between are arranged, which is where a laye
 stops doing so.
 
 Python's imports are read here (pycycles.py has the reader). TS/JS's are read by dependency-cruiser, which resolves
-tsconfig paths, index files and re-exports; it needs a TypeScript below 7 to read .ts files at all, and says nothing
-when it hasn't one, so a changed file it didn't read is said so. An import counts where the change added it."""
+tsconfig paths, index files and re-exports; it needs a TypeScript below 7 beside it to read .ts files at all, and says
+nothing when it hasn't one (depcruise.py picks the one to run), so a changed file it didn't read is said so. An import counts where the change added it."""
 
 from __future__ import annotations
 
@@ -17,7 +17,8 @@ from typing import Callable, Dict, Iterable, List, Set, Tuple
 
 from .gitutil import git, run
 from .pycycles import ImportGraph
-from .toolchain import JS_EXTS, find_up, resolve_bin
+from .depcruise import pick
+from .toolchain import JS_EXTS, find_up
 
 Place = Tuple[str, int]  # a file, relative to the repo, and the line of an import in it
 DEPCRUISE_EXCLUDE = r"(^|/)(node_modules|dist|build|out|coverage|\.next|\.git)(/|$)"
@@ -109,7 +110,7 @@ def package_cycles(repo: Path, prefix: str, group: List[str], modules: list, not
     for rel in group:
         source = rel[len(prefix):]
         if source not in imports:
-            notes.append(f"dependency-cruiser didn't read {rel}: it needs TypeScript below 7 (npm i -D typescript@6)")
+            notes.append(f"dependency-cruiser didn't read {rel}: it needs a TypeScript below 7 beside it; broom doctor has the fix")
             continue
         text = (repo / rel).read_text(errors="replace")
         for target in imports[source]:
@@ -124,7 +125,7 @@ def js_folder_cycles(repo: Path, rels: List[str], notes: List[str], timeout: Cal
     """The imports in the changed TS/JS files that lead into another folder, which leads back to this one. Each
     package (the nearest package.json) is read on its own, as imports between packages go through node_modules."""
     changed = [rel for rel in rels if Path(rel).suffix in JS_EXTS]
-    exe = resolve_bin("depcruise", repo, repo) if changed else None  # without it, broom doctor says so
+    exe = pick(repo) if changed else None  # without one, broom doctor says so
     if not exe:
         return []
     packages: Dict[Path, List[str]] = {}

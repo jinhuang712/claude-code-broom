@@ -195,7 +195,9 @@ Both are hints, and both count where the change adds the import.
 
 `folder_cycle` is an import that leads into a folder whose files lead back to this one, such as `auth` importing `providers` while `providers` imports `auth`. It covers Python and TS/JS.
 
-TS/JS needs dependency-cruiser and a TypeScript below 7 next to it. `broom doctor` offers it. Without it nothing is measured and nothing nags. Go refuses package cycles itself. Swift and Rust aren't read.
+TS/JS needs dependency-cruiser, which reads a `.ts` file only with a TypeScript below 7 beside it. So broom keeps a copy of its own with a TypeScript 6, and a project on TypeScript 7 is read like any other. `broom doctor` offers the copy as one command, and it changes nothing in the project or in the user's own TypeScript. Without a dependency-cruiser that can read the repo nothing is measured and nothing nags. Go refuses package cycles itself. Swift and Rust aren't read.
+
+- **Why**: [036: broom keeps its own dependency-cruiser](../specs/decisions/036-own-dependency-cruiser.md)
 
 ---
 

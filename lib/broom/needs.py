@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Tuple
 
 from .config import setting
+from .depcruise import choose, install_command as own_install
 from .gitutil import run
 from .state import DEFAULTS, load_json, read_jsonc
 from .toolchain import (
@@ -303,7 +304,7 @@ class Diagnosis:
             self.machine.append((coded[0], "smells", "jscpd", "jscpd"))
         if "js" in self.projects:  # broom's own TS/JS rules are an oxlint plugin, which runs on Node
             self.machine.append(("js", "smells", "node", "node"))
-            self.machine.append(("js", "smells", "dependency-cruiser", "dependency-cruiser"))
+            self.items.append(depcruise_item(self.repo, self.db))
 
     def swift(self) -> None:
         """Add the Swift tools to the machine checks, and check each Swift project's linter and formatter."""
@@ -350,6 +351,19 @@ class Diagnosis:
                     self.items.append(Item(lang, "plugin", key, "conflict", "",
                                            f"also starts a {LANG_NAMES[lang]} language server; only the first one "
                                            "registered for an extension runs", f"claude plugin disable {key}"))
+
+
+def depcruise_item(repo: Path, db: dict) -> Item:
+    """The dependency-cruiser the cycle check would run: ok when one reads this repo's code, else a gap whose fix is
+    broom's own copy, the same command for every way of installing JS tools. A copy that is installed and reads no
+    .ts file is said so in the detail."""
+    exe, why = choose(repo)
+    fix = own_install()
+    if not exe:
+        return Item("js", "smells", "dependency-cruiser", "missing", detail=why, fix=fix, global_fix=fix)
+    works, first = probe(exe, db.get("dependency-cruiser", {}), repo)
+    return Item("js", "smells", "dependency-cruiser", "ok" if works else "broken", detail=first,
+                fix="" if works else fix, global_fix="" if works else fix)
 
 
 def typescript_lsp(repo: Path, db: dict) -> Item:

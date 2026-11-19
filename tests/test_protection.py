@@ -16,7 +16,7 @@ BARE_CHECKS = {"file length", "function and class length", "nested ternaries", "
                "skipped tests", "code files with no test by name"}  # in `checks` beside the rows of the blocks
 PY_TOOLS = {"ruff": 'echo "ruff 0.9.0"', "pyright-langserver": "exit 0", "jscpd": 'echo "5.4.0"'}
 TS_TOOLS = {name: f'echo "{name} 1.0.0"' for name in ("oxlint", "oxfmt", "tsc", "node", "jscpd", "tsgolint")}
-TS_TOOLS.update({"typescript-language-server": "exit 0", "dependency-cruiser": 'echo "16.0.0"'})
+TS_TOOLS.update({"typescript-language-server": "exit 0", "depcruise": 'echo "16.0.0"'})
 
 
 class ProtectionTest(BroomCase):
@@ -265,3 +265,48 @@ class ProtectionTest(BroomCase):
         self.assertIn("All set.", plain.stdout)
         self.assertEqual(self.cli(r, "doctor", "--checks", env=env).returncode, 0, "the same as the plain doctor's")
         self.assertEqual(self.cli(r, "doctor", "--checks", "--json", env=env).returncode, 0)
+
+
+class CyclesCopyTest(BroomCase):
+    """The cycles row by which dependency-cruiser the check would run: broom's own copy, the PATH's when it reads the
+    repo's code, or none, which has the install command of broom's copy as its fix."""
+    checks, text, line = ProtectionTest.checks, ProtectionTest.text, ProtectionTest.line
+    BLIND = "dependency-cruiser reads no .ts file: the TypeScript beside it is 7.0.2, and it needs one below 7"
+
+    def js_cycles(self, repo: Path, typescript: str = None, *, on_path: bool = True) -> dict:
+        """The cycles row with a dependency-cruiser on PATH as npm installs one, beside the TypeScript given."""
+        tools = {k: v for k, v in TS_TOOLS.items() if k != "depcruise"}
+        env = self.fake_path(fakes=tools)
+        return self.checks(repo, self.npm_depcruise(env, typescript) if on_path else env)["js", "cycles"]
+
+    def ts_repo_with_formatter(self) -> Path:
+        return self.ts_repo({".oxfmtrc.json": "{}\n"})
+
+    def test_a_typescript_7_beside_the_one_on_path_is_a_gap_with_the_install_of_broom_s_own_copy(self) -> None:
+        r = self.ts_repo_with_formatter()
+        row = self.js_cycles(r, "7.0.2")
+        self.assertEqual((row["status"], row["fix"]), ("off", self.own_install()))
+        self.assertIn(f"{self.BLIND}, so cycles between folders aren't found", row["why"])
+        self.assertIn("typescript@6", self.line(self.text(r, self.npm_depcruise(self.fake_path(), "7.0.2")), "✗", "cycles"))
+
+    def test_no_dependency_cruiser_at_all_is_the_same_gap(self) -> None:
+        row = self.js_cycles(self.ts_repo_with_formatter(), on_path=False)
+        self.assertEqual((row["status"], row["fix"]), ("off", self.own_install()))
+        self.assertIn("dependency-cruiser is not installed", row["why"])
+
+    def test_broom_s_own_copy_runs_the_check_whatever_is_on_path(self) -> None:
+        r = self.ts_repo_with_formatter()
+        self.own_depcruise()
+        for typescript in ("7.0.2", None):
+            row = self.js_cycles(r, typescript)
+            self.assertEqual((row["status"], row["why"], row["fix"]), ("on", "", ""), typescript)
+
+    def test_a_typescript_below_7_beside_the_one_on_path_leaves_the_row_on(self) -> None:
+        r = self.ts_repo_with_formatter()
+        row = self.js_cycles(r, "5.9.3")
+        self.assertEqual((row["status"], row["why"], row["fix"]), ("on", "", ""))
+        self.assertIn("dependency-cruiser", row["tool"])
+
+    def test_a_js_only_repo_is_not_stopped_by_a_typescript_it_has_no_use_for(self) -> None:
+        r = self.repo({"package.json": "{}\n", "a.js": "export const a = 1;\n"})
+        self.assertEqual(self.js_cycles(r, "7.0.2")["status"], "on")

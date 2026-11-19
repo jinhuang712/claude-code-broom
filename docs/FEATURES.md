@@ -49,7 +49,7 @@ Features
 │   ├── ✅ F4.4: Dead code — code a change adds and nothing uses
 │   ├── 🚧 F4.5: Cycles — Go, Swift and Rust aren't read
 │   │   ├── ✅ F4.5.1: Import cycle
-│   │   └── 🚧 F4.5.2: Folder cycle — TS/JS needs a TypeScript below 7
+│   │   └── ✅ F4.5.2: Folder cycle
 │   ├── ✅ F4.6: What is skipped — dependencies, build output and generated code
 │   ├── ✅ F4.7: Tests — measured by rules of their own
 │   ├── ✅ F4.8: Limits told before the work — Claude knows the bar when it starts

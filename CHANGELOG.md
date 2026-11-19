@@ -6,6 +6,18 @@
 
 ---
 
+## 0.25.7 — 2026-11-19
+
+---
+
+### TS/JS
+
+- A project on TypeScript 7 gets its cycles between folders checked. Before, dependency-cruiser read none of its `.ts` files and said nothing, and `broom doctor` still called the tool ok.
+- broom now keeps a dependency-cruiser of its own, with a TypeScript 6 beside it, under its data directory. `broom doctor` offers it as one command, and `/broom:setup` and `/broom:status` install it on your yes. It changes nothing in your project and leaves your own TypeScript alone. One install serves every repo.
+- If you installed dependency-cruiser for broom before, in a project or globally, it is still used where it can read the project.
+
+---
+
 ## 0.25.6 — 2026-11-19
 
 ---

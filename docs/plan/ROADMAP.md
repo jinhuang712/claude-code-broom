@@ -420,7 +420,7 @@ The user set this on 2026-11-19: what a stranger meets first, and what can only 
 - [F9.5: /broom:status](../features/F9-record.md#f95-broomstatus)
 - [F2.6: Scan on request](../features/F2-sweep.md#f26-scan-on-request)
 - [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)
-- [I18: Doctor says folder cycles are checked in a TypeScript 7 project](ISSUES.md#i18-doctor-says-folder-cycles-are-checked-in-a-typescript-7-project)
+- A project on TypeScript 7 gets its folder cycles read, by a dependency-cruiser of broom's own, and the doctor no longer calls one that reads nothing ok, done on 2026-11-19.
 - The line for another tool's git hook no longer blocks every commit where the marketplace copy is absent, and doctor sees it once added, done on 2026-11-19.
 
 **Exit criteria** (1):

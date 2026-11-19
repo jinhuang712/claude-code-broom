@@ -59,7 +59,7 @@ HAS_SOURCEKIT = HAS_SWIFT_FORMAT and shutil.which("sourcekit-lsp") is not None
 def no_depcruise():
     """A patch that hides dependency-cruiser from the folder-cycle check, for a test of other tools: one installed on
     the machine adds a note of its own, and with a TypeScript 7 beside it a note that it read no .ts file."""
-    return mock.patch("broom.foldercycles.resolve_bin", return_value=None)
+    return mock.patch("broom.foldercycles.pick", return_value=None)
 
 
 def py_function(name: str, lines: int) -> str:
@@ -182,6 +182,37 @@ class BroomCase(unittest.TestCase):
             (d / name).write_text("#!/bin/sh\n" + body + "\n")
             (d / name).chmod(0o755)
         return {**self.env, "PATH": str(d), "CLAUDE_CONFIG_DIR": str(self.config_dir())}
+
+    def npm_depcruise(self, env: dict, typescript: str = None, *, own: bool = False) -> dict:
+        """`env` with a dependency-cruiser on its PATH as a global npm install puts one: a symlink to a script in
+        <prefix>/lib/node_modules/dependency-cruiser/bin, with the `typescript` package of version `typescript`
+        beside the package (inside it with `own`), or none."""
+        modules = self.tmp / f"npm{uuid.uuid4().hex[:6]}" / "lib" / "node_modules"
+        script = modules / "dependency-cruiser" / "bin" / "dependency-cruiser.mjs"
+        script.parent.mkdir(parents=True)
+        script.write_text('#!/bin/sh\necho "18.8.0"\n')
+        script.chmod(0o755)
+        if typescript:
+            home = modules / "dependency-cruiser" / "node_modules" if own else modules
+            (home / "typescript").mkdir(parents=True)
+            (home / "typescript" / "package.json").write_text(json.dumps({"name": "typescript", "version": typescript}))
+        for name in ("depcruise", "dependency-cruiser"):
+            (Path(env["PATH"]) / name).symlink_to(script)
+        return env
+
+    def own_depcruise(self) -> str:
+        """broom's own dependency-cruiser, as `npm i --prefix` leaves it in the test run's data directory; returns the
+        command that installs it."""
+        own = self.tmp / "data" / "node"
+        exe = own / "node_modules" / ".bin" / "depcruise"
+        exe.parent.mkdir(parents=True, exist_ok=True)
+        exe.write_text('#!/bin/sh\necho "18.8.0"\n')
+        exe.chmod(0o755)
+        return self.own_install(own)
+
+    def own_install(self, own: Path = None) -> str:
+        """The command that installs broom's own dependency-cruiser into the test run's data directory."""
+        return f'npm i --prefix "{own or self.tmp / "data" / "node"}" dependency-cruiser typescript@6'
 
     def config_dir(self, settings: dict = None) -> Path:
         d = self.tmp / "claude-config"

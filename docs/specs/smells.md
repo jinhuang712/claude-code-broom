@@ -70,7 +70,11 @@ The session scan gives these tools 20 seconds between them. The quick ones go fi
 
 A Python import closes a cycle when what it imports leads back to its file. broom reads the module-level imports itself. An import inside a function, or under `if TYPE_CHECKING:`, is how code breaks a cycle, so it doesn't count. Names are matched by their path, and a name two files share is skipped.
 
-A folder cycle is an import that leads into a folder whose files lead back to this one. Python's are read by broom. TS/JS's are read by dependency-cruiser, package by package from the nearest `package.json`, runtime imports only. It needs a TypeScript below 7 next to it and reads no `.ts` file without one, silently, so a changed file it didn't read is said so.
+A folder cycle is an import that leads into a folder whose files lead back to this one. Python's are read by broom. TS/JS's are read by dependency-cruiser, package by package from the nearest `package.json`, runtime imports only. It loads the TypeScript that sits beside it, needs one below 7 and reads no `.ts` file without one, silently.
+
+So broom picks the dependency-cruiser to run. Its own copy comes first: one installed under broom's data directory with a TypeScript 6 beside it, which reads a project whatever TypeScript the project uses. Without that copy it takes the project's or the PATH's, unless the repo holds TypeScript files and the TypeScript beside that one is 7 or later, or missing. Which TypeScript sits beside a copy is read from the `package.json` files Node would search, with no process started. A changed file that dependency-cruiser still didn't read is said so in a note.
+
+- [036: broom keeps its own dependency-cruiser](decisions/036-own-dependency-cruiser.md)
 
 - [014: No layering rules without a project's own](decisions/014-no-layering-rules.md)
 

@@ -56,6 +56,7 @@ class PythonFolderTests(BroomCase):
                          [("folder_cycle", [1], "hint")])
 
 
+
 class JsFolderTests(BroomCase):
     def fake_depcruise(self, modules: list) -> dict:
         report = self.tmp / "report.json"
@@ -85,6 +86,7 @@ class JsFolderTests(BroomCase):
         with mock.patch.dict(os.environ, {"PATH": env["PATH"]}):
             self.assertEqual(js_folder_cycles(r, ["src/a.ts"], notes, lambda: 60), [])
         self.assertTrue(any("didn't read src/a.ts" in n and "TypeScript below 7" in n for n in notes), notes)
+        self.assertFalse(any("npm i" in n for n in notes), "the user's TypeScript is not ours to change")
 
     def test_without_dependency_cruiser_nothing_is_measured_and_nothing_nags(self) -> None:
         r = self.repo({"package.json": "{}", "src/a.ts": "export const a = 1;\n"})

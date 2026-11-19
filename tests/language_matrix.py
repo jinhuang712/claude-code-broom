@@ -7,16 +7,17 @@ here would be a finding of this file."""
 from __future__ import annotations
 
 import shutil
-import tempfile
 from dataclasses import dataclass, field
-from functools import lru_cache
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import ContextManager, Dict, Optional, Tuple
+from unittest import mock
 
+from isolation import DEFAULT_DATA
 from support import BroomCase
 
 from broom.config import DEAD_CODE, SMELL_LIMITS, SMELL_PRESENCE
-from broom.foldercycles import run_depcruise
+from broom import depcruise
+from broom.depcruise import pick
 from broom.smells import find_smells
 
 EVERY_SMELL = {*SMELL_LIMITS, *SMELL_PRESENCE, DEAD_CODE}
@@ -24,26 +25,21 @@ EVERY_SMELL = {*SMELL_LIMITS, *SMELL_PRESENCE, DEAD_CODE}
 GO_EXEMPT = {"nested_ternary", "import_cycle", "folder_cycle"}
 
 
-PROBE_SECONDS = 30
+REAL_OWN = DEFAULT_DATA / "node"  # broom's own dependency-cruiser in the user's real data directory, read only
 
 
-@lru_cache(maxsize=1)
-def depcruise_reads_typescript() -> bool:
-    """Whether the dependency-cruiser on the PATH reads a .ts file: it reads none without a TypeScript below 7
-    beside it, and says nothing."""
-    with tempfile.TemporaryDirectory() as tmp:
-        (Path(tmp) / "a.ts").write_text("export const a = 1;\n")
-        modules, _ = run_depcruise(Path(tmp), shutil.which("depcruise") or "depcruise", PROBE_SECONDS)
-    return any(m.get("source") == "a.ts" for m in modules)
+def real_copy() -> ContextManager:
+    """A patch that makes broom's own dependency-cruiser the one installed in the user's real data directory, where
+    it is: the test run's own data directory has none, and a sample of cycles between folders needs one that reads .ts."""
+    return mock.patch.object(depcruise, "OWN_DIR", REAL_OWN)
 
 
-def unusable(tool: str) -> Optional[str]:
-    """Why `tool` can't measure on this machine, or None when it can."""
-    if not shutil.which(tool):
-        return f"{tool} missing"
-    if tool == "depcruise" and not depcruise_reads_typescript():
-        return "depcruise has no TypeScript below 7 beside it, so it reads no .ts file"
-    return None
+def unusable(tool: str, repo: Path) -> Optional[str]:
+    """Why `tool` can't measure on this machine for `repo`, or None when it can."""
+    if tool == "depcruise":
+        with real_copy():
+            return None if pick(repo) else "no dependency-cruiser that reads .ts files: broom doctor has the fix"
+    return None if shutil.which(tool) else f"{tool} missing"
 
 
 def text(*rows: str) -> str:
@@ -84,15 +80,16 @@ class MatrixCase(BroomCase):
 
     def prove(self, smell: str, sample: Sample) -> None:
         """Commit the base, write the change and check `find_smells` reports `smell` for the first changed file."""
-        for tool in sample.tools:
-            why = unusable(tool)
-            if why:
-                self.skipTest(why)
         r = self.repo({"README.md": "x\n", **self.SCAFFOLD, **sample.base})
         for rel, body in sample.change.items():
             (r / rel).parent.mkdir(parents=True, exist_ok=True)
             (r / rel).write_text(body)
-        found, _ = find_smells(r, [r / rel for rel in sample.change], "HEAD")
+        for tool in sample.tools:
+            why = unusable(tool, r)
+            if why:
+                self.skipTest(why)
+        with real_copy():
+            found, _ = find_smells(r, [r / rel for rel in sample.change], "HEAD")
         mine = [s.metric for s in found if s.file == self.target(r, sample)]
         self.assertIn(smell, mine, f"found for {next(iter(sample.change))}: {sorted(set(mine))}")
 

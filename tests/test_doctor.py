@@ -14,6 +14,7 @@ from support import (
 )
 
 from broom import githook
+from broom.doctor import cache_key
 
 
 
@@ -266,6 +267,47 @@ class DoctorTest(BroomCase):
         self.assertEqual(item["status"], "broken")
         self.assertIn("'sometimes' is not one of", item["detail"])
         self.assertIn("colour", item["detail"])
+
+
+class DependencyCruiserItemTest(BroomCase):
+    """The dependency-cruiser item: ok when one reads this repo's code, else a gap with broom's own copy as the fix."""
+    tools = DoctorTest.tools
+
+    def ts_repo_of_one_file(self) -> Path:
+        return self.repo({"package.json": "{}", "a.ts": "export const a = 1;\n", "b.js": "export const b = 1;\n"})
+
+    def test_a_blind_copy_on_path_is_a_gap_whose_detail_says_why_and_whose_fix_is_broom_s_copy(self) -> None:
+        r = self.ts_repo_of_one_file()
+        result = self.doctor(r, self.npm_depcruise(self.fake_path(), "7.0.2"))
+        item = {i["tool"]: i for i in result["items"]}["dependency-cruiser"]
+        self.assertEqual((item["status"], item["fix"]), ("missing", self.own_install()))
+        self.assertIn("the TypeScript beside it is 7.0.2, and it needs one below 7", item["detail"])
+        self.assertIn(self.own_install(), result["fix"])
+        self.assertIn(self.own_install(), result["fix_global"], "the copy is broom's, global tools or not")
+        self.assertFalse(result["healthy"])
+
+    def test_nothing_installed_is_the_same_gap_with_no_reason(self) -> None:
+        item = self.tools(self.ts_repo_of_one_file(), self.fake_path())["dependency-cruiser"]
+        self.assertEqual((item["status"], item["detail"], item["fix"]), ("missing", "", self.own_install()))
+
+    def test_broom_s_own_copy_or_a_good_one_on_path_is_ok(self) -> None:
+        r = self.ts_repo_of_one_file()
+        self.assertEqual(self.tools(r, self.npm_depcruise(self.fake_path(), "5.9.3"))["dependency-cruiser"]["status"],
+                         "ok")
+        self.own_depcruise()
+        item = self.tools(r, self.npm_depcruise(self.fake_path(), "7.0.2"))["dependency-cruiser"]
+        self.assertEqual((item["status"], item["detail"], item["fix"]), ("ok", "18.8.0", ""))
+
+    def test_a_js_only_repo_takes_the_copy_on_path_whatever_typescript_it_has(self) -> None:
+        r = self.repo({"package.json": "{}", "b.js": "export const b = 1;\n"})
+        item = self.tools(r, self.npm_depcruise(self.fake_path(), "7.0.2"))["dependency-cruiser"]
+        self.assertEqual((item["status"], item["detail"]), ("ok", "18.8.0"))
+
+    def test_installing_the_copy_changes_the_key_of_the_cached_diagnosis(self) -> None:
+        r = self.ts_repo_of_one_file()
+        before = cache_key(r, {})
+        self.own_depcruise()
+        self.assertNotEqual(cache_key(r, {}), before)
 
 
 class SetupOfferTest(BroomCase):
