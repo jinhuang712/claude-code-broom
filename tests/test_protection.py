@@ -229,6 +229,12 @@ class ProtectionTest(BroomCase):
         css = [i for i in result["items"] if i["lang"] == "css" and i["tool"] == "prettier"]
         self.assertTrue(css and css[0]["status"] != "ok", result["items"])
 
+    def test_smells_turned_off_one_by_one_are_named_after_the_languages(self) -> None:
+        r = self.repo({"a.py": "x = 1\n", ".broom.json": '{"smells_off": ["magic_numbers", "todo"]}\n'})
+        text = self.text(r, self.fake_path(fakes=PY_TOOLS))
+        self.assertIn("turned off in .broom.json: magic_numbers, todo", self.line(text, "–", "smells off"))
+        self.assertGreater(text.index("smells off"), text.index("Beside the languages:"))
+
     def test_the_checks_start_no_tool_the_plain_doctor_does_not(self) -> None:
         r = self.py_repo()
         log = self.tmp / "started.log"

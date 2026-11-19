@@ -99,11 +99,7 @@ A row takes 1 of 3 forms:
 - The check doesn't run, with the reason and the command that turns it on.
 - broom has no such check for the language, with the reason.
 
-After the languages the list names the gaps of the repo itself, such as a missing git hook. It ends with what broom checks with no tool installed at all. It starts no tool the plain doctor doesn't start, and it exits as the plain doctor does.
-
-1 gap:
-
-- A single smell turned off in `.broom.json` still shows as measured.
+After the languages the list names the gaps of the repo itself, such as a missing git hook, and the smells `.broom.json` turns off one by one. It ends with what broom checks with no tool installed at all. It starts no tool the plain doctor doesn't start, and it exits as the plain doctor does.
 
 - **Stance**: [Say what happened](../PHILOSOPHY.md#what-happens-to-what-was-skipped)
 - **Commands**: [broom doctor](../CLI.md#broom-doctor)

@@ -6,6 +6,16 @@
 
 ---
 
+## 0.24.2 — 2026-11-19
+
+---
+
+### Setup
+
+- `broom doctor --checks` names the smells that `smells_off` in `.broom.json` turns off, after the languages. A row of a language still showed them as measured.
+
+---
+
 ## 0.24.1 — 2026-11-19
 
 ---

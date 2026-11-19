@@ -11,7 +11,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
-from .config import setting
+from .config import repo_config, setting
 from .doctor import MARKS
 from .gate import display
 from .needs import DEFAULTS_DETAIL, LANG_NAMES, Diagnosis, Item, install_command, tools_db
@@ -337,6 +337,14 @@ def other_rows(items: List[dict]) -> List[Row]:
             for i in items if i["lang"] not in SPECS and i["status"] != "ok"]
 
 
+def off_row(repo: Path) -> List[Row]:
+    """The smells the repo's .broom.json turns off one by one (`smells_off`), which the rows above still show as
+    measured: one row that names them."""
+    off = repo_config(repo).get("smells_off")
+    names = [str(n) for n in off] if isinstance(off, list) else []
+    return [Row(ANY_LANGUAGE, "smells off", NONE, why=f"turned off in .broom.json: {', '.join(names)}")] if names else []
+
+
 def protection(repo: Path, result: dict) -> Protection:
     """The protection list for `repo` from its doctor `result`: the doctor's items, split by the check each stops and
     added to where a check rests on a tool the doctor doesn't ask about."""
@@ -344,4 +352,5 @@ def protection(repo: Path, result: dict) -> Protection:
     smells_on = setting("smells", repo) != "off"
     items = split_deps(result["items"], repo)
     rows = [r for lang in languages if lang in SPECS for r in language_rows(lang, items, smells_on=smells_on)]
-    return Protection(repo, rows, bare_rows(list(languages), smells_on=smells_on), other_rows(result["items"]))
+    other = other_rows(result["items"]) + (off_row(repo) if smells_on else [])
+    return Protection(repo, rows, bare_rows(list(languages), smells_on=smells_on), other)
