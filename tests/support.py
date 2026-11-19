@@ -12,6 +12,7 @@ import tempfile
 import unittest
 import uuid
 from pathlib import Path
+from unittest import mock
 
 import isolation  # first: it gives the run a data directory of its own, before broom fixes one
 from broom.toolchain import swift_format_cmd
@@ -53,6 +54,12 @@ def swift_format_runs() -> bool:
 
 HAS_SWIFT_FORMAT = swift_format_runs()
 HAS_SOURCEKIT = HAS_SWIFT_FORMAT and shutil.which("sourcekit-lsp") is not None
+
+
+def no_depcruise():
+    """A patch that hides dependency-cruiser from the folder-cycle check, for a test of other tools: one installed on
+    the machine adds a note of its own, and with a TypeScript 7 beside it a note that it read no .ts file."""
+    return mock.patch("broom.foldercycles.resolve_bin", return_value=None)
 
 
 def py_function(name: str, lines: int) -> str:

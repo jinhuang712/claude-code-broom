@@ -2,7 +2,7 @@
   "name": "broom",
   "displayName": "broom",
   "description": "A gate and a ruler for the coding agent: holds Claude's changes to the project's formatter, linter and type checker, measures code smells and rot, and gives a repo's numbers for a refactor.",
-  "version": "0.25.5",
+  "version": "0.25.6",
   "author": {
     "name": "Jin Huang",
     "url": "https://github.com/jinhuang712"

@@ -5,7 +5,7 @@ from __future__ import annotations
 import shutil
 import unittest
 
-from support import HAS_GO, BroomCase
+from support import HAS_GO, BroomCase, no_depcruise
 
 from broom.config import SMELL_LIMITS
 from broom.realtree import TOOL_TIMEOUT, Budget, clippy_dirs, find_in_real_tree
@@ -147,6 +147,7 @@ class RealTreeTest(BroomCase):
     def test_a_spent_budget_skips_the_tools_and_says_so(self) -> None:
         r = self.repo({"go.mod": GO_MOD, "main.go": GO_SMELLY, "a.ts": "export const a = 1;\n"})
         notes: list = []
-        self.assertEqual(find_in_real_tree(r, ["main.go", "a.ts"], SOFT, notes, Budget(0)), [])
+        with no_depcruise():
+            self.assertEqual(find_in_real_tree(r, ["main.go", "a.ts"], SOFT, notes, Budget(0)), [])
         self.assertEqual(sorted(n.split(" before ")[1].split(" measured")[0] for n in notes), ["golangci-lint", "oxlint"])
         self.assertTrue(find_in_real_tree(r, ["main.go"], SOFT, [], Budget(60)), "a roomy budget still measures")

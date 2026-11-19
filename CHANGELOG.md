@@ -6,6 +6,19 @@
 
 ---
 
+## 0.25.6 — 2026-11-19
+
+---
+
+### git's pre-commit hook
+
+- The line broom gives you for another tool's hook no longer blocks every commit. Before, it called broom at one fixed path, and where that path was missing each commit failed. Now it looks for broom in three places, as broom's own hook does, and lets the commit through when it finds none.
+- If you added the old line to a hook, replace it with the line `broom install-hook` prints now.
+- `broom doctor` counts the hook as installed once that line is in it. Before, it kept reporting the hook as missing.
+- `broom install-hook` never writes over another tool's hook, also when the hook holds broom's line.
+
+---
+
 ## 0.25.5 — 2026-11-19
 
 ---

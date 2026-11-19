@@ -13,6 +13,8 @@ from support import (
     BROOM, HAS_GO, HAS_PY, HAS_TS, ROOT, TS_BAD, BroomCase,
 )
 
+from broom import githook
+
 
 
 class DoctorTest(BroomCase):
@@ -301,8 +303,10 @@ class SetupOfferTest(BroomCase):
         (hook,) = self.hook_items(result)
         self.assertEqual((hook["status"], hook["fix"]), ("missing", ""), "broom never replaces it")
         self.assertIn("another tool's hook", hook["detail"])
-        self.assertIn("hook pre-commit || exit 1", hook["detail"])
+        self.assertIn(githook.LINE, hook["detail"])
         self.assertNotIn("broom install-hook", result["fix"])
+        (r / ".git/hooks/pre-commit").write_text(f"#!/bin/sh\n{githook.LINE}\nexit 0\n")
+        self.assertEqual(self.hook_items(self.doctor(r, env)), [], "gone once the line is in their hook")
 
     def test_a_repo_without_code_is_not_offered_gits_hook(self) -> None:
         r = self.repo({"README.md": "hi\n"})

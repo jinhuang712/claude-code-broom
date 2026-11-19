@@ -7,7 +7,7 @@ import shutil
 import unittest
 from pathlib import Path
 
-from support import HAS_PY, BroomCase, py_function
+from support import HAS_PY, BroomCase, no_depcruise, py_function
 
 from broom.hotspots import render
 from broom.measure import Raw
@@ -254,7 +254,8 @@ class SmellTest(BroomCase):
                     self.skipTest(f"{tool} missing")
                 (r / rel).parent.mkdir(parents=True, exist_ok=True)
                 (r / rel).write_text(text)
-                found, notes = find_smells(r, [r / rel], "HEAD")
+                with no_depcruise():
+                    found, notes = find_smells(r, [r / rel], "HEAD")
                 self.assertEqual(notes, [])
                 self.assertIn("takes 9 parameters (hard limit 8; new)", " ".join(s.text() for s in found))
 

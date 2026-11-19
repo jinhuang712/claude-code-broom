@@ -13,7 +13,8 @@ Issues
 │   ├── I5: Six rules sit on an alpha plugin API
 │   └── I6: The Bash parser guesses what git's hook knows
 └── fix
-    └── I3: The cause of the reported Stop hang is unconfirmed
+    ├── I3: The cause of the reported Stop hang is unconfirmed
+    └── I18: Doctor says folder cycles are checked in a TypeScript 7 project
 ```
 
 ---
@@ -80,3 +81,20 @@ Issues
   - [F2.1: Commit check](../features/F2-sweep.md#f21-commit-check)
   - [F2.4: git's pre-commit hook](../features/F2-sweep.md#f24-gits-pre-commit-hook)
 - next: [F2.4.1: Offered at setup](../features/F2-sweep.md#f241-offered-at-setup)
+
+---
+
+## I18: Doctor says folder cycles are checked in a TypeScript 7 project
+
+- type: fix
+- why:
+  - dependency-cruiser reads no `.ts` file without a TypeScript below 7 next to it.
+  - In a project on TypeScript 7, `broom doctor` still lists dependency-cruiser as ok, and `broom doctor --checks` lists the cycles between folders as on.
+  - A scan says that the files weren't read, and the protection list doesn't.
+- found: a report from a setup run in a TypeScript 7 project, 2026-11-19
+  - It showed here the same day: a global dependency-cruiser 18.8 beside a global TypeScript 7.0 read no `.ts` file, and 4 tests failed on its note.
+  - The fix doctor offers for the gap, a global install, lands beside whatever TypeScript is global.
+- next: decide what doctor offers where the TypeScript beside dependency-cruiser is 7, since a global TypeScript 6 would replace the user's own
+- touches:
+  - [F1.5: Protection list](../features/F1-setup.md#f15-protection-list)
+  - [F4.5.2: Folder cycle](../features/F4-smells.md#f452-folder-cycle)

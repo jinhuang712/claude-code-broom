@@ -275,9 +275,9 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 **Called by**: a person.
 
-**Prints**: stdout gets `broom: added <path>`, or the line to add when another tool's hook is there. stderr gets `broom: not inside a git repository`.
+**Prints**: stdout gets `broom: added <path>`, or the line to add when another tool's hook is there, or that the hook holds the line already. stderr gets `broom: not inside a git repository`.
 
-**Fails**: exit 1 when another tool's hook is present, and outside a repo.
+**Fails**: exit 1 when another tool's hook is present without broom's line, and outside a repo.
 
 **Example**: `broom install-hook` prints `broom: added .git/hooks/pre-commit`.
 

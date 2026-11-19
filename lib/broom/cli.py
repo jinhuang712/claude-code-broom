@@ -270,9 +270,13 @@ def cmd_known(args: argparse.Namespace) -> int:
 
 def cmd_install_hook(_args: argparse.Namespace) -> int:
     """Run `broom install-hook`: add broom's line to the repo's git hook; 1 when that hook belongs to another tool."""
-    from .githook import LINE, install
+    from .githook import LINE, install, installed
 
-    written, path = install(repo_or_exit())
+    repo = repo_or_exit()
+    written, path = install(repo)
+    if not written and installed(repo):
+        say(f"broom: {display(path)} is another tool's hook, and it holds broom's line already")
+        return 0
     if not written:
         say(f"broom: {display(path)} is another tool's hook; add this line to it instead:\n  {LINE}")
         return 1

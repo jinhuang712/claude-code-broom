@@ -8,7 +8,7 @@ import shutil
 import unittest
 from pathlib import Path
 
-from support import HAS_PY, BroomCase, py_function
+from support import HAS_PY, BroomCase, no_depcruise, py_function
 
 from broom.smells import find_smells
 
@@ -96,7 +96,8 @@ class TouchedHintTest(TouchedCase):
         text = many + "\n" + ts_function("longer", 60)
         r = self.repo({"a.ts": text})
         (r / "a.ts").write_text(text.replace("return a;", "return b;").replace("x += 3;", "x += 33;"))
-        found, notes = find_smells(r, [r / "a.ts"], "HEAD")
+        with no_depcruise():
+            found, notes = find_smells(r, [r / "a.ts"], "HEAD")
         self.assertEqual(notes, [])
         self.assertEqual([s.text() for s in found if s.touched],
                          [f"longer is 60 lines long (over 50; was 60: {TOUCHED})"], "no parameter hint, though touched")

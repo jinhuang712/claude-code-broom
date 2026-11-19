@@ -7,18 +7,43 @@ here would be a finding of this file."""
 from __future__ import annotations
 
 import shutil
+import tempfile
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 from support import BroomCase
 
 from broom.config import DEAD_CODE, SMELL_LIMITS, SMELL_PRESENCE
+from broom.foldercycles import run_depcruise
 from broom.smells import find_smells
 
 EVERY_SMELL = {*SMELL_LIMITS, *SMELL_PRESENCE, DEAD_CODE}
 # What the language itself rules out: Go has no ternary operator, and its compiler refuses a package cycle.
 GO_EXEMPT = {"nested_ternary", "import_cycle", "folder_cycle"}
+
+
+PROBE_SECONDS = 30
+
+
+@lru_cache(maxsize=1)
+def depcruise_reads_typescript() -> bool:
+    """Whether the dependency-cruiser on the PATH reads a .ts file: it reads none without a TypeScript below 7
+    beside it, and says nothing."""
+    with tempfile.TemporaryDirectory() as tmp:
+        (Path(tmp) / "a.ts").write_text("export const a = 1;\n")
+        modules, _ = run_depcruise(Path(tmp), shutil.which("depcruise") or "depcruise", PROBE_SECONDS)
+    return any(m.get("source") == "a.ts" for m in modules)
+
+
+def unusable(tool: str) -> Optional[str]:
+    """Why `tool` can't measure on this machine, or None when it can."""
+    if not shutil.which(tool):
+        return f"{tool} missing"
+    if tool == "depcruise" and not depcruise_reads_typescript():
+        return "depcruise has no TypeScript below 7 beside it, so it reads no .ts file"
+    return None
 
 
 def text(*rows: str) -> str:
@@ -34,7 +59,7 @@ def repeated(row: str, times: int) -> str:
 @dataclass(frozen=True)
 class Sample:
     """A change that adds one smell: `change` is written after `base` is committed, and the smell must be reported for
-    the first file of `change`. `tools` are the programs the smell is measured with: one missing skips the sample."""
+    the first file of `change`. `tools` are the programs the smell is measured with: one that is missing or can't measure here skips the sample."""
 
     change: Dict[str, str]
     tools: Tuple[str, ...] = ()
@@ -60,8 +85,9 @@ class MatrixCase(BroomCase):
     def prove(self, smell: str, sample: Sample) -> None:
         """Commit the base, write the change and check `find_smells` reports `smell` for the first changed file."""
         for tool in sample.tools:
-            if not shutil.which(tool):
-                self.skipTest(f"{tool} missing")
+            why = unusable(tool)
+            if why:
+                self.skipTest(why)
         r = self.repo({"README.md": "x\n", **self.SCAFFOLD, **sample.base})
         for rel, body in sample.change.items():
             (r / rel).parent.mkdir(parents=True, exist_ok=True)

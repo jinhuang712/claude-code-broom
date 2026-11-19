@@ -77,7 +77,7 @@ A subagent's edits are checked at that subagent's end. The block goes to the sub
 
 `broom install-hook` adds git's own pre-commit hook to a repo. It checks the staged files of every commit, a wrapper script's and a person's included, without formatting.
 
-It never replaces another tool's hook and prints the line to add to it instead. Content that passed already goes through at once. Where it is installed it is the commit check, and the commit check of F2.1 only formats.
+It never replaces another tool's hook and prints the line to add to it instead. That line finds broom the way broom's own hook does, and a commit goes ahead where no broom is found. Once the line is in the hook, `broom doctor` counts the hook as installed. Content that passed already goes through at once. Where it is installed it is the commit check, and the commit check of F2.1 only formats.
 
 - **Commands**: [broom install-hook](../CLI.md#broom-install-hook)
 - **How it works**: [Commit check](../specs/commit-check.md)

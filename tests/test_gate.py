@@ -35,8 +35,41 @@ class GateTest(BroomCase):
         hook.write_text("#!/bin/sh\nexit 0\n")
         out = self.cli(r, "install-hook")
         self.assertEqual(out.returncode, 1)
-        self.assertIn("hook pre-commit || exit 1", out.stdout)
+        self.assertIn(githook.LINE, out.stdout)
         self.assertEqual(hook.read_text(), "#!/bin/sh\nexit 0\n")
+
+    def test_the_line_for_another_tools_hook_checks_the_commit_and_lets_that_hook_go_on(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        hook = r / ".git/hooks/pre-commit"
+        theirs = f"#!/bin/sh\n{githook.LINE}\necho theirs ran >&2\n"
+        hook.write_text(theirs)
+        hook.chmod(0o755)
+        self.assertTrue(githook.installed(r), "the line is how broom knows it is there")
+        out = self.cli(r, "install-hook")
+        self.assertEqual((out.returncode, hook.read_text()), (0, theirs), "their hook is never written over")
+        self.assertIn("holds broom's line already", out.stdout)
+        (r / "a.py").write_text(py_function("huge", 120))
+        self.sh(r, "git", "add", "a.py")
+        out = self.git_commit(r)
+        self.assertEqual(out.returncode, 1, "no marketplace copy here: the line finds this install")
+        self.assertIn("huge is 120 lines long", out.stderr)
+        self.assertNotIn("theirs ran", out.stderr)
+        (r / "a.py").write_text(py_function("small", 20))
+        self.sh(r, "git", "add", "a.py")
+        out = self.git_commit(r)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn("theirs ran", out.stderr, "a clean commit goes on to the rest of their hook")
+
+    def test_the_line_lets_a_commit_through_where_no_broom_is_found(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        hook = r / ".git/hooks/pre-commit"
+        gone = githook.LINE.replace(str(githook.PLUGIN_ROOT), "/nowhere")
+        hook.write_text(f"#!/bin/sh\n{gone}\n")
+        hook.chmod(0o755)
+        (r / "a.py").write_text(py_function("huge", 120))
+        self.sh(r, "git", "add", "a.py")
+        out = self.git_commit(r)
+        self.assertEqual(out.returncode, 0, "a missing broom never blocks: " + out.stderr)
 
     def test_git_pre_commit_checks_commits_claude_code_doesnt_see(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
