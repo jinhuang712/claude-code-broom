@@ -6,6 +6,12 @@
 
 ---
 
+### Docs
+
+- The README names the check after an edit and the rule that a turn shows its tests ran, and says that type errors count anywhere.
+
+---
+
 ## 0.24.2 — 2026-11-19
 
 ---

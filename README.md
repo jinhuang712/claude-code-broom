@@ -2,7 +2,7 @@
 
 > A ruler for code quality in Claude Code, and a tool for refactoring.
 
-broom is a tool for the coding agent, with no model of its own. It holds Claude's changes to the project's own formatter, linter and type checker before they leave the session, and it measures a whole repo one way when Claude is asked how the code is doing. At a change it judges that change and the code it touches, never the rest of the repo, so a legacy repo's old warnings don't land on a small fix.
+broom is a tool for the coding agent, with no model of its own. It holds Claude's changes to the project's own formatter, linter and type checker before they leave the session, and it measures a whole repo one way when Claude is asked how the code is doing. At a change it judges that change and the code it touches, so a legacy repo's old warnings don't land on a small fix. Type errors are the one exception, since a changed signature breaks callers anywhere.
 
 [中文](docs/README.zh-CN.md)
 
@@ -11,7 +11,8 @@ broom is a tool for the coding agent, with no model of its own. It holds Claude'
 ## What it does
 
 - 🧰 **Sets up**: When a session opens in a repo, broom notices what's missing and Claude offers to install and configure it.
-- 🧹 **Sweeps**: At a commit and at a turn's end it formats, lints and type-checks Claude's changes and holds them back until they're clean.
+- 🧹 **Sweeps**: After an edit it formats the file and tells Claude what a fast linter finds. At a commit and at a turn's end it formats, lints and type-checks Claude's changes and holds them back until they're clean.
+- 🧪 **Tests ran**: A turn that changed code ends once the project's tests ran on it, or with a reason the user sees.
 - 👃 **Smells**: A change that makes code too long, nests too deep or repeats itself is held back until it is cleaned or accepted with a reason.
 - 👀 **Sees**: Language servers for six languages give Claude diagnostics as it edits.
 - 📊 **Diagnoses**: `broom diagnose`, `broom stats` and `broom compare` give a whole repo's numbers before a refactor and after it.
@@ -68,7 +69,7 @@ Four settings in `/config` start at defaults and are never asked. A `.broom.json
 
 ## Architecture
 
-Claude Code starts one of broom's hooks at a session start, a prompt, a Bash call, an edit and a turn's end. The hook runs the project's tools on what changed, then exits with a block, a note or nothing.
+Claude Code starts one of broom's hooks at a session start, a prompt, a Bash call, a Bash command that failed, an edit and a turn's end. The hook runs the project's tools on what changed, then exits with a block, a note or nothing.
 
 ```
 Claude Code

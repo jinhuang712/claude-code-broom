@@ -17,7 +17,7 @@ Setup gets a repo the formatters, linters, type checkers and language servers it
 
 `broom doctor` lists a repo's languages with their tools and configs, and gives a ready command for each fix.
 
-It checks 8 things:
+It checks 9 things:
 
 - Each needed tool is on PATH and runs.
 - The TypeScript language server gives Claude diagnostics.
@@ -25,6 +25,7 @@ It checks 8 things:
 - Formatter configs exist, with one fix at the root of a monorepo.
 - Tracked CSS, SCSS and Less files get 3 tools checked: linter · formatter · language server.
 - Swift files get the same, in SwiftPM packages and Xcode projects alike.
+- A repo with TS/JS has oxlint at its root, which the smells need whichever linter the projects use.
 - No other plugin starts a language server for the same files.
 - `.broom.json` is valid.
 

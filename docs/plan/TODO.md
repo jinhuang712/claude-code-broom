@@ -48,8 +48,8 @@
 
 - description:
   - A file that just passed 1,000 lines could be told at the edit, before more is written into it.
-  - PROPOSAL argues against a lint after every edit.
-  - That argument is about half-finished code, which a line count is not.
+  - The check after an edit tells what a fast linter finds, and a size is not among it.
+  - A line count is cheap and certain, so it fits that moment.
 - created: 2026-11-17
 - next: decide with the ledger's numbers
 
