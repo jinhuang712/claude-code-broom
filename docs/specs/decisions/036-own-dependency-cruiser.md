@@ -26,4 +26,4 @@ broom installs a copy of its own under its data directory, with a TypeScript 6 b
 
 ## Consequences
 
-broom installs something outside the project and outside the user's own global tools, still only on a yes. When dependency-cruiser reads with TypeScript 7 itself, the copy is no longer needed.
+broom installs something outside the project and outside the user's own global tools, still only on a yes. When dependency-cruiser reads with TypeScript 7 itself, the copy is no longer needed for it.

@@ -200,6 +200,31 @@ class BroomCase(unittest.TestCase):
             (Path(env["PATH"]) / name).symlink_to(script)
         return env
 
+    def ts_install(self, version: str, files: dict = None) -> Path:
+        """A repo whose node_modules holds TypeScript `version`."""
+        r = self.repo({"package.json": "{}\n", ".gitignore": "node_modules\n", **(files or {})})
+        (r / "node_modules/typescript").mkdir(parents=True)
+        (r / "node_modules/typescript/package.json").write_text(json.dumps({"version": version}))
+        (r / "node_modules/.bin").mkdir()
+        (r / "node_modules/.bin/tsc").write_text("#!/bin/sh\n")
+        (r / "node_modules/.bin/tsc").chmod(0o755)
+        return r
+
+    def npm_server(self, env: dict, typescript: str = None) -> dict:
+        """`env` with a typescript-language-server on its PATH as a global npm install puts one: a symlink to a script
+        in <prefix>/lib/node_modules/typescript-language-server/lib, with the `typescript` package of version
+        `typescript` beside the package, or none."""
+        modules = self.tmp / f"npm{uuid.uuid4().hex[:6]}" / "lib" / "node_modules"
+        script = modules / "typescript-language-server" / "lib" / "cli.mjs"
+        script.parent.mkdir(parents=True)
+        script.write_text('#!/bin/sh\necho "tls $*"\n')
+        script.chmod(0o755)
+        if typescript:
+            (modules / "typescript").mkdir()
+            (modules / "typescript" / "package.json").write_text(json.dumps({"name": "typescript", "version": typescript}))
+        (Path(env["PATH"]) / "typescript-language-server").symlink_to(script)
+        return env
+
     def own_depcruise(self) -> str:
         """broom's own dependency-cruiser, as `npm i --prefix` leaves it in the test run's data directory; returns the
         command that installs it."""
@@ -212,7 +237,7 @@ class BroomCase(unittest.TestCase):
 
     def own_install(self, own: Path = None) -> str:
         """The command that installs broom's own dependency-cruiser into the test run's data directory."""
-        return f'npm i --prefix "{own or self.tmp / "data" / "node"}" dependency-cruiser typescript@6'
+        return f'npm i --prefix "{own or self.tmp / "data" / "node"}" dependency-cruiser typescript-language-server typescript@6'
 
     def config_dir(self, settings: dict = None) -> Path:
         d = self.tmp / "claude-config"

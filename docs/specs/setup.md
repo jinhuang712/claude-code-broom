@@ -18,7 +18,7 @@ The tools registry marks some tools as optional. The doctor lists those for the 
 
 - [029: A tool broom can do without is listed and never asked for](decisions/029-optional-tools.md)
 
-In a repo with TS/JS it asks which dependency-cruiser the cycle check would run. One that can't read the repo's TypeScript counts as missing, with the reason in the item. The fix is always the same command, which installs broom's own copy under its data directory, so it is one command for every repo of the machine.
+In a repo with TS/JS it asks which dependency-cruiser the cycle check would run. One that can't read the repo's TypeScript counts as missing, with the reason in the item. The fix is always the same command, which installs broom's own copy under its data directory, so it is one command for every repo of the machine. The TypeScript language server is asked the same way: one that can't start in the repo counts as missing, and the same command is its fix.
 
 In a repo with code it lists git's pre-commit hook as a gap until `broom install-hook` adds it. The gap is answered by kind like the others, so a user who declined once is not asked in the next repo. When another tool's hook is there, the item gives the line to add to it.
 

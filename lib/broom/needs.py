@@ -209,7 +209,7 @@ class Diagnosis:
         if unformatted:
             self.oxfmt_needed("js", self.formatting_off("js", "oxfmt", unformatted, "formatter", "TS/JS"))
         if "js" in self.projects:
-            self.items.append(typescript_lsp(self.repo, self.db))
+            self.items.append(typescript_lsp(self.repo))
 
     def js_lint(self, p: Path) -> None:
         """Check each JS linter the project's config selects (oxlint, eslint or biome) and add an item if missing."""
@@ -366,7 +366,7 @@ def depcruise_item(repo: Path, db: dict) -> Item:
                 fix="" if works else fix, global_fix="" if works else fix)
 
 
-def typescript_lsp(repo: Path, db: dict) -> Item:
+def typescript_lsp(repo: Path) -> Item:
     """The TypeScript server broom's launcher starts for this repo. Claude Code starts one per session, from the
     repo root, so that is where it's decided."""
     from .lsp import typescript_server
@@ -376,4 +376,5 @@ def typescript_lsp(repo: Path, db: dict) -> Item:
     if cmd and Path(cmd[0]).name == tool:
         return Item("js", "lsp", tool, "ok", detail=why)
     detail = f"without it the language server is {why}" if cmd else why
-    return Item("js", "lsp", tool, "missing", detail=detail, fix=install_command(db.get(tool, {})))
+    fix = own_install()
+    return Item("js", "lsp", tool, "missing", detail=detail, fix=fix, global_fix=fix)

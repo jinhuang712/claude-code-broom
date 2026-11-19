@@ -85,7 +85,9 @@ class ProtectionTest(BroomCase):
     # TS/JS
 
     def test_ts_with_its_tools_every_check_is_on(self) -> None:
-        rows = self.checks(self.ts_repo_with_formatter(), self.fake_path(fakes=TS_TOOLS))
+        tools = {k: v for k, v in TS_TOOLS.items() if k != "typescript-language-server"}
+        env = self.npm_server(self.fake_path(fakes=tools), "6.0.3")  # a server needs a TypeScript below 7 beside it
+        rows = self.checks(self.ts_repo_with_formatter(), env)
         self.assertEqual({check: row["status"] for check, row in self.block(rows, "js").items()},
                          dict.fromkeys(("format", "lint", "type check", "smells", "duplicate and dead code", "cycles",
                                         "diagnostics as Claude edits"), "on"))

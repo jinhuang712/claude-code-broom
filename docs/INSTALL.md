@@ -37,7 +37,7 @@ A user who would rather install the tools themselves needs these:
 | Language | Install |
 |---|---|
 | Go | `brew install golangci-lint` · `go install golang.org/x/tools/gopls@latest` |
-| TS/JS | `npm i -D oxlint oxlint-tsgolint oxfmt` in the project · `npm i -g typescript-language-server` |
+| TS/JS | `npm i -D oxlint oxlint-tsgolint oxfmt` in the project · the command `broom doctor` gives for broom's own copy |
 | Rust | `rustup component add clippy rustfmt rust-analyzer` |
 | Python | `brew install ruff` · `npm i -g pyright` |
 | CSS · SCSS · Less | `npm i -D stylelint` in the project · `stylelint-config-recommended-scss` for SCSS · `stylelint-config-recommended-less` for Less · `npm i -g vscode-langservers-extracted` |

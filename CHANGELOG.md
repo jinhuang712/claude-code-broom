@@ -6,6 +6,18 @@
 
 ---
 
+## 0.25.8 — 2026-11-19
+
+---
+
+### Language servers
+
+- The TypeScript language server starts in a project on TypeScript 7. Before, a typescript-language-server installed beside a global TypeScript 7 had no `tsserver` to load, and Claude Code said the server couldn't start.
+- broom's own copy now holds a typescript-language-server too, with its TypeScript 6. The command `broom doctor` gives for it installs both, and `/broom:setup` and `/broom:status` run it on your yes. If you installed the copy with 0.25.7, run the command once more.
+- Until the copy is installed, a project on TypeScript 7 gets `tsc --lsp`, which gives navigation and no diagnostics.
+
+---
+
 ## 0.25.7 — 2026-11-19
 
 ---

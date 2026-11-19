@@ -17,6 +17,7 @@ import threading
 from pathlib import Path
 from typing import IO, Dict, List, Optional, Set, Tuple
 
+from . import depcruise
 from .gitutil import git_root, run
 from .state import PLUGIN_ROOT
 from .toolchain import boundary, find_up, in_node_modules
@@ -72,27 +73,42 @@ TSC_LSP_MAJOR = 7  # the TypeScript major version whose tsc has a language serve
 NO_PUSH = "which gives Claude no diagnostics: TypeScript 7 only sends them on request, and Claude Code never asks"
 
 
+def server_start(exe: str, project: str) -> Tuple[bool, str]:
+    """Whether the typescript-language-server `exe` can start for a project with TypeScript `project` ("" for none),
+    and the reason: it loads the project's tsserver when the project's TypeScript is below 7, else the TypeScript beside
+    it, which must be below 7 too, since TypeScript 7 ships no tsserver.js."""
+    major = major_version(project)
+    if major is not None and major < TSC_LSP_MAJOR:
+        return True, f"the project's TypeScript {project}, through typescript-language-server"
+    beside = depcruise.typescript_beside(exe)
+    if beside is not None and (major_version(beside) or TSC_LSP_MAJOR) < TSC_LSP_MAJOR:
+        why = f" (the project's TypeScript {project} has no tsserver)" if major is not None else ""
+        return True, f"the TypeScript {beside} beside typescript-language-server{why}"
+    if beside is None:
+        return False, f"the typescript-language-server at {exe} has no TypeScript beside it, and the project has none below 7"
+    return False, f"the TypeScript beside the typescript-language-server at {exe} is {beside}, which has no tsserver"
+
+
 def typescript_server(root: Path) -> Tuple[Optional[List[str]], str]:
-    """The TypeScript language server for a project, and why. typescript-language-server wherever it's installed:
-    it loads the project's tsserver (TypeScript 6 and older), else its bundled TypeScript 6, and it pushes
-    diagnostics. TypeScript 7's `tsc --lsp` answers them only when asked, and Claude Code (2.1.280) never asks, so
-    it's the fallback: navigation without diagnostics."""
-    tls = shutil.which("typescript-language-server")
+    """The TypeScript language server for a project, and why. typescript-language-server, broom's own copy first, then
+    the one on PATH, whichever can start (see `server_start`): it pushes diagnostics. TypeScript 7's `tsc --lsp`
+    answers them only when asked, and Claude Code (2.1.280) never asks, so it's the fallback: navigation without
+    diagnostics."""
     version, tsc = project_typescript(root)
+    skipped = ""
+    for exe in dict.fromkeys(e for e in (depcruise.own_server(), shutil.which("typescript-language-server")) if e):
+        ok, why = server_start(exe, version)
+        if ok:
+            return [exe, "--stdio"], why
+        skipped = skipped or why
+    note = f" ({skipped})" if skipped else ""
     major = major_version(version)
-    if tls:
-        if major is not None and major < TSC_LSP_MAJOR:
-            return [tls, "--stdio"], f"the project's TypeScript {version}, through typescript-language-server"
-        if major is not None:
-            return [tls, "--stdio"], (f"typescript-language-server's bundled TypeScript: the project's TypeScript "
-                                      f"{version} has no tsserver")
-        return [tls, "--stdio"], "typescript-language-server's bundled TypeScript"
     if major is not None and major >= TSC_LSP_MAJOR and tsc:
-        return [str(tsc), "--lsp", "--stdio"], f"the project's TypeScript {version} (`tsc --lsp`), {NO_PUSH}"
+        return [str(tsc), "--lsp", "--stdio"], f"the project's TypeScript {version} (`tsc --lsp`), {NO_PUSH}{note}"
     exe, global_version = _global_tsc()
     if exe and (major_version(global_version) or 0) >= TSC_LSP_MAJOR:
-        return [exe, "--lsp", "--stdio"], f"the global TypeScript {global_version} (`tsc --lsp`), {NO_PUSH}"
-    return None, f"no typescript-language-server and no TypeScript 7 (global tsc: {global_version or 'none'})"
+        return [exe, "--lsp", "--stdio"], f"the global TypeScript {global_version} (`tsc --lsp`), {NO_PUSH}{note}"
+    return None, skipped or f"no typescript-language-server and no TypeScript 7 (global tsc: {global_version or 'none'})"
 
 
 def expand_root(arg: str) -> str:

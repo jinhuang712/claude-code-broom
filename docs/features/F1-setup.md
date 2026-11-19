@@ -20,7 +20,7 @@ Setup gets a repo the formatters, linters, type checkers and language servers it
 It checks 10 things:
 
 - Each needed tool is on PATH and runs.
-- The TypeScript language server gives Claude diagnostics.
+- The TypeScript language server starts and gives Claude diagnostics, and broom's own copy is the fix.
 - The project's configured tools resolve, or its dependencies need installing.
 - Formatter configs exist, with one fix at the root of a monorepo.
 - Tracked CSS, SCSS and Less files get 3 tools checked: linter · formatter · language server.

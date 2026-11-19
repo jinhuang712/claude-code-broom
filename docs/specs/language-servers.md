@@ -17,16 +17,20 @@ Claude Code only takes diagnostics a server pushes with `publishDiagnostics`. It
 `.lsp.json` starts `${CLAUDE_PLUGIN_ROOT}/bin/broom lsp typescript`, which picks a server and replaces itself with it, so the server owns stdin and stdout.
 
 ```
-typescript-language-server installed?
-├── Yes   start it: the project's tsserver (TypeScript 6 and older), else its bundled TypeScript 6
-└── No    start tsc --lsp: the project's TypeScript 7, then the global one
+Which server can start?
+├── broom's own typescript-language-server   it has a TypeScript 6 beside it
+├── the PATH's typescript-language-server    the project's TypeScript or the one beside the server is below 7
+└── neither                                  tsc --lsp: the project's TypeScript 7, then the global one
 ```
 
-TypeScript 7's `tsc --lsp` sends diagnostics only on request, so under Claude Code it gives navigation and no diagnostics. typescript-language-server pushes them. Since 6.0 it falls back to its bundled TypeScript 6, also in TypeScript 7 projects, which ship no `tsserver`.
+TypeScript 7's `tsc --lsp` sends diagnostics only on request, so under Claude Code it gives navigation and no diagnostics. typescript-language-server pushes them. It ships no TypeScript of its own: it loads the project's `tsserver`, else the `typescript` package Node finds beside the server. TypeScript 7 ships no `tsserver`, so in a project on TypeScript 7 a server beside a TypeScript 7 exits at start. Which TypeScript sits beside a server is read from the `package.json` files Node would search, with no process started.
+
+broom's own copy lives under its data directory. The command that installs its dependency-cruiser installs this server too.
 
 The choice follows the session's directory: one server per session, so a monorepo gets the TypeScript at its root.
 
 - [023: typescript-language-server is the TypeScript server](decisions/023-typescript-server.md)
+- [037: broom's own copy holds the TypeScript server too](decisions/037-own-typescript-server.md)
 
 ---
 

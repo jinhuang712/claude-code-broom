@@ -1,7 +1,8 @@
 """The dependency-cruiser broom runs for cycles between folders in TS/JS. It reads a .ts file only with a TypeScript
 below 7 beside it, and says nothing when it has none, so broom keeps a copy of its own under its data directory, with
 a TypeScript 6 beside it: it reads the project's code whatever TypeScript the project uses, and touches nothing of the
-user's. A dependency-cruiser of the project or of PATH is used only where the TypeScript beside it lets it read."""
+user's. A dependency-cruiser of the project or of PATH is used only where the TypeScript beside it lets it read. The
+same copy holds a typescript-language-server, which has no TypeScript of its own and loads the one beside it."""
 
 from __future__ import annotations
 
@@ -16,7 +17,7 @@ from .state import DATA_ROOT
 from .toolchain import resolve_bin
 
 OWN_DIR = DATA_ROOT / "node"  # where broom's own copy is installed, with `npm i --prefix`
-OWN_PACKAGES = "dependency-cruiser typescript@6"
+OWN_PACKAGES = "dependency-cruiser typescript-language-server typescript@6"
 TS_EXTS = (".ts", ".tsx", ".mts", ".cts")
 TS_LIMIT = 7  # dependency-cruiser reads .ts files only with a TypeScript below this major version
 READS_NO_TS = "dependency-cruiser reads no .ts file"  # how the reason a copy doesn't count begins
@@ -33,10 +34,17 @@ def own_copy() -> Optional[str]:
     return str(exe) if exe.is_file() else None
 
 
+def own_server() -> Optional[str]:
+    """The `typescript-language-server` of broom's own copy, None when it isn't installed."""
+    exe = OWN_DIR / "node_modules" / ".bin" / "typescript-language-server"
+    return str(exe) if exe.is_file() else None
+
+
 def typescript_beside(exe: str) -> Optional[str]:
-    """The version of the `typescript` package that Node would load from dependency-cruiser's own folder, read with no
-    process started: from the real path of `exe` up through each enclosing node_modules (the package's own first,
-    then the one that holds it, then those of its ancestors). None when there is none."""
+    """The version of the `typescript` package that Node would load from the folder of `exe` (dependency-cruiser or
+    typescript-language-server), read with no process started: from the real path of `exe` up through each enclosing
+    node_modules (the package's own first, then the one that holds it, then those of its ancestors). None when there
+    is none."""
     for folder in Path(os.path.realpath(exe)).parents:
         if folder.name == "node_modules":  # Node looks for node_modules/node_modules in none
             continue
