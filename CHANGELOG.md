@@ -18,6 +18,12 @@
 
 ---
 
+### Smells
+
+- An import that closes a cycle and only moved, because a line above it went or a sort reordered the block, no longer blocks the commit. Before, git showed the moved line as added, and broom took the old cycle for a new one. That blocked a step-by-step cleanup of the cycles.
+
+---
+
 ## 0.25.7 — 2026-11-19
 
 ---
