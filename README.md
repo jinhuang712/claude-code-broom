@@ -57,7 +57,7 @@ Claude fixes the findings and commits again. To look first, ask for a sweep in y
 /broom:sweep the last 3 commits
 ```
 
-To pay down what's already there, ask for `/broom:clean`, which ranks the code smells worst first and cleans up in small, tested batches.
+To see where a repo stands, ask for `/broom:status`: it sets up what is missing on one yes, then sums up the code and what broom stopped lately. To pay down what's already there, ask for `/broom:clean`, which ranks the code smells worst first and cleans up in small, tested batches.
 
 ---
 

@@ -346,13 +346,16 @@ An edit must not be felt, since Claude makes many in a row.
 
 **Want**: tooling in one conversation.
 
-**Checks**: [F1.3: /broom:setup](../features/F1-setup.md#f13-broomsetup)
+**Checks**:
+
+- [F1.3: /broom:setup](../features/F1-setup.md#f13-broomsetup)
+- [F10.6: /broom:status](../features/F10-diagnosis.md#f106-broomstatus)
 
 **Condition**: Both questions come before broom acts on the user's machine or repo, and no setting is asked.
 
 **How**: Read the skill and count the questions.
 
-**Status**: ✅ 2026-11-17, by reading `skills/setup/SKILL.md`: two questions in one call before anything is run, and no setting among them. The offer to disable a conflicting plugin was a third question until that day, and is now one of the commands of the first.
+**Status**: ✅ 2026-11-17, by reading `skills/setup/SKILL.md`: two questions in one call before anything is run, and no setting among them. The offer to disable a conflicting plugin was a third question until that day, and is now one of the commands of the first. On 2026-11-19 `skills/status/SKILL.md` was read the same way: one question, and no setting.
 
 ---
 

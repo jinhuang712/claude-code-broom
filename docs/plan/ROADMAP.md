@@ -27,7 +27,7 @@ Roadmap
 ├── ⬜ CP8: Lighter — less code, fewer runs, less noise
 │   ├── ⬜ CP8.1: Fewer interruptions
 │   └── ⬜ CP8.2: Fewer runs and less code
-├── ⬜ CP9: Ready for a public release — the README's face and the language servers proven
+├── 🟨 CP9: Ready for a public release — the README's face and the language servers proven
 └── ⬜ CP10: Waits for a need
 ```
 
@@ -408,12 +408,13 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 ## CP9: Ready for a public release
 
-**Status**: ⬜
+**Status**: 🟨
 
-The user set this on 2026-11-19: what a stranger meets first, and what can only be proven in real sessions of every language, comes just before a public release.
+The user set this on 2026-11-19: what a stranger meets first, and what can only be proven in real sessions of every language, comes just before a public release. `/broom:status` shipped in 0.25.1 that day, and a fresh session with no tools on its PATH ran it end to end.
 
-**Delivers** (1):
+**Delivers** (2):
 
+- [F10.6: /broom:status](../features/F10-diagnosis.md#f106-broomstatus)
 - [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)
 
 **Exit criteria** (1):

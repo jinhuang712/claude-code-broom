@@ -6,6 +6,17 @@
 
 ---
 
+## 0.25.1 — 2026-11-19
+
+---
+
+### Setup
+
+- `/broom:status` tells you where a repo stands and gets it ready in one command. When tools or configs are missing it says what it would install and asks once, then it measures the code and what broom stopped, fixed and let through in the last 7 days, and sums it up with up to three next steps. You type no `broom` command.
+- `/broom:setup` says that files are formatted after each edit by default. It said at commit.
+
+---
+
 ## 0.25.0 — 2026-11-19
 
 ---
