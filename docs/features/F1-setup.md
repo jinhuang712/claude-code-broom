@@ -27,7 +27,7 @@ It checks 10 things:
 - Swift files get the same, in SwiftPM packages and Xcode projects alike.
 - A repo with TS/JS has oxlint at its root, which the smells need whichever linter the projects use.
 - A repo with TS/JS has a dependency-cruiser that can read its files, and broom's own copy is the fix.
-- No other plugin starts a language server for the same files.
+- No other enabled plugin starts a language server for files broom's servers serve, whatever languages the repo has.
 - `.broom.json` is valid.
 
 It looks three levels deep and at up to 20 projects per language. Python files git tracks count as Python also where no project file sits above them. It flags unknown keys and values in `.broom.json`.

@@ -333,11 +333,12 @@ def bare_lines(rows: List[Row]) -> List[str]:
     return [f"  {MARKS['ok']} {check.ljust(width)}{GAP}{', '.join(langs)}" for check, langs in where.items()]
 
 
-def other_rows(items: List[dict]) -> List[Row]:
-    """The doctor's gaps that are no check of a language, such as git's own hook: they fail the doctor too, so the
-    list names them, each as the doctor does."""
+def other_rows(items: List[dict], languages: Iterable[str]) -> List[Row]:
+    """The doctor's gaps that are no check of a language, such as git's own hook, and a plugin's server competing for
+    a language the repo lacks: they fail the doctor too, so the list names them, each as the doctor does."""
     return [Row(i["lang"], f"{i['lang']} {i['role']}", OFF, i["tool"], i.get("detail") or i["status"], i.get("fix") or "")
-            for i in items if i["lang"] not in SPECS and i["status"] != "ok"]
+            for i in items if i["status"] != "ok" and (
+                i["lang"] not in SPECS or (i["role"] == "plugin" and i["lang"] not in languages))]
 
 
 def off_row(repo: Path) -> List[Row]:
@@ -355,5 +356,5 @@ def protection(repo: Path, result: dict) -> Protection:
     smells_on = setting("smells", repo) != "off"
     items = split_deps(result["items"], repo)
     rows = [r for lang in languages if lang in SPECS for r in language_rows(lang, items, smells_on=smells_on)]
-    other = other_rows(result["items"]) + (off_row(repo) if smells_on else [])
+    other = other_rows(result["items"], languages) + (off_row(repo) if smells_on else [])
     return Protection(repo, rows, bare_rows(list(languages), smells_on=smells_on), other)

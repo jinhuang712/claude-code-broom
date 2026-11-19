@@ -29,7 +29,7 @@ In a project on TypeScript 7 the server needs a TypeScript 6 beside it. broom's 
 - Without a typescript-language-server that can start, broom falls back to TypeScript 7's `tsc --lsp`, which gives navigation and no diagnostics.
 - The CSS server accepts Tailwind's at-rules and CSS modules' `composes`.
 - In an Xcode project without a `Package.swift`, a call into another file shows as "Cannot find … in scope".
-- When another plugin serves the same files only one server starts, and `broom doctor` says so.
+- When another plugin serves the same files only one server starts. `broom doctor` names every such plugin, also for a language the repo lacks, and `/broom:setup` offers to disable them.
 
 - **How it works**: [Language servers](../specs/language-servers.md)
 - **Why**:

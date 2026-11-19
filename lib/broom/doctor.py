@@ -18,6 +18,7 @@ from .depcruise import OWN_DIR
 from .dependencies import optional_lines, optional_tools
 from .githook import LINE, hook_path, installed
 from .gitutil import git
+from .lspplugins import config_dir
 from .needs import LANG_NAMES, LOCKFILES, Diagnosis, Item, settings_files
 from .state import DATA_ROOT, load_json, save_json, short_hash, update_json
 from .toolchain import (
@@ -248,10 +249,11 @@ def plan_commands(items: List[Item], *, machine_wide: bool = False) -> Tuple[Lis
 
 def cache_key(repo: Path, projects: Dict[str, List[Path]]) -> str:
     """Changes when a tool is installed or removed (PATH directories change mtime), a config or lockfile
-    changes, or Claude Code's settings change."""
+    changes, or Claude Code's settings or installed plugins change."""
     parts: List[object] = [__version__, str(repo), os.environ.get("PATH", "")]
     paths = [Path(d) for d in os.environ.get("PATH", "").split(os.pathsep) if d]
-    paths += settings_files(repo) + [hook_path(repo), OWN_DIR / "node_modules" / ".bin"]
+    paths += settings_files(repo) + [config_dir() / "plugins" / "installed_plugins.json", hook_path(repo),
+                                     OWN_DIR / "node_modules" / ".bin"]
     for dirs in projects.values():
         for p in dirs:
             paths += [p / n for n in CONFIG_NAMES] + [p / "node_modules" / ".bin"]

@@ -12,7 +12,7 @@ CSS has no marker file. It goes by the `.css`, `.scss` and `.less` files git tra
 
 Untracked files are left out: listing them walks the working tree, about 160 ms on a 6,000-file repo against 25 ms for tracked files.
 
-The scan flags missing configs, collapsed to one fix at the repo root since configs are found by walking up. It flags plugins whose language servers claim the same files as broom's.
+The scan flags missing configs, collapsed to one fix at the repo root since configs are found by walking up. It flags enabled plugins whose language servers claim the same files as broom's, in every repo whatever its languages, since a plugin is enabled for every repo at once. Which files a plugin claims is read from the language servers it declares, in its install folder or in its marketplace's entry for it, where the official ones declare theirs. A plugin whose declaration can't be found is matched by a list of known names.
 
 The tools registry marks some tools as optional. The doctor lists those for the repo's languages after the gaps, found by name alone and never run. They are no items of the scan, so they never reach the repo's health, its fixes or the session start. A note that says an optional tool is missing is shown by `broom diagnose` and `broom smells` and never by a hook.
 

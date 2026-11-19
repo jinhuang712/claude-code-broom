@@ -15,7 +15,8 @@ from typing import Callable, Dict, List, Tuple
 from .config import setting
 from .depcruise import choose, install_command as own_install
 from .gitutil import run
-from .state import DEFAULTS, load_json, read_jsonc
+from .lspplugins import competing
+from .state import DEFAULTS, read_jsonc
 from .toolchain import (
     DIALECT_DEFAULTS, GOLANGCI_CFG, SWIFT_FORMAT_CFG, SWIFTFORMAT_CFG, SWIFTLINT_CFG, css_linters, find_up,
     in_node_modules, js_formatter, js_linters, resolve_bin, ruff_configured, swift_format_cmd, swift_formatter,
@@ -24,11 +25,6 @@ from .toolchain import (
 
 LANG_NAMES = {"go": "Go", "js": "TS/JS", "rust": "Rust", "py": "Python", "css": "CSS", "scss": "SCSS",
               "less": "Less", "swift": "Swift", "broom": "broom", "git": "git"}
-# Plugins that start a language server for the same files as broom's .lsp.json. Claude Code starts only the
-# first server registered for an extension, so either one silently never runs.
-LSP_PLUGINS = {"gopls-lsp": "go", "gopls": "go", "typescript-lsp": "js", "vtsls": "js", "ts7-lsp": "js",
-               "typescript-language-server": "js", "rust-analyzer-lsp": "rust", "rust-analyzer": "rust",
-               "pyright-lsp": "py", "pyright": "py", "swift-lsp": "swift", "sourcekit-lsp": "swift"}
 LOCKFILES = (("pnpm-lock.yaml", "pnpm"), ("bun.lock", "bun"), ("bun.lockb", "bun"), ("yarn.lock", "yarn"),
              ("package-lock.json", "npm"))
 ADD_DEV = {"pnpm": "pnpm add -D", "bun": "bun add -d", "yarn": "yarn add -D", "npm": "npm i -D"}
@@ -342,15 +338,11 @@ class Diagnosis:
                                    fix=install_command(self.db.get(tool, {}))))
 
     def plugins(self) -> None:
-        """Report each enabled plugin that starts a language server for a language this repo uses, as a conflict."""
-        for path in settings_files(self.repo):
-            enabled = load_json(path, {}).get("enabledPlugins") or {}
-            for key, on in enabled.items():
-                lang = LSP_PLUGINS.get(key.split("@")[0])
-                if on is True and lang in self.projects:
-                    self.items.append(Item(lang, "plugin", key, "conflict", "",
-                                           f"also starts a {LANG_NAMES[lang]} language server; only the first one "
-                                           "registered for an extension runs", f"claude plugin disable {key}"))
+        """Report each enabled plugin whose language server competes with broom's, whatever languages this repo has."""
+        for key, lang in competing(settings_files(self.repo), self.repo):
+            self.items.append(Item(lang, "plugin", key, "conflict", "",
+                                   f"also starts a {LANG_NAMES[lang]} language server; only the first one "
+                                   "registered for an extension runs", f"claude plugin disable {key}"))
 
 
 def depcruise_item(repo: Path, db: dict) -> Item:

@@ -6,6 +6,23 @@
 
 ---
 
+## 0.25.9 — 2026-11-19
+
+---
+
+### Setup
+
+- `broom doctor` names every enabled plugin whose language server competes with one of broom's, and `/broom:setup` offers to disable it. Before, it named such a plugin only in a repo of that language, so the conflict came up repo by repo.
+- A plugin is now judged by the files its language servers claim, not by its name, so a server under an unknown name is caught too.
+
+---
+
+### Version
+
+- `broom --version` and `broom doctor --json` say the version that is installed. 0.25.8 still said 0.25.7.
+
+---
+
 ## 0.25.8 — 2026-11-19
 
 ---
