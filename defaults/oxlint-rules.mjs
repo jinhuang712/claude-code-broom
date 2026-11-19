@@ -158,8 +158,54 @@ const missingDocs = {
   },
 };
 
+// A handler that never looks at the error it caught and throws nothing: a `catch` clause with a body, or a function
+// literal handed as the first argument to `.catch(...)`. An empty `catch` body is no-empty's. A handler that uses its
+// parameter (more mentions of its name than the parameter itself), destructures it or throws is quiet. The open
+// handlers sit on a stack: each Identifier counts for those whose parameter it names, each throw marks them all.
+function isPromiseHandler(node) {
+  const call = node.parent;
+  return (
+    call?.type === "CallExpression" &&
+    call.arguments[0] === node &&
+    call.callee.type === "MemberExpression" &&
+    call.callee.property.name === "catch"
+  );
+}
+
+// The name of the one parameter a handler can look at, or null with `looked` set when there is nothing to count.
+function openHandler(param) {
+  const named = param?.type === "Identifier";
+  return { name: named ? param.name : null, mentions: 0, thrown: false, looked: Boolean(param) && !named };
+}
+
+const broadCatch = {
+  meta: { type: "suggestion", schema: [] },
+  create(context) {
+    const open = [];
+    const enter = (param) => open.push(openHandler(param));
+    const leave = (node, body) => {
+      const h = open.pop();
+      const empty = node.type === "CatchClause" && body.body.length === 0;
+      if (empty || h.thrown || h.looked || h.mentions > 1) return;
+      context.report({ node, message: "Handler never looks at the error it caught." });
+    };
+    const onFunction = {};
+    for (const type of FUNCTIONS) {
+      onFunction[type] = (node) => isPromiseHandler(node) && enter(node.params[0]);
+      onFunction[`${type}:exit`] = (node) => isPromiseHandler(node) && leave(node, node.body);
+    }
+    return {
+      ...onFunction,
+      CatchClause: (node) => enter(node.param),
+      "CatchClause:exit": (node) => leave(node, node.body),
+      Identifier: (node) => open.forEach((h) => { if (h.name === node.name) h.mentions += 1; }),
+      ThrowStatement: () => open.forEach((h) => { h.thrown = true; }),
+    };
+  },
+};
+
 export default {
   meta: { name: "broom" },
   rules: { "bool-params": boolParams, "class-lines": classLines, "module-state": moduleState,
-           "commented-code": commentedCode, "missing-docs": missingDocs },
+           "commented-code": commentedCode, "missing-docs": missingDocs, "broad-catch": broadCatch },
 };

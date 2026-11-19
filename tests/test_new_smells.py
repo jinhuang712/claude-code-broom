@@ -136,8 +136,30 @@ class OtherLanguagesTest(NewSmellCase):
         after = before + text("", "public func fresh() {}", "", "func hidden() {}")
         self.assertEqual(self.changed("a.swift", before, after), [("missing_docs", [4])])
 
-    @unittest.skipUnless(shutil.which("oxlint"), "oxlint missing")
-    def test_ts_has_no_rule_for_a_broad_catch_so_none_is_found(self) -> None:
-        after = text("/** Fresh. */", "export function fresh(a: number): number {", "  try {", "    return a;",
-                     "  } catch (e) {", "    return 0;", "  }", "}")
-        self.assertEqual(self.changed("src/a.ts", "export const x = 1;\n", after), [])
+    @unittest.skipUnless(shutil.which("oxlint") and shutil.which("node"), "oxlint or node missing")
+    def test_a_ts_handler_that_ignores_the_error_and_throws_nothing_is_found(self) -> None:
+        before = "export const x = 1;\n"
+        after = before + text(
+            "", "/** Fresh. */", "export function fresh(a: () => void, p: Promise<number>): void {",
+            "  try { a(); } catch (e) { a(); }",  # 5: never mentions e
+            "  try { a(); } catch { a(); }",  # 6: no parameter
+            "  try { a(); } catch (e) { }",  # empty: no-empty's
+            "  try { a(); } catch (e) { /* ignored */ }",  # comment only
+            "  try { a(); } catch (e) { console.error(e); }",
+            "  try { a(); } catch (e) { if (e instanceof RangeError) a(); }",
+            "  try { a(); } catch ({ code }) { a(); }",
+            "  try { a(); } catch (e) { throw new Error('wrapped'); }",
+            "  p.catch(() => {});",  # 13: empty body counts
+            "  p.catch((e) => 0);",  # 14
+            "  p.catch(function () { return 1; });",  # 15
+            "  p.then((v) => v).catch((err) => { a(); });",  # 16
+            "  p.catch(console.error);",
+            "  p.catch((e) => console.error(e));",
+            "  p.catch(() => { throw new Error('wrapped'); });",
+            "}")
+        self.assertEqual(self.changed("src/a.ts", before, after), [("broad_catch", [5, 6, 13, 14, 15, 16])])
+
+    @unittest.skipUnless(shutil.which("oxlint") and shutil.which("node"), "oxlint or node missing")
+    def test_an_old_ts_handler_stays_quiet_when_the_change_is_elsewhere(self) -> None:
+        old = text("/** Old. */", "export function old(a: () => void): void {", "  try { a(); } catch (e) { a(); }", "}")
+        self.assertEqual(self.changed("src/a.ts", old, old + "export const x = 1;\n"), [])

@@ -37,7 +37,7 @@ Where a smell is found by a guess and not a parse, it is a nit even when the sam
 
 ## Touched
 
-A sized smell that was already past its soft limit at the base, and that the change didn't make worse, is a hint when a changed line lies in its unit. A function or a type runs from the row's line through its length. A file counts when it gained lines besides imports. In Python `ast` gives each function's range, so parameters, nesting, complexity and a nested ternary are told too. The other languages' tools give no range for those four, so there they stay untold. No tool runs for this: it reuses the rows of both versions.
+A sized smell that was already past its soft limit at the base, and that the change didn't make worse, is a hint when a changed line lies in its unit. A function or a type runs from the row's line through its length. A file counts when it gained lines besides imports. In Python `ast` gives each function's range, so parameters, nesting, complexity and a nested ternary are told too. The other languages' tools give no range for those four, so there they stay untold. A Go type's methods lie apart in its file, so its first line and its size give no range, and it stays untold as well. No tool runs for this: it reuses the rows of both versions.
 
 A sized smell that was past the hard limit at the base and grew carries the size it had. That mark travels with the blocked result, and accepting leaves such a finding out.
 
@@ -78,11 +78,23 @@ A folder cycle is an import that leads into a folder whose files lead back to th
 
 ## broom's own oxlint rules
 
-Five rules of broom's own are loaded as an oxlint JS plugin, an alpha feature, in a second oxlint pass. They need Node. Without it, or with an oxlint that can't load plugins, only these smells go unmeasured, and a note says so. A test loads the plugin with the oxlint installed, so an upgrade that breaks it shows up there. It was tested with oxlint 1.85 and Node 24.
+Six rules of broom's own are loaded as an oxlint JS plugin, an alpha feature, in a second oxlint pass. They need Node. Without it, or with an oxlint that can't load plugins, only these smells go unmeasured, and a note says so. A test loads the plugin with the oxlint installed, so an upgrade that breaks it shows up there. It was tested with oxlint 1.85 and Node 24.
 
 The commented-code rule guesses: a comment that compiles as JS and has code's punctuation, with `Note: x()` skipped as a label. TypeScript syntax in a comment doesn't compile, so it is missed.
 
-oxlint's own rule list, read in full in 2026-11, has nothing for these five smells, bar Jest's `require-to-throw-message`.
+The broad-catch rule keeps the handlers it is inside of on a stack: a `catch` clause, or a function handed first to a `.catch()` call. Each mention of a handler's parameter counts for it, and a `throw` marks every open handler. A handler that closes with no mention beyond the parameter itself and no `throw` is reported, unless it is a `catch` with an empty body, which oxlint's own `no-empty` owns.
+
+oxlint's own rule list, read in full in 2026-11, has nothing for the first five smells, bar Jest's `require-to-throw-message`. For the broad catch only its rules named for `catch` were looked at, on 2026-11-19 with oxlint 1.85.
+
+---
+
+## Go's text reads
+
+golangci-lint has no linter for three of Go's smells, so broom reads them from the source in the scratch copy, with no tool. gofmt's layout makes the text enough: a declaration starts at the first column, and the brace that closes it stands there too.
+
+A type's length is its `struct` or `interface` declaration plus every method on it in the same file, matched by the receiver's type. A type inside a `type ( ... )` group isn't read, and a raw string that holds a brace at the first column ends a block early.
+
+A broad catch is a `recover()` that stands as a statement or is assigned to `_`. A broad test assertion is a testify `Error` or `Panics` in a `_test.go` file, called on `assert`, `require`, `Assert()` or `Require()`. `s.Error(` is left out, since that name reports a failure on a `*testing.T`.
 
 ---
 

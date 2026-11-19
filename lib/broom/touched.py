@@ -4,7 +4,8 @@ the code cleans it. A smell in a function or file the change left alone never co
 
 A unit is touched when a changed line lies in it:
 
-- a function or a type, from its first line through its length, in every language;
+- a function or a type, from its first line through its length, in every language but for a Go type, whose methods
+  are scattered through the file, so its first line plus its size is not its span and no touch can be told;
 - a file, when it gained lines besides imports (the caller leaves out the file length of one that didn't);
 - in Python, where `ast` gives the function's range, a function with too many parameters, nesting or complexity, and
   a nested ternary in one. The other languages' tools give no range for these, so they stay as they were.
@@ -20,7 +21,7 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 from .gitutil import ChangedLines
 from .reading import Limits, Raw
 from .smell import Smell, level, made_worse
-from .toolchain import PY_EXTS
+from .toolchain import GO_EXTS, PY_EXTS
 
 SPANNED = ("function_lines", "type_lines")  # the row's line starts the unit and its value is the unit's length
 FILE = "file_lines"
@@ -45,7 +46,9 @@ def span_around(text: str, line: int) -> Optional[Tuple[int, int]]:
 
 
 def telling(r: Raw) -> bool:
-    """Whether a touch can be told for the row: a length in any language, and in Python the rest."""
+    """Whether a touch can be told for the row: a length in any language but a Go type's, and in Python the rest."""
+    if r.metric == "type_lines" and Path(r.rel).suffix in GO_EXTS:
+        return False
     if r.metric in SPANNED or r.metric == FILE:
         return True
     return r.metric in IN_FUNCTION and Path(r.rel).suffix in PY_EXTS

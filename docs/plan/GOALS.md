@@ -16,7 +16,9 @@ Goals
 │   ├── ✅ O5: A full diagnosis of an old repo — every smell, with no time cut
 │   ├── ✅ O6: A number that got worse is told once — the check-up speaks only then
 │   ├── ✅ O7: No script to write — broom answers what a session would count by hand
-│   └── ✅ O8: Done means tests ran — a turn that changed code ends with its tests run
+│   ├── ✅ O8: Done means tests ran — a turn that changed code ends with its tests run
+│   ├── ✅ O9: The first three languages measure every smell — Python, TS/JS and Go
+│   └── ⬜ O10: Swift and Rust measure every smell — bar what each language rules out
 ├── Measures
 │   ├── ⬜ M1: Fix rate — how much of what broom blocks gets fixed
 │   └── ⬜ M2: Check time — the seconds a commit check takes
@@ -163,6 +165,40 @@ A turn that changed code doesn't end before the project's tests ran on that code
 **Acceptance**: A fresh session is asked for a change to code and told that it need not write tests. Its turn ends only after it ran the repo's tests on the changed code, or after it accepted the finding with a reason or asked the user.
 
 **Status**: ✅ 2026-11-18, in two fresh sessions on a throwaway repo with 0.23.5 and this rule. The first ran the repo's tests on its own after the change, and its turn ended with no block. The second was told to run no test: its turn's end was blocked with `tests_not_run`, and it ended the turn with `broom known --ask`, which put the question to the user.
+
+---
+
+#### O9: The first three languages measure every smell
+
+Python, TS/JS and Go each measure every smell of the bar, bar what the language rules out.
+
+**Want**: a ruler in everyday work.
+
+**Checks**:
+
+- [F4: Smells](../features/F4-smells.md)
+- [F8: Languages](../features/F8-languages.md)
+
+**Acceptance**: A test adds each of the 27 smells in Python, in TS/JS and in Go, and expects broom to find it. Go is let off 3: a nested ternary and both cycles. A smell with no sample fails the test.
+
+**Status**: ✅ 2026-11-19, by `tests/test_language_matrix_python.py`, `tests/test_language_matrix_ts.py` and `tests/test_language_matrix_go.py`: 27 samples in Python, 27 in TS/JS and 24 in Go were found. The folder cycle of TS/JS needs dependency-cruiser, which this machine lacks, so that one sample ran with a copy installed in a temporary folder.
+
+---
+
+#### O10: Swift and Rust measure every smell
+
+Swift and Rust each measure every smell of the bar, bar what the language rules out.
+
+**Want**: a ruler in everyday work.
+
+**Checks**:
+
+- [F8.3: Rust](../features/F8-languages.md#f83-rust)
+- [F8.6: Swift](../features/F8-languages.md#f86-swift)
+
+**Acceptance**: The test of [O9: The first three languages measure every smell](#o9-the-first-three-languages-measure-every-smell) holds Swift and Rust too, each with a named list of what the language rules out.
+
+**Status**: ⬜
 
 ---
 

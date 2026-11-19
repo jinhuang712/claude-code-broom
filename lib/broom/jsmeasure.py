@@ -91,7 +91,8 @@ def read_oxlint(r: Reader, diagnostics: List[dict], metric_of: Callable[[str, st
 # feature, so they run in a pass of their own: an old oxlint or a missing Node costs these smells, no others.
 BROOM_RULES = DEFAULTS / "oxlint-rules.mjs"
 BROOM_RULE_METRICS = {"bool-params": "bool_params", "class-lines": "type_lines", "module-state": "globals",
-                      "commented-code": "commented_code", "missing-docs": "missing_docs"}
+                      "commented-code": "commented_code", "missing-docs": "missing_docs",
+                      "broad-catch": "broad_catch"}
 
 
 def broom_rules_config(lim: Limits) -> dict:
@@ -99,7 +100,8 @@ def broom_rules_config(lim: Limits) -> dict:
     return {"jsPlugins": [str(BROOM_RULES)], "plugins": ["typescript"],
             "categories": {c: "off" for c in OXLINT_CATEGORIES},
             "rules": {"broom/bool-params": "warn", "broom/class-lines": ["warn", {"max": lim["type_lines"][0]}],
-                      "broom/module-state": "warn", "broom/commented-code": "warn", "broom/missing-docs": "warn"}}
+                      "broom/module-state": "warn", "broom/commented-code": "warn", "broom/missing-docs": "warn",
+                      "broom/broad-catch": "warn"}}
 
 
 def broom_rule_metric(rule: str, _msg: str) -> Optional[str]:
@@ -118,5 +120,5 @@ def measure_js(r: Reader, rels: List[str], lim: Limits, start: Path) -> None:
         read_oxlint(r, run_oxlint(r, exe, "oxlint-rules", broom_rules_config(lim), rels),
                     broom_rule_metric)
     else:
-        r.notes.append("node is missing, so boolean flag parameters, long classes, module state, commented-out code and "
-                       "missing doc comments in TS/JS aren't measured")
+        r.notes.append("node is missing, so boolean flag parameters, long classes, module state, commented-out code, "
+                       "missing doc comments and broad catches in TS/JS aren't measured")

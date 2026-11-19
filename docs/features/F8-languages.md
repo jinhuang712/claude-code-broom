@@ -21,13 +21,27 @@ broom runs each language's own tools. They come from the project's `node_modules
 | CSS · SCSS · Less | the project's biome, oxfmt or prettier | the project's stylelint, biome or ESLint | — |
 | Swift | the project's swift-format or SwiftFormat | SwiftLint | `swift build --build-tests` |
 
+broom has 27 smells, and each language measures a share of them:
+
+| | Measures | Lacks |
+|---|---|---|
+| Python | 27 | — |
+| TS/JS | 27 | — |
+| Go | 24 | 3 that the language rules out |
+| Swift | 19 | 8 |
+| Rust | 16 | 11 |
+| CSS · SCSS · Less | 2 | 25 |
+
 - **Stance**: [The project's tools, not ours](../PHILOSOPHY.md#whose-rules-decide-what-is-clean)
+- **What each smell is**: [F4: Smells](F4-smells.md)
 
 ---
 
 ## F8.1: Go
 
 At commit the project's golangci formatters, gofumpt and goimports, format too.
+
+Go has 24 of the smells. The language rules out the other 3: a nested ternary, which it has no operator for, and both cycles, which its compiler refuses.
 
 ---
 
@@ -41,7 +55,9 @@ Without a project linter, oxlint runs with broom's defaults, type-aware. A solut
 
 A crate is checked whole, by one run of clippy that also measures the smells. A cold `cargo clippy` can time out.
 
-Rust has 16 of the smells: 6 sized ones and 9 that count by occurrence, plus dead code. It lacks magic numbers, commented-out code, globals, long types, nested ternaries and broad test assertions, which clippy has no lint for.
+Rust has 16 of the smells: 6 sized ones and 9 that count by occurrence, plus dead code.
+
+It lacks 11: magic numbers · commented-out code · globals · long types · nested ternaries · broad test assertions · broad catches · missing doc comments · untested files · import cycles · folder cycles. Rust has no ternary operator, so the language rules that one out.
 
 ---
 
@@ -67,6 +83,8 @@ Without a project linter, stylelint runs with broom's defaults, which report err
 ---
 
 ## F8.6: Swift
+
+Swift has 19 of the smells. It lacks 8: nesting · commented-out code · broad test assertions · broad catches · deprecated calls · import cycles · folder cycles · dead code.
 
 SwiftLint runs with the project's `.swiftlint.yml`, else with broom's defaults. The defaults are bug-finders and not style: the rules SwiftLint files under "lint" and "performance", plus `force_cast` and `force_try`. Naming, length and layout rules are off, and CocoaPods, Carthage and `.build` code is skipped.
 

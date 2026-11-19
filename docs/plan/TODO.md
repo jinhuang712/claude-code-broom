@@ -160,6 +160,29 @@
 
 ---
 
+### [P2][IDEA] A Go error dropped with the blank name
+
+- description:
+  - Go's `swallowed_error` finds an empty block. An error assigned to `_` is the commoner way to drop one, and nothing counts it.
+  - errcheck finds it with `check-blank`. It needs types, so it would run in the real tree.
+  - Rust's nearest form, a `Result` dropped with `let _ =`, is already a nit.
+- created: 2026-11-19
+- found: the look for missed rot at the end of CP10.1
+- related: [F4.2: Occurrence smells](../features/F4-smells.md#f42-occurrence-smells)
+
+---
+
+### [P2][IDEA] broom says which smells a repo's languages lack
+
+- description:
+  - The user asked on 2026-11-19 how many smells each language measures, and the answer came from reading the code.
+  - `broom doctor --checks` lists the checks that run. It could list, per language of the repo, the smells that language doesn't measure.
+- created: 2026-11-19
+- found: the user's question
+- related: [F1.5: Protection list](../features/F1-setup.md#f15-protection-list)
+
+---
+
 ### [P2][DISCUSSION] Whether /broom:sweep still earns its place
 
 - description:

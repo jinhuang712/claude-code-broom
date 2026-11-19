@@ -14,6 +14,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from .config import NOTED, SMELL_PRESENCE
 from .gitutil import run
+from .gomeasure import go_text
 from .jsmeasure import measure_js
 from .reading import TOOL_TIMEOUT, Limits, Raw, Reader, match, number, quoted_name
 from .toolchain import CSS_EXTS, GO_EXTS, JS_EXTS, PY_EXTS, RS_EXTS, SWIFT_EXTS
@@ -207,8 +208,10 @@ def golangci_read(linter: str, text: str) -> Optional[Tuple[str, Optional[int], 
     return None
 
 
-def measure_go(r: Reader, _rels: List[str], lim: Limits, _start: Path) -> None:
-    """Measure the Go files with golangci-lint in a scratch module; without golangci-lint, a note and no rows."""
+def measure_go(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None:
+    """Measure the Go files: the text smells from the source, then the rest with golangci-lint in a scratch module;
+    without golangci-lint, a note and no more rows."""
+    go_text(r, rels, lim)
     exe = shutil.which("golangci-lint")
     if not exe:
         r.notes.append("missing:golangci-lint (brew install golangci-lint)")

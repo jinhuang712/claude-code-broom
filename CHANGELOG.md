@@ -6,6 +6,21 @@
 
 ---
 
+## 0.25.3 — 2026-11-19
+
+---
+
+### Smells
+
+- Python and TS/JS now measure all 27 smells, and Go measures the 24 the language allows. Go has no ternary to nest, and its compiler refuses import cycles.
+- TS/JS: a `catch`, or a function handed to `.catch()`, that never looks at the error it caught and throws nothing is a `broad_catch` hint. Before, only Python had this smell. An empty `catch` is still a swallowed error.
+- Go: a type that is too long counts, measured as its declaration plus its methods in the same file.
+- Go: a `recover()` whose value is dropped is a `broad_catch` hint.
+- Go: a testify `Error` or `Panics` in a test file is a `broad_test_asserts` hint, since any error passes it.
+- The three Go smells are read from the source, so they need no tool installed.
+
+---
+
 ## 0.25.2 — 2026-11-19
 
 ---

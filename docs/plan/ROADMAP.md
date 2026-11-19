@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP8: Lighter](#cp8-lighter), which waits for a week of the ledger's numbers, about 2026-11-24. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
+**Current checkpoint**: [CP8: Lighter](#cp8-lighter), which waits for a week of the ledger's numbers, about 2026-11-24. CP10.1 ended on 2026-11-19 with 0.25.3, and CP10.2 comes after the checkpoints before it. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
 
 ---
 
@@ -28,7 +28,10 @@ Roadmap
 │   ├── ⬜ CP8.1: Fewer interruptions
 │   └── ⬜ CP8.2: Fewer runs and less code
 ├── 🟨 CP9: Ready for a public release — the README's face and the language servers proven
-└── ⬜ CP10: Waits for a need
+├── 🟨 CP10: The same smells in every language — in the order the user set
+│   ├── ✅ CP10.1: Python, TS/JS and Go
+│   └── ⬜ CP10.2: Swift and Rust
+└── ⬜ CP11: Waits for a need
 ```
 
 ---
@@ -394,7 +397,7 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 - The test suite runs each file in a process of its own and takes about 40 seconds where it took 150, done on 2026-11-17.
 - [I2: Three paths call the same tools](ISSUES.md#i2-three-paths-call-the-same-tools)
-- [I5: Five rules sit on an alpha plugin API](ISSUES.md#i5-five-rules-sit-on-an-alpha-plugin-api)
+- [I5: Six rules sit on an alpha plugin API](ISSUES.md#i5-six-rules-sit-on-an-alpha-plugin-api)
 - [I6: The Bash parser guesses what git's hook knows](ISSUES.md#i6-the-bash-parser-guesses-what-gits-hook-knows)
 
 **Exit criteria** (2):
@@ -424,7 +427,58 @@ The user set this on 2026-11-19: what a stranger meets first, and what can only 
 
 ---
 
-## CP10: Waits for a need
+## CP10: The same smells in every language
+
+**Status**: 🟨
+
+The user set the order on 2026-11-19. Python and TS/JS come first, as the languages agents write most. Go comes with them, as the language backend work can't avoid. Swift and Rust come after.
+
+**Exit criteria** (2):
+
+- **Sub-checkpoints**
+  - [CP10.1: Python, TS/JS and Go](#cp101-python-tsjs-and-go) is met.
+  - [CP10.2: Swift and Rust](#cp102-swift-and-rust) is met.
+
+---
+
+### CP10.1: Python, TS/JS and Go
+
+**Status**: ✅
+
+TS/JS lacked 1 smell and Go lacked 3 that the language allows. All 4 shipped in 0.25.3 on 2026-11-19.
+
+**Delivers** (3):
+
+- [F4.2.1: Broad catch](../features/F4-smells.md#f421-broad-catch), in TS/JS and Go.
+- [F4.1: Sized smells](../features/F4-smells.md#f41-sized-smells), with the length of a Go type.
+- [F4.2: Occurrence smells](../features/F4-smells.md#f42-occurrence-smells), with a broad test assertion in Go.
+
+**Exit criteria** (1):
+
+- **Objectives**
+  - [O9: The first three languages measure every smell](GOALS.md#o9-the-first-three-languages-measure-every-smell): ✅ 2026-11-19, 78 samples found
+
+---
+
+### CP10.2: Swift and Rust
+
+**Status**: ⬜
+
+Swift lacks 8 smells and Rust 11, one of which Rust rules out.
+
+**Delivers** (2):
+
+- [F8.6: Swift](../features/F8-languages.md#f86-swift), with the smells it lacks.
+- [F8.3: Rust](../features/F8-languages.md#f83-rust), with the smells it lacks.
+
+**Exit criteria** (1):
+
+- **Objectives**
+  - [O10: Swift and Rust measure every smell](GOALS.md#o10-swift-and-rust-measure-every-smell)
+
+---
+
+## CP11: Waits for a need
 
 **Status**: ⬜
 

@@ -4,7 +4,7 @@
 F4: Smells
 ├── F4.1: Sized smells — a hint past the soft limit, a block past the hard one
 ├── F4.2: Occurrence smells — a change that adds one gets its level
-│   ├── F4.2.1: Broad catch
+│   ├── F4.2.1: Broad catch — a handler that takes every error
 │   ├── F4.2.2: Skipped test
 │   └── F4.2.3: Untested file
 ├── F4.3: Duplicate code — a new copy anywhere in the repo
@@ -43,12 +43,14 @@ A sized smell counts when the change pushed it past a limit, or grew it while pa
 | `nesting` | 4 | 6 | `PLR1702` | `max-depth` | `nestif` | — |
 | `complexity` | 10 | 20 | `C901` | `complexity` | `gocognit` | `cyclomatic_complexity` |
 | `nested_ternary` | — | any | `ast` | `no-nested-ternary` | — | a custom rule |
-| `type_lines` | 250 | — | `ast` | `broom/class-lines` | — | `type_body_length` |
+| `type_lines` | 250 | — | `ast` | `broom/class-lines` | read by broom | `type_body_length` |
 | `duplicate_lines` | 10 | 30 | jscpd | jscpd | jscpd | jscpd |
 
-5 notes on the table:
+7 notes on the table:
 
 - `file_lines` and `duplicate_lines` count in Rust and CSS too.
+- Go has no ternary operator, so it has no `nested_ternary`.
+- Go's `type_lines` is a type's declaration plus its methods in the same file.
 - Rust gets 4 of them from clippy: `function_lines` from `too_many_lines` · `params` from `too_many_arguments` · `complexity` from `cognitive_complexity` · `nesting` from `excessive_nesting`.
 - Rust's `nesting` only hints, since clippy names no depth.
 - Swift has no control-flow nesting rule, and complexity covers it.
@@ -78,16 +80,17 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 | `type_escape` | hint | `ANN401` | `no-explicit-any` `no-non-null-assertion` | `revive` `unchecked-type-assertion` | `force_cast` `force_unwrapping` `force_try` |
 | `globals` | hint | `PLW0603` | `broom/module-state` | `gochecknoglobals` | a custom rule |
 | `bool_params` | hint | `FBT001` | `broom/bool-params` | `revive` `flag-parameter` | a custom rule |
-| `broad_test_asserts` | hint | `PT011` | `jest/require-to-throw-message` | — | — |
-| `broad_catch` | hint | `BLE001` `E722` | — | — | — |
+| `broad_test_asserts` | hint | `PT011` | `jest/require-to-throw-message` | read by broom | — |
+| `broad_catch` | hint | `BLE001` `E722` | `broom/broad-catch` | read by broom | — |
 | `missing_docs` | hint | `D100` `D101` `D102` `D103` | `broom/missing-docs` | `revive` `exported` | `missing_docs` |
 | `deprecated_api` | hint | `UP` and others | `typescript/no-deprecated` | `staticcheck` `SA1019` | — |
 | `skipped_test` | hint | read by broom | read by broom | read by broom | read by broom |
 | `untested_file` | nit | read by broom | read by broom | read by broom | read by broom |
 
-8 notes on the table:
+10 notes on the table:
 
 - `commented_code` is a nit in TS/JS and Go, whose detectors guess.
+- Go's `commented_code` is found inside a function and missed at the top level of a file.
 - TS/JS's `no-unused-vars` counts parameters only.
 - Unused variables and imports stay with the project's linter, which already reports them.
 - Swift's `debug_output` rule finds 4 calls: `print` · `debugPrint` · `NSLog` · `dump`.
@@ -95,10 +98,11 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 - Swift's `bool_params` rule finds an unlabeled `_ flag: Bool`.
 - A function handed to a call is the callee's choice and doesn't count for `bool_params`.
 - `module-state` is a `let` or `var` at module level that a function assigns.
+- Go's `broad_test_asserts` is a testify `Error` or `Panics`, which any error passes.
 
 Rust gets 8 of these from clippy and rustc: `suppression` · `swallowed_error` · `unused_params` · `debug_output` · `todo` · `type_escape` · `bool_params` · `deprecated_api`. Its `skipped_test` is an `#[ignore]`, read by broom. Its `swallowed_error` is a `Result` dropped with `let _ =`, and it is a nit, since that can be deliberate. Its `todo` is a `todo!()` or an `unimplemented!()`. Test code is not built, so a test may be long, unwrap and print. CSS, SCSS and Less have no smell tool.
 
-The four `broom/` rules need Node. Without it only these smells go unmeasured, and a note says so.
+The five `broom/` rules need Node. Without it only these smells go unmeasured, and a note says so.
 
 - **Why**: [009: An occurrence counts when the change raises the count](../specs/decisions/009-occurrence-by-count.md)
 
@@ -106,11 +110,21 @@ The four `broom/` rules need Node. Without it only these smells go unmeasured, a
 
 ### F4.2.1: Broad catch
 
-`broad_catch` is an error handler that catches every error, such as a bare `except` or an `except Exception`. It hides the error it wasn't written for. A change that adds one gets a hint.
+`broad_catch` is an error handler that takes every error alike. It hides the error it wasn't written for. A change that adds one gets a hint.
+
+It has 1 form per language:
+
+| Language | What counts | What stays quiet |
+|---|---|---|
+| Python | a bare `except` · an `except Exception` | a handler that re-raises |
+| TS/JS | a `catch` or a `.catch()` callback that never reads its error | a handler that throws |
+| Go | a `recover()` whose value is dropped | a `recover()` whose value is read |
+
+TS/JS can't catch by type, so there a handler has to look at what it caught. An empty `catch` is a `swallowed_error`.
 
 1 gap:
 
-- Only Python is covered, since the tools broom runs have no such rule in the other languages.
+- Swift and Rust aren't covered, since the tools broom runs have no such rule for them.
 
 ---
 
@@ -228,9 +242,10 @@ A function or a type is touched when a changed line lies inside it. A file is to
 
 A function, a type or a file that was already past the hard limit and that the change grew can't be accepted. The block marks that line, and `broom known --accept` leaves it out and says what size to bring it back to. A smell that is newly past the hard limit can be accepted as before.
 
-1 gap:
+2 gaps:
 
 - Outside Python a touched function is told its length only, since the tools give no range for the other sized smells.
+- A touched Go type isn't told, since its methods lie apart in the file.
 
 In Rust a touched function that is too long is told.
 
