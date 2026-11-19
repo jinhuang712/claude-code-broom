@@ -21,7 +21,7 @@ somewhere; don't raise it again unless the user asks for everything.
 ## 2. Ask
 
 Ask only before acting on the user's machine or repo: installing tools and adding config files. Never ask the
-user to pick settings. They start at defaults (format at commit, check at each turn end and at commit, format
+user to pick settings. They start at defaults (format after each edit, check at each turn end and at commit, format
 only the changed lines), and the user changes one in `/config` or `.broom.json` when they object.
 
 Summarize the gaps in plain words, then ask with AskUserQuestion, in one call, only the questions that apply:
