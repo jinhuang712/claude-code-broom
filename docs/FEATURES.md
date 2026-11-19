@@ -119,7 +119,7 @@ Features
 
 ## Not planned
 
-8 things the project will not build:
+9 things the project will not build:
 
 - **A model inside broom**: broom holds no model, so what needs judgment stays with Claude, such as whether a name is good.
 - **Running tests**: They are too slow for a commit check, and CI runs them. broom reads a coverage report and doesn't make one.
@@ -129,3 +129,4 @@ Features
 - **Layering rules without a project's own**: Layers differ per project, and none of the author's repos declares any.
 - **A compile check for Xcode projects**: It needs `xcodebuild`, a scheme and minutes.
 - **A build server for Xcode projects**: A tool such as xcode-build-server does that, and broom doesn't set one up.
+- **Watching other plugins' language servers**: A plugin that serves files broom's servers don't serve leaves broom's wants untouched, and Claude Code itself says when its program is missing. broom names only a plugin that competes with one of its own servers.
