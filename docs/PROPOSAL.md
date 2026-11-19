@@ -26,9 +26,9 @@ Claude Code runs language servers only when a plugin declares them. The official
 
 ---
 
-#### A lint after every edit pushes Claude into early fixes
+#### A full check after every edit pushes Claude into early fixes
 
-A hook that lints after every edit is slow and noisy. A warning in the middle of a change makes Claude fix what the next edit would have settled.
+A hook that runs every check after every edit is slow, and one that blocks is noisy. A type check or a linter that needs a build takes seconds, and every edit would pay them. A block in the middle of a change makes Claude fix what the next edit would have settled.
 
 ---
 
@@ -78,7 +78,7 @@ To learn how long the files are, which tests are skipped or what nothing uses, a
 
 broom holds no model. Every analysis stays with the coding agent, and broom gives that agent what it lacks, in two ways:
 
-1. **A gate the user sets**: Hooks put broom into Claude's flow. Before each commit and at each turn's end it checks Claude's changes and holds them back until they're clean.
+1. **A gate the user sets**: Hooks put broom into Claude's flow. After each edit it formats the file and only tells what a fast linter finds. Before each commit and at each turn's end it checks Claude's changes and holds them back until they're clean.
 2. **A ruler Claude picks up**: On request broom measures a whole repo one way and remembers the result: its smells, its numbers and its rot.
 
 Both rest on the project's own tools. broom detects what a repo needs and sets it up with the user's consent, and it declares language servers so Claude gets diagnostics as it edits. It holds one bar for code smells: each change is measured against it while it is made, and a whole repo when someone plans a refactor.
