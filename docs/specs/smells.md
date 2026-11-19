@@ -50,7 +50,7 @@ A sized smell that was past the hard limit at the base and grew carries the size
 
 ## The real tree
 
-A typed linter or a module graph can't work on the scratch copy, whose imports don't resolve. Those tools run in the project's own checkout: Go's typed linters, TS/JS import cycles, dependency-cruiser and clippy. With no copy of the base to compare with, a finding counts when it is on a line the change added, a new file included.
+A typed linter or a module graph can't work on the scratch copy, whose imports don't resolve. Those tools run in the project's own checkout: Go's typed linters, TS/JS import cycles, dependency-cruiser and clippy. With no copy of the base to compare with, a finding counts when it is on a line the change added, a new file included. git takes a line that only moved for an added one, so an occurrence on an added line whose text the file already held at the base stays old, as often as the base held it.
 
 Go's scratch copy runs only linters that read syntax alone, so Go's repeated literals stay unmeasured. One linter that needs types makes golangci-lint skip every linter in the run.
 

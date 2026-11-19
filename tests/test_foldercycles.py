@@ -55,6 +55,16 @@ class PythonFolderTests(BroomCase):
         self.assertEqual([(s.metric, s.added, s.level) for s in found if s.metric == "folder_cycle"],
                          [("folder_cycle", [1], "hint")])
 
+    @unittest.skipUnless(HAS_PY, "ruff")
+    def test_an_old_cycle_import_that_a_change_only_moved_is_not_the_changes_own(self) -> None:
+        old = "from pkg.ui import view\nimport os\nimport sys\n\nVALUE = (view.SHOWN, os.sep, sys.path)\n"
+        r = self.repo({**PY_REPO, "pkg/auth/login.py": old})
+        moved = "import os\nimport sys\nfrom pkg.ui import view\n\nVALUE = (view.SHOWN, os.sep, sys.path)\n"
+        (r / "pkg/auth/login.py").write_text(moved)
+        self.assertIn("+from pkg.ui import view", self.sh(r, "git", "diff"), "git takes the moved line for added")
+        found, _ = find_smells(r, [r / "pkg/auth/login.py"], "HEAD")
+        self.assertEqual([s for s in found if s.metric == "folder_cycle"], [])
+
 
 
 class JsFolderTests(BroomCase):
