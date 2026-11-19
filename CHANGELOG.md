@@ -6,6 +6,16 @@
 
 ---
 
+## 0.25.5 — 2026-11-19
+
+---
+
+### Cleanup
+
+- When broom finds severe smells in a repo, Claude offers to clean them up in its own words. In 0.25.4 it could still tell you to type `/broom:clean`, which is gone.
+
+---
+
 ## 0.25.4 — 2026-11-19
 
 ---
