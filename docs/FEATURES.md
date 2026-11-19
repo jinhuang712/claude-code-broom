@@ -2,7 +2,7 @@
 
 The marks: ✅ built · 🚧 built, with a gap named beside it · ❔ claimed and not yet run, with the reason beside it · ⬜ planned.
 
-A ✅ here means the test suite covers the feature and passed on 2026-11-18.
+A ✅ here means the test suite covers the feature and passed on 2026-11-18, or for a skill that a fresh session ran it end to end.
 
 ---
 
@@ -13,7 +13,7 @@ Features
 ├── ✅ F1: Setup — a repo gets the tools and configs it needs
 │   ├── ✅ F1.1: Doctor — what a repo needs and has
 │   ├── ✅ F1.2: Offer at session start — Claude offers a setup when a repo has gaps
-│   ├── ❔ F1.3: /broom:setup — a skill, run once in a fresh session, where no tool had to be installed
+│   ├── ✅ F1.3: /broom:setup — a skill, run end to end in a fresh session on 2026-11-19
 │   ├── ✅ F1.4: Default configs — added where a project has none
 │   └── ✅ F1.5: Protection list — which checks run and which don't
 ├── ✅ F2: Sweep — Claude's changes are formatted, checked and held back

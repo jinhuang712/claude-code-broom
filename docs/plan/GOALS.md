@@ -10,7 +10,7 @@ The goals are checked at the end of a checkpoint and before a release. The test 
 Goals
 ├── Objectives
 │   ├── ✅ O1: Clean work without asking — Claude's changes meet the project's rules
-│   ├── ⬜ O2: Tooling in one conversation — a bare repo ends with no gap
+│   ├── ✅ O2: Tooling in one conversation — a bare repo ends with no gap
 │   ├── ⬜ O3: Mistakes seen while editing — a diagnostic after an edit
 │   ├── ✅ O4: Nothing passes silently — every pass has a reason the user can see
 │   ├── ✅ O5: A full diagnosis of an old repo — every smell, with no time cut
@@ -71,7 +71,7 @@ A repo with no tooling gets working tooling in one short conversation.
 
 **Acceptance**: In a repo with no tools and no configs, one run of `/broom:setup` ends with `broom doctor` printing `All set.`.
 
-**Status**: ⬜. On 2026-11-18 a fresh session ran `/broom:setup` in a Python repo with no config and no git hook, and `broom doctor` ended with `All set.`. A repo with no tools was not run, since the tools are installed on the machine that tests.
+**Status**: ✅ 2026-11-19, with 0.24.2. A fresh session ran `/broom:setup` once in a Python repo with no config, no git hook and none of its tools on the PATH. It installed ruff, pyright and jscpd, added the git hook and a ruff config, and `broom doctor` ended with `All set.`, in 12 turns. The PATH held only Python, git, Node and uv, and the installs went to a temporary folder, so the machine's own tools were never touched.
 
 ---
 

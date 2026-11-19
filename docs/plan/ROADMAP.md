@@ -319,7 +319,7 @@ The user asked on 2026-11-17 for a round of polish and self-test once the featur
 **Exit criteria** (6):
 
 - **Objectives**
-  - [O2: Tooling in one conversation](GOALS.md#o2-tooling-in-one-conversation)
+  - [O2: Tooling in one conversation](GOALS.md#o2-tooling-in-one-conversation): ✅ 2026-11-19, a bare Python repo set up in one run
   - [O3: Mistakes seen while editing](GOALS.md#o3-mistakes-seen-while-editing)
   - [O7: No script to write](GOALS.md#o7-no-script-to-write): ✅ 2026-11-17, ten of ten answers from broom and no script
 - **Thresholds**
