@@ -11,7 +11,7 @@ record), `event`, `where` (the hook: commit, pre-commit, stop, subagent-stop) an
   gave-up. Older lines also hold retry, denials, stop-again and turn-ended, which no longer occur.
 - ask: Claude put a question to the user about a finding (`why` is the question). It is no outcome: the finding still
   awaits its fix or pass line.
-- hint: a note, a slight smell, was given as context, without a block.
+- hint: a nit, a slight smell, was given as context, without a block.
 - skip: a tool didn't run (`note` is the timeout or missing note, `tool` the tool).
 - time: seconds one check (`check`) took in a hook.
 - error: a hook failed and let the action through.

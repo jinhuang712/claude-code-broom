@@ -11,7 +11,7 @@ from broom.config import DEAD_CODE, SMELL_LIMITS, SMELL_PRESENCE, TESTS_FAILED, 
 from broom.findings import Issue
 from broom.fixes import NOT_A_FIX, fixes, how_to_fix
 from broom.gate import MAX_CHARS, render
-from broom.smells import Smell, noted_text
+from broom.smells import Smell, nits_text
 
 WAY_OUT = ('Accept only for a real reason, such as a false positive or a refactor that comes in a later step: run '
            '`broom known --accept "<why>"`, then commit again.')
@@ -144,8 +144,8 @@ class NoteTextTest(BroomCase):
 
     def test_a_note_ends_with_the_fix_lines_of_its_first_three_kinds(self) -> None:
         kinds = ["todo", "debug_output", "todo", "globals", "magic_numbers"]
-        text = noted_text([self.note(k, n) for n, k in enumerate(kinds, 1)])
+        text = nits_text([self.note(k, n) for n, k in enumerate(kinds, 1)])
         rows = text.splitlines()
-        self.assertTrue(rows[0].startswith("broom: 5 slight code smell(s) this change made worse; nothing stops on "
+        self.assertTrue(rows[0].startswith("broom: 5 nit(s) this change made worse; nothing stops on "
                                            "them: "))
         self.assertEqual(rows[1:], ["How to fix:", *[f"  {k}: {fixes()[k]}" for k in ("todo", "debug_output", "globals")]])

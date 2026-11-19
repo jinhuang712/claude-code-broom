@@ -50,7 +50,7 @@ class SmellLanguageTest(BroomCase):
                      ("hint", "bool_params")),
             "d.ts": ("oxlint", "export class Big {\n" + "".join(f"  m{n}() {{ return this; }}\n" for n in range(260))
                      + "}\n", ("hint", "type_lines")),
-            "e.ts": ("oxlint", "// const x = compute(1, 2);\nexport const y = 1;\n", ("note", "commented_code")),
+            "e.ts": ("oxlint", "// const x = compute(1, 2);\nexport const y = 1;\n", ("nit", "commented_code")),
             "f.ts": ("oxlint", "let counter = 0;\nexport function bump(): number {\n  counter += 1;\n  return counter;\n}\n",
                      ("hint", "globals")),
             "g.test.ts": ("oxlint", 'test("t", () => {\n  expect(() => f()).toThrow();\n});\n',

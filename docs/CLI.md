@@ -374,7 +374,7 @@ An uncaught error exits 1 with a traceback.
 
 Each item of `checks` holds 6 keys: `language` · `check` · `status` · `tool` · `why` · `fix`. Its `status` is `on`, `off` or `none`.
 
-Each item of `smells` holds 6 keys: `file` · `line` · `smell` · `level` · `text` · `was`. `was` is null for a new smell.
+Each item of `smells` holds 6 keys: `file` · `line` · `smell` · `level` · `text` · `was`. `level` is `block`, `hint` or `nit`. `was` is null for a new smell.
 
 ---
 

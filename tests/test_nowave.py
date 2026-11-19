@@ -86,7 +86,7 @@ class CommitTest(NoWaveCase):
         out = self.commit(r, "git commit -m x")
         self.assertEqual(self.denied(out), "")
         context = out["hookSpecificOutput"]["additionalContext"]
-        self.assertIn("1 slight code smell(s) this change made worse; nothing stops on them", context)
+        self.assertIn("1 nit(s) this change made worse; nothing stops on them", context)
         self.assertIn("a.py:1 1 more TODO/FIXME comment(s)", context)
         self.assertEqual([(x["rule"], x["file"]) for x in ledger.read(ledger.LEDGER) if x["event"] == "hint"],
                          [("todo", "a.py")])
@@ -178,7 +178,7 @@ class TurnEndTest(NoWaveCase):
         r = self.repo({"a.py": "x = 1\n"})
         (r / "a.py").write_text("x = 1  # TODO: later\n")
         self.edit(r)
-        self.assertEqual(self.stop(r), {"systemMessage": "broom: 1 slight smell(s) noted: a.py:1 todo"})
+        self.assertEqual(self.stop(r), {"systemMessage": "broom: 1 nit(s) told: a.py:1 todo"})
         self.assertEqual(self.stop(r), {}, "the turn is over, and the note was told")
 
     def test_a_note_is_told_once_at_the_end_of_a_turn_that_blocked_before(self) -> None:
@@ -190,7 +190,7 @@ class TurnEndTest(NoWaveCase):
             self.assertNotIn("todo", self.stop(r)["reason"], "a note is no part of a block")
         (r / "a.py").write_text(todo + py_function("small", 20))
         self.edit(r)
-        self.assertEqual(self.stop(r), {"systemMessage": "broom: 1 slight smell(s) noted: a.py:1 todo"})
+        self.assertEqual(self.stop(r), {"systemMessage": "broom: 1 nit(s) told: a.py:1 todo"})
         self.assertEqual(self.stop(r), {}, "told once")
 
 

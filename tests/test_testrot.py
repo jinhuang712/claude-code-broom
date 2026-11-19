@@ -130,7 +130,7 @@ class UntestedFileTest(BroomCase):
         return [(s.metric, s.added) for s in found if s.metric == "untested_file"]
 
     def test_it_is_a_note_and_an_occurrence_smell(self) -> None:
-        self.assertEqual(SMELL_PRESENCE["untested_file"], "note")
+        self.assertEqual(SMELL_PRESENCE["untested_file"], "nit")
 
     def test_a_code_file_of_30_lines_added_with_no_test_beside_it_is_found(self) -> None:
         self.assertEqual(self.added({"pkg/fresh.py": lines_of_code(30)}), [("untested_file", [1])])
@@ -186,7 +186,7 @@ class UntestedFileTest(BroomCase):
         done = self.cli(r, "smells", "--base", "HEAD", "--json", env=self.fake_path())
         self.assertEqual(done.returncode, 0, done.stderr)
         smells = json.loads(done.stdout)["smells"]
-        self.assertEqual([(s["file"], s["smell"], s["level"]) for s in smells], [("pkg/fresh.py", "untested_file", "note")])
+        self.assertEqual([(s["file"], s["smell"], s["level"]) for s in smells], [("pkg/fresh.py", "untested_file", "nit")])
         self.assertIn("no test file beside it by name", smells[0]["text"])
         self.assertIn("test_name.py", self.cli(r, "fixes", "untested_file").stdout)
 

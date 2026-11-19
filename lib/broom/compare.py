@@ -134,7 +134,7 @@ def triple(was: int, now: int) -> dict:
 def summary_of(before: List[Smell], after: List[Smell]) -> dict:
     """The smells, those past the hard limit and the hints (a note counts as one), before and after."""
     out = {}
-    for name, levels in (("smells", None), ("severe", ("block",)), ("hints", ("hint", "note"))):
+    for name, levels in (("smells", None), ("severe", ("block",)), ("hints", ("hint", "nit"))):
         count = [sum(levels is None or s.level in levels for s in rows) for rows in (before, after)]
         out[name] = triple(*count)
     return out

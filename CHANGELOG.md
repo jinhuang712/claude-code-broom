@@ -6,6 +6,16 @@
 
 ---
 
+## 0.24.3 — 2026-11-19
+
+---
+
+### Smells
+
+- A slight smell is called a nit: it is told and stops nothing, as before. Before, `broom smells --json` gave its `level` as `note`, and Claude read `slight code smell(s)`. After, the level is `nit`, and Claude reads `nit(s)`. A note now means only a line that says what a check skipped.
+
+---
+
 ### Docs
 
 - The README names the check after an edit and the rule that a turn shows its tests ran, and says that type errors count anywhere.

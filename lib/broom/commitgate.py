@@ -6,7 +6,7 @@ Every finding that stops, lint included and a smell's hint with a smell's block,
 accepts it with `broom known --accept "<why>"`, which puts the reason on record: a retry alone lets nothing through.
 A false positive or a refactor that comes in a later step costs one command, and Claude tells the user what it
 accepted. Where the user must decide, `broom known --ask "<question>"` and then stopping puts the question to them: it
-passes nothing. A note, a slight smell, is told and stops nothing.
+passes nothing. A nit, a slight smell, is told and stops nothing.
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ from .gitcmd import CommitPlan, GitOp, parse, parse_commit, plan_commit, staged
 from .githook import installed
 from .gitutil import ChangedLines, git, git_root
 from .passed import record, staged_blobs, unpassed, worktree_blobs
-from .smells import Smell, gate_smells, noted_text
+from .smells import Smell, gate_smells, nits_text
 from .state import DATA_ROOT, emit, load_json, session_dir, warn
 from .toolchain import lang_of
 
@@ -170,7 +170,7 @@ def gate_files(repo: Path, files: List[Path], sd: Path, cwd: Path, state: dict) 
     commit that does."""
     files = sorted(f for f in files if lang_of(f))
     blocking, told, notes = checked(files, turn=sd)
-    context = [noted_text(told)] if told else []
+    context = [nits_text(told)] if told else []
     ledger.hinted(entries_of(s.issue() for s in told))
     key, found, known = str(repo), entries_of(blocking), baseline_keys()
     prior = open_findings(state.get(key, {}))

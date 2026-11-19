@@ -21,7 +21,7 @@ from typing import Dict, List, Optional, Set, Tuple
 from .findings import Issue
 from .fixes import fix_lines
 from .clones import Clone, Unused, find_clones, find_unused
-from .config import DEAD_CODE, LIMIT_PAIR, NOTE, NOTED, SMELL_LIMITS, SMELL_PRESENCE, repo_config, setting
+from .config import DEAD_CODE, LIMIT_PAIR, NIT, NOTED, SMELL_LIMITS, SMELL_PRESENCE, repo_config, setting
 from .gate import issue_key
 from .gitutil import ChangedLines, renamed, run_bytes
 from .maintained import GENERATED, Maintained, generated
@@ -36,8 +36,8 @@ from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS
 TEST_BLOCK = re.compile(r"(describe|it|test|suite|context)(\.\w+)?\(")
 GIT_TIMEOUT = 60
 
-NOTES_SHOWN = 10
-NOTE_KINDS = 3  # how many kinds of smell a note gives the fix of
+NITS_SHOWN = 10
+NIT_KINDS = 3  # how many kinds of smell a nit message gives the fix of
 
 
 def moved(base: Limits, pairs: object) -> Limits:
@@ -101,14 +101,14 @@ def one_per_line(rows: List[Raw]) -> List[Raw]:
     return sorted(seen.values(), key=lambda r: (r.rel, r.line))
 
 
-# Where a smell is found by a guess, not a parse, it is only a note even when the same smell blocks in another
+# Where a smell is found by a guess, not a parse, it is only a nit even when the same smell blocks in another
 # language. In Rust `let _ = f();` drops a Result by design as often as by mistake, and clippy can't tell which.
 GUESSED = {"commented_code": JS_EXTS | GO_EXTS, "swallowed_error": RS_EXTS}
 
 
 def presence_level(metric: str, rel: str) -> str:
-    """The level of a presence smell in file `rel`: a note for a kind guessed by text, else its normal level."""
-    return NOTE if Path(rel).suffix in GUESSED.get(metric, ()) else SMELL_PRESENCE[metric]
+    """The level of a presence smell in file `rel`: a nit for a kind guessed by text, else its normal level."""
+    return NIT if Path(rel).suffix in GUESSED.get(metric, ()) else SMELL_PRESENCE[metric]
 
 
 def example(metric: str, rows: list) -> str:
@@ -226,7 +226,7 @@ def unused_smells(repo: Path, unused: List[Unused], scope: set, base: Optional[s
     for u in unused:
         lines = changed.get(repo / u.rel) if changed else None
         if u.rel in scope and (lines is None or u.line in lines):
-            out.append(Smell(repo, repo / u.rel, u.line, DEAD_CODE, u.what, 1, None, "jscpd", NOTE, 0))
+            out.append(Smell(repo, repo / u.rel, u.line, DEAD_CODE, u.what, 1, None, "jscpd", NIT, 0))
     return out
 
 
@@ -259,7 +259,7 @@ def real_tree_smells(repo: Path, found: List[Found], base: Optional[str], lim: R
         if f.metric in SMELL_PRESENCE:
             added.setdefault((f.rel, f.metric), []).append(f)
         elif f.metric == DEAD_CODE:
-            out.append(Smell(repo, repo / f.rel, f.line, DEAD_CODE, f.key, 1, None, f.tool, NOTE, 0))
+            out.append(Smell(repo, repo / f.rel, f.line, DEAD_CODE, f.key, 1, None, f.tool, NIT, 0))
         else:
             pair = lim.of(f.rel)[f.metric]
             at = level(f.value, pair)
@@ -333,18 +333,18 @@ def gate_smells(repo: Path, files: List[Path], known: set, base: str = "HEAD"
     if setting("smells", repo) == "off":
         return [], [], []
     found, notes = find_smells(repo, files, base)
-    stops = [s.issue() for s in found if s.level != NOTE]
-    told = [s for s in found if s.level == NOTE and issue_key(s.issue()) not in known]
+    stops = [s.issue() for s in found if s.level != NIT]
+    told = [s for s in found if s.level == NIT and issue_key(s.issue()) not in known]
     # A smell that grew past the hard limit stays a block whatever was accepted: accepting it is refused.
     return [i for i in stops if i.grown_from is not None or issue_key(i) not in known], told, notes
 
 
-def noted_text(told: List[Smell]) -> str:
-    """What Claude is told of the notes a change made: the first NOTES_SHOWN of them, and to end with, the fix lines
-    of the kinds of smell those are, at most NOTE_KINDS. Nothing stops on a note."""
-    shown = "; ".join(f"{s.file.relative_to(s.repo)}:{s.line} {s.text()}" for s in told[:NOTES_SHOWN])
-    more = f"; and {len(told) - NOTES_SHOWN} more" if len(told) > NOTES_SHOWN else ""
-    kinds = list(dict.fromkeys(s.metric for s in told[:NOTES_SHOWN]))[:NOTE_KINDS]
+def nits_text(told: List[Smell]) -> str:
+    """What Claude is told of the nits a change made: the first NITS_SHOWN of them, and to end with, the fix lines
+    of the kinds of smell those are, at most NIT_KINDS. Nothing stops on a nit."""
+    shown = "; ".join(f"{s.file.relative_to(s.repo)}:{s.line} {s.text()}" for s in told[:NITS_SHOWN])
+    more = f"; and {len(told) - NITS_SHOWN} more" if len(told) > NITS_SHOWN else ""
+    kinds = list(dict.fromkeys(s.metric for s in told[:NITS_SHOWN]))[:NIT_KINDS]
     fix = fix_lines(kinds)
-    return (f"broom: {len(told)} slight code smell(s) this change made worse; nothing stops on them: {shown}{more}"
+    return (f"broom: {len(told)} nit(s) this change made worse; nothing stops on them: {shown}{more}"
             + ("\nHow to fix:\n" + "\n".join(fix) if fix else ""))

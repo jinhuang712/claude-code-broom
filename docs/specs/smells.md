@@ -31,7 +31,7 @@ A file git sees as renamed is read at its old path, and its changed lines come f
 
 An occurrence smell counts when the change raises the count in a file. Lines match the base by text: a moved line stays old, and an edited line that keeps its occurrence adds nothing. A line counts once per smell.
 
-Where a smell is found by a guess and not a parse, it is a note even when the same smell blocks in another language.
+Where a smell is found by a guess and not a parse, it is a nit even when the same smell blocks in another language.
 
 ---
 

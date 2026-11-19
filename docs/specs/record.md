@@ -26,7 +26,7 @@ The ledger is `ledger.jsonl` in the data directory, one JSON object per line. Ev
 - **fix**: A finding of an earlier block is gone.
 - **pass**: A finding was let through, with how.
 - **ask**: A question about a blocked finding was put to the user. It is no outcome, and the finding stays open.
-- **hint**: A note, which is a slight smell, was told without a block.
+- **hint**: A nit, which is a slight smell, was told without a block. The event keeps its older name.
 - **waiver**: A change loosened the bar, with its kind.
 - **skip**: A tool didn't run, with the timeout or missing-tool note.
 - **time**: The seconds one check took in a hook.

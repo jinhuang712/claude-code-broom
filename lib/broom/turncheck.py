@@ -4,7 +4,7 @@ A turn's end blocks like a commit, and stopping again passes nothing: what is le
 accepted with `broom known --accept "<why>"`, or put to the user with `broom known --ask "<question>"`, which blocks
 no more in this turn and opens the user's line with `broom: ... WAITS FOR YOUR ANSWER`. After MAX_BLOCKS blocks broom
 gives up, as it never traps a turn: the turn ends, what is left is on record as `gave-up`, and the user is told in a
-line that opens `broom GAVE UP`. A note, a slight smell, never blocks: the user's line at the turn's end tells it, once.
+line that opens `broom GAVE UP`. A nit, a slight smell, never blocks: the user's line at the turn's end tells it, once.
 """
 
 from __future__ import annotations
@@ -120,13 +120,13 @@ class Turn(NamedTuple):
 
 def end_tail(d: Path, notes: List[str], files: List[Path], told: List[Smell]) -> str:
     """What a turn's end adds to the user's line besides what was let through: the checks that didn't run, which are
-    told once a session, and the notes (slight smells), which the turn's end tells once since it ends the turn."""
+    told once a session, and the nits (slight smells), which the turn's end tells once since it ends the turn."""
     skipped = new_notes(d / "notes.json", notes, files[0])
     parts = []
     if skipped:
         parts.append("; ".join(note_text(n) for n in skipped) + (" (run /broom:setup)" if setup_hint(skipped) else ""))
     if told:
-        parts.append(f"{len(told)} slight smell(s) noted: {names([s.issue() for s in told])}")
+        parts.append(f"{len(told)} nit(s) told: {names([s.issue() for s in told])}")
     return "; ".join(parts)
 
 

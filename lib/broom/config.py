@@ -19,9 +19,9 @@ SETTINGS = {
     "smells": ("on", ("on", "off")),
 }
 # The levels of a finding: "block" and "hint" both stop a commit and a turn's end until the finding is fixed or
-# accepted with a reason (a block is past a hard limit, and one that grew there can't be accepted); NOTE is told to
-# Claude and never stops anything.
-NOTE = "note"
+# accepted with a reason (a block is past a hard limit, and one that grew there can't be accepted); a NIT is told to
+# Claude and never stops anything: a smell that is slight, or that its detector guesses.
+NIT = "nit"
 # Code smell limits, (soft, hard): past soft is a hint, past hard a block. SwiftLint's own warning and error
 # defaults, except nesting; .broom.json `limits` moves them per repo.
 LIMIT_PAIR = 2  # a limit in .broom.json is [soft, hard]
@@ -44,16 +44,16 @@ CHECKUP = "checkup"
 TESTS_TOOL = "tests"
 TESTS_NOT_RUN = "tests_not_run"
 TESTS_FAILED = "tests_failed"
-# Smells that count by occurrence, not by size: a change that adds one gets this level. A smell is a note where it
+# Smells that count by occurrence, not by size: a change that adds one gets this level. A smell is a nit where it
 # is slight or its detector guesses.
 SMELL_PRESENCE = {
     "suppression": "block",  # a lint suppression without a reason or a rule
     "swallowed_error": "block",  # an empty block or catch, or a catch that only rethrows
     "commented_code": "block",
     "unused_params": "hint",
-    "magic_numbers": NOTE,
+    "magic_numbers": NIT,
     "debug_output": "hint",
-    "todo": NOTE,
+    "todo": NIT,
     "type_escape": "hint",  # any, force casts and unwraps, non-null assertions
     "globals": "hint",
     "bool_params": "hint",
@@ -63,7 +63,7 @@ SMELL_PRESENCE = {
     "import_cycle": "hint",  # modules that import one another in a ring
     "folder_cycle": "hint",  # folders that do: the layers of the code going the wrong way
     "skipped_test": "hint",  # a test marked skipped or disabled, with no condition behind it
-    "untested_file": NOTE,  # a code file of 30 lines or more a change adds, with no test file beside it by name
+    "untested_file": NIT,  # a code file of 30 lines or more a change adds, with no test file beside it by name
     "deprecated_api": "hint",  # a call to something its author marked deprecated
 }
 # Presence smells whose text carries what the tool said of the first finding: a deprecation note names what replaced it.

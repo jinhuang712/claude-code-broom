@@ -12,7 +12,7 @@ Code nothing uses is something Claude wrote and never wired in. A whole-repo lis
 
 ## The choice
 
-A dead-code finding counts on a line the change added, or in a new file. It comes from jscpd in TS/JS and Python and from golangci-lint's `unused` in Go. It is a note, told without a block, since what loads dynamically looks unused too.
+A dead-code finding counts on a line the change added, or in a new file. It comes from jscpd in TS/JS and Python and from golangci-lint's `unused` in Go. It is a nit, told without a block, since what loads dynamically looks unused too.
 
 ---
 

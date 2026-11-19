@@ -58,7 +58,7 @@ class Smell:
     value: int  # the size, or for an occurrence smell the count in the file
     was: Optional[int]
     tool: str
-    level: str  # "note" (told, never stops), "hint" past the soft limit, "block" past the hard one; a hint stops too
+    level: str  # "nit" (told, never stops), "hint" past the soft limit, "block" past the hard one; a hint stops too
     limit: int
     added: List[int] = field(default_factory=list)  # an occurrence smell's lines this change added
     compared: bool = True  # measured against a base; a whole-repo scan isn't, so nothing in it is "new"

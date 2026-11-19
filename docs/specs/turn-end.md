@@ -39,7 +39,7 @@ Findings block the turn's end with the same report as a commit, a hint with the 
 
 Stopping again passes nothing: each stop checks again, with a new edit or without, and blocks while a finding is left. After three blocks the check gives up. It records nothing as known: what is left stays open and is written to the record as `gave-up`, and a commit still stops on it. The repo's last blocked result lets go of it then, so a later `broom known --accept` can't pass it a second time. The user's line opens with `broom GAVE UP after 3 blocks` and names up to five of the findings left.
 
-A note never blocks. The user's line at the turn's end tells it, once.
+A nit never blocks. The user's line at the turn's end tells it, once.
 
 ---
 

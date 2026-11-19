@@ -14,7 +14,7 @@ Each term has its meaning, the words that lost to it and its name in the code wh
 | Soft limit | the size past which a sized smell is a hint | — | `limits[0]` |
 | Hard limit | the size past which a sized smell blocks | — | `limits[1]` |
 | Hint | a smell below its hard limit that stops a commit and a turn's end until it is fixed or accepted | — | `level == "hint"` |
-| Note | a slight smell, or one a detector guesses, that is told and stops nothing | — | `level == "note"` |
+| Nit | a slight smell, or one a detector guesses, that is told and stops nothing | note · slight | `level == "nit"` |
 | Block | the stop of a commit or a turn's end by a finding, and the level of a smell past its hard limit | denial | `level == "block"` |
 | Severe smell | a smell past its hard limit | — | `Issue.severe` |
 | Touched smell | an old sized smell in a function, a type or a file the change touches | — | `Smell.touched` |

@@ -208,7 +208,7 @@ A finding that is more than slight passes only fixed, or accepted with a reason.
 - A turn's end blocks again until what is left is fixed or accepted, so Claude goes back and finishes before it replies.
 - After three blocks broom lets go, and tells the user what is still open in words that can't be missed.
 
-What is slight is told and never blocks: magic numbers · TODO comments · dead code · a new file with no test · any smell a detector guesses.
+A nit, which is slight, is told and never blocks: magic numbers · TODO comments · dead code · a new file with no test · any smell a detector guesses.
 
 - **Stance**: [Fixed, or let through with a reason the user sees](../PHILOSOPHY.md#how-does-a-finding-end)
 - **Design**: [6. A finding ends fixed or with a reason the user sees](../DESIGNS.md#6-a-finding-ends-fixed-or-with-a-reason-the-user-sees)
