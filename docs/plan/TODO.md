@@ -183,13 +183,24 @@
 
 ---
 
-### [P2][DISCUSSION] Whether /broom:sweep still earns its place
+### [P1][DISCUSSION] Three commands: setup, status and scan
 
 - description:
-  - The hooks now check Claude's work after each edit, at each commit and at each turn's end, so a sweep of "my changes" repeats what already ran.
-  - `/broom:status` sums up the whole repo, which `broom sweep --all` partly did.
-  - What only a sweep does is check a scope no hook saw, such as a branch before a pull request or commits made outside Claude.
-  - `/broom:clean` is another job: it rewrites code to clear old smells, in batches the user agrees to.
+  - The user proposed on 2026-11-19 to keep 3 commands where broom has 4: `/broom:setup` · `/broom:status` · `/broom:scan`.
+  - Setup is the user setting up broom and the tools behind it by hand.
+  - Scan runs the tools for real on a scope the user gives in their own words, such as a module, the files changed lately, a commit or the whole repo. It lists every smell and hint, and it fixes nothing.
+  - Status is the unclear one: the user asked to talk it through.
+  - Today's status mixes the other two: it sets up on one yes, and it measures the whole repo before it sums up.
+  - The agent's proposal: status is about broom and scan is about the code. Status says what protects the repo and what broom stopped, fixed and let through lately. It runs no tool, and for the code it points to scan.
+  - `/broom:sweep` would go: a scan with a scope does its checking, and the hooks already format.
+  - `/broom:clean` would stop being a command and stay as a skill only Claude loads, when the user asks to fix what a scan found.
+  - Still open besides status: whether status keeps its offer to set up on one yes, which the user asked for that day.
 - created: 2026-11-19
-- found: the user asked whether sweep and clean repeat each other
-- next: the user decides whether to keep it, fold it into `/broom:status` or drop it
+- updated: 2026-11-19
+- status: OPEN
+- found: the user, in the session of 2026-11-19
+- related:
+  - [F10.6: /broom:status](../features/F10-diagnosis.md#f106-broomstatus)
+  - [F2.6: Sweep on request](../features/F2-sweep.md#f26-sweep-on-request)
+  - [F5.3: /broom:clean](../features/F5-cleanup.md#f53-broomclean)
+- next: the user picks what status is, and the commands are rebuilt to that
