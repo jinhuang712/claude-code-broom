@@ -28,7 +28,7 @@ Status: ✅ built · ⬜ planned
 | `--scope` | `changed` · `function` · `file` | the `format_scope` setting |
 | `paths` | narrow the scope to these | the repo |
 
-**Called by**: a person and the `/broom:sweep` skill.
+**Called by**: a person and the `/broom:scan` skill.
 
 **Prints**: stdout gets `formatted <file> (<tool>)` lines, `note:` lines, the report or `broom: clean (N file(s))`, the count of known issues hidden and the smell report. stderr gets only `broom: unknown revision '<REV>'`.
 
@@ -70,7 +70,7 @@ Status: ✅ built · ⬜ planned
 | `--json` | print one JSON object | off |
 | `--checks` | list which checks run and which don't, by language | off |
 
-**Called by**: a person and the `/broom:setup` skill.
+**Called by**: a person and the `/broom:setup` and `/broom:status` skills.
 
 **Prints**: stdout gets one line per item with its status, git's pre-commit hook among them, a `To fix:` list, a `To turn formatting on:` list, `All set.` when healthy, and the optional tools with their install commands. With `--checks` it gets a block per language with one row per check, the gaps of the repo itself, and the checks that need no tool. stderr gets `broom: not inside a git repository`.
 
@@ -119,7 +119,7 @@ Status: ✅ built · ⬜ planned
 
 With `--only function_lines` or `--only type_lines` alone, the list goes on under the limit until `--top` is full.
 
-**Called by**: a person and the `/broom:clean` skill. Claude runs `--dismiss` when the user says not now.
+**Called by**: a person and the clean skill. Claude runs `--dismiss` when the user says not now.
 
 **Prints**: stdout gets a first line with the counts, then `Hotspots:` and `Worst smells:` blocks, a `Longest under the limit (not smells):` block when `--only` asks for sizes, and `note:` lines. With `--json` those sizes are under `sizes`, each with `file`, `line`, `name` and `value`. stderr gets `broom: not inside a git repository` or `broom: unknown revision '<REV>'`.
 
@@ -144,7 +144,7 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 | `--out FILE` | write the report to a file and say where | off |
 | `--vulnerabilities` | ask osv-scanner for known vulnerabilities, which sends package names and versions to osv.dev | off |
 
-**Called by**: a person, Claude and the `/broom:clean` skill.
+**Called by**: a person, Claude, the `/broom:scan` skill and the clean skill.
 
 **Prints**: stdout gets a report that also reads as Markdown: a summary, the smells by kind and by language, the hotspots by churn, the worst smells, the check-up's counters, the tests that repeat one another, the unused dependencies and the four sections of `broom stats`. The last line says how long it took. stderr gets `broom: not inside a git repository`.
 
@@ -166,7 +166,7 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 | `--top N` | how many hotspots and how long each list is | 10 |
 | `--json` | print JSON, with every smell of each list | off |
 
-**Called by**: a person, Claude and the `/broom:clean` skill.
+**Called by**: a person, Claude and the clean skill.
 
 **Prints**: stdout gets the count per kind before and after, the smells that are gone, new, smaller and bigger, how each hotspot of the base moved, and one line to quote. stderr gets `broom: unknown revision '<REV>'` or `broom: not inside a git repository`.
 
@@ -187,7 +187,7 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 | `smell` | only these smells | all of them |
 | `--json` | print JSON | off |
 
-**Called by**: a person and the `/broom:clean` skill.
+**Called by**: a person and the clean skill.
 
 **Prints**: stdout gets one line per smell, its name and its fix. stderr gets `broom: unknown smell <name>` with the list of names.
 
@@ -211,7 +211,7 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 | `--ask QUESTION` | mark what the last block showed as waiting for the user, and pass nothing | off |
 | `--clear` | remove the known issues under `paths` | off |
 
-**Called by**: a person, and Claude when a block message offers `--accept`.
+**Called by**: a person, the `/broom:status` skill, and Claude when a block message offers `--accept`.
 
 **Prints**: stdout gets one line per known issue with its location, tool, rule, message, date and reason. Accept prints `broom: accepted N issue(s) as known (WHY); commit again`, or `stop again` after a turn-end block. Ask prints `broom: N issue(s) wait for the user's answer (QUESTION)` and that nothing is accepted. stderr gets the refusals.
 
@@ -234,7 +234,7 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 | `--all` | every repo in the ledger | off |
 | `--json` | print JSON | off |
 
-**Called by**: a person and Claude.
+**Called by**: a person, Claude and the `/broom:status` skill.
 
 **Prints**: stdout gets a line of totals with the fix rate, then a table per rule, the self-waivers by kind, the skips by tool and the median and longest seconds per check. With nothing recorded it prints `broom: nothing recorded for <repo> in the last N days`. stderr gets `broom: not inside a git repository`.
 

@@ -26,7 +26,7 @@ On a 2,376-file repo the scan took 13 to 36 seconds. On a 3,184-file repo it too
 
 ## The note
 
-When smells past the hard limit exist, Claude is told to raise them at a natural point and offer `/broom:clean`. It doesn't start a cleanup.
+When smells past the hard limit exist, Claude is told to raise them at a natural point and offer a cleanup. It doesn't start a cleanup.
 
 `broom smells --dismiss` records the count of severe smells. The note returns only when that count grows.
 

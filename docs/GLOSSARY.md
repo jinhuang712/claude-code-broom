@@ -6,6 +6,7 @@ Each term has its meaning, the words that lost to it and its name in the code wh
 |---|---|---|---|
 | Sweep | one run that formats, lints and type-checks a set of files | clean pass | `sweep` |
 | Check | the lint, type and smell part of a sweep | gate | `checked`, `gate_files` |
+| Scan | a check of a scope on the user's request, which lists what it finds and changes nothing | — | `/broom:scan` |
 | Finding | one thing a tool reports at a file and line | issue | `Issue` |
 | Type error | a compile or type error, which counts anywhere | hard error | `Issue.hard` |
 | Smell | code that works and is hard to change, such as a 300-line function | — | `Smell` |

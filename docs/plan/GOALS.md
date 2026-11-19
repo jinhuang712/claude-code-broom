@@ -385,7 +385,7 @@ An edit must not be felt, since Claude makes many in a row.
 **Checks**:
 
 - [F1.3: /broom:setup](../features/F1-setup.md#f13-broomsetup)
-- [F10.6: /broom:status](../features/F10-diagnosis.md#f106-broomstatus)
+- [F9.5: /broom:status](../features/F9-record.md#f95-broomstatus)
 
 **Condition**: Both questions come before broom acts on the user's machine or repo, and no setting is asked.
 

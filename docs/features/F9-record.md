@@ -5,7 +5,8 @@ F9: Record
 ├── F9.1: Ledger — every block, fix, pass and skip leaves a line
 ├── F9.2: Turn summary — the user sees what was let through
 ├── F9.3: Report — what broom stopped, what was fixed and what passed
-└── F9.4: Tiers by fix rate — a rule nobody fixes stops interrupting
+├── F9.4: Tiers by fix rate — a rule nobody fixes stops interrupting
+└── F9.5: /broom:status — how broom stands in a repo, set up on one yes
 ```
 
 The record says what broom did with each finding. The user ends up knowing whether broom works: how much it stopped, how much of that was fixed and what went through with which reason.
@@ -57,3 +58,30 @@ A rule that is let through far more often than it is fixed is told to Claude wit
 It applies to hints only. A type error and a severe smell never change tier.
 
 - **Design**: [6. A finding ends fixed or with a reason the user sees](../DESIGNS.md#6-a-finding-ends-fixed-or-with-a-reason-the-user-sees)
+
+---
+
+## F9.5: /broom:status
+
+`/broom:status` tells the user how broom stands in a repo and gets it ready, in one command. It is about broom: how the code is doing is `/broom:scan`'s. The user types no `broom` command.
+
+It goes in 4 steps:
+
+1. It looks at what the repo lacks: tools, configs and git's hook.
+2. When something is missing, it says what it would install and add, and asks one question: all of it, let me pick, or not now.
+3. It reads the record: the checks that run, what broom stopped, fixed and let through in the last 7 days, and the findings accepted with their reasons.
+4. It sums up what protects the repo and what broom did, with up to three next steps.
+
+It runs no linter and measures no code. It starts no scan and changes no setting: those wait for the user's go-ahead. A repo new to broom has no history yet, and the summary says so. A number of days given after the command replaces the 7.
+
+- **Stance**: [Ask, don't assume](../PHILOSOPHY.md#who-decides-what-is-installed-or-changed)
+- **Design**: [7. Nothing is installed or set without a yes](../DESIGNS.md#7-nothing-is-installed-or-set-without-a-yes)
+- **Commands**:
+  - [broom doctor](../CLI.md#broom-doctor)
+  - [broom report](../CLI.md#broom-report)
+  - [broom known](../CLI.md#broom-known)
+- **Why**: [035: Three commands, and a cleanup that is none](../specs/decisions/035-three-commands.md)
+
+**Stories** (1):
+
+- A user about to work in a complex repo runs it once to get the repo ready, and again a week later to see what broom stopped.

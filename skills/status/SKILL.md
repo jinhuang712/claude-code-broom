@@ -1,11 +1,11 @@
 ---
 name: status
-description: Show where this repo stands with broom, and set up what is missing on one yes. Checks what protects the repo, installs the missing tools and adds configs once the user agrees, measures how the code is doing and what broom stopped, fixed and let through lately, then sums it up with what to do next. Use for /broom:status, when the user asks how a repo is doing or what broom has done, or before work starts in a repo new to broom.
+description: Show how broom stands in this repo, and set up what is missing on one yes. Says which checks protect the repo and which don't, installs the missing tools and adds configs once the user agrees, and reports what broom stopped, fixed and let through lately. It runs no linter - how the code itself is doing is /broom:scan's. Use for /broom:status, when the user asks what broom is doing here or what it has done, or before work starts in a repo new to broom.
 argument-hint: "[how many days of history, 7 by default]"
 ---
 
-The user ran this command to learn where the repo stands and to have it ready. Get every number from broom, and
-write no script.
+The user ran this command to learn how broom stands in this repo and to have it ready. It is about broom, not
+about the code: run no linter and no scan here. Get every number from broom, and write no script.
 
 ## 1. Look
 
@@ -32,34 +32,30 @@ pick, or not now. Ask nothing else, and no setting.
   it as printed. `xcode-select --install` opens macOS's installer and returns at once: ask the user to finish it.
   Run `broom setup --done` afterwards.
 - **Let me pick**: go on as `/broom:setup` does from its step 2.
-- **Not now**: run `broom setup --dismiss`, and go on with the gaps left. The numbers below are then cut short
-  where a tool is missing, and broom says which.
+- **Not now**: run `broom setup --dismiss`, and go on with the gaps left.
 
 A plugin disabled here applies after `/reload-plugins`: tell the user so.
 
-## 3. Measure
-
-Run these in order. `broom diagnose` measures the whole repo with no time cut: on a repo of thousands of files say
-that it takes a while before you start it.
+## 3. Read the record
 
 ```bash
 broom doctor --checks
-broom diagnose --top 5
 broom report --days 7
+broom known
 ```
 
 Use the days the user gave in place of 7. `broom report` says when nothing was recorded yet: a repo new to broom
-has no history.
+has no history. `broom known` lists the findings that were accepted, each with its reason.
 
 ## 4. Sum up
 
-Answer in a short reply, not in the commands' output. Four parts, each a few lines:
+Answer in a short reply, not in the commands' output. Three parts, each a few lines:
 
 1. **What protects the repo**: the checks that run, and the ones that don't with why. Name what step 2 set up.
-2. **How the code is doing**: the smells by level, the three worst files, and any rot counter that stands out.
-3. **What broom did lately**: blocked, fixed and let through, the fix rate, and the rules let through most often.
-   A rule let through far more often than fixed is noise: name it.
-4. **What to do next**: up to three steps, worst first, such as `/broom:clean` on a hotspot, a gap left on
-   purpose, or a limit to move in `.broom.json` for code that is deliberate.
+2. **What broom did lately**: blocked, fixed and let through, the fix rate, and the rules let through most often.
+   A rule let through far more often than fixed is noise: name it. Say how many findings stand accepted, and the
+   reasons that repeat.
+3. **What to do next**: up to three steps, such as a gap left on purpose, a limit to move in `.broom.json` for
+   code that is deliberate, or `/broom:scan` to see how the code itself is doing.
 
-Start nothing of step 4 yourself: a cleanup or a settings change waits for the user's go-ahead.
+Start nothing of part 3 yourself: a scan or a settings change waits for the user's go-ahead.

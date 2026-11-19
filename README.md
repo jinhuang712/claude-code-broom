@@ -50,14 +50,23 @@ tsc (~/code/app):
 Trying again passes nothing: only a fix does, or accepting with a reason. If one predates this change or is a false positive, run `broom known --accept "<why>"`, then commit again.
 ```
 
-Claude fixes the findings and commits again. To look first, ask for a sweep in your own words:
+Claude fixes the findings and commits again. broom has three commands, and you need none of them for that:
+
+| Command | What it does |
+|---|---|
+| `/broom:setup` | installs the missing tools and adds configs, after asking |
+| `/broom:status` | says which checks run, and what broom stopped, fixed and let through lately |
+| `/broom:scan` | runs the tools on a scope and lists what it finds, fixing nothing |
+
+A scan takes its scope in your own words:
 
 ```text
-/broom:sweep what I staged
-/broom:sweep the last 3 commits
+/broom:scan
+/broom:scan src/api
+/broom:scan the last 3 commits
 ```
 
-To see where a repo stands, ask for `/broom:status`: it sets up what is missing on one yes, then sums up the code and what broom stopped lately. To pay down what's already there, ask for `/broom:clean`, which ranks the code smells worst first and cleans up in small, tested batches.
+To have the findings fixed, say which. Claude cleans up worst first, in small, tested batches.
 
 ---
 
@@ -78,7 +87,7 @@ Claude Code
 hooks/hooks.json ──▶ hooks/commit.sh ──▶ bin/broom ──▶ lib/broom/
                                             ▲              │
 git pre-commit hook ────────────────────────┘              ├──▶ the project's tools (formatters, linters, type checkers)
-skills/ (setup · sweep · clean) ───▶ bin/broom             ├──▶ defaults/ (configs where a project has none)
+skills/ (setup · status · scan · clean) ───▶ bin/broom    ├──▶ defaults/ (configs where a project has none)
 .lsp.json ──▶ language servers                             └──▶ the data directory (state shared by every hook)
 ```
 

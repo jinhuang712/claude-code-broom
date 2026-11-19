@@ -1,7 +1,7 @@
 ---
 name: clean
-description: Clean up the code smells broom finds across a repo or an area - long functions, files and types, high complexity, deep nesting, duplicate and dead code, magic numbers and the like - worst first, in small verified batches. Use for /broom:clean, when broom's session note reports smells and the user agrees to a cleanup, when the user asks to clean up, refactor or pay down tech debt, or before reworking an area that `broom smells` ranks as a hotspot.
-argument-hint: "[area or kind of smell, in your words]"
+description: Clean up the code smells broom finds across a repo or an area - long functions, files and types, high complexity, deep nesting, duplicate and dead code, magic numbers and the like - worst first, in small verified batches. Use when the user asks to fix what a scan found, agrees to the cleanup that broom's session note offers, asks to clean up, refactor or pay down tech debt, or before reworking an area that `broom smells` ranks as a hotspot.
+user-invocable: false
 ---
 
 ## 1. Rank

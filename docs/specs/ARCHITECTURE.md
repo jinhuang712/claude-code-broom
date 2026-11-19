@@ -9,7 +9,7 @@ Claude Code
 hooks/hooks.json ──▶ hooks/commit.sh ──▶ bin/broom ──▶ lib/broom/
                                             ▲              │
 git pre-commit hook ────────────────────────┘              ├──▶ the project's tools (formatters, linters, type checkers)
-skills/ (setup · status · sweep · clean) ──▶ bin/broom    ├──▶ defaults/ (configs where a project has none)
+skills/ (setup · status · scan · clean) ───▶ bin/broom    ├──▶ defaults/ (configs where a project has none)
 .lsp.json ──▶ language servers                             └──▶ the data directory (state shared by every hook)
 ```
 
@@ -66,7 +66,7 @@ They live in `defaults/`.
 
 ## Skills
 
-They tell Claude how to run a setup, a status report, a sweep and a cleanup with the `broom` command.
+They tell Claude how to run a setup, a status report, a scan and a cleanup with the `broom` command. The first three are commands the user types, and Claude alone loads the fourth.
 
 They live in `skills/`.
 

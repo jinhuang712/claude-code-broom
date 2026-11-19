@@ -50,14 +50,23 @@ tsc (~/code/app):
 Trying again passes nothing: only a fix does, or accepting with a reason. If one predates this change or is a false positive, run `broom known --accept "<why>"`, then commit again.
 ```
 
-Claude 修好问题后再次提交。想先看看的话，用自己的话让它清扫：
+Claude 修好问题后再次提交。broom 有三个命令，上面这些都不需要你运行它们：
+
+| 命令 | 做什么 |
+|---|---|
+| `/broom:setup` | 先问你，再安装缺少的工具、添加配置 |
+| `/broom:status` | 说明哪些检查在运行，以及 broom 最近拦了、修了、放行了什么 |
+| `/broom:scan` | 在一个范围内运行工具，列出发现的问题，不做任何修改 |
+
+扫描的范围用你自己的话说：
 
 ```text
-/broom:sweep 我暂存的改动
-/broom:sweep 最近 3 个提交
+/broom:scan
+/broom:scan src/api
+/broom:scan 最近 3 个提交
 ```
 
-想知道仓库现在怎么样，就运行 `/broom:status`：缺什么，你点一次头它就装好，然后总结代码状况和 broom 最近拦了什么。想清理已有的问题，就运行 `/broom:clean`，它把坏味道从最坏的排起，小步、带测试地清理。
+想修掉发现的问题，说出要修哪些即可。Claude 会从最严重的开始，小步、带测试地清理。
 
 ---
 
@@ -78,7 +87,7 @@ Claude Code
 hooks/hooks.json ──▶ hooks/commit.sh ──▶ bin/broom ──▶ lib/broom/
                                             ▲              │
 git pre-commit hook ────────────────────────┘              ├──▶ the project's tools (formatters, linters, type checkers)
-skills/ (setup · sweep · clean) ───▶ bin/broom             ├──▶ defaults/ (configs where a project has none)
+skills/ (setup · status · scan · clean) ───▶ bin/broom    ├──▶ defaults/ (configs where a project has none)
 .lsp.json ──▶ language servers                             └──▶ the data directory (state shared by every hook)
 ```
 

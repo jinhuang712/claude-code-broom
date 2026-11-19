@@ -413,11 +413,12 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 **Status**: 🟨
 
-The user set this on 2026-11-19: what a stranger meets first, and what can only be proven in real sessions of every language, comes just before a public release. `/broom:status` shipped in 0.25.1 that day, and a fresh session with no tools on its PATH ran it end to end.
+The user set this on 2026-11-19: what a stranger meets first, and what can only be proven in real sessions of every language, comes just before a public release. `/broom:status` shipped in 0.25.1 that day, and a fresh session with no tools on its PATH ran it end to end. The commands became three in 0.25.4 that day: setup, status and scan.
 
-**Delivers** (2):
+**Delivers** (3):
 
-- [F10.6: /broom:status](../features/F10-diagnosis.md#f106-broomstatus)
+- [F9.5: /broom:status](../features/F9-record.md#f95-broomstatus)
+- [F2.6: Scan on request](../features/F2-sweep.md#f26-scan-on-request)
 - [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)
 
 **Exit criteria** (1):

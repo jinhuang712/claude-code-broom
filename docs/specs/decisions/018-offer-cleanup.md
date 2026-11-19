@@ -12,7 +12,7 @@ Smells already in a repo need someone to go after them, and the user won't remem
 
 ## The choice
 
-When a scan finds smells past the hard limit, Claude is told to raise them at a natural point and offer `/broom:clean`. "Not now" records the count, and the note returns only when it grows.
+When a scan finds smells past the hard limit, Claude is told to raise them at a natural point and offer a cleanup. "Not now" records the count, and the note returns only when it grows.
 
 ---
 

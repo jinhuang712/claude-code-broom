@@ -6,6 +6,20 @@
 
 ---
 
+## 0.25.4 — 2026-11-19
+
+---
+
+### Commands
+
+- broom has three commands now: `/broom:setup`, `/broom:status` and `/broom:scan`.
+- New: `/broom:scan` runs the tools on a scope you give in your own words and lists what it finds. It fixes nothing and formats nothing. With no scope it scans the whole repo.
+- `/broom:status` is about broom alone: which checks run, what it stopped, fixed and let through, and what was accepted with which reason. It no longer measures the code, so it runs no linter. It still offers to set up what is missing on one yes.
+- `/broom:sweep` is gone. Before: `/broom:sweep the last 3 commits`. After: `/broom:scan the last 3 commits`, which reports and formats nothing. To have a scope formatted, ask Claude or run `broom sweep`.
+- `/broom:clean` is no command any more. Before: `/broom:clean src/api`. After: ask in your own words, such as "clean up src/api", or "fix the first three" after a scan. Claude cleans up the way it did.
+
+---
+
 ## 0.25.3 — 2026-11-19
 
 ---

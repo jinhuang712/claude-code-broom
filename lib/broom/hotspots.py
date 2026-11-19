@@ -1,4 +1,4 @@
-"""The repo's code smells as a whole, ranked worst first for whoever cleans up: Claude through /broom:clean, or a
+"""The repo's code smells as a whole, ranked worst first for whoever cleans up: Claude by its clean skill, or a
 person running `broom smells`. And the session note that tells Claude, once per session, when the repo has
 smells past the hard limit, so it raises them with the user at a natural point. The user's "not now"
 (`broom smells --dismiss`) keeps the note quiet until that count grows. The scan behind the note runs in the
@@ -241,7 +241,7 @@ def session_note(repo: Path, data: Optional[dict]) -> Optional[str]:
     floor = "at least " if data.get("partial") else ""  # a scan that ran out of time counted only what it reached
     return (f"broom found {floor}{data['severe']} code smell(s) past the hard limit in this repo ({data['total']} in all; "
             f"worst files: {', '.join(data['hotspots'])}). Don't interrupt the user's task for this: at a natural "
-            "point, tell them and offer /broom:clean, which ranks the smells and cleans up worst first. Don't clean "
+            "point, tell them and offer a cleanup, which the broom:clean skill does worst first. Don't clean "
             "up without their go-ahead. If they say not now, run `broom smells --dismiss`: broom then stays quiet "
             "until the count grows.")
 

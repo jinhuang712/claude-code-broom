@@ -10,7 +10,7 @@ F2: Sweep
 ├── F2.5: Known issues — what was let through, and why
 │   ├── F2.5.1: A reason for every pass
 │   └── F2.5.2: A turn can end with a finding open
-├── F2.6: Sweep on request — a scope in the user's own words
+├── F2.6: Scan on request — a scope in the user's own words, found and not fixed
 ├── F2.7: Time limit — a hook run takes at most 30 seconds
 ├── F2.8: Self-waivers shown — a loosened bar never goes unseen
 ├── F2.9: Messages that say how to fix — the fix beside the finding
@@ -120,15 +120,32 @@ After three blocks broom gives up, since it never traps a turn for good. Nothing
 
 ---
 
-## F2.6: Sweep on request
+## F2.6: Scan on request
 
-`/broom:sweep` sweeps a scope the user describes in their own words: what is staged, the last 3 commits, this branch, some folders or the whole repo. It reports what is left.
+`/broom:scan` runs the tools on a scope the user describes in their own words and lists what it finds. It fixes nothing and formats nothing. With no scope it scans the whole repo.
 
-`broom sweep` does the same from the command line. A sweep of the whole repo only reports unless `--fix` is given.
+It scans in 1 of 2 ways:
+
+- **An area**: the whole repo, a module or some files. It lists everything there: type errors, lint findings and every smell, with the hotspots and the check-up's counters.
+- **A change**: the uncommitted work, what is staged, a commit or this branch. It lists what the change made worse and the old smells in the code it touched.
+
+The report names the scope, groups the findings most severe first and names every tool that was missing. It ends with an offer to fix what the user picks, and waits for the answer.
+
+`broom sweep` checks the same scopes from the command line, and formats them unless `--check` is given. A sweep of the whole repo only reports unless `--fix` is given.
+
+1 gap:
+
+- A scan from one commit covers every change since it, later commits included.
 
 - **Commands**:
   - [broom sweep](../CLI.md#broom-sweep)
+  - [broom diagnose](../CLI.md#broom-diagnose)
   - [broom fmt](../CLI.md#broom-fmt)
+- **Why**: [035: Three commands, and a cleanup that is none](../specs/decisions/035-three-commands.md)
+
+**Stories** (1):
+
+- A user about to send a branch for review scans it to see what it made worse, and decides what to fix.
 
 ---
 
