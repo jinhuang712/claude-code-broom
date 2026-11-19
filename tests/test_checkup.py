@@ -143,7 +143,7 @@ class OffTest(CheckupCase):
     def test_smells_off_holding_checkup_turns_it_off_and_leaves_the_smell_note(self) -> None:
         r = self.repo({"a.py": py_function("huge", 120), ".broom.json": '{"smells_off": ["checkup"]}'})
         note = self.scan(r, "s1")
-        self.assertIn("broom:clean", note, "the smell note is not the check-up")
+        self.assertIn("clean skill", note, "the smell note is not the check-up")
         self.assertNotIn("check-up", note)
         self.assertFalse(checkup.record_path(r).exists(), "nothing was counted or kept")
         self.assertTrue(self.diagnose(r)["off"])

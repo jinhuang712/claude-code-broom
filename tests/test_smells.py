@@ -141,15 +141,15 @@ class SmellTest(BroomCase):
 
     def test_session_note_offers_a_cleanup_until_dismissed(self) -> None:
         r = self.repo({"a.py": py_function("huge", 120)})
-        self.assertNotIn("broom:clean", str(self.session(r, "s5", self.env)), "the first turn doesn't wait for a scan")
+        self.assertNotIn("clean skill", str(self.session(r, "s5", self.env)), "the first turn doesn't wait for a scan")
         note = self.session(r, "s5", self.env, "session-scan")["hookSpecificOutput"]["additionalContext"]
         self.assertIn("1 code smell(s) past the hard limit", note)
-        self.assertIn("broom:clean", note)
+        self.assertIn("clean skill", note)
         self.assertEqual(self.session(r, "s5", self.env, "session-scan"), {}, "once per session")
-        self.assertIn("broom:clean", str(self.session(r, "s6", self.env)), "a cached scan is said at once")
+        self.assertIn("clean skill", str(self.session(r, "s6", self.env)), "a cached scan is said at once")
         self.assertEqual(self.session(r, "s6", self.env, "session-scan"), {}, "and not again")
         self.assertIn("stays quiet", self.cli(r, "smells", "--dismiss").stdout)
-        self.assertNotIn("broom:clean", str(self.session(r, "s7", self.env)))
+        self.assertNotIn("clean skill", str(self.session(r, "s7", self.env)))
         (r / "b.py").write_text(py_function("bigger", 130).replace("+=", "-="))  # not a copy of a.py
         self.sh(r, "git", "add", "b.py")
         self.sh(r, "git", "commit", "-qm", "more")

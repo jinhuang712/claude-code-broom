@@ -241,9 +241,9 @@ def session_note(repo: Path, data: Optional[dict]) -> Optional[str]:
     floor = "at least " if data.get("partial") else ""  # a scan that ran out of time counted only what it reached
     return (f"broom found {floor}{data['severe']} code smell(s) past the hard limit in this repo ({data['total']} in all; "
             f"worst files: {', '.join(data['hotspots'])}). Don't interrupt the user's task for this: at a natural "
-            "point, tell them and offer a cleanup, which the broom:clean skill does worst first. Don't clean "
-            "up without their go-ahead. If they say not now, run `broom smells --dismiss`: broom then stays quiet "
-            "until the count grows.")
+            "point, tell them and offer to clean up worst first. Don't clean up without their go-ahead: once they "
+            "agree, load broom's clean skill, which is no command for them to type. If they say not now, run "
+            "`broom smells --dismiss`: broom then stays quiet until the count grows.")
 
 
 def dismiss(repo: Path) -> str:

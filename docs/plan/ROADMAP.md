@@ -413,7 +413,7 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 **Status**: 🟨
 
-The user set this on 2026-11-19: what a stranger meets first, and what can only be proven in real sessions of every language, comes just before a public release. `/broom:status` shipped in 0.25.1 that day, and a fresh session with no tools on its PATH ran it end to end. The commands became three in 0.25.4 that day: setup, status and scan.
+The user set this on 2026-11-19: what a stranger meets first, and what can only be proven in real sessions of every language, comes just before a public release. `/broom:status` shipped in 0.25.1 that day, and a fresh session with no tools on its PATH ran it end to end. The commands became three in 0.25.4 that day: setup, status and scan. Three fresh sessions ran a scan of a whole repo, a scan of two commits and a status, and none changed a file.
 
 **Delivers** (3):
 

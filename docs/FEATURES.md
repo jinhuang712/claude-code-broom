@@ -25,7 +25,7 @@ Features
 │   ├── ✅ F2.5: Known issues — what was let through, and why
 │   │   ├── ✅ F2.5.1: A reason for every pass
 │   │   └── ✅ F2.5.2: A turn can end with a finding open
-│   ├── ❔ F2.6: Scan on request — /broom:scan, a skill not yet run in a fresh session
+│   ├── ✅ F2.6: Scan on request — /broom:scan, a skill, run end to end in fresh sessions on 2026-11-19
 │   ├── 🚧 F2.7: Time limit — a cold build can be cut off and go unchecked
 │   ├── 🚧 F2.8: Self-waivers shown — a config loosened by a command is missed with `check_on` at `commit`
 │   ├── ✅ F2.9: Messages that say how to fix — the fix beside the finding
@@ -80,7 +80,7 @@ Features
 │   ├── 🚧 F9.2: Turn summary — not shown with `check_on` at `commit`
 │   ├── ✅ F9.3: Report — the record of a repo over a period
 │   ├── ⬜ F9.4: Tiers by fix rate — a rule nobody fixes stops interrupting
-│   └── ❔ F9.5: /broom:status — rewritten on 2026-11-19, not yet run in a fresh session
+│   └── ✅ F9.5: /broom:status — a skill, run end to end in a fresh session on 2026-11-19
 ├── 🚧 F10: Diagnosis — a repo's numbers before and after a refactor
 │   ├── ✅ F10.1: Whole-repo diagnosis — an old repo's smells in full, as a report and as data
 │   ├── ✅ F10.2: Hotspots by churn — the files that are both bad and often changed
