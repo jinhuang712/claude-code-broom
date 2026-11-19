@@ -6,7 +6,7 @@
 
 ---
 
-### [P1][DISCUSSION] A hero image for the README
+### [P2][DISCUSSION] A hero image for the README
 
 - description: The README opens with no image. Which image stands for broom is the user's pick, from options shown side by side.
 - created: 2026-11-18
@@ -146,3 +146,14 @@
 - found: a fresh session's commit on a public Python project that configures both, where the commit check ran ruff alone
 - related: [F8.4: Python](../features/F8-languages.md#f84-python)
 
+---
+
+### [P2][IDEA] A test suite that gets slower
+
+- description:
+  - A suite slows a little with each change, and no change is at fault, which is rot by broom's own definition.
+  - This repo's suite took about 40 seconds on 2026-11-17 and 78 to 81 on 2026-11-19.
+  - broom sees each test run's command at a turn's end, so it could keep how long a run took and tell when that grew.
+- created: 2026-11-19
+- found: the look for missed rot at the end of CP6
+- related: [F11.1: Counters](../features/F11-checkup.md#f111-counters)

@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP6: Polish and self-test](#cp6-polish-and-self-test). CP7 was put first by the user on 2026-11-18 and ended that day with 0.24.0. CP2 and CP3 shipped, and their goals that need use are still open. CP5 ended with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
+**Current checkpoint**: [CP8: Lighter](#cp8-lighter), which waits for a week of the ledger's numbers, about 2026-11-24. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
 
 ---
 
@@ -22,12 +22,13 @@ Roadmap
 │   ├── ✅ CP5.2: Tests: coverage, duplicates and skips
 │   ├── ✅ CP5.3: Dependencies and deprecated APIs
 │   └── ✅ CP5.4: Rust's missing smells
-├── 🟨 CP6: Polish and self-test — every goal run in a real session, every rough edge smoothed
+├── ✅ CP6: Polish and self-test — every goal run in a real session, every rough edge smoothed
 ├── ✅ CP7: Nothing is waved through — three moments in Claude's flow, and no pass without a reason
 ├── ⬜ CP8: Lighter — less code, fewer runs, less noise
 │   ├── ⬜ CP8.1: Fewer interruptions
 │   └── ⬜ CP8.2: Fewer runs and less code
-└── ⬜ CP9: Waits for a need
+├── ⬜ CP9: Ready for a public release — the README's face and the language servers proven
+└── ⬜ CP10: Waits for a need
 ```
 
 ---
@@ -295,11 +296,13 @@ The user lifted the hold on Rust's smells on 2026-11-17, and 7 more shipped in 0
 
 ## CP6: Polish and self-test
 
-**Status**: 🟨
+**Status**: ✅
+
+It ended on 2026-11-19 with 0.25.0. That day the user moved the README's hero image and the language-server check to CP9, as work for just before a public release.
 
 The user asked on 2026-11-17 for a round of polish and self-test once the features are in. broom is used end to end in fresh sessions, on throwaway repos and on real ones, and what that finds is fixed.
 
-**Delivers** (12):
+**Delivers** (11):
 
 - [F1.5: Protection list](../features/F1-setup.md#f15-protection-list)
 - A command added to `test_commands` is shown as a self-waiver, done on 2026-11-19.
@@ -310,17 +313,15 @@ The user asked on 2026-11-17 for a round of polish and self-test once the featur
 - A blocked finding ends with one line in the record: none is lost at a commit of other files, done on 2026-11-18.
 - git's own hook reads a linked worktree as it reads the main checkout, done on 2026-11-18.
 - A fresh session answers ten questions about a repo from broom alone after five runs, done on 2026-11-17.
-- [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)
 - README and INSTALL say which systems are supported, done on 2026-11-17.
 - An idle turn's end starts git once where it started it 7 times, done on 2026-11-17.
   - An idle hook loads no check.
 - A commit with a redirection or a heredoc message is checked where it passed unread before, done on 2026-11-17.
 
-**Exit criteria** (6):
+**Exit criteria** (5):
 
 - **Objectives**
   - [O2: Tooling in one conversation](GOALS.md#o2-tooling-in-one-conversation): ✅ 2026-11-19, a bare Python repo set up in one run
-  - [O3: Mistakes seen while editing](GOALS.md#o3-mistakes-seen-while-editing)
   - [O7: No script to write](GOALS.md#o7-no-script-to-write): ✅ 2026-11-17, ten of ten answers from broom and no script
 - **Thresholds**
   - [T2: An idle Python hook costs 50 ms at most](GOALS.md#t2-an-idle-python-hook-costs-50-ms-at-most): ✅ 2026-11-17, 31 ms for an edit and 39 ms for a turn's end
@@ -405,7 +406,24 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 ---
 
-## CP9: Waits for a need
+## CP9: Ready for a public release
+
+**Status**: ⬜
+
+The user set this on 2026-11-19: what a stranger meets first, and what can only be proven in real sessions of every language, comes just before a public release.
+
+**Delivers** (1):
+
+- [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)
+
+**Exit criteria** (1):
+
+- **Objectives**
+  - [O3: Mistakes seen while editing](GOALS.md#o3-mistakes-seen-while-editing)
+
+---
+
+## CP10: Waits for a need
 
 **Status**: ⬜
 

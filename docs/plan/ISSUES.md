@@ -25,7 +25,7 @@ Issues
   - The changelog's sections before 0.18.2 keep their old wording, with long bullets of several commas.
   - README has no hero image.
 - found: the docs pass, 2026-11-17
-- next: [A hero image for the README](TODO.md#p1discussion-a-hero-image-for-the-readme)
+- next: [A hero image for the README](TODO.md#p2discussion-a-hero-image-for-the-readme)
 
 ---
 

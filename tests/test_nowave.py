@@ -80,7 +80,7 @@ class CommitTest(NoWaveCase):
         self.assertIn("medium is 60 lines long (over 50; new)", reason)
         self.assertIn("huge is 120 lines long (hard limit 100; new)", reason)
 
-    def test_a_commit_whose_only_finding_is_a_note_passes_with_the_note_in_its_context(self) -> None:
+    def test_a_commit_whose_only_finding_is_a_nit_passes_with_the_nit_in_its_context(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
         self.staged(r, "x = 1  # TODO: later\n")
         out = self.commit(r, "git commit -m x")

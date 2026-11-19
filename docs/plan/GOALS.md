@@ -103,7 +103,7 @@ A finding is fixed, or it leaves a reason the user can see.
 
 **Acceptance**: A test lets a finding through by each way broom has. Each way leaves a ledger line with a reason, and the turn's summary names it.
 
-**Status**: ✅ 2026-11-17, for the three ways: accepted with a reason and a turn ended with the finding open by `tests/test_ledger.py`, and a turn given up after three blocks by `tests/test_turncheck.py`.
+**Status**: ✅ 2026-11-19, for the two ways left since a second stop stopped passing: accepted with a reason, and given up after three blocks. `tests/test_ledger.py` checks both pass lines and the turn's summary of each, and `tests/test_asked.py` checks an accept the user agreed to. A question put with `--ask` is no way through, and it leaves an `ask` line.
 
 ---
 

@@ -6,6 +6,16 @@
 
 ---
 
+## 0.25.0 — 2026-11-19
+
+---
+
+### Docs
+
+- The checkpoint of polish and self-test ends, with nothing new in use. Its last fixes shipped in 0.24.1 to 0.24.3, and a fresh session with no tools on its PATH set a Python repo up in one `/broom:setup` run.
+
+---
+
 ## 0.24.3 — 2026-11-19
 
 ---
