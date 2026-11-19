@@ -41,7 +41,7 @@ Older lines can hold four more: `retry`, `denials` and `stop-again` from before 
 
 A waiver has one of 3 kinds:
 
-- **config**: The repo's `.broom.json` is looser than at the base in 1 of 4 ways: a smell turned off · a glob added to `exclude` or `legacy` · a limit raised · `check_on` or `smells` set to off.
+- **config**: The repo's `.broom.json` is looser than at the base in 1 of 5 ways: a smell turned off · a glob added to `exclude` or `legacy` · a command added to `test_commands` · a limit raised · `check_on` or `smells` set to off.
 - **suppression**: A line the change added holds a lint suppression after a comment sign, with a reason or without.
 - **no-verify**: Claude ran `git commit --no-verify`.
 

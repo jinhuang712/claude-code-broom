@@ -6,6 +6,23 @@
 
 ---
 
+## 0.24.1 — 2026-11-19
+
+---
+
+### Setup
+
+- `broom doctor` asks for oxlint wherever a repo has TS/JS, since the smell scan needs it whichever linter lints. A project that linted with eslint or biome alone was told all is set while its smells went unmeasured.
+- `broom doctor` sees a CSS formatter that a project's config names and that isn't installed, outside a JS project too.
+
+---
+
+### Sweep
+
+- A command added to `test_commands` in `.broom.json` is shown as a self-waiver, since whatever the list names counts as a test run.
+
+---
+
 ## 0.24.0 — 2026-11-18
 
 ---

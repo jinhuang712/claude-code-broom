@@ -71,4 +71,4 @@ A list turns single smells off, such as `["magic_numbers", "debug_output"]`. The
 
 ### F7.2.5: test_commands
 
-A list names the commands that run the project's tests when broom's own list of runners doesn't know them, such as `["just check", "bazel test"]`. broom only recognizes them and never runs one.
+A list names the commands that run the project's tests when broom's own list of runners doesn't know them, such as `["just check", "bazel test"]`. broom only recognizes them and never runs one. A command added to the list is shown as a self-waiver, since whatever it names counts as a test run.

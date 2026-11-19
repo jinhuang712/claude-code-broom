@@ -26,7 +26,7 @@ In a repo with code it lists git's pre-commit hook as a gap until `broom install
 
 `broom doctor --checks` turns the same scan into a list by check. Each language has a fixed set of checks, and each check names the items of the scan it rests on. A check is on when all of them are ok. It is off when one isn't, with that item's own fix. Where broom has no such check for a language, the row says why.
 
-Two lookups are added that the scan doesn't make: oxlint at the repo root, which the TS/JS smells need, and the CSS formatter a config names. Neither starts a process. An item of the scan that belongs to no language, such as git's hook, is listed after the languages.
+The scan makes two lookups beside each project's own tools: oxlint at the repo root, which the TS/JS smells need whichever linter the projects use, and the formatter each CSS project's config names. Neither starts a process, and a missing one is a gap of the plain doctor like any other. An item of the scan that belongs to no language, such as git's hook, is listed after the languages.
 
 ---
 

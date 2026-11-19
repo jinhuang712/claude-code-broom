@@ -94,10 +94,10 @@ def raised_limits(old: dict, new: dict) -> List[str]:
 
 def loosened(old: dict, new: dict) -> List[str]:
     """What the .broom.json `new` loosens against `old`, as short notes such as `smells_off +magic_numbers`: smells
-    turned off, globs added to `exclude` or `legacy`, limits raised, and `check_on` or `smells` set to off.
-    Tightening is not a waiver."""
+    turned off, globs added to `exclude` or `legacy`, commands added to `test_commands` (any of them makes a test run),
+    limits raised, and `check_on` or `smells` set to off. Tightening is not a waiver."""
     notes = []
-    for key in ("smells_off", "exclude", "legacy"):
+    for key in ("smells_off", "exclude", "legacy", "test_commands"):
         added = [str(x) for x in listed(new.get(key)) if x not in listed(old.get(key))]
         if added:
             notes.append(f"{key} " + " ".join(f"+{x}" for x in added))

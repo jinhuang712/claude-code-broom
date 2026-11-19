@@ -214,6 +214,21 @@ class ProtectionTest(BroomCase):
 
     # nothing more is started, and the doctor is as it was
 
+    def test_the_plain_doctor_asks_for_the_oxlint_of_the_smells_where_eslint_lints(self) -> None:
+        r = self.ts_repo({".oxfmtrc.json": "{}\n", "eslint.config.js": "export default [];\n"})
+        tools = {k: v for k, v in TS_TOOLS.items() if k != "oxlint"}
+        result = self.doctor(r, self.fake_path(fakes={**tools, "eslint": 'echo "9.0.0"'}))
+        gaps = {(i["lang"], i["role"], i["tool"]): i for i in result["items"] if i["status"] != "ok"}
+        self.assertIn(("js", "smells", "oxlint"), gaps, "the smell scan needs it whichever linter lints")
+        self.assertNotIn(("js", "lint", "oxlint"), gaps, "eslint is the project's linter")
+        self.assertFalse(result["healthy"])
+
+    def test_the_plain_doctor_sees_a_css_formatter_missing_outside_a_js_project(self) -> None:
+        r = self.repo({"a.css": "a { color: red; }\n", ".prettierrc": "{}\n"})
+        result = self.doctor(r, self.fake_path())
+        css = [i for i in result["items"] if i["lang"] == "css" and i["tool"] == "prettier"]
+        self.assertTrue(css and css[0]["status"] != "ok", result["items"])
+
     def test_the_checks_start_no_tool_the_plain_doctor_does_not(self) -> None:
         r = self.py_repo()
         log = self.tmp / "started.log"

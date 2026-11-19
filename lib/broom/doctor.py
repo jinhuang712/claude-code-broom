@@ -95,9 +95,13 @@ def tracked_projects(root: Path) -> Dict[str, List[Path]]:
 
 def diagnose(repo: Path, projects: Optional[Dict[str, List[Path]]] = None) -> dict:
     """Everything `broom doctor` reports for the repo, and the commands that fix it."""
+    from .protection import extra_items  # protection reads the doctor's result
+
     projects = scan(repo) if projects is None else projects
+    languages = {lang: ["." if p == repo else str(p.relative_to(repo)) for p in dirs] for lang, dirs in projects.items()}
     unique: Dict[Tuple[str, ...], Item] = {}
-    for i in Diagnosis(repo, projects).findings() + check_repo_file(repo) + check_git_hook(repo, projects):
+    found = Diagnosis(repo, projects).findings() + check_repo_file(repo) + check_git_hook(repo, projects)
+    for i in found + extra_items(repo, languages):
         # one package's missing tool installed at the root is the same fix for every package
         unique.setdefault((i.lang, i.role, i.tool, i.status, i.project, i.fix), i)
     items = list(unique.values())
@@ -105,8 +109,7 @@ def diagnose(repo: Path, projects: Optional[Dict[str, List[Path]]] = None) -> di
     fixes_global, configure_global = plan_commands(items, machine_wide=True)
     return {
         "version": __version__, "repo": str(repo),
-        "languages": {lang: ["." if p == repo else str(p.relative_to(repo)) for p in dirs]
-                      for lang, dirs in projects.items()},
+        "languages": languages,
         "items": [asdict(i) for i in items],
         "fix": fixes, "configure": configure,
         # the same, with JS tools installed machine-wide instead of as devDependencies: once for every repo

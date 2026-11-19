@@ -157,7 +157,7 @@ A change that loosens the bar is listed in the turn's summary and in the record.
 
 3 kinds:
 
-- A change to `.broom.json` that turns a smell off, raises a limit or excludes a path.
+- A change to `.broom.json` that turns a smell off, raises a limit, excludes a path or names a new test command.
 - A new lint suppression, with a reason or without.
 - A commit made with `--no-verify`.
 

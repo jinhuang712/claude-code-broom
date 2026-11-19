@@ -233,7 +233,7 @@ def split_deps(items: List[dict], repo: Path) -> List[dict]:
     return out
 
 
-def css_formats(repo: Path, languages: Dict[str, List[str]]) -> List[dict]:
+def css_formats(repo: Path, languages: Dict[str, List[str]]) -> List[Item]:
     """The formatter of each CSS project that the doctor doesn't ask about: it looks for one only where CSS has none to
     find, outside a JS project. Found by the project's config, as the formatter itself finds it."""
     diagnosis, out = Diagnosis(repo, {}), []
@@ -247,14 +247,22 @@ def css_formats(repo: Path, languages: Dict[str, List[str]]) -> List[dict]:
         elif rel in languages.get("js", []):
             out.append(Item("css", "format", "oxfmt", "off", rel, "no formatter config, so broom doesn't format CSS",
                             f"broom init {rel}"))
-    return [asdict(i) for i in out]
+    return out
 
 
-def oxlint_item(repo: Path) -> dict:
+def oxlint_item(repo: Path) -> Item:
     """The oxlint the smell scan runs: found from the repo root, whichever linter the projects use for linting."""
     found = resolve_bin("oxlint", repo, repo)
-    return asdict(Item("js", "smells", "oxlint", "ok" if found else "missing",
-                       fix=install_command(tools_db().get("oxlint", {}))))
+    return Item("js", "smells", "oxlint", "ok" if found else "missing", fix=install_command(tools_db().get("oxlint", {})))
+
+
+def extra_items(repo: Path, languages: Dict[str, List[str]]) -> List[Item]:
+    """The tools that checks rest on and that the diagnosis of each project doesn't ask about: the formatter of each CSS
+    project, and the oxlint of the TS/JS smell scan, whichever linter the projects use. The doctor counts them as gaps."""
+    out = css_formats(repo, languages)
+    if "js" in languages and setting("smells", repo) != "off":
+        out.append(oxlint_item(repo))
+    return out
 
 
 def language_rows(lang: str, items: List[dict], *, smells_on: bool) -> List[Row]:
@@ -334,8 +342,6 @@ def protection(repo: Path, result: dict) -> Protection:
     added to where a check rests on a tool the doctor doesn't ask about."""
     languages = result["languages"]
     smells_on = setting("smells", repo) != "off"
-    items = split_deps(result["items"], repo) + css_formats(repo, languages)
-    if "js" in languages and smells_on:
-        items.append(oxlint_item(repo))
+    items = split_deps(result["items"], repo)
     rows = [r for lang in languages if lang in SPECS for r in language_rows(lang, items, smells_on=smells_on)]
     return Protection(repo, rows, bare_rows(list(languages), smells_on=smells_on), other_rows(result["items"]))

@@ -94,6 +94,7 @@ class ConfigTest(LedgerCase):
         loose = [  # (before, after, what it says)
             ({}, {"smells_off": ["magic_numbers", "todo"]}, ["smells_off +magic_numbers +todo"]),
             ({"smells_off": ["todo"]}, {"smells_off": ["todo", "globals"]}, ["smells_off +globals"]),
+            ({}, {"test_commands": ["ls"]}, ["test_commands +ls"]),
             ({"exclude": ["a/*"]}, {"exclude": ["a/*", "vendor/**"]}, ["exclude +vendor/**"]),
             ({}, {"legacy": ["old/*"]}, ["legacy +old/*"]),
             ({}, {"limits": {"function_lines": [80, 150]}}, ["limits function_lines 50/100 -> 80/150"]),
@@ -107,6 +108,7 @@ class ConfigTest(LedgerCase):
         tight = [
             ({"smells_off": ["todo", "globals"]}, {"smells_off": ["todo"]}),
             ({"exclude": ["a/*", "b/*"]}, {"exclude": ["a/*"]}),
+            ({"test_commands": ["make t", "ls"]}, {"test_commands": ["make t"]}),
             ({"limits": {"function_lines": [80, 150]}}, {"limits": {"function_lines": [60, 100]}}),
             ({"limits": {"function_lines": [80, 150]}}, {}),
             ({"check_on": "off"}, {"check_on": "stop"}),
