@@ -12,8 +12,10 @@ Issues
 │   ├── I2: Three paths call the same tools
 │   ├── I5: Six rules sit on an alpha plugin API
 │   └── I6: The Bash parser guesses what git's hook knows
-└── fix
-    └── I3: The cause of the reported Stop hang is unconfirmed
+├── fix
+│   └── I3: The cause of the reported Stop hang is unconfirmed
+└── feat
+    └── I19: The report can't give the two measures their first value
 ```
 
 ---
@@ -80,3 +82,17 @@ Issues
   - [F2.1: Commit check](../features/F2-sweep.md#f21-commit-check)
   - [F2.4: git's pre-commit hook](../features/F2-sweep.md#f24-gits-pre-commit-hook)
 - next: [F2.4.1: Offered at setup](../features/F2-sweep.md#f241-offered-at-setup)
+
+---
+
+## I19: The report can't give the two measures their first value
+
+- type: feat
+- why:
+  - M2 is the median seconds of a commit check, and `broom report` gives seconds per tool, so M2 can't be computed from it.
+  - M1 over all repos counts the throwaway repos of the self-tests, and `broom report` has no way to leave them out.
+  - `untested_file` showed a fix rate of 7% on 2026-11-19, most likely from before 0.23.5 made it a nit, and the report can't split a rule's numbers by date.
+- found: a first look at the ledger, 2026-11-19
+- touches:
+  - [F9.3: Report](../features/F9-record.md#f93-report)
+- next: the ledger holds about a week of use on 2026-11-24

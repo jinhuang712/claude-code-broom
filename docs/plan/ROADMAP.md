@@ -78,11 +78,12 @@ broom keeps no record of what it stopped and what was fixed, so nobody can say w
 
 The three features shipped in 0.18.2 on 2026-11-17. The measures get their first value after a week of sessions on the new version.
 
-**Delivers** (3):
+**Delivers** (4):
 
 - [F9.1: Ledger](../features/F9-record.md#f91-ledger)
 - [F9.2: Turn summary](../features/F9-record.md#f92-turn-summary)
 - [F9.3: Report](../features/F9-record.md#f93-report)
+- [I19: The report can't give the two measures their first value](ISSUES.md#i19-the-report-cant-give-the-two-measures-their-first-value)
 
 **Exit criteria** (2):
 
