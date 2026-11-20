@@ -1,0 +1,3 @@
+# ast-grep reads broom's structural rules from here (lib/broom/syntax.py, decision 038).
+ruleDirs:
+  - rules

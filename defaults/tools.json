@@ -60,6 +60,11 @@
     "probe": ["jscpd", "--version"],
     "install": [["npm", "npm i -g jscpd"], ["cargo", "cargo install jscpd"]]
   },
+  "_comment_syntax": "The smells no linter covers, read from a syntax tree by structural rules (defaults/sg/, decision 038), where the language's own parser can't run without a build: Go and Rust.",
+  "ast-grep": {
+    "probe": ["ast-grep", "--version"],
+    "install": [["brew", "brew install ast-grep"], ["npm", "npm i -g @ast-grep/cli"], ["cargo", "cargo install ast-grep --locked"]]
+  },
   "_comment_optional": "Tools broom uses when they are installed, and only then: `optional` keeps them out of the doctor's gaps, its fixes, its exit code and the session start, which never offer them. `for` says what each finds; `lang` is the language whose projects it serves, `any` for all. They are found by name on PATH, with no probe, so that listing them costs a lookup.",
   "tsgolint": {
     "optional": true, "lang": "js", "for": "calls to deprecated APIs in TS/JS, in every check", "dev": "oxlint-tsgolint",

@@ -29,6 +29,7 @@ LOCKFILES = (("pnpm-lock.yaml", "pnpm"), ("bun.lock", "bun"), ("bun.lockb", "bun
              ("package-lock.json", "npm"))
 ADD_DEV = {"pnpm": "pnpm add -D", "bun": "bun add -d", "yarn": "yarn add -D", "npm": "npm i -D"}
 DEFAULTS_DETAIL = "broom's defaults (no project config)"
+SYNTAX_LANGS = ("go", "rust")  # the languages whose smells ast-grep reads from a syntax tree (syntax.py)
 DEPS_DETAIL = "configured, but the project's dependencies aren't installed"
 Machine = Tuple[str, str, str, str]  # a tool on PATH to probe: (lang, role, tool, name on PATH)
 
@@ -298,6 +299,9 @@ class Diagnosis:
         coded = [lang for lang in ("go", "js", "py", "swift", "rust", "css") if lang in self.projects]
         if coded:  # duplicate code, in every language smells measure
             self.machine.append((coded[0], "smells", "jscpd", "jscpd"))
+        tree = [lang for lang in SYNTAX_LANGS if lang in self.projects]
+        if tree:  # what no linter covers, read from a syntax tree (syntax.py)
+            self.machine.append((tree[0], "smells", "ast-grep", "ast-grep"))
         if "js" in self.projects:  # broom's own TS/JS rules are an oxlint plugin, which runs on Node
             self.machine.append(("js", "smells", "node", "node"))
             self.items.append(depcruise_item(self.repo, self.db))
