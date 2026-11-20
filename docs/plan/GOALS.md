@@ -34,7 +34,7 @@ Goals
     ├── ✅ R3: An old smell in untouched code never comes up
     ├── ✅ R4: Setup asks at most two questions
     ├── ✅ R5: Nothing is waved through
-    └── ⬜ R6: No check reads code by a text pattern
+    └── ✅ R6: No check reads code by a text pattern
 ```
 
 ---
@@ -426,5 +426,5 @@ An edit must not be felt, since Claude makes many in a row.
 
 **How**: A test lists each regular expression in `lib/broom` with what it reads, and fails on one the list doesn't hold.
 
-**Status**: ⬜
+**Status**: ✅ 2026-11-20, by `tests/test_no_text_patterns.py`: 65 regular expressions, each listed with what it reads. 40 read a tool's output, 7 a command, 7 a path, 4 a row's identity key, 4 one token a tree isolated and 3 a setting.
 

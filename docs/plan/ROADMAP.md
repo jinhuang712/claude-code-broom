@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP8: Lighter](#cp8-lighter), which waits for a week of the ledger's numbers: about 2026-11-24 for the fix rate and 2026-11-27 for the check time. CP10 ended on 2026-11-20 with 0.26.0, once [CP11: Read from a syntax tree](#cp11-read-from-a-syntax-tree) read Rust's nested ternary. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
+**Current checkpoint**: [CP8: Lighter](#cp8-lighter), which waits for a week of the ledger's numbers: about 2026-11-24 for the fix rate and 2026-11-27 for the check time. CP10 ended on 2026-11-20 with 0.26.0, and [CP11: Read from a syntax tree](#cp11-read-from-a-syntax-tree) with 0.27.0 that day. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
 
 ---
 
@@ -31,7 +31,7 @@ Roadmap
 ├── ✅ CP10: The same smells in every language — in the order the user set
 │   ├── ✅ CP10.1: Python, TS/JS and Go
 │   └── ✅ CP10.2: Swift and Rust
-├── 🟨 CP11: Read from a syntax tree — what no linter covers, read by a parser
+├── ✅ CP11: Read from a syntax tree — what no linter covers, read by a parser
 └── ⬜ CP12: Waits for a need
 ```
 
@@ -488,9 +488,9 @@ Swift gained 6 smells and Rust 10 in 0.25.11 on 2026-11-20, so Swift measures 25
 
 ## CP11: Read from a syntax tree
 
-**Status**: 🟨
+**Status**: ✅
 
-The user set this on 2026-11-20: a check rests on a mechanism and not on a text pattern, so it holds up as code varies. It moves every smell broom reads from text to a parser. The smells moved in 0.26.0 on 2026-11-20, and the checks around them are left.
+The user set this on 2026-11-20: a check rests on a mechanism and not on a text pattern, so it holds up as code varies. It moves every smell broom reads from text to a parser. The smells moved in 0.26.0 on 2026-11-20, the checks around them in 0.27.0 that day, and the checkpoint ended with it.
 
 **Delivers** (6):
 
@@ -499,7 +499,7 @@ The user set this on 2026-11-20: a check rests on a mechanism and not on a text 
 - Rust's 6 text-read smells and its `use` graph are read with ast-grep, done on 2026-11-20.
 - Go's 3 text-read smells are read with ast-grep, done on 2026-11-20.
 - Skipped tests, test cases and the comment counters are read from trees in every language, done on 2026-11-20.
-- [I24: Six checks still read code by a text pattern](ISSUES.md#i24-six-checks-still-read-code-by-a-text-pattern)
+- Suppressions, import growth, import lines, generated files and test callbacks are read from trees, and every language says where its grammar can't parse, done on 2026-11-20.
 
 **Exit criteria** (3):
 
@@ -507,7 +507,7 @@ The user set this on 2026-11-20: a check rests on a mechanism and not on a text 
   - [O9: The first three languages measure every smell](GOALS.md#o9-the-first-three-languages-measure-every-smell): ✅ 2026-11-20, 27 in Python, 27 in TS/JS and 24 in Go
   - [O10: Swift and Rust measure every smell](GOALS.md#o10-swift-and-rust-measure-every-smell): ✅ 2026-11-20
 - **Constraints**
-  - [R6: No check reads code by a text pattern](GOALS.md#r6-no-check-reads-code-by-a-text-pattern)
+  - [R6: No check reads code by a text pattern](GOALS.md#r6-no-check-reads-code-by-a-text-pattern): ✅ 2026-11-20, 65 regular expressions, none on source code
 
 ---
 

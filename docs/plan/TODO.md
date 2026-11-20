@@ -205,3 +205,15 @@
 - found: the look for missed rot at the end of CP10
 - related: [F4.2.3: Untested file](../features/F4-smells.md#f423-untested-file)
 
+---
+
+### [P2][IDEA] Suppressions in files broom reads no tree for
+
+- description:
+  - Since 0.27.0 a lint suppression is found only in a comment a syntax tree isolated, in Python, Swift, Go, Rust, TS/JS and CSS.
+  - A `.vue` or `.svelte` file, a shell script or a YAML config can loosen a linter too, and no self-waiver tells it any more.
+  - ast-grep bundles grammars for HTML, Bash and YAML, so their comments could be read the same way.
+- created: 2026-11-20
+- found: the look for missed rot at the end of CP11
+- related: [F2.8: Self-waivers shown](../features/F2-sweep.md#f28-self-waivers-shown)
+

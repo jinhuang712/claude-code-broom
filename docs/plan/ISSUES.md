@@ -11,8 +11,7 @@ Issues
 ├── refactor
 │   ├── I2: Three paths call the same tools
 │   ├── I5: Six rules sit on an alpha plugin API
-│   ├── I6: The Bash parser guesses what git's hook knows
-│   └── I24: Six checks still read code by a text pattern
+│   └── I6: The Bash parser guesses what git's hook knows
 └── fix
     └── I3: The cause of the reported Stop hang is unconfirmed
 ```
@@ -81,21 +80,3 @@ Issues
   - [F2.1: Commit check](../features/F2-sweep.md#f21-commit-check)
   - [F2.4: git's pre-commit hook](../features/F2-sweep.md#f24-gits-pre-commit-hook)
 - next: [F2.4.1: Offered at setup](../features/F2-sweep.md#f241-offered-at-setup)
-
----
-
-## I24: Six checks still read code by a text pattern
-
-- type: refactor
-- why:
-  - CP11 moved the smells to syntax trees, and 6 checks around them still match source text:
-    - `waivers.suppression_in` finds a suppression an edit added, in the edit hook.
-    - `measure.IMPORT_START` tells whether a file grew by imports alone.
-    - `foldercycles.import_line` finds the line of an import dependency-cruiser named.
-    - `maintained.GENERATED` reads a file's header for generated code.
-    - `smells.TEST_BLOCK` tells a `describe` or `it` callback by its line.
-    - `reading.Reader.add` keys a row by its line's text.
-  - Go, TS/JS and CSS give no note yet for a region ast-grep can't parse, as Rust and Swift do.
-- found: the review of CP11's work, 2026-11-20
-- touches:
-  - [9. A smell is read from a syntax tree, never from a text pattern](../DESIGNS.md#9-a-smell-is-read-from-a-syntax-tree-never-from-a-text-pattern)

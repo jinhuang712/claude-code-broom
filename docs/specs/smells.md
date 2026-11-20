@@ -106,7 +106,9 @@ The tree comes from 3 places:
 - **Swift**: the compiler's `-dump-parse` with JSON output, which gives the statements and declarations, and SourceKit, the toolchain's own reader, which gives the tokens, the comments and each call's place. SourceKit is loaded from the toolchain with `ctypes` and answers from a service of its own, so a crash there loses an answer and not the hook. One swiftc run reads up to 200 files.
 - **Go, Rust, TS/JS and CSS**: ast-grep, with the YAML rules under `defaults/sg/rules/`. Each rule names the smell it finds, and a run applies only the rules its check needs. SCSS and Less are read with the CSS grammar.
 
-Code a parser can't read is left out, with a note: Swift's declaration that holds the error, and Rust's region the grammar marks as an error. Without ast-grep the smells it reads go unmeasured, with a note, and nothing blocks.
+Code a parser can't read is left out, with a note: Swift's declaration that holds the error, and in the languages ast-grep reads the region its grammar marks as an error. Without ast-grep the smells it reads go unmeasured, with a note, and nothing blocks.
+
+A generated file is one whose comment on one of its first 5 lines says `DO NOT EDIT` or `@generated`. A file grew by imports alone when only its import declarations grew. A TS/JS function passed to `describe`, `it` or `test` is a container, and its length and complexity don't count. Each of these is read from the tree too.
 
 Commented-out code is decided by the language's own parser: a comment, or a run of whole-line comments, counts when its text parses as code with no error and holds a statement, a declaration, a call or an assignment. Prose that happens to parse still counts, so it stays a nit.
 

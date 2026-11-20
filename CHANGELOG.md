@@ -6,6 +6,19 @@
 
 ---
 
+## 0.27.0 — 2026-11-20
+
+---
+
+### Smells
+
+- The checks around the smells read the syntax tree too. A lint suppression is one only in a comment, or in a Rust `allow` attribute, so a marker inside a string on a line you added is no self-waiver. A file is generated when a comment near its top says so, not a string. A file grew by imports alone when only its import declarations grew.
+- A TS/JS function passed to `describe`, `it` or `test` is told by the call it is handed to, so a `describe(` inside a string no longer passes for one.
+- Go, TS/JS and CSS say where their grammar can't parse a file, as Rust and Swift do, and the smells in that region go unmeasured. Before, they went unmeasured with no word.
+- A suppression in a file broom reads no tree for, such as `.vue` or a shell script, is no longer seen.
+
+---
+
 ## 0.26.1 — 2026-11-20
 
 ---
