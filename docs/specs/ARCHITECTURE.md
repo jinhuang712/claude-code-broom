@@ -58,7 +58,7 @@ It lives in `lib/broom/`.
 
 ## Default configs
 
-They are lint configs used only where a project has none, broom's own oxlint rules and the registry of tools with their install commands.
+They are lint configs used only where a project has none, broom's own oxlint rules, the ast-grep rules that read smells from a syntax tree and the registry of tools with their install commands.
 
 They live in `defaults/`.
 

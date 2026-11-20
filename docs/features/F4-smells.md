@@ -35,6 +35,8 @@ A smell has 1 of 3 levels. A hint and a block both stop a commit and a turn's en
 
 A sized smell counts when the change pushed it past a limit, or grew it while past the hard one. Growth between the limits is left alone.
 
+`read by broom` in the tables means broom reads the smell from the file's syntax tree: Python's with its own parser, Swift's with its compiler and SourceKit, and the others' with ast-grep. A string or a comment that looks like code is never taken for it.
+
 | Smell | Soft | Hard | Python | TS/JS | Go | Swift |
 |---|---|---|---|---|---|---|
 | `function_lines` | 50 | 100 | `ast` | `max-lines-per-function` | `funlen` | `function_body_length` |
@@ -42,7 +44,7 @@ A sized smell counts when the change pushed it past a limit, or grew it while pa
 | `params` | 5 | 8 | `PLR0913` | `max-params` | `revive` `argument-limit` | `function_parameter_count` |
 | `nesting` | 4 | 6 | `PLR1702` | `max-depth` | `nestif` | read by broom |
 | `complexity` | 10 | 20 | `C901` | `complexity` | `gocognit` | `cyclomatic_complexity` |
-| `nested_ternary` | — | any | `ast` | `no-nested-ternary` | — | a custom rule |
+| `nested_ternary` | — | any | `ast` | `no-nested-ternary` | — | read by broom |
 | `type_lines` | 250 | — | `ast` | `broom/class-lines` | read by broom | `type_body_length` |
 | `duplicate_lines` | 10 | 30 | jscpd | jscpd | jscpd | jscpd |
 
@@ -54,9 +56,9 @@ A sized smell counts when the change pushed it past a limit, or grew it while pa
 - Rust gets 4 of them from clippy: `function_lines` from `too_many_lines` · `params` from `too_many_arguments` · `complexity` from `cognitive_complexity` · `nesting` from `excessive_nesting`.
 - Rust's `nesting` only hints, since clippy names no depth.
 - Rust's `type_lines` is read by broom, as Go's is: a `struct`, `enum`, `trait` or `union` plus its `impl` blocks in the same file.
-- Rust has no `nested_ternary` yet: a nested `if` expression counts as one and is still to be measured.
+- Rust's `nested_ternary` is an `if` that gives a value and holds another such `if` in a branch. An `else if` chain stays flat and doesn't count.
 - Swift's `nesting` counts the blocks of control flow inside a function, since SwiftLint's own rule counts nested types.
-- Swift's nested-ternary rule finds two ternary operators on one line.
+- Swift's `nested_ternary` is a ternary inside another, wherever its lines break.
 
 A file git sees as renamed is measured against its old path. A file whose lines besides imports didn't grow isn't longer for the change.
 
@@ -74,15 +76,15 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 |---|---|---|---|---|---|
 | `suppression` | block | `PGH003` `PGH004` | `ban-ts-comment` | `nolintlint` | `blanket_disable_command` |
 | `swallowed_error` | block | `S110` | `no-empty` `no-useless-catch` | `revive` `empty-block` | `no_empty_block` |
-| `commented_code` | block | `ERA001` | `broom/commented-code` | `gocritic` `commentedOutCode` | a custom rule |
+| `commented_code` | block | `ERA001` | `broom/commented-code` | `gocritic` `commentedOutCode` | read by broom |
 | `unused_params` | hint | `ARG` | `no-unused-vars` | `revive` `unused-parameter` | `unused_parameter` |
 | `magic_numbers` | nit | `PLR2004` | `no-magic-numbers` | `mnd` | `no_magic_numbers` |
-| `debug_output` | hint | `T201` `T203` | `no-console` | `forbidigo` | a custom rule |
+| `debug_output` | hint | `T201` `T203` | `no-console` | `forbidigo` | read by broom |
 | `todo` | nit | `FIX` | `no-warning-comments` | `godox` | `todo` |
 | `type_escape` | hint | `ANN401` | `no-explicit-any` `no-non-null-assertion` | `revive` `unchecked-type-assertion` | `force_cast` `force_unwrapping` `force_try` |
-| `globals` | hint | `PLW0603` | `broom/module-state` | `gochecknoglobals` | a custom rule |
-| `bool_params` | hint | `FBT001` | `broom/bool-params` | `revive` `flag-parameter` | a custom rule |
-| `broad_test_asserts` | hint | `PT011` | `jest/require-to-throw-message` | read by broom | a custom rule |
+| `globals` | hint | `PLW0603` | `broom/module-state` | `gochecknoglobals` | read by broom |
+| `bool_params` | hint | `FBT001` | `broom/bool-params` | `revive` `flag-parameter` | read by broom |
+| `broad_test_asserts` | hint | `PT011` | `jest/require-to-throw-message` | read by broom | read by broom |
 | `broad_catch` | hint | `BLE001` `E722` | `broom/broad-catch` | read by broom | read by broom |
 | `missing_docs` | hint | `D100` `D101` `D102` `D103` | `broom/missing-docs` | `revive` `exported` | `missing_docs` |
 | `deprecated_api` | hint | `UP` and others | `typescript/no-deprecated` | `staticcheck` `SA1019` | `swiftc` `DeprecatedDeclaration` |
@@ -134,7 +136,7 @@ TS/JS can't catch by type, so there a handler has to look at what it caught. An 
 
 `skipped_test` is a test a change marks as skipped or disabled. It is the shortest way to make a failing suite pass. A change that adds one gets a hint.
 
-It covers Python, TS/JS, Go, Rust and Swift, and it needs no tool: broom reads the test files' text. A skip that a condition decides doesn't count, such as `skipUnless` or a `t.Skip` under an `if`. That is how a suite fits the machine it runs on. `broom stats` and the check-up still count those.
+It covers Python, TS/JS, Go, Rust and Swift, and broom reads it from the test files' syntax trees, so a skip written inside a string doesn't count. A skip that a condition decides doesn't count, such as `skipUnless` or a `t.Skip` under an `if`. That is how a suite fits the machine it runs on. `broom stats` and the check-up still count those.
 
 ---
 

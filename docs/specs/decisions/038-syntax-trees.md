@@ -14,8 +14,8 @@ Where a linter has no rule for a smell, broom read the smell from the text itsel
 
 A smell no linter covers is read from a syntax tree, in this order:
 
-1. The language's own parser, where it runs with no build: Python's `ast` in broom's own process, and the Swift compiler's `-dump-parse` with JSON output.
-2. ast-grep for the rest: Go, Rust and TS/JS. It runs structural rules on tree-sitter grammars it bundles, and its rules live in broom's `defaults/`.
+1. The language's own parser, where it runs with no build: Python's `ast` and `tokenize` in broom's own process, and for Swift the compiler's `-dump-parse` with JSON output beside SourceKit, the toolchain's reader of tokens and comments.
+2. ast-grep for the rest: Go, Rust, TS/JS and CSS. It runs structural rules on tree-sitter grammars it bundles, and its rules live in broom's `defaults/`.
 
 A smell that a language's parser shows as unparsable code is not guessed: the region is left out with a note.
 

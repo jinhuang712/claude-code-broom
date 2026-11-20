@@ -72,7 +72,7 @@ The session scan gives these tools 20 seconds between them. The quick ones go fi
 
 A Python import closes a cycle when what it imports leads back to its file. broom reads the module-level imports itself. An import inside a function, or under `if TYPE_CHECKING:`, is how code breaks a cycle, so it doesn't count. Names are matched by their path, and a name two files share is skipped.
 
-Rust's `use` statements of the same crate are read by broom: `crate::`, `super::` and `self::` paths, grouped or not, each mapped to its `x.rs` or `x/mod.rs`. `#[path]`, inline `mod` blocks, `src/bin/` and test code aren't read. The graph is Python's, so the same rules of a cycle hold.
+Rust's `use` declarations of the same crate are read from the syntax tree: `crate::`, `super::` and `self::` paths, grouped or not, each mapped to its `x.rs` or `x/mod.rs`. `#[path]`, inline `mod` blocks, `src/bin/` and test code aren't read. The graph is Python's, so the same rules of a cycle hold.
 
 A folder cycle is an import that leads into a folder whose files lead back to this one. Python's and Rust's are read by broom, and `src/a.rs` belongs to the folder `src/a/` where that folder exists. TS/JS's are read by dependency-cruiser, package by package from the nearest `package.json`, runtime imports only. It loads the TypeScript that sits beside it, needs one below 7 and reads no `.ts` file without one, silently.
 
@@ -96,21 +96,23 @@ oxlint's own rule list, read in full in 2026-11, has nothing for the first five 
 
 ---
 
-## Go's text reads
+## Syntax trees
 
-golangci-lint has no linter for three of Go's smells, so broom reads them from the source in the scratch copy, with no tool. gofmt's layout makes the text enough: a declaration starts at the first column, and the brace that closes it stands there too.
+What no linter covers is read from the file's syntax tree, never from a pattern of its text. A string, a comment or a raw string that looks like code is never taken for it, and a call split over several lines is read like one on a line.
 
-A type's length is its `struct` or `interface` declaration plus every method on it in the same file, matched by the receiver's type. A type inside a `type ( ... )` group isn't read, and a raw string that holds a brace at the first column ends a block early.
+The tree comes from 3 places:
 
-A broad catch is a `recover()` that stands as a statement or is assigned to `_`. A broad test assertion is a testify `Error` or `Panics` in a `_test.go` file, called on `assert`, `require`, `Assert()` or `Require()`. `s.Error(` is left out, since that name reports a failure on a `*testing.T`.
+- **Python**: the standard library's `ast` and `tokenize`, in broom's own process.
+- **Swift**: the compiler's `-dump-parse` with JSON output, which gives the statements and declarations, and SourceKit, the toolchain's own reader, which gives the tokens, the comments and each call's place. SourceKit is loaded from the toolchain with `ctypes` and answers from a service of its own, so a crash there loses an answer and not the hook. One swiftc run reads up to 200 files.
+- **Go, Rust, TS/JS and CSS**: ast-grep, with the YAML rules under `defaults/sg/rules/`. Each rule names the smell it finds, and a run applies only the rules its check needs. SCSS and Less are read with the CSS grammar.
 
----
+Code a parser can't read is left out, with a note: Swift's declaration that holds the error, and Rust's region the grammar marks as an error. Without ast-grep the smells it reads go unmeasured, with a note, and nothing blocks.
 
-## Swift's and Rust's text reads
+Commented-out code is decided by the language's own parser: a comment, or a run of whole-line comments, counts when its text parses as code with no error and holds a statement, a declaration, a call or an assignment. Prose that happens to parse still counts, so it stays a nit.
 
-Swift's nesting, its broad catches and its dead code are read from the source. Comments and strings are blanked first, raw strings and interpolation among them, then the braces are counted. The line that opens a block says what it is, and a closure passed in parentheses adds no depth. A dead declaration is a `private` or `fileprivate` one whose name appears only once in its file, where `@objc`, `@IB`, `override` and `CodingKeys` are left out.
+A Go type's length is its declaration plus every method on it in the same file, matched by the receiver's type, in a `type ( ... )` group too. A Rust type's length is its item plus its `impl` blocks in the same file. Rust's test code is a file under `tests/`, a file named for tests, or an item under `#[cfg(test)]` or marked as a test.
 
-Rust's magic numbers, commented code, globals, type lengths, broad test assertions and broad catches are read from the source the same way. rustfmt's layout makes the text enough, as gofmt's does for Go. Test code is a file under `tests/`, a file named for tests, or anything after a `#[cfg(test)]`.
+- [038: Smells are read from a syntax tree](decisions/038-syntax-trees.md)
 
 ---
 
@@ -118,7 +120,7 @@ Rust's magic numbers, commented code, globals, type lengths, broad test assertio
 
 jscpd 5 scans every code file in the repo. Given the base ref it scans that tree too and marks the clones the base lacked. A clone counts when it is new and has a side in the change's files. jscpd gets a baseline only from a base git can resolve.
 
-Dead code comes from the same tool in TS/JS and Python, with tests and entry points left out, from golangci-lint's `unused` in Go, from rustc in Rust and from broom's text read in Swift. A finding counts on a line the change added, or in a new file. Generated code still counts as using code.
+Dead code comes from the same tool in TS/JS and Python, with tests and entry points left out, from golangci-lint's `unused` in Go, from rustc in Rust and from Swift's tree, where a `private` or `fileprivate` declaration no other token of its file names is dead. A finding counts on a line the change added, or in a new file. Generated code still counts as using code.
 
 - [010: Duplicate code is found across the whole repo](decisions/010-whole-repo-clones.md)
 - [011: Code marked legacy may be repeated](decisions/011-legacy.md)
@@ -128,7 +130,7 @@ Dead code comes from the same tool in TS/JS and Python, with tests and entry poi
 
 ## Tests
 
-Two smells are read from the files with no tool. A skipped test is found by each language's own form in the text of a test file, and it counts like any occurrence: when the change raises the count. A skip whose name states a condition, or that sits behind an `if`, is how a suite fits its machine, so it is left out.
+Two smells are read from the files' syntax trees with no linter. A skipped test is found by each language's own form in a test file's tree, and it counts like any occurrence: when the change raises the count. A skip whose name states a condition, that sits behind an `if`, a `case` or a `catch`, or that Rust puts under `cfg_attr`, is how a suite fits its machine, so it is left out.
 
 A new code file counts as untested when no test file anywhere in the repo is named for it. A Rust file also counts as tested when it holds its own tests. The names of all files come from one `git ls-files`, and it runs only when the change adds a code file of 30 lines or more.
 

@@ -29,7 +29,7 @@ broom has 27 smells, and each language measures a share of them:
 | TS/JS | 27 | — |
 | Go | 24 | 3 that the language rules out |
 | Swift | 25 | 2 that the language rules out |
-| Rust | 26 | 1 |
+| Rust | 27 | — |
 | CSS · SCSS · Less | 2 | 25 |
 
 - **Stance**: [The project's tools, not ours](../PHILOSOPHY.md#whose-rules-decide-what-is-clean)
@@ -55,9 +55,7 @@ Without a project linter, oxlint runs with broom's defaults, type-aware. A solut
 
 A crate is checked whole, by one run of clippy that also measures the smells. A cold `cargo clippy` can time out.
 
-Rust has 26 of the smells: 7 sized ones, 16 that count by occurrence, the 2 cycles and dead code.
-
-It lacks the nested ternary for now. Rust has no ternary operator, but its `if` is an expression, as Python's conditional expression is, so a nested `if` in value position counts as one and is still to be measured.
+Rust has all 27 of the smells: 8 sized ones, 16 that count by occurrence, the 2 cycles and dead code. It has no ternary operator, but its `if` is an expression, as Python's conditional expression is, so an `if` that gives a value and holds another in a branch is its nested ternary. The smells no linter covers are read from the syntax tree with ast-grep.
 
 ---
 

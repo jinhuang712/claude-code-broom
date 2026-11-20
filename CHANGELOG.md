@@ -6,6 +6,27 @@
 
 ---
 
+## 0.26.0 — 2026-11-20
+
+---
+
+### Smells
+
+- The smells no linter covers are read from each file's syntax tree, never from a pattern of its text. A brace, a `catch` or a `TODO` inside a string, a raw string or a comment is no longer taken for code, and a call split over several lines is read like one on a line.
+- Swift's are read by its compiler and SourceKit, which come with the toolchain. Go's, Rust's, TS/JS's and CSS's are read by ast-grep, which `broom doctor` now offers for Go, Rust and TS/JS: `brew install ast-grep`. Without it those smells go unmeasured with a note, and nothing blocks.
+- Rust measures all 27 smells: an `if` that gives a value and holds another in a branch is a nested ternary. An `else if` chain is not.
+- Swift rules out both cycles, since a Swift file never imports another file. Its 25 smells are the whole bar for it.
+- Commented-out code counts when the comment parses as code in its own language. Before, a keyword at its start was enough.
+- A Go type declared inside a `type ( … )` group is measured. Before, it was skipped.
+
+---
+
+### Stats and check-up
+
+- Test cases, skipped tests, lint suppressions and TODO comments are counted from the syntax tree in every language, so one written inside a string no longer counts. A Rust `#[allow(…)]` counts as a suppression, and a test ignored under `cfg_attr` counts as one a condition decides.
+
+---
+
 ## 0.25.11 — 2026-11-20
 
 ---

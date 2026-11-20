@@ -68,10 +68,10 @@ Features
 │       ├── ✅ F7.2.3: limits and test_limits
 │       ├── ✅ F7.2.4: smells_off
 │       └── ✅ F7.2.5: test_commands
-├── 🚧 F8: Languages — six, and Rust lacks one smell
+├── 🚧 F8: Languages — six, and CSS measures lengths and duplicates only
 │   ├── ✅ F8.1: Go
 │   ├── ✅ F8.2: TS/JS
-│   ├── 🚧 F8.3: Rust — 26 of the 27 smells, and nesting only hints
+│   ├── 🚧 F8.3: Rust — all 27 smells, and nesting only hints
 │   ├── ✅ F8.4: Python
 │   ├── 🚧 F8.5: CSS, SCSS and Less — file length and duplicates only
 │   └── 🚧 F8.6: Swift — 25 of the 27 smells, and no compile check for Xcode projects

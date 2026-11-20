@@ -18,7 +18,7 @@ Goals
 │   ├── ✅ O7: No script to write — broom answers what a session would count by hand
 │   ├── ✅ O8: Done means tests ran — a turn that changed code ends with its tests run
 │   ├── ✅ O9: The first three languages measure every smell — Python, TS/JS and Go
-│   └── ⬜ O10: Swift and Rust measure every smell — bar what each language rules out
+│   └── ✅ O10: Swift and Rust measure every smell — bar what each language rules out
 ├── Measures
 │   ├── ⬜ M1: Fix rate — how much of what broom blocks gets fixed
 │   └── ⬜ M2: Check time — the seconds a commit check takes
@@ -198,7 +198,7 @@ Swift and Rust each measure every smell of the bar, bar what the language rules 
 
 **Acceptance**: The test of [O9: The first three languages measure every smell](#o9-the-first-three-languages-measure-every-smell) holds Swift and Rust too, each with a named list of what the language rules out.
 
-**Status**: ⬜
+**Status**: ✅ 2026-11-20, by `tests/test_language_matrix_swift.py` and `tests/test_language_matrix_rust.py`: 25 samples in Swift and 27 in Rust were found, each read from a syntax tree. Swift is let off both cycles, since a Swift file imports modules and never another file, and SwiftPM refuses modules that depend on one another. Rust is let off none.
 
 ---
 
