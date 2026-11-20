@@ -6,17 +6,6 @@
 
 ---
 
-### [P2][DISCUSSION] A hero image for the README
-
-- description: The README opens with no image. Which image stands for broom is the user's pick, from options shown side by side.
-- created: 2026-11-18
-- status: OPEN
-- found: the docs pass of 2026-11-18
-- blocks: [I1: The moved text doesn't meet the wording rules](ISSUES.md#i1-the-moved-text-doesnt-meet-the-wording-rules)
-- next: draw a few options and show them on one sheet
-
----
-
 ### [P2][DISCUSSION] Where a contributor asks first
 
 - description: CONTRIBUTING states the bar for a change and names no place to ask before starting one.
@@ -60,18 +49,6 @@
 - description: Tools such as import-linter and dependency-cruiser hold imports to layers a project wrote down. broom reports cycles, which need no rules. Layers would need the user to write them.
 - created: 2026-11-17
 - related: [014: No layering rules without a project's own](../specs/decisions/014-no-layering-rules.md)
-
----
-
-### [P2][IDEA] One measurer for sized smells in every language
-
-- description:
-  - lizard measures 4 sizes: function length · complexity · parameters · nesting.
-  - It covers 5 languages: Go · TS/JS · Python · Rust · Swift.
-  - It could fill Rust's and Swift's gaps with one tool.
-  - Its parsers are partial, so it needs a run beside the current measurers first.
-- created: 2026-11-17
-- related: [F8.3: Rust](../features/F8-languages.md#f83-rust)
 
 ---
 

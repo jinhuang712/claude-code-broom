@@ -1,5 +1,10 @@
 # broom 🧹
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-dark.svg">
+  <img alt="broom: the languages it reads, its 27 smell detectors and what else it does" src="docs/assets/hero-light.svg">
+</picture>
+
 > A ruler for code quality in Claude Code, and a tool for refactoring.
 
 broom is a tool for the coding agent, with no model of its own. It holds Claude's changes to the project's own formatter, linter and type checker before they leave the session, and it measures a whole repo one way when Claude is asked how the code is doing. At a change it judges that change and the code it touches, so a legacy repo's old warnings don't land on a small fix. Type errors are the one exception, since a changed signature breaks callers anywhere.

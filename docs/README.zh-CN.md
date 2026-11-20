@@ -1,5 +1,10 @@
 # broom 🧹
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/hero-dark.svg">
+  <img alt="broom：支持的语言、27 种坏味道检测和其他功能" src="assets/hero-light.svg">
+</picture>
+
 > Claude Code 里的代码质量标尺，也是重构时的工具。
 
 broom 是给 Coding Agent 用的工具，自己不带任何模型。它让 Claude 的改动在离开会话之前，先过一遍项目自己的格式化工具、lint 工具和类型检查；有人问起代码状况时，它用同一种量法量整个仓库。检查一次改动时，它评判这次改动和它碰到的代码，所以老仓库里的旧警告不会压到一个小修复上。类型错误是唯一的例外，因为改了签名会弄坏任何地方的调用方。
