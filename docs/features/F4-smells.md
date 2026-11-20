@@ -40,20 +40,22 @@ A sized smell counts when the change pushed it past a limit, or grew it while pa
 | `function_lines` | 50 | 100 | `ast` | `max-lines-per-function` | `funlen` | `function_body_length` |
 | `file_lines` | 400 | 1000 | counted | counted | counted | counted |
 | `params` | 5 | 8 | `PLR0913` | `max-params` | `revive` `argument-limit` | `function_parameter_count` |
-| `nesting` | 4 | 6 | `PLR1702` | `max-depth` | `nestif` | — |
+| `nesting` | 4 | 6 | `PLR1702` | `max-depth` | `nestif` | read by broom |
 | `complexity` | 10 | 20 | `C901` | `complexity` | `gocognit` | `cyclomatic_complexity` |
 | `nested_ternary` | — | any | `ast` | `no-nested-ternary` | — | a custom rule |
 | `type_lines` | 250 | — | `ast` | `broom/class-lines` | read by broom | `type_body_length` |
 | `duplicate_lines` | 10 | 30 | jscpd | jscpd | jscpd | jscpd |
 
-7 notes on the table:
+9 notes on the table:
 
 - `file_lines` and `duplicate_lines` count in Rust and CSS too.
 - Go has no ternary operator, so it has no `nested_ternary`.
 - Go's `type_lines` is a type's declaration plus its methods in the same file.
 - Rust gets 4 of them from clippy: `function_lines` from `too_many_lines` · `params` from `too_many_arguments` · `complexity` from `cognitive_complexity` · `nesting` from `excessive_nesting`.
 - Rust's `nesting` only hints, since clippy names no depth.
-- Swift has no control-flow nesting rule, and complexity covers it.
+- Rust's `type_lines` is read by broom, as Go's is: a `struct`, `enum`, `trait` or `union` plus its `impl` blocks in the same file.
+- Rust has no `nested_ternary` yet: whether a nested `if` expression counts as one waits for a decision.
+- Swift's `nesting` counts the blocks of control flow inside a function, since SwiftLint's own rule counts nested types.
 - Swift's nested-ternary rule finds two ternary operators on one line.
 
 A file git sees as renamed is measured against its old path. A file whose lines besides imports didn't grow isn't longer for the change.
@@ -72,7 +74,7 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 |---|---|---|---|---|---|
 | `suppression` | block | `PGH003` `PGH004` | `ban-ts-comment` | `nolintlint` | `blanket_disable_command` |
 | `swallowed_error` | block | `S110` | `no-empty` `no-useless-catch` | `revive` `empty-block` | `no_empty_block` |
-| `commented_code` | block | `ERA001` | `broom/commented-code` | `gocritic` `commentedOutCode` | — |
+| `commented_code` | block | `ERA001` | `broom/commented-code` | `gocritic` `commentedOutCode` | a custom rule |
 | `unused_params` | hint | `ARG` | `no-unused-vars` | `revive` `unused-parameter` | `unused_parameter` |
 | `magic_numbers` | nit | `PLR2004` | `no-magic-numbers` | `mnd` | `no_magic_numbers` |
 | `debug_output` | hint | `T201` `T203` | `no-console` | `forbidigo` | a custom rule |
@@ -80,16 +82,16 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 | `type_escape` | hint | `ANN401` | `no-explicit-any` `no-non-null-assertion` | `revive` `unchecked-type-assertion` | `force_cast` `force_unwrapping` `force_try` |
 | `globals` | hint | `PLW0603` | `broom/module-state` | `gochecknoglobals` | a custom rule |
 | `bool_params` | hint | `FBT001` | `broom/bool-params` | `revive` `flag-parameter` | a custom rule |
-| `broad_test_asserts` | hint | `PT011` | `jest/require-to-throw-message` | read by broom | — |
-| `broad_catch` | hint | `BLE001` `E722` | `broom/broad-catch` | read by broom | — |
+| `broad_test_asserts` | hint | `PT011` | `jest/require-to-throw-message` | read by broom | a custom rule |
+| `broad_catch` | hint | `BLE001` `E722` | `broom/broad-catch` | read by broom | read by broom |
 | `missing_docs` | hint | `D100` `D101` `D102` `D103` | `broom/missing-docs` | `revive` `exported` | `missing_docs` |
-| `deprecated_api` | hint | `UP` and others | `typescript/no-deprecated` | `staticcheck` `SA1019` | — |
+| `deprecated_api` | hint | `UP` and others | `typescript/no-deprecated` | `staticcheck` `SA1019` | `swiftc` `DeprecatedDeclaration` |
 | `skipped_test` | hint | read by broom | read by broom | read by broom | read by broom |
 | `untested_file` | nit | read by broom | read by broom | read by broom | read by broom |
 
-10 notes on the table:
+12 notes on the table:
 
-- `commented_code` is a nit in TS/JS and Go, whose detectors guess.
+- `commented_code` is a nit in TS/JS, Go, Swift and Rust, whose detectors guess.
 - Go's `commented_code` is found inside a function and missed at the top level of a file.
 - TS/JS's `no-unused-vars` counts parameters only.
 - Unused variables and imports stay with the project's linter, which already reports them.
@@ -99,8 +101,10 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 - A function handed to a call is the callee's choice and doesn't count for `bool_params`.
 - `module-state` is a `let` or `var` at module level that a function assigns.
 - Go's `broad_test_asserts` is a testify `Error` or `Panics`, which any error passes.
+- Swift's `broad_test_asserts` is an `XCTAssertThrowsError` with no handler, or an `#expect` or `#require` that any `Error` passes.
+- Swift's `deprecated_api` comes from type-checking the changed files of a SwiftPM package, so an Xcode project is left out.
 
-Rust gets 8 of these from clippy and rustc: `suppression` · `swallowed_error` · `unused_params` · `debug_output` · `todo` · `type_escape` · `bool_params` · `deprecated_api`. Its `skipped_test` is an `#[ignore]`, read by broom. Its `swallowed_error` is a `Result` dropped with `let _ =`, and it is a nit, since that can be deliberate. Its `todo` is a `todo!()` or an `unimplemented!()`. Test code is not built, so a test may be long, unwrap and print. CSS, SCSS and Less have no smell tool.
+Rust gets 9 of these from clippy and rustc: `suppression` · `swallowed_error` · `unused_params` · `debug_output` · `todo` · `type_escape` · `bool_params` · `deprecated_api` · `missing_docs`. broom reads 5 more from its text: `magic_numbers` · `commented_code` · `globals` · `broad_test_asserts` · `broad_catch`. A Rust global is a `static mut`, a `static` that holds a lock, a cell or an atomic, or a `thread_local!`, and a plain `static` is a constant. A broad test assertion is a `#[should_panic]` with no `expected`, or an `assert!` that any `Err` passes. Its `skipped_test` is an `#[ignore]`, read by broom. Its `swallowed_error` is a `Result` dropped with `let _ =`, and it is a nit, since that can be deliberate. Its `todo` is a `todo!()` or an `unimplemented!()`. Test code is not built, so a test may be long, unwrap and print. CSS, SCSS and Less have no smell tool.
 
 The five `broom/` rules need Node. Without it only these smells go unmeasured, and a note says so.
 
@@ -119,12 +123,10 @@ It has 1 form per language:
 | Python | a bare `except` · an `except Exception` | a handler that re-raises |
 | TS/JS | a `catch` or a `.catch()` callback that never reads its error | a handler that throws |
 | Go | a `recover()` whose value is dropped | a `recover()` whose value is read |
+| Swift | a `catch` that never reads its error | a `catch` of a named error type · a handler that throws · `try?` |
+| Rust | an `Err(_) =>` arm · a `.map_err(\|_\| …)` · a dropped `catch_unwind` | an arm that binds the error |
 
-TS/JS can't catch by type, so there a handler has to look at what it caught. An empty `catch` is a `swallowed_error`.
-
-1 gap:
-
-- Swift and Rust aren't covered, since the tools broom runs have no such rule for them.
+TS/JS can't catch by type, so there a handler has to look at what it caught. An empty `catch` is a `swallowed_error`. Swift's `try?` drops every error too, and it is left out, since it is the language's common way to say an error doesn't matter.
 
 ---
 
@@ -142,10 +144,12 @@ It covers Python, TS/JS, Go, Rust and Swift, and it needs no tool: broom reads t
 
 A file of fewer than 30 non-blank lines is left alone. So are `__init__.py` and `conftest.py`.
 
+A Rust file is tested when it holds a `#[test]` or a `#[cfg(test)]`, or when a file such as `tests/<name>.rs` is named for it. `main.rs`, `lib.rs`, `mod.rs` and `build.rs` are left alone.
+
 2 gaps:
 
 - The pairing goes by file name, so a test named otherwise is missed.
-- Rust and CSS take no part, since they have no such naming.
+- CSS takes no part, since it has no such naming.
 
 ---
 
@@ -169,7 +173,7 @@ It needs jscpd 5, which `broom doctor` checks for.
 
 ## F4.4: Dead code
 
-A file, export, symbol or import that nothing uses gets a nit when the change added it. It covers TS/JS and Python, with tests and entry points left out, unexported code in Go and what rustc calls dead in Rust.
+A file, export, symbol or import that nothing uses gets a nit when the change added it. It covers TS/JS and Python, with tests and entry points left out, unexported code in Go, what rustc calls dead in Rust and a `private` or `fileprivate` declaration nothing in its file names in Swift. Swift's `internal` code is not read, since its uses may lie anywhere in the module.
 
 What loads dynamically, such as a manifest's scripts or plugins, looks unused too. `smells_off: ["dead_code"]` turns it off per repo.
 
@@ -187,15 +191,15 @@ Both are hints, and both count where the change adds the import.
 
 ### F4.5.1: Import cycle
 
-`import_cycle` is a module importing back what imports it. It covers Python and TS/JS. In Python an import inside a function or under `if TYPE_CHECKING:` doesn't count.
+`import_cycle` is a module importing back what imports it. It covers Python, TS/JS and Rust, where a `use` of the same crate counts. In Python an import inside a function or under `if TYPE_CHECKING:` doesn't count. Swift rules it out: a Swift file imports modules and never another file, and SwiftPM refuses modules that depend on one another.
 
 ---
 
 ### F4.5.2: Folder cycle
 
-`folder_cycle` is an import that leads into a folder whose files lead back to this one, such as `auth` importing `providers` while `providers` imports `auth`. It covers Python and TS/JS.
+`folder_cycle` is an import that leads into a folder whose files lead back to this one, such as `auth` importing `providers` while `providers` imports `auth`. It covers Python, TS/JS and Rust.
 
-TS/JS needs dependency-cruiser, which reads a `.ts` file only with a TypeScript below 7 beside it. So broom keeps a copy of its own with a TypeScript 6, and a project on TypeScript 7 is read like any other. `broom doctor` offers the copy as one command, and it changes nothing in the project or in the user's own TypeScript. Without a dependency-cruiser that can read the repo nothing is measured and nothing nags. Go refuses package cycles itself. Swift and Rust aren't read.
+TS/JS needs dependency-cruiser, which reads a `.ts` file only with a TypeScript below 7 beside it. So broom keeps a copy of its own with a TypeScript 6, and a project on TypeScript 7 is read like any other. `broom doctor` offers the copy as one command, and it changes nothing in the project or in the user's own TypeScript. Without a dependency-cruiser that can read the repo nothing is measured and nothing nags. Go refuses package cycles itself. Swift isn't read, since the files of one module don't import one another, and whether that rules it out waits for a decision.
 
 - **Why**: [036: broom keeps its own dependency-cruiser](../specs/decisions/036-own-dependency-cruiser.md)
 

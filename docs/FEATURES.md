@@ -42,12 +42,12 @@ Features
 ├── ✅ F4: Smells — one bar for code that is hard to change
 │   ├── ✅ F4.1: Sized smells — stopped past the soft limit, and no growth past the hard one
 │   ├── ✅ F4.2: Occurrence smells — a change that adds one gets its level
-│   │   ├── 🚧 F4.2.1: Broad catch — not in Swift or Rust
+│   │   ├── ✅ F4.2.1: Broad catch
 │   │   ├── ✅ F4.2.2: Skipped test
 │   │   └── 🚧 F4.2.3: Untested file — paired by file name only
 │   ├── ✅ F4.3: Duplicate code — a new copy anywhere in the repo
 │   ├── ✅ F4.4: Dead code — code a change adds and nothing uses
-│   ├── 🚧 F4.5: Cycles — Go, Swift and Rust aren't read
+│   ├── 🚧 F4.5: Cycles — Swift's folders aren't read
 │   │   ├── ✅ F4.5.1: Import cycle
 │   │   └── ✅ F4.5.2: Folder cycle
 │   ├── ✅ F4.6: What is skipped — dependencies, build output and generated code
@@ -68,13 +68,13 @@ Features
 │       ├── ✅ F7.2.3: limits and test_limits
 │       ├── ✅ F7.2.4: smells_off
 │       └── ✅ F7.2.5: test_commands
-├── 🚧 F8: Languages — six, and Swift and Rust lack smells
+├── 🚧 F8: Languages — six, and Swift and Rust lack one smell each
 │   ├── ✅ F8.1: Go
 │   ├── ✅ F8.2: TS/JS
-│   ├── 🚧 F8.3: Rust — 16 of the 27 smells, and nesting only hints
+│   ├── 🚧 F8.3: Rust — 26 of the 27 smells, and nesting only hints
 │   ├── ✅ F8.4: Python
 │   ├── 🚧 F8.5: CSS, SCSS and Less — file length and duplicates only
-│   └── 🚧 F8.6: Swift — 19 of the 27 smells, and no compile check for Xcode projects
+│   └── 🚧 F8.6: Swift — 25 of the 27 smells, and no compile check for Xcode projects
 ├── 🚧 F9: Record — tiers by fix rate are not built
 │   ├── ✅ F9.1: Ledger — every block, fix, pass and skip leaves a line
 │   ├── 🚧 F9.2: Turn summary — not shown with `check_on` at `commit`

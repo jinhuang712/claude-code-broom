@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP8: Lighter](#cp8-lighter), which waits for a week of the ledger's numbers: about 2026-11-24 for the fix rate and 2026-11-27 for the check time. CP10.1 ended on 2026-11-19 with 0.25.3, and CP10.2 comes after the checkpoints before it. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
+**Current checkpoint**: [CP8: Lighter](#cp8-lighter), which waits for a week of the ledger's numbers: about 2026-11-24 for the fix rate and 2026-11-27 for the check time. CP10.1 ended on 2026-11-19 with 0.25.3, and CP10.2 waits for two decisions after 0.25.11. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
 
 ---
 
@@ -30,7 +30,7 @@ Roadmap
 ├── 🟨 CP9: Ready for a public release — the README's face and the language servers proven
 ├── 🟨 CP10: The same smells in every language — in the order the user set
 │   ├── ✅ CP10.1: Python, TS/JS and Go
-│   └── ⬜ CP10.2: Swift and Rust
+│   └── 🟨 CP10.2: Swift and Rust
 └── ⬜ CP11: Waits for a need
 ```
 
@@ -469,9 +469,12 @@ TS/JS lacked 1 smell and Go lacked 3 that the language allows. All 4 shipped in 
 
 ### CP10.2: Swift and Rust
 
-**Status**: ⬜
+**Status**: 🟨
 
-Swift lacks 8 smells and Rust 11, one of which Rust rules out.
+Swift gained 6 smells and Rust 10 in 0.25.11 on 2026-11-20, so Swift measures 25 and Rust 26. Swift rules out the import cycle. Two wait for the user:
+
+- [Whether Rust's nested `if` expression is a nested ternary](TODO.md#p1discussion-whether-rusts-nested-if-expression-is-a-nested-ternary)
+- [Whether Swift rules out the folder cycle](TODO.md#p1discussion-whether-swift-rules-out-the-folder-cycle)
 
 **Delivers** (2):
 

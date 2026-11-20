@@ -56,9 +56,11 @@ Go's scratch copy runs only linters that read syntax alone, so Go's repeated lit
 
 clippy runs with thresholds from a `clippy.toml` of broom's own, under a config path and a target directory of its own, so it and the project's clippy run don't make cargo check the crate again each time. A crate is checked whole, in one run.
 
+clippy runs with rustc's `missing_docs` lint turned on too, which is off by default.
+
 clippy takes one threshold per lint, so it gets the soft limit, and the size in its message says whether the finding is a hint or a block. Its nesting lint names no depth, so that smell only hints. rustc's own warnings give dead code and unused parameters, the latter kept only where the unused variable sits in a function's parameter list. `cargo clippy` builds no test code, so tests are left out.
 
-A deprecated call needs types in Go, TS/JS and Rust, so it is found here too: by staticcheck's `SA1019` in the Go run, by rustc's `deprecated` lint in the clippy run, and by oxlint's `typescript/no-deprecated` in the run that finds import cycles. That oxlint run is type-aware only where tsgolint is installed. Python's come from ruff in the scratch copy, where an alias imported from `typing` is dropped. The finding keeps the tool's own words, since they name what replaced the API.
+A deprecated call needs types in Go, TS/JS, Rust and Swift, so it is found here too: by staticcheck's `SA1019` in the Go run, by rustc's `deprecated` lint in the clippy run, by oxlint's `typescript/no-deprecated` in the run that finds import cycles, and by the Swift compiler's `DeprecatedDeclaration` warnings. Swift's changed files are type-checked as the primary files of their target, which `swift package dump-package` names into a scratch path of broom's own, so the package is never built. A call into another module resolves only when a build left that module in the package's `.build`. That oxlint run is type-aware only where tsgolint is installed. Python's come from ruff in the scratch copy, where an alias imported from `typing` is dropped. The finding keeps the tool's own words, since they name what replaced the API.
 
 The session scan gives these tools 20 seconds between them. The quick ones go first and clippy last, and a tool the time runs out before is skipped with a note. `broom smells` from the command line has no such limit.
 
@@ -70,7 +72,9 @@ The session scan gives these tools 20 seconds between them. The quick ones go fi
 
 A Python import closes a cycle when what it imports leads back to its file. broom reads the module-level imports itself. An import inside a function, or under `if TYPE_CHECKING:`, is how code breaks a cycle, so it doesn't count. Names are matched by their path, and a name two files share is skipped.
 
-A folder cycle is an import that leads into a folder whose files lead back to this one. Python's are read by broom. TS/JS's are read by dependency-cruiser, package by package from the nearest `package.json`, runtime imports only. It loads the TypeScript that sits beside it, needs one below 7 and reads no `.ts` file without one, silently.
+Rust's `use` statements of the same crate are read by broom: `crate::`, `super::` and `self::` paths, grouped or not, each mapped to its `x.rs` or `x/mod.rs`. `#[path]`, inline `mod` blocks, `src/bin/` and test code aren't read. The graph is Python's, so the same rules of a cycle hold.
+
+A folder cycle is an import that leads into a folder whose files lead back to this one. Python's and Rust's are read by broom, and `src/a.rs` belongs to the folder `src/a/` where that folder exists. TS/JS's are read by dependency-cruiser, package by package from the nearest `package.json`, runtime imports only. It loads the TypeScript that sits beside it, needs one below 7 and reads no `.ts` file without one, silently.
 
 So broom picks the dependency-cruiser to run. Its own copy comes first: one installed under broom's data directory with a TypeScript 6 beside it, which reads a project whatever TypeScript the project uses. Without that copy it takes the project's or the PATH's, unless the repo holds TypeScript files and the TypeScript beside that one is 7 or later, or missing. Which TypeScript sits beside a copy is read from the `package.json` files Node would search, with no process started. A changed file that dependency-cruiser still didn't read is said so in a note.
 
@@ -102,11 +106,19 @@ A broad catch is a `recover()` that stands as a statement or is assigned to `_`.
 
 ---
 
+## Swift's and Rust's text reads
+
+Swift's nesting, its broad catches and its dead code are read from the source. Comments and strings are blanked first, raw strings and interpolation among them, then the braces are counted. The line that opens a block says what it is, and a closure passed in parentheses adds no depth. A dead declaration is a `private` or `fileprivate` one whose name appears only once in its file, where `@objc`, `@IB`, `override` and `CodingKeys` are left out.
+
+Rust's magic numbers, commented code, globals, type lengths, broad test assertions and broad catches are read from the source the same way. rustfmt's layout makes the text enough, as gofmt's does for Go. Test code is a file under `tests/`, a file named for tests, or anything after a `#[cfg(test)]`.
+
+---
+
 ## Duplicate and dead code
 
 jscpd 5 scans every code file in the repo. Given the base ref it scans that tree too and marks the clones the base lacked. A clone counts when it is new and has a side in the change's files. jscpd gets a baseline only from a base git can resolve.
 
-Dead code comes from the same tool in TS/JS and Python, with tests and entry points left out, and from golangci-lint's `unused` in Go. A finding counts on a line the change added, or in a new file. Generated code still counts as using code.
+Dead code comes from the same tool in TS/JS and Python, with tests and entry points left out, from golangci-lint's `unused` in Go, from rustc in Rust and from broom's text read in Swift. A finding counts on a line the change added, or in a new file. Generated code still counts as using code.
 
 - [010: Duplicate code is found across the whole repo](decisions/010-whole-repo-clones.md)
 - [011: Code marked legacy may be repeated](decisions/011-legacy.md)
@@ -118,7 +130,7 @@ Dead code comes from the same tool in TS/JS and Python, with tests and entry poi
 
 Two smells are read from the files with no tool. A skipped test is found by each language's own form in the text of a test file, and it counts like any occurrence: when the change raises the count. A skip whose name states a condition, or that sits behind an `if`, is how a suite fits its machine, so it is left out.
 
-A new code file counts as untested when no test file anywhere in the repo is named for it. The names of all files come from one `git ls-files`, and it runs only when the change adds a code file of 30 lines or more.
+A new code file counts as untested when no test file anywhere in the repo is named for it. A Rust file also counts as tested when it holds its own tests. The names of all files come from one `git ls-files`, and it runs only when the change adds a code file of 30 lines or more.
 
 - [009: An occurrence counts when the change raises the count](decisions/009-occurrence-by-count.md)
 

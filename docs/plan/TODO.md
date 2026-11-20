@@ -6,6 +6,48 @@
 
 ---
 
+### [P1][DISCUSSION] Whether Rust's nested `if` expression is a nested ternary
+
+- description:
+  - Rust has no `?:` operator, and its `if … else` is an expression, as Python's conditional expression is.
+  - Python's counts as a ternary, so a nested `if` in value position could count in Rust, read from the text in about 50 lines.
+  - The docs called the smell ruled out in Rust until 2026-11-20.
+- created: 2026-11-20
+- status: OPEN
+- found: the plan for CP10.2
+- blocks: [O10: Swift and Rust measure every smell](GOALS.md#o10-swift-and-rust-measure-every-smell)
+- next: the user picks: measure it, or rule it out
+
+---
+
+### [P1][DISCUSSION] Whether Swift rules out the folder cycle
+
+- description:
+  - The files of one Swift module see each other with no import, and SwiftPM refuses modules that depend on one another.
+  - Layers inside a module can still go the wrong way, but no import says so.
+  - Reading it would need a graph of type names across folders, about 90 lines with false hits from shared names, or sourcekit-lsp's index, which is too slow for a hook.
+- created: 2026-11-20
+- status: OPEN
+- found: the plan for CP10.2
+- blocks: [O10: Swift and Rust measure every smell](GOALS.md#o10-swift-and-rust-measure-every-smell)
+- next: the user picks: rule it out as Go's cycles are, or read the type names
+
+---
+
+### [P1][DISCUSSION] Which formula the fix rate takes
+
+- description:
+  - GOALS gives M1 as the fixed over the blocked, so a finding still open counts against its rule.
+  - `broom report` gives the fixed over the fixed plus the let through, so it counts only findings that ended.
+  - On 2026-11-20 the ledger gave 58% by the first and 75% by the second.
+- created: 2026-11-20
+- status: OPEN
+- found: the review of the report for I19
+- blocks: [M1: Fix rate](GOALS.md#m1-fix-rate)
+- next: the user picks one, and GOALS or the report follows it
+
+---
+
 ### [P2][DISCUSSION] A hero image for the README
 
 - description: The README opens with no image. Which image stands for broom is the user's pick, from options shown side by side.

@@ -6,6 +6,18 @@
 
 ---
 
+## 0.25.11 — 2026-11-20
+
+---
+
+### Smells
+
+- Swift measures 6 more smells, 25 of 27: nesting, commented-out code, a test assertion any error passes, a `catch` that never reads its error, a call to a deprecated API and a private declaration nothing uses. A deprecated call is found in SwiftPM packages, by type-checking the changed files without a build. `try?` is not a broad catch.
+- Rust measures 10 more, 26 of 27: magic numbers, commented-out code, globals, long types, broad test assertions, broad catches, missing doc comments, untested files, and cycles between modules and between folders. A crate's public items now need doc comments, as in Go and Python, and the first check after the update runs clippy over the crate once more.
+- Commented-out code is a nit in Swift and Rust, since it is a guess there.
+
+---
+
 ## 0.25.10 — 2026-11-20
 
 ---

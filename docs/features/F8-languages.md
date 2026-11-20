@@ -28,8 +28,8 @@ broom has 27 smells, and each language measures a share of them:
 | Python | 27 | — |
 | TS/JS | 27 | — |
 | Go | 24 | 3 that the language rules out |
-| Swift | 19 | 8 |
-| Rust | 16 | 11 |
+| Swift | 25 | 2 |
+| Rust | 26 | 1 |
 | CSS · SCSS · Less | 2 | 25 |
 
 - **Stance**: [The project's tools, not ours](../PHILOSOPHY.md#whose-rules-decide-what-is-clean)
@@ -55,9 +55,9 @@ Without a project linter, oxlint runs with broom's defaults, type-aware. A solut
 
 A crate is checked whole, by one run of clippy that also measures the smells. A cold `cargo clippy` can time out.
 
-Rust has 16 of the smells: 6 sized ones and 9 that count by occurrence, plus dead code.
+Rust has 26 of the smells: 7 sized ones, 16 that count by occurrence, the 2 cycles and dead code.
 
-It lacks 11: magic numbers · commented-out code · globals · long types · nested ternaries · broad test assertions · broad catches · missing doc comments · untested files · import cycles · folder cycles. Rust has no ternary operator, so the language rules that one out.
+It lacks the nested ternary. Rust has no ternary operator, and its `if` is an expression, so whether a nested `if` counts as one waits for a decision.
 
 ---
 
@@ -84,13 +84,13 @@ Without a project linter, stylelint runs with broom's defaults, which report err
 
 ## F8.6: Swift
 
-Swift has 19 of the smells. It lacks 8: nesting · commented-out code · broad test assertions · broad catches · deprecated calls · import cycles · folder cycles · dead code.
+Swift has 25 of the smells. It lacks the 2 cycles. A Swift file imports modules and never another file, and SwiftPM refuses modules that depend on one another, so the language rules out the import cycle. Whether that rules out the folder cycle too waits for a decision.
 
 SwiftLint runs with the project's `.swiftlint.yml`, else with broom's defaults. The defaults are bug-finders and not style: the rules SwiftLint files under "lint" and "performance", plus `force_cast` and `force_try`. Naming, length and layout rules are off, and CocoaPods, Carthage and `.build` code is skipped.
 
 4 limits:
 
-- The compile check covers SwiftPM packages only, since an Xcode project needs `xcodebuild` with a scheme and minutes.
+- The compile check and deprecated calls cover SwiftPM packages only, since an Xcode project needs `xcodebuild` with a scheme and minutes.
 - It counts errors only, because SwiftPM prints warnings just for the files it recompiles.
 - With macOS's Command Line Tools and no Xcode the check builds the sources and leaves the tests out, with a note.
 - A cold `swift build` can time out.
