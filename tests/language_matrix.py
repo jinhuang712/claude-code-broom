@@ -23,7 +23,7 @@ from broom.smells import find_smells
 EVERY_SMELL = {*SMELL_LIMITS, *SMELL_PRESENCE, DEAD_CODE}
 # What the language itself rules out: Go has no ternary operator, and its compiler refuses a package cycle.
 GO_EXEMPT = {"nested_ternary", "import_cycle", "folder_cycle"}
-# Swift's compiler refuses modules that import one another; cycles between its folders aren't read yet.
+# Swift rules out both cycles: a file imports modules, never a file, and SwiftPM refuses modules that import one another.
 SWIFT_EXEMPT = {"import_cycle", "folder_cycle"}
 # Rust has no ternary operator either: `if` is an expression, and whether a nested one is the smell is not settled.
 RUST_EXEMPT = {"nested_ternary"}

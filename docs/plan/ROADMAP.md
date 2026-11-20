@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP8: Lighter](#cp8-lighter), which waits for a week of the ledger's numbers: about 2026-11-24 for the fix rate and 2026-11-27 for the check time. CP10.1 ended on 2026-11-19 with 0.25.3, and CP10.2 waits for two decisions after 0.25.11. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
+**Current checkpoint**: [CP8: Lighter](#cp8-lighter), which waits for a week of the ledger's numbers: about 2026-11-24 for the fix rate and 2026-11-27 for the check time. CP10.1 ended on 2026-11-19 with 0.25.3, and CP10.2 waits for Rust's nested ternary, which waits for how smells are read. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
 
 ---
 
@@ -471,10 +471,7 @@ TS/JS lacked 1 smell and Go lacked 3 that the language allows. All 4 shipped in 
 
 **Status**: 🟨
 
-Swift gained 6 smells and Rust 10 in 0.25.11 on 2026-11-20, so Swift measures 25 and Rust 26. Swift rules out the import cycle. Two wait for the user:
-
-- [Whether Rust's nested `if` expression is a nested ternary](TODO.md#p1discussion-whether-rusts-nested-if-expression-is-a-nested-ternary)
-- [Whether Swift rules out the folder cycle](TODO.md#p1discussion-whether-swift-rules-out-the-folder-cycle)
+Swift gained 6 smells and Rust 10 in 0.25.11 on 2026-11-20, so Swift measures 25 and Rust 26. The user settled two questions that day: Swift rules out both cycles, and a nested `if` expression in Rust is a nested ternary. That last one waits for [Smells read from a syntax tree, not from text patterns](TODO.md#p0discussion-smells-read-from-a-syntax-tree-not-from-text-patterns).
 
 **Delivers** (2):
 

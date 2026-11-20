@@ -54,7 +54,7 @@ A sized smell counts when the change pushed it past a limit, or grew it while pa
 - Rust gets 4 of them from clippy: `function_lines` from `too_many_lines` · `params` from `too_many_arguments` · `complexity` from `cognitive_complexity` · `nesting` from `excessive_nesting`.
 - Rust's `nesting` only hints, since clippy names no depth.
 - Rust's `type_lines` is read by broom, as Go's is: a `struct`, `enum`, `trait` or `union` plus its `impl` blocks in the same file.
-- Rust has no `nested_ternary` yet: whether a nested `if` expression counts as one waits for a decision.
+- Rust has no `nested_ternary` yet: a nested `if` expression counts as one and is still to be measured.
 - Swift's `nesting` counts the blocks of control flow inside a function, since SwiftLint's own rule counts nested types.
 - Swift's nested-ternary rule finds two ternary operators on one line.
 
@@ -199,7 +199,7 @@ Both are hints, and both count where the change adds the import.
 
 `folder_cycle` is an import that leads into a folder whose files lead back to this one, such as `auth` importing `providers` while `providers` imports `auth`. It covers Python, TS/JS and Rust.
 
-TS/JS needs dependency-cruiser, which reads a `.ts` file only with a TypeScript below 7 beside it. So broom keeps a copy of its own with a TypeScript 6, and a project on TypeScript 7 is read like any other. `broom doctor` offers the copy as one command, and it changes nothing in the project or in the user's own TypeScript. Without a dependency-cruiser that can read the repo nothing is measured and nothing nags. Go refuses package cycles itself. Swift isn't read, since the files of one module don't import one another, and whether that rules it out waits for a decision.
+TS/JS needs dependency-cruiser, which reads a `.ts` file only with a TypeScript below 7 beside it. So broom keeps a copy of its own with a TypeScript 6, and a project on TypeScript 7 is read like any other. `broom doctor` offers the copy as one command, and it changes nothing in the project or in the user's own TypeScript. Without a dependency-cruiser that can read the repo nothing is measured and nothing nags. Go refuses package cycles itself. Swift rules it out too: the files of one module don't import one another, and SwiftPM refuses modules that do.
 
 - **Why**: [036: broom keeps its own dependency-cruiser](../specs/decisions/036-own-dependency-cruiser.md)
 

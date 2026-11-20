@@ -47,7 +47,7 @@ Features
 │   │   └── 🚧 F4.2.3: Untested file — paired by file name only
 │   ├── ✅ F4.3: Duplicate code — a new copy anywhere in the repo
 │   ├── ✅ F4.4: Dead code — code a change adds and nothing uses
-│   ├── 🚧 F4.5: Cycles — Swift's folders aren't read
+│   ├── ✅ F4.5: Cycles
 │   │   ├── ✅ F4.5.1: Import cycle
 │   │   └── ✅ F4.5.2: Folder cycle
 │   ├── ✅ F4.6: What is skipped — dependencies, build output and generated code
@@ -68,7 +68,7 @@ Features
 │       ├── ✅ F7.2.3: limits and test_limits
 │       ├── ✅ F7.2.4: smells_off
 │       └── ✅ F7.2.5: test_commands
-├── 🚧 F8: Languages — six, and Swift and Rust lack one smell each
+├── 🚧 F8: Languages — six, and Rust lacks one smell
 │   ├── ✅ F8.1: Go
 │   ├── ✅ F8.2: TS/JS
 │   ├── 🚧 F8.3: Rust — 26 of the 27 smells, and nesting only hints

@@ -28,7 +28,7 @@ broom has 27 smells, and each language measures a share of them:
 | Python | 27 | — |
 | TS/JS | 27 | — |
 | Go | 24 | 3 that the language rules out |
-| Swift | 25 | 2 |
+| Swift | 25 | 2 that the language rules out |
 | Rust | 26 | 1 |
 | CSS · SCSS · Less | 2 | 25 |
 
@@ -57,7 +57,7 @@ A crate is checked whole, by one run of clippy that also measures the smells. A 
 
 Rust has 26 of the smells: 7 sized ones, 16 that count by occurrence, the 2 cycles and dead code.
 
-It lacks the nested ternary. Rust has no ternary operator, and its `if` is an expression, so whether a nested `if` counts as one waits for a decision.
+It lacks the nested ternary for now. Rust has no ternary operator, but its `if` is an expression, as Python's conditional expression is, so a nested `if` in value position counts as one and is still to be measured.
 
 ---
 
@@ -84,7 +84,7 @@ Without a project linter, stylelint runs with broom's defaults, which report err
 
 ## F8.6: Swift
 
-Swift has 25 of the smells. It lacks the 2 cycles. A Swift file imports modules and never another file, and SwiftPM refuses modules that depend on one another, so the language rules out the import cycle. Whether that rules out the folder cycle too waits for a decision.
+Swift has 25 of the smells. The language rules out the other 2, both cycles: a Swift file imports modules and never another file, and SwiftPM refuses modules that depend on one another. Layers inside one module can still go the wrong way, and no import says so.
 
 SwiftLint runs with the project's `.swiftlint.yml`, else with broom's defaults. The defaults are bug-finders and not style: the rules SwiftLint files under "lint" and "performance", plus `force_cast` and `force_try`. Naming, length and layout rules are off, and CocoaPods, Carthage and `.build` code is skipped.
 

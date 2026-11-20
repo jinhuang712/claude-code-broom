@@ -6,45 +6,18 @@
 
 ---
 
-### [P1][DISCUSSION] Whether Rust's nested `if` expression is a nested ternary
+### [P0][DISCUSSION] Smells read from a syntax tree, not from text patterns
 
 - description:
-  - Rust has no `?:` operator, and its `if … else` is an expression, as Python's conditional expression is.
-  - Python's counts as a ternary, so a nested `if` in value position could count in Rust, read from the text in about 50 lines.
-  - The docs called the smell ruled out in Rust until 2026-11-20.
+  - The user asked on 2026-11-20 for checks that rest on a mechanism and not on hard-coded text patterns, so that they hold up as code varies.
+  - broom reads several smells from text today: Go's three in `gomeasure.py`, Swift's in `swiftmeasure.py` and its SwiftLint custom rules, Rust's in `rustmeasure.py` and `rustcycles.py`, and skipped tests in `testrot.py`.
+  - ast-grep runs structural rules on tree-sitter grammars it bundles for Python, TS/JS, Go, Rust, Swift, CSS and Bash. It is a CLI like jscpd, so the standard library stays the only package broom needs.
+  - The other ways: a parser of each language's own run as a helper, a language server's symbols, or the text patterns kept with more tests.
 - created: 2026-11-20
 - status: OPEN
-- found: the plan for CP10.2
-- blocks: [O10: Swift and Rust measure every smell](GOALS.md#o10-swift-and-rust-measure-every-smell)
-- next: the user picks: measure it, or rule it out
-
----
-
-### [P1][DISCUSSION] Whether Swift rules out the folder cycle
-
-- description:
-  - The files of one Swift module see each other with no import, and SwiftPM refuses modules that depend on one another.
-  - Layers inside a module can still go the wrong way, but no import says so.
-  - Reading it would need a graph of type names across folders, about 90 lines with false hits from shared names, or sourcekit-lsp's index, which is too slow for a hook.
-- created: 2026-11-20
-- status: OPEN
-- found: the plan for CP10.2
-- blocks: [O10: Swift and Rust measure every smell](GOALS.md#o10-swift-and-rust-measure-every-smell)
-- next: the user picks: rule it out as Go's cycles are, or read the type names
-
----
-
-### [P1][DISCUSSION] Which formula the fix rate takes
-
-- description:
-  - GOALS gives M1 as the fixed over the blocked, so a finding still open counts against its rule.
-  - `broom report` gives the fixed over the fixed plus the let through, so it counts only findings that ended.
-  - On 2026-11-20 the ledger gave 58% by the first and 75% by the second.
-- created: 2026-11-20
-- status: OPEN
-- found: the review of the report for I19
-- blocks: [M1: Fix rate](GOALS.md#m1-fix-rate)
-- next: the user picks one, and GOALS or the report follows it
+- found: the user, after the Swift and Rust smells of 0.25.11
+- blocks: Rust's nested ternary in [CP10.2: Swift and Rust](ROADMAP.md#cp102-swift-and-rust)
+- next: the user picks the mechanism, then it becomes a guideline in DESIGNS and the text reads move to it
 
 ---
 
