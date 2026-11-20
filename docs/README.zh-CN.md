@@ -7,6 +7,8 @@
 
 > Claude Code 里的代码质量标尺，也是重构时的工具。
 
+[![release](https://img.shields.io/github/v/release/jinhuang712/claude-code-broom?label=release&color=8b5cf6)](https://github.com/jinhuang712/claude-code-broom/releases) [![Claude Code plugin](https://img.shields.io/badge/Claude%20Code-plugin-d97757)](https://docs.claude.com/en/docs/claude-code/plugins) ![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-3776ab) ![macOS](https://img.shields.io/badge/macOS-supported-0ea5e9) [![MIT](https://img.shields.io/badge/license-MIT-22c55e)](../LICENSE)
+
 broom 是给 Coding Agent 用的工具，自己不带任何模型。它让 Claude 的改动在离开会话之前，先过一遍项目自己的格式化工具、lint 工具和类型检查；有人问起代码状况时，它用同一种量法量整个仓库。检查一次改动时，它评判这次改动和它碰到的代码，所以老仓库里的旧警告不会压到一个小修复上。类型错误是唯一的例外，因为改了签名会弄坏任何地方的调用方。
 
 [English](../README.md)
@@ -23,7 +25,8 @@ broom 是给 Coding Agent 用的工具，自己不带任何模型。它让 Claud
 - 📊 **诊断**：`broom diagnose`、`broom stats` 和 `broom compare` 给出整个仓库在重构前后的数字。
 - 🩺 **体检**：会话开始时它数一遍仓库里的腐化，某个数字变大了就告诉 Claude 一次。
 
-没有你的同意，什么都不装。被拦下的问题要么修好，要么带着记录在案的理由放行。
+> [!IMPORTANT]
+> 没有你的同意，什么都不装。被拦下的问题要么修好，要么带着记录在案的理由放行。
 
 ---
 
@@ -34,7 +37,10 @@ broom 是给 Coding Agent 用的工具，自己不带任何模型。它让 Claud
 /plugin install broom@claude-code-broom
 ```
 
-需要 macOS、Claude Code 2.1.271 或更高版本、Python 3.9+（命令名 `python3`）和 git。Linux 没有测试过，Windows 不支持。其余内容在 [INSTALL.md](INSTALL.md)（英文）：终端里的装法、每种语言的工具、更新和卸载。
+需要 macOS、Claude Code 2.1.271 或更高版本、Python 3.9+（命令名 `python3`）和 git。其余内容在 [INSTALL.md](INSTALL.md)（英文）：终端里的装法、每种语言的工具、更新和卸载。
+
+> [!WARNING]
+> Linux 没有测试过，Windows 不支持。
 
 ---
 
@@ -71,7 +77,8 @@ Claude 修好问题后再次提交。broom 有三个命令，上面这些都不�
 /broom:scan 最近 3 个提交
 ```
 
-想修掉发现的问题，说出要修哪些即可。Claude 会从最严重的开始，小步、带测试地清理。
+> [!TIP]
+> 想修掉发现的问题，说出要修哪些即可。Claude 会从最严重的开始，小步、带测试地清理。
 
 ---
 
@@ -85,15 +92,29 @@ Claude 修好问题后再次提交。broom 有三个命令，上面这些都不�
 
 Claude Code 在会话开始、收到提示、调用 Bash、Bash 命令失败、编辑文件和一轮对话结束时启动 broom 的某个钩子。钩子对改动的部分运行项目自己的工具，然后以拦截、一条说明或什么都不说退出。
 
-```
-Claude Code
-  │ SessionStart · UserPromptSubmit · PreToolUse(Bash) · PostToolUse(edit) · PostToolUseFailure(Bash) · Stop · SubagentStop
-  ▼
-hooks/hooks.json ──▶ hooks/commit.sh ──▶ bin/broom ──▶ lib/broom/
-                                            ▲              │
-git pre-commit hook ────────────────────────┘              ├──▶ the project's tools (formatters, linters, type checkers)
-skills/ (setup · status · scan · clean) ───▶ bin/broom    ├──▶ defaults/ (configs where a project has none)
-.lsp.json ──▶ language servers                             └──▶ the data directory (state shared by every hook)
+```mermaid
+flowchart LR
+  CC["Claude Code<br/>session start · prompt · Bash · edit · turn end"]:::host
+  GIT["git's pre-commit hook"]:::host
+  SK["skills<br/>setup · status · scan · clean"]:::host
+  H["hooks/"]:::broom
+  B["bin/broom"]:::broom
+  L["lib/broom/"]:::broom
+  T["the project's tools<br/>formatters · linters · type checkers"]:::tool
+  D["defaults/<br/>configs where a project has none"]:::tool
+  S[("data directory<br/>state shared by every hook")]:::data
+  LSP[".lsp.json<br/>language servers"]:::tool
+  CC --> H --> B --> L
+  GIT --> B
+  SK --> B
+  L --> T
+  L --> D
+  L --> S
+  CC --> LSP
+  classDef host fill:#ede9fe,stroke:#7c3aed,color:#2e1065
+  classDef broom fill:#fef3c7,stroke:#d97706,color:#451a03
+  classDef tool fill:#dcfce7,stroke:#16a34a,color:#052e16
+  classDef data fill:#e0f2fe,stroke:#0284c7,color:#082f49
 ```
 
 ---
