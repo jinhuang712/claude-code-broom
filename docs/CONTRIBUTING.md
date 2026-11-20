@@ -6,6 +6,8 @@
 
 A change keeps broom on Python 3.9 with the standard library only. Read [DESIGNS.md](DESIGNS.md) before a change to how broom works, and [PHILOSOPHY.md](PHILOSOPHY.md) before a change to what it does.
 
+Ask before you start, in the repo's [GitHub issues](https://github.com/jinhuang712/claude-code-broom/issues).
+
 ---
 
 ## Set up

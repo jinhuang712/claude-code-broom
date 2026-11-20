@@ -31,16 +31,6 @@
 
 ---
 
-### [P2][DISCUSSION] Where a contributor asks first
-
-- description: CONTRIBUTING states the bar for a change and names no place to ask before starting one.
-- created: 2026-11-18
-- status: OPEN
-- found: the docs pass of 2026-11-18
-- next: the user names the place, such as the repo's GitHub issues
-
----
-
 ### [P2][DISCUSSION] One open way to ask broom, in place of a flag per question
 
 - description:
