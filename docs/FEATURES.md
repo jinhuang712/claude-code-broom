@@ -57,7 +57,7 @@ Features
 ├── ✅ F5: Cleanup — the smells already in a repo
 │   ├── ✅ F5.1: Ranking — the smells of a repo or an area, worst first
 │   ├── ✅ F5.2: Session note — Claude raises severe smells at a natural point
-│   └── ❔ F5.3: Cleanup on the user's word — a skill Claude loads, not run in this pass
+│   └── ✅ F5.3: Cleanup on the user's word — a skill Claude loads, run end to end in a fresh session on 2026-11-20
 ├── ✅ F6: Language servers — run in fresh sessions of Claude Code 2.1.329 on 2026-11-20
 │   └── ✅ F6.1: Diagnostics as Claude edits — six servers
 ├── ✅ F7: Settings — defaults that are never asked

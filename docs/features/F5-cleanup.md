@@ -47,7 +47,7 @@ A cleanup starts when the user asks for one in their own words: to fix what a sc
 
 The skill ranks the smells of the repo or an area, agrees a scope and batches with the user, and cleans up worst first. It keeps behavior and the tests green, re-checks each batch and commits it alone.
 
-It asks `broom fixes` for the usual fix of each smell. A smell that is deliberate stays, and the skill offers `exclude`, `limits`, `legacy` or `smells_off` instead of contorting the code.
+`broom fixes` gives it the usual fix of each smell, the same line a block message carries. A smell that is deliberate stays, and the skill offers `exclude`, `limits`, `legacy` or `smells_off` instead of contorting the code.
 
 - **Commands**: [broom smells](../CLI.md#broom-smells)
 - **Why**: [035: Three commands, and a cleanup that is none](../specs/decisions/035-three-commands.md)
