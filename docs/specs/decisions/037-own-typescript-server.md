@@ -19,7 +19,7 @@ The install command of broom's own copy adds typescript-language-server beside i
 ## Not chosen
 
 - **Hand the server a `tsserver` path in `.lsp.json`**: The path differs per machine, and whether Claude Code expands a variable there was not checked.
-- **Tell the user to install a global TypeScript 6**: It replaces their own TypeScript, as 036 already weighed.
+- **Tell the user to install a global TypeScript 6**: It replaces their own TypeScript.
 - **`tsc --lsp` in TypeScript 7 projects**: It gives navigation and no diagnostics under Claude Code.
 
 ---

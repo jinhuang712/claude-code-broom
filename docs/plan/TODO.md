@@ -20,6 +20,17 @@
 
 ---
 
+### [P2][IDEA] INSTALL says what to do when an install fails
+
+- description:
+  - INSTALL has no part for a failed install, and nobody has recorded what one shows.
+  - Every install so far ran on the author's machine, so the first install by a stranger is where the cases come from.
+- created: 2026-11-20
+- found: the docs pass of 2026-11-20
+- related: [What it takes for a second user to install broom and stay](#p1discussion-what-it-takes-for-a-second-user-to-install-broom-and-stay)
+
+---
+
 ### [P2][DISCUSSION] Where a contributor asks first
 
 - description: CONTRIBUTING states the bar for a change and names no place to ask before starting one.
@@ -143,7 +154,7 @@
 
 - description:
   - A suite slows a little with each change, and no change is at fault, which is rot by broom's own definition.
-  - This repo's suite took about 40 seconds on 2026-11-17 and 78 to 81 on 2026-11-19.
+  - This repo's suite took about 40 seconds on 2026-11-17, 78 to 81 on 2026-11-19 and 113 to 150 on 2026-11-20, that day with other sessions busy on the machine.
   - broom sees each test run's command at a turn's end, so it could keep how long a run took and tell when that grew.
 - created: 2026-11-19
 - found: the look for missed rot at the end of CP6

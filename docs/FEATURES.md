@@ -2,7 +2,7 @@
 
 The marks: ✅ built · 🚧 built, with a gap named beside it · ❔ claimed and not yet run, with the reason beside it · ⬜ planned.
 
-A ✅ here means the test suite covers the feature and passed on 2026-11-20, or for a skill or a language server that a fresh session ran it end to end.
+A ✅ here means the test suite covers the feature and passed on 2026-11-20, or for a skill or a language server that a fresh session ran it end to end. A group is 🚧 when a feature under it has a gap or is not built.
 
 ---
 
@@ -16,7 +16,7 @@ Features
 │   ├── ✅ F1.3: /broom:setup — a skill, run end to end in a fresh session on 2026-11-19
 │   ├── ✅ F1.4: Default configs — added where a project has none
 │   └── ✅ F1.5: Protection list — which checks run and which don't
-├── ✅ F2: Sweep — Claude's changes are formatted, checked and held back
+├── 🚧 F2: Sweep — Claude's changes are formatted, checked and held back
 │   ├── ✅ F2.1: Commit check — a git commit is formatted, checked and held back
 │   ├── ✅ F2.2: Turn-end check — what a turn changed is checked when Claude stops
 │   ├── ✅ F2.3: Subagent check — a subagent fixes its own work
@@ -25,7 +25,7 @@ Features
 │   ├── ✅ F2.5: Known issues — what was let through, and why
 │   │   ├── ✅ F2.5.1: A reason for every pass
 │   │   └── ✅ F2.5.2: A turn can end with a finding open
-│   ├── ✅ F2.6: Scan on request — /broom:scan, a skill, run end to end in fresh sessions on 2026-11-19
+│   ├── 🚧 F2.6: Scan on request — a scan from one commit covers the later commits too
 │   ├── 🚧 F2.7: Time limit — a cold build can be cut off and go unchecked
 │   ├── 🚧 F2.8: Self-waivers shown — a config loosened by a command is missed with `check_on` at `commit`
 │   ├── ✅ F2.9: Messages that say how to fix — the fix beside the finding
@@ -39,7 +39,7 @@ Features
 │       ├── ✅ F3.2.1: changed
 │       ├── ✅ F3.2.2: function
 │       └── ✅ F3.2.3: file
-├── ✅ F4: Smells — one bar for code that is hard to change
+├── 🚧 F4: Smells — one bar for code that is hard to change
 │   ├── ✅ F4.1: Sized smells — stopped past the soft limit, and no growth past the hard one
 │   ├── ✅ F4.2: Occurrence smells — a change that adds one gets its level
 │   │   ├── ✅ F4.2.1: Broad catch
@@ -78,7 +78,7 @@ Features
 ├── 🚧 F9: Record — tiers by fix rate are not built
 │   ├── ✅ F9.1: Ledger — every block, fix, pass and skip leaves a line
 │   ├── 🚧 F9.2: Turn summary — not shown with `check_on` at `commit`
-│   ├── ✅ F9.3: Report — the record of a repo over a period
+│   ├── 🚧 F9.3: Report — nits told without a block are not shown
 │   ├── ⬜ F9.4: Tiers by fix rate — a rule nobody fixes stops interrupting
 │   └── ✅ F9.5: /broom:status — a skill, run end to end in a fresh session on 2026-11-19
 ├── 🚧 F10: Diagnosis — a repo's numbers before and after a refactor
@@ -87,14 +87,14 @@ Features
 │   ├── 🚧 F10.3: Before and after — a tool that fails silently in the base's checkout is not caught
 │   ├── 🚧 F10.4: Numbers on request — a test is paired with its code by file name
 │   └── ✅ F10.5: Claude knows what to ask — broom before a script
-└── 🚧 F11: Check-up — Swift is left out of dependencies and deprecated APIs
+└── 🚧 F11: Check-up — Swift is left out of dependencies
     ├── ✅ F11.1: Counters — numbers that speak only when they grow
     ├── 🚧 F11.2: Test coverage — files are listed and functions are not
     ├── ✅ F11.3: Duplicate tests — tests that repeat one another
     ├── ✅ F11.4: Dead code in the whole repo — what nothing uses any more
     ├── 🚧 F11.5: Missing comments — in TS/JS only exported functions and classes
     ├── 🚧 F11.6: Dependencies — Rust's tool was never run here
-    └── 🚧 F11.7: Deprecated APIs — Swift is not covered, and TS/JS needs tsgolint
+    └── 🚧 F11.7: Deprecated APIs — Swift in an Xcode project is not covered, and TS/JS needs tsgolint
 ```
 
 ---

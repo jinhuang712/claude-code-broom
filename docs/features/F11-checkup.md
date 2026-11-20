@@ -173,12 +173,13 @@ It comes from the tools broom already runs:
 | Go | staticcheck's `SA1019` |
 | Rust | rustc's `deprecated` lint |
 | TS/JS | oxlint's `typescript/no-deprecated`, which needs tsgolint |
+| Swift | the compiler's `DeprecatedDeclaration` warnings in a SwiftPM package |
 
 Python's `typing.List` and its like are not counted, since every codebase older than Python 3.9 holds them and no version has dropped them.
 
 3 gaps:
 
-- Swift is not covered.
+- Swift in an Xcode project is not covered.
 - TS/JS is measured only where tsgolint is installed, and `broom doctor` lists it as optional.
 - Python's own `@deprecated` marks in a project are not seen, since ruff reads no types.
 

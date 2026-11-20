@@ -46,7 +46,11 @@ When a turn let something through, the user sees one line at its end, such as `b
 
 `--all` covers every repo but those in a temporary folder, where only a test or a trial puts one, and says how many it left out.
 
-A finding counts once, however often it was blocked. Notes told without a block are recorded and not yet shown.
+A finding counts once, however often it was blocked.
+
+1 gap:
+
+- Nits told without a block are recorded and not shown.
 
 - **Commands**: [broom report](../CLI.md#broom-report)
 - **How it works**: [Record](../specs/record.md)

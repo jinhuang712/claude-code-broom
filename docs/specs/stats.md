@@ -3,7 +3,7 @@
 This part counts what a session would otherwise write a throwaway script to count. It exists so that two sessions asked the same question about a repo give the same answer.
 
 ```
-the repo's code files ──▶ one pass over each file's text ──▶ size · tests · rot
+the repo's code files ──▶ one pass over each file's tree ──▶ size · tests · rot
 git log, once ───────────────────────────────────────────▶ history
 git blame, on the lines that hold a TODO ────────────────▶ the age of each TODO
 the coverage report of the project's own test run ───────▶ the lines a test reached

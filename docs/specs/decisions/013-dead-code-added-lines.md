@@ -1,4 +1,4 @@
-# 013. Dead code counts only on lines the change added, in TS/JS, Python and Go
+# 013. Dead code counts only on lines the change added
 
 Decided: 2026-11-13
 
@@ -12,7 +12,7 @@ Code nothing uses is something Claude wrote and never wired in. A whole-repo lis
 
 ## The choice
 
-A dead-code finding counts on a line the change added, or in a new file. It comes from jscpd in TS/JS and Python and from golangci-lint's `unused` in Go. It is a nit, told without a block, since what loads dynamically looks unused too.
+A dead-code finding counts on a line the change added, or in a new file. It is a nit, told without a block, since what loads dynamically looks unused too.
 
 ---
 

@@ -191,7 +191,7 @@ A block says first what was blocked and what to do, then lists the findings. Aft
 
 The message then says what is not a fix: a function cut in two at an arbitrary line, a new lint suppression and a looser `.broom.json`. The way to accept a finding comes last.
 
-A message holds at most 9,000 characters. Past that it shows fewer findings and says how many more there are. A note given at a commit ends with the fix of up to 3 of its kinds.
+A message holds at most 9,000 characters. Past that it shows fewer findings and says how many more there are. A nit told at a commit ends with the fix of up to 3 of its kinds.
 
 - **Commands**: [broom fixes](../CLI.md#broom-fixes)
 - **How it works**: [Commit check](../specs/commit-check.md)

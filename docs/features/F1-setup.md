@@ -17,7 +17,7 @@ Setup gets a repo the formatters, linters, type checkers and language servers it
 
 `broom doctor` lists a repo's languages with their tools and configs, and gives a ready command for each fix.
 
-It checks 11 things:
+It checks 12 things:
 
 - Each needed tool is on PATH and runs.
 - The TypeScript language server starts and gives Claude diagnostics, and broom's own copy is the fix.
@@ -29,6 +29,7 @@ It checks 11 things:
 - A repo with TS/JS has a dependency-cruiser that can read its files, and broom's own copy is the fix.
 - A repo with Go, Rust or TS/JS has ast-grep, which reads the smells no linter covers from the syntax tree.
 - No other enabled plugin starts a language server for files broom's servers serve, whatever languages the repo has.
+- A repo with code has git's pre-commit hook.
 - `.broom.json` is valid.
 
 It looks three levels deep and at up to 20 projects per language. Python files git tracks count as Python also where no project file sits above them. It flags unknown keys and values in `.broom.json`.

@@ -28,6 +28,8 @@ Roadmap
 │   ├── ⬜ CP8.1: Fewer interruptions
 │   └── ⬜ CP8.2: Fewer runs and less code
 ├── ✅ CP9: Ready for a public release — the README's face and the language servers proven
+│   ├── ✅ CP9.1: Three commands
+│   └── ✅ CP9.2: The README's face and the language servers
 ├── ✅ CP10: The same smells in every language — in the order the user set
 │   ├── ✅ CP10.1: Python, TS/JS and Go
 │   └── ✅ CP10.2: Swift and Rust
@@ -416,12 +418,42 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 **Status**: ✅
 
-The user set this on 2026-11-19: what a stranger meets first, and what can only be proven in real sessions of every language, comes just before a public release. `/broom:status` shipped in 0.25.1 that day, and a fresh session with no tools on its PATH ran it end to end. The commands became three in 0.25.4 that day: setup, status and scan. Three fresh sessions ran a scan of a whole repo, a scan of two commits and a status, and none changed a file. One of them named the old cleanup command, which 0.25.5 put right. On 2026-11-20 a fresh session per language saw the server's diagnostic after an edit, in all six, so the hero image was what was left. The user picked its broom from options of Codex's on 2026-11-20, and the checkpoint ended with 0.28.0 that day.
+The user set this on 2026-11-19: what a stranger meets first, and what can only be proven in real sessions of every language, comes just before a public release. The checkpoint ended with 0.28.0 on 2026-11-20.
 
-**Delivers** (8):
+**Exit criteria** (2):
+
+- **Sub-checkpoints**
+  - [CP9.1: Three commands](#cp91-three-commands) is met.
+  - [CP9.2: The README's face and the language servers](#cp92-the-readmes-face-and-the-language-servers) is met.
+
+---
+
+### CP9.1: Three commands
+
+**Status**: ✅
+
+`/broom:status` shipped in 0.25.1 on 2026-11-19, and a fresh session with no tools on its PATH ran it end to end. The commands became three in 0.25.4 that day: setup, status and scan. Three fresh sessions ran a scan of a whole repo, a scan of two commits and a status, and none changed a file. One of them named the old cleanup command, which 0.25.5 put right.
+
+**Delivers** (2):
 
 - [F9.5: /broom:status](../features/F9-record.md#f95-broomstatus)
 - [F2.6: Scan on request](../features/F2-sweep.md#f26-scan-on-request)
+
+**Exit criteria** (1):
+
+- **Constraints**
+  - [R4: Setup asks at most two questions](GOALS.md#r4-setup-asks-at-most-two-questions): ✅ 2026-11-19, one question in the status skill
+
+---
+
+### CP9.2: The README's face and the language servers
+
+**Status**: ✅
+
+On 2026-11-20 a fresh session per language saw the server's diagnostic after an edit, in all six, so the hero image was what was left. The user picked its broom from options of Codex's that day, and the sub-checkpoint ended with 0.28.0.
+
+**Delivers** (6):
+
 - The README opens with a hero in a dark and a light version, and the changelog's sections before 0.18.2 meet the wording rules, done on 2026-11-20.
 - A project on TypeScript 7 gets its folder cycles read, by a dependency-cruiser of broom's own, and the doctor no longer calls one that reads nothing ok, done on 2026-11-19.
 - The line for another tool's git hook no longer blocks every commit where the marketplace copy is absent, and doctor sees it once added, done on 2026-11-19.

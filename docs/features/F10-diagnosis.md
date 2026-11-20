@@ -75,7 +75,7 @@ The longest functions and types come from `broom smells --only function_lines` a
 
 3 gaps:
 
-- Rust functions and types under their soft limit are not listed.
+- Rust functions under their soft limit are not listed.
 - A code file is paired with its test by file name, which misses a test named otherwise.
 - Rust and CSS take no part in the pairing.
 

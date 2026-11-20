@@ -56,8 +56,7 @@ Writing is one append under a lock. It never raises into a hook. Over 2 MB the l
 
 A finding is fixed when a block of the same repo or of the same turn held it, no check has ended it and it is gone from the current result. A turn-end block takes the place of the repo's last block, and what a commit blocked before stays behind it until a commit covers its file. A fix is written once: a commit and a turn's end that both see a finding gone write one line between them.
 
-A commit keeps what earlier commits blocked in files it didn't take. Such a finding stays in the repo's record until a commit covers its file, it is accepted or its file is gone. One whose file is gone leaves with no line, since a moved file would otherwise read as fixed.
- Four things keep a gone finding open instead:
+Four things keep a gone finding open instead:
 
 - Its file is not among the files this check covered, as when the next commit takes other files.
 - A timeout or missing-tool note covers the tool that found it.
@@ -66,6 +65,8 @@ A commit keeps what earlier commits blocked in files it didn't take. Such a find
 - The same run saw a looser `.broom.json`, which may only have hidden it.
 
 A type error in a file outside the checked files is never counted as fixed.
+
+A commit keeps what earlier commits blocked in files it didn't take. Such a finding stays in the repo's record until a commit covers its file, it is accepted or its file is gone. One whose file is gone leaves with no line, since a moved file would otherwise read as fixed.
 
 ---
 
@@ -83,7 +84,7 @@ The notes are cleared at the next prompt. With `check_on` at `commit` no stop ho
 
 `broom report` counts distinct findings by repo and key, each by how it ended last: fixed, let through or still open. A finding blocked three times and then fixed counts once as blocked and once as fixed.
 
-The fix rate is the fixed over the fixed plus the let through, so a finding that hasn't ended counts against no rule. A block of self-waivers gives their count by kind and the notes of the config ones. The lines of notes are written and not yet shown.
+The fix rate is the fixed over the fixed plus the let through, so a finding that hasn't ended counts against no rule. A block of self-waivers gives their count by kind and the notes of the config ones. The lines of nits are written and not yet shown.
 
 The run lines give the seconds of a whole check, grouped by moment: git's hook and Claude Code's commit hook are both at a commit, and a subagent's end is at a turn's end. The time lines give the seconds per tool beside them. Before 0.25.10 the ledger held only the time lines, which leave out the smells.
 

@@ -60,7 +60,7 @@ Claude's work comes out formatted, lint-clean and type-correct by the project's 
 
 **Acceptance**: The test suite passes. It commits and stops in temporary repos and expects the block.
 
-**Status**: ✅ 2026-11-18, 656 tests with 3 skipped.
+**Status**: ✅ 2026-11-20, 770 tests with 3 skipped.
 
 ---
 
