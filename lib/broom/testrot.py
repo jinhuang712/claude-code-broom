@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Callable, Dict, Iterable, List, Optional, Pattern, Set, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple
 
 from .clones import Clone
 from .config import SMELL_PRESENCE
@@ -27,26 +27,9 @@ from .treefacts import TREE_LANGS, skip_trees
 
 TEST_FILE = re.compile(r"(^|/)(tests?|__tests__|Tests)/|_test\.(go|py)$|(^|/)test_[^/]*\.py$|"
                        r"\.(test|spec)\.[cm]?[jt]sx?$|Tests?\.swift$")
-# How a test is skipped or disabled, in the languages no syntax tree reads it from yet: treefacts reads Python,
-# Go and TS/JS, and swiftcalls reads Swift. Rust keeps its tests next to the code.
-SKIPS: Dict[str, Pattern[str]] = {lang: re.compile(pattern, re.M) for lang, pattern in {
-    "rust": r"#\[ignore\b",
-}.items()}
 SKIPPED_TEST = "skipped_test"
-# A skip named for its condition; or one that sits behind an `if` on its own line or the line above: a guard.
-CONDITIONED = re.compile(r"skip(?:If|Unless|if)\b")
-GUARD = re.compile(r"\b(?:if|guard|unless)\b")
-GUARDED = re.compile(r"^(?:\}\s*)?(?:if|elif|else|except|catch|guard|case)\b")
-
-
-def is_conditional(row: str, found: re.Match[str], before: str) -> bool:
-    """Whether the skip `found` on `row` depends on a condition: its name says so, an `if` stands before it on the row,
-    or `before`, the line above, opens a branch."""
-    return bool(CONDITIONED.search(found.group()) or GUARD.search(row[:found.start()]) or GUARDED.match(before))
-
-
 def tree_skip_rows(texts: Dict[str, str], notes: List[str]) -> List[Raw]:
-    """A row for each skip no condition decides in the Python, Go and TS/JS test files `texts`, read from their trees."""
+    """A row for each skip no condition decides in the test files `texts` of a tree language, read from their trees."""
     out = []
     for rel, tree in skip_trees({rel: t for rel, t in texts.items() if lang_of(Path(rel)) in TREE_LANGS}, notes).items():
         rows = texts[rel].splitlines()
@@ -57,22 +40,11 @@ def tree_skip_rows(texts: Dict[str, str], notes: List[str]) -> List[Raw]:
 def skip_rows(texts: Dict[str, str], notes: Optional[List[str]] = None) -> List[Raw]:
     """A row for each skipped or disabled test that no condition decides, in the test files among `texts` (path to
     text; Rust files all count). The key is the line's text, which matches a skip across versions of the file. What
-    keeps ast-grep from reading the Go and TS/JS ones goes to `notes`."""
+    keeps ast-grep from reading them goes to `notes`. Swift's are read by its compiler and SourceKit."""
     tests = {rel: text for rel, text in texts.items() if TEST_FILE.search(rel) or rel.endswith(".rs")}
     out = tree_skip_rows(tests, [] if notes is None else notes)
     for rel, text in tests.items():
-        if lang_of(Path(rel)) == "swift":
-            out += swift_skip_rows(rel, text)
-            continue
-        pattern = SKIPS.get(lang_of(Path(rel)) or "")
-        if not pattern or not pattern.search(text):
-            continue
-        before = ""  # the last line with something on it
-        for n, row in enumerate(text.splitlines(), 1):
-            found = pattern.search(row)
-            if found and not is_conditional(row, found, before):
-                out.append(Raw(rel, n, SKIPPED_TEST, row.strip(), 1, "broom"))
-            before = row.strip() or before
+        out += swift_skip_rows(rel, text) if lang_of(Path(rel)) == "swift" else []
     return out
 
 

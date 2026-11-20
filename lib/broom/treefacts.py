@@ -15,11 +15,12 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from .reading import TOOL_TIMEOUT
-from .syntax import Match, matches
+from .syntax import Match, Rules, matches
 from .toolchain import lang_of
 
-TREE_LANGS = ("py", "go", "js")  # the languages whose counters and skips come from a tree
-SG_LANGS = ("go", "js")  # those ast-grep reads
+TREE_LANGS = ("py", "go", "js", "rust", "css")  # the languages whose counters and skips come from a tree here
+SG_LANGS = ("go", "js", "rust", "css")  # those ast-grep reads
+FACT_RULES = Rules(only="(test-case|skip|comment|suppression)$")  # the rules of these facts, and none of the smells'
 BATCH = 2000  # files per ast-grep run, well inside the length of a command line
 # The words of every TODO marker and lint suppression. A Python file with none of them holds no such comment, so it
 # isn't tokenized; ast-grep's comment rules look for the same words.
@@ -129,7 +130,7 @@ def sg_trees(root: Path, rels: List[str], notes: List[str]) -> Dict[str, Tree]:
     trees = {rel: Tree() for rel in rels}
     mine: List[str] = []  # this run's own notes: other threads may add to `notes` meanwhile
     for start in range(0, len(rels), BATCH):
-        for m in matches(root, rels[start:start + BATCH], mine, TOOL_TIMEOUT):
+        for m in matches(root, rels[start:start + BATCH], mine, TOOL_TIMEOUT, FACT_RULES):
             if m.file in trees:
                 trees[m.file].add(m)
     notes += mine

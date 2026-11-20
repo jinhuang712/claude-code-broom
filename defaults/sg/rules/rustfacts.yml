@@ -1,0 +1,54 @@
+# Rust's test cases, skipped tests and marked comments (treefacts.py, for testrot.py and statscan.py), read from the
+# tree. A test case is a `#[test]` attribute, or one whose path ends in `test`, such as `#[tokio::test]`. A skip is an
+# `#[ignore]`, with or without a reason; inside a `#[cfg_attr(…, ignore)]` a condition decides it. The `rustfacts-`
+# prefix keeps these out of the smell rules that `^rust-` picks (rustmeasure.py).
+id: rustfacts-test-case
+language: Rust
+message: a test case
+metadata: {smell: test_case}
+rule:
+  kind: attribute
+  any:
+    - has: {kind: identifier, regex: '^test$', nthChild: 1}
+    - has: {kind: scoped_identifier, nthChild: 1, has: {field: name, regex: '^test$'}}
+---
+id: rustfacts-skip
+language: Rust
+message: a skipped test
+metadata: {smell: skipped_test}
+rule:
+  kind: attribute
+  has: {kind: identifier, regex: '^ignore$', nthChild: 1}
+---
+id: rustfacts-guarded-skip
+language: Rust
+message: a skip a condition decides
+metadata: {smell: guarded_skip}
+rule:
+  kind: identifier
+  regex: '^ignore$'
+  inside:
+    kind: token_tree
+    inside:
+      kind: attribute
+      has: {kind: identifier, regex: '^cfg_attr$', nthChild: 1}
+---
+id: rustfacts-comment
+language: Rust
+message: a comment with a marker word
+metadata: {smell: marked_comment}
+rule:
+  any: [kind: line_comment, kind: block_comment]
+  pattern: $TEXT
+  regex: 'TODO|FIXME|HACK|XXX|noqa|ignore|disable|nolint|@ts-|allow\('
+---
+# A lint suppression in Rust is an attribute, `#[allow(…)]` or `#![allow(…)]`, not a comment. Its text is handed on
+# as a marked comment's is, where the suppression markers (waivers.py) read its kind.
+id: rustfacts-suppression
+language: Rust
+message: a lint the code allows
+metadata: {smell: marked_comment}
+rule:
+  any: [kind: attribute_item, kind: inner_attribute_item]
+  pattern: $TEXT
+  has: {kind: attribute, has: {kind: identifier, regex: '^allow$', nthChild: 1}}

@@ -1,3 +1,6 @@
 # ast-grep reads broom's structural rules from here (lib/broom/syntax.py, decision 038).
 ruleDirs:
   - rules
+# SCSS and Less are read with the CSS grammar, whose comments include `//` ones (js_comment).
+languageGlobs:
+  css: ["*.scss", "*.less"]

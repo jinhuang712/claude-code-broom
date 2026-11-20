@@ -253,8 +253,18 @@ class ScanTest(StatsCase):
         f = statscan.scan("a.py", "py", text('x = "no' + 'qa"', 'y = "# TODO"', '"""', "# FIXME", '"""', "# HACK"))
         self.assertEqual((f.suppressions, f.todos), ([], [6]))
 
-    def test_comments_carry_over_lines_per_language(self) -> None:
-        self.assertEqual(statscan.todo_lines("css", ["a { color: red } /* HACK */"]), [1])
+    @unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
+    def test_rust_and_css_tests_and_comments_come_from_the_tree(self) -> None:
+        r = self.repo({
+            "src/a.rs": text("#[test]", "fn a() {}", "#[tokio::test]", '#[ignore = "slow"]', "async fn b() {}",
+                             '#[cfg_attr(not(feature = "x"), ignore)]', "#[test]", "fn c() {}", "// TODO: fix",
+                             'fn d() { let s = "// TODO: no #[test] #[ignore]"; }'),
+            "a.css": text("/* one", "HACK: two */", 'a { content: "/* TODO: no */" }'),
+            "b.scss": text("// FIXME: three", ".a { .b { color: red } }")})
+        facts = {f.rel: f for f in stats.collect(r, [])}
+        rust = facts["src/a.rs"]
+        self.assertEqual((rust.cases, rust.skipped, rust.todos), (3, 2, [9]))
+        self.assertEqual((facts["a.css"].todos, facts["b.scss"].todos), ([2], [1]))
 
     @unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
     def test_go_and_ts_comments_come_from_the_tree_and_a_marker_in_a_string_is_none(self) -> None:
