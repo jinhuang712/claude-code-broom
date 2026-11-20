@@ -60,7 +60,7 @@ The other docs are read when the work needs them.
 
 The handbook is [CONTRIBUTING.md](docs/CONTRIBUTING.md): how to set up, run the checks and land a change.
 
-19 rules:
+20 rules:
 
 - [MUST] follow these rules strictly unless the user rejects one.
 - [MUST] read every doc you work on in full.
@@ -69,6 +69,7 @@ The handbook is [CONTRIBUTING.md](docs/CONTRIBUTING.md): how to set up, run the 
 - [MUST] run the checks in CONTRIBUTING before a change lands.
 - [MUST] look at each checkpoint's end for kinds of rot broom still misses, then add each to FEATURES or to TODO.
 - [MUST] push and tag when a checkpoint or a sub-checkpoint ends and the checks pass, then tell the user.
+- [MUST] publish a GitHub release for every tag, with its CHANGELOG section as the notes.
 - [MUST] bump Z for a release, and Y when a whole checkpoint ends.
 - [MUST] update the installed plugin after a release, then tell the user to reload.
 - [MUST] keep this repo at zero findings by broom's own measure.
