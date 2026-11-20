@@ -650,24 +650,17 @@
 
 ### Fixes
 
-- A Stop hook that ran until Claude Code ended it at its timeout (18 of 130 Stops in one session, about 90 minutes,
-  none between a few seconds and the timeout) is made hard to repeat. The cause on that machine isn't confirmed:
-  it didn't reproduce here. What was found and fixed:
-  - broom read each tool's output through pipes. A tool that exits and leaves a daemon behind in a session of its
-    own (a language server, a build server, git's file system monitor) holds those pipes open, and `run()` waited
-    for the daemon: 12.0 s for a tool that took no time, with the daemon sleeping 12 s; and after a timeout it
-    waited with no limit. Output now goes to files and is read when the command is done, and a command reads no
-    input.
-  - `git cat-file`, run on every check, was started outside the hook's 25 seconds, with its own 60. It goes through
-    the same limits now.
-  - git is told not to start its file system monitor, take its optional index lock or ask for a password, for each
-    command broom starts.
-  - The hook's input was read until its pipe closed (the commit hook's launcher too). It is read until it parses.
+- A Stop hook that ran until Claude Code ended it at its timeout is made hard to repeat. It happened in 18 of 130 Stops of one session, over about 90 minutes. No Stop took between a few seconds and the timeout.
+- The cause on that machine isn't confirmed, since it didn't reproduce here. What was found is fixed:
+  - Tool output was read through pipes. A tool that exits and leaves a daemon behind keeps those pipes open, as a language server or git's file system monitor does.
+  - `run()` then waited for the daemon: 12.0 s for a tool that took no time, beside a daemon that slept 12 s. After a timeout it waited with no limit.
+  - Output now goes to files that are read when the command is done. A command reads no input.
+  - `git cat-file` ran on every check outside the hook's 25 seconds, with 60 of its own. It goes through the same limits now.
+  - git is told not to start its file system monitor for any command broom starts. It also takes no optional index lock and asks for no password.
+  - The hook's input was read until its pipe closed, in the commit hook's launcher too. It is read until it parses.
   - A state file's lock is waited for 5 seconds at most.
-- A hook still running after 20 seconds writes `hook-trace.log` in broom's data directory: where each thread is and
-  what processes it started. If it happens again, that says whether broom or a tool was holding it.
-- The per-path caches of golangci-lint and clippy are kept 7 days, not 30: every worktree an agent makes has a path
-  of its own, and one data directory held 844 MB of them.
+- A hook still running after 20 seconds writes `hook-trace.log` in broom's data directory. It shows where each thread is and what processes it started, so a repeat says whether broom or a tool held the hook.
+- The per-path caches of golangci-lint and clippy are kept 7 days instead of 30. Every worktree an agent makes has a path of its own, and one data directory held 844 MB of them.
 
 ---
 
@@ -677,52 +670,44 @@
 
 ### Sweep
 
-- One run of any hook takes at most 30 seconds. Every hook in `hooks.json` has that `timeout` (the commit and stop
-  hooks had 300, the async ones none), the commands a run starts share 25 seconds, one that runs out is killed with
-  everything it started (a linter's compiler no longer keeps running after it), and at 28 seconds the hook gives up
-  and lets the commit, edit or stop through. A check cut off never blocks, and its content isn't recorded as passed.
-  A session-start scan that ran out of time keeps what it counted as a floor ("at least N") and runs again.
-- Where `broom install-hook` has added git's own hook, it does the commit check, on the files the commit really
-  takes; the PreToolUse hook, which can only guess them from the command's arguments, only formats.
+- One run of any hook takes at most 30 seconds. Every hook in `hooks.json` has that `timeout` now. Before, the commit and stop hooks had 300 and the async ones had none.
+- The commands of one run share 25 seconds. A command that runs out is killed with everything it started, so a linter's compiler no longer keeps running after it.
+- At 28 seconds the hook gives up and lets the commit, edit or stop through. A check cut off never blocks, and its content isn't recorded as passed.
+- A session-start scan that ran out of time keeps its count as a floor, such as "at least N", and runs again.
+- Where `broom install-hook` added git's own hook, that hook does the commit check on the files the commit really takes. The PreToolUse hook can only guess them from the command, so it only formats.
 
 ---
 
 ### Speed
 
-- Checks that passed aren't run again, and work isn't done twice. Content that passed is recorded file by file, so
-  one file with a hint doesn't make the other 19 run again at each try (74 commands the first time and 1 after
-  for a clean batch; 73, 71, 71 with one hint before). What the smell measurers found in a file is kept for a day by
-  its content: a second check of 30 Go files took 3.8 s and 18.5 CPU-seconds, not 8.5 s and 48.6, and a session
-  scan after a new commit 0.8 s on a 3,184-file repo, not 4.0. broom's clippy run keeps its own config path and
-  target directory, so it and the project's clippy run stop making cargo check the crate again each time. git is
-  asked once per repo what is tracked and what differs: 15 git processes for a 30-file check, not 262, and 8, not
-  505. A check that ran out of time is skipped for 20 minutes in every session and agent, with a note.
-- A check no longer takes every core. Each tool a hook starts is kept to a quarter of the cores (`GOMAXPROCS`,
-  `RAYON_NUM_THREADS`, `CARGO_BUILD_JOBS`, unless you set them): next to a busy foreground job the check took 11.8
-  s instead of 9.7, and the job kept 97 to 104 percent of its speed instead of 73 to 82. A lower priority was
-  measured and left out: `nice 10` changed nothing, and macOS's background class made the check 3.6 times slower.
-- Measured and left as it was: `tsc --incremental` (800 modules: 0.81 s without, 0.75 s with, and TypeScript 7 does
-  them in 0.08), and jscpd's whole-repo scans (2.9 s on a 9,279-file repo, once per distinct change).
+- Checks that passed aren't run again. Content that passed is recorded file by file, so one file with a hint no longer makes the other 19 run again at each try.
+- A clean batch took 74 commands the first time and 1 after. With one hint it took 73, 71 and 71 before.
+- What the smell measurers found in a file is kept for a day by its content. A second check of 30 Go files took 3.8 s and 18.5 CPU-seconds, where it took 8.5 s and 48.6.
+- A session scan after a new commit took 0.8 s on a 3,184-file repo, where it took 4.0.
+- broom's clippy run keeps its own config path and target directory. It and the project's own clippy run no longer make cargo check the crate again each time.
+- git is asked once per repo what is tracked and what differs. One 30-file check started 15 git processes where it started 262. Another started 8 where it started 505.
+- A check that ran out of time is skipped for 20 minutes in every session and agent, with a note.
+- Each tool a hook starts is kept to a quarter of the cores through `GOMAXPROCS`, `RAYON_NUM_THREADS` and `CARGO_BUILD_JOBS`, unless you set them.
+- Next to a busy foreground job the check took 11.8 s instead of 9.7. The job kept 97 to 104 percent of its speed instead of 73 to 82.
+- A lower priority was measured and left out. `nice 10` changed nothing, and macOS's background class made the check 3.6 times slower.
+- `tsc --incremental` was measured and left out. On 800 modules it took 0.75 s where a full check took 0.81, and TypeScript 7 takes 0.08.
+- jscpd's whole-repo scan was measured and left as it was. It took 2.9 s on a 9,279-file repo, once per distinct change.
 
 ---
 
 ### Fixes
 
-- Hooks that run at once no longer lose one another's changes to the state they share: the read, change and write
-  of the passed record, known issues, last blocked commit, notes, setup answers and the measurement cache hold a
-  lock. Six processes making 40 changes each kept 58 of the 240 before, and all 240 now.
-- ruff, golangci-lint and clippy are read from their JSON, not their text. The text of golangci-lint read the
-  closing parenthesis of "for loop can be changed to use an integer range (Go 1.22+)" as the linter's name, and
-  so as a compile error that blocks a commit.
+- Hooks that run at once no longer lose one another's changes to the state they share. Six processes making 40 changes each kept 58 of the 240 before, and all 240 now.
+- Each read, change and write of that state holds a lock: the passed record, known issues, the last blocked commit, notes, setup answers and the measurement cache.
+- ruff, golangci-lint and clippy are read from their JSON instead of their text. golangci-lint's text "for loop can be changed to use an integer range (Go 1.22+)" had its closing parenthesis read as the linter's name. That made it a compile error that blocks a commit.
 
 ---
 
 ### Smells
 
-- A new smell, `folder_cycle` (a hint): an import the change adds that leads into a folder whose files lead back
-  to this one, the layers going the wrong way. Python's imports are read by broom, TS/JS's by dependency-cruiser,
-  which `broom doctor` offers and which needs a TypeScript below 7 next to it (it reads no `.ts` file without one,
-  and says nothing; a changed file it didn't read is said so).
+- A new hint, `folder_cycle`: an import the change adds that leads into a folder whose files lead back to this one. The layers then go the wrong way.
+- broom reads Python's imports itself. TS/JS's are read by dependency-cruiser, which `broom doctor` offers.
+- dependency-cruiser needs a TypeScript below 7 beside it. Without one it reads no `.ts` file and says nothing, so broom names each changed file it didn't read.
 
 ---
 
@@ -732,26 +717,26 @@
 
 ### Smells
 
-- Smells that need the project's own checkout, where imports and dependencies resolve, run there and not in the
-  scratch copy of the changed files: Go's typed linters (`debug_output`, `globals`, `commented_code`, and
-  `dead_code` from `unused`), TS/JS and Python import cycles (a new smell, `import_cycle`), and clippy for Rust
-  (`params`, `bool_params`, `debug_output`, `type_escape`, `suppression`). With no copy of the base to compare
-  with, a finding counts when it is on a line the change added. The scan at session start gives these tools 60
-  seconds between them, quick ones first, and says what it skipped.
-- TS/JS get `bool_params`, `type_lines`, `globals` and `commented_code` from four oxlint rules of broom's own
-  (`defaults/oxlint-rules.mjs`, an oxlint JS plugin, so they need Node), `unused_params` and `broad_test_asserts`
-  from oxlint and its Jest rules. Python gets `nested_ternary`; Go `type_escape`; Swift `debug_output`,
-  `nested_ternary`, `globals` and unlabeled `bool_params`, as SwiftLint custom rules. Python and TS/JS now have a
-  source for every smell. `commented_code` is a hint in TS/JS and Go, whose detectors guess, and blocks in Python.
+- Smells that need the project's own checkout run there, where imports and dependencies resolve. Before, they ran in the scratch copy of the changed files.
+- Go's typed linters run there: `debug_output`, `globals`, `commented_code` and `dead_code` from `unused`.
+- TS/JS and Python import cycles run there, as a new smell: `import_cycle`.
+- clippy runs there for Rust: `params`, `bool_params`, `debug_output`, `type_escape` and `suppression`.
+- With no copy of the base to compare with, such a finding counts when it is on a line the change added.
+- The scan at session start gives these tools 60 seconds between them, quick ones first. It says what it skipped.
+- TS/JS get `bool_params`, `type_lines`, `globals` and `commented_code` from four oxlint rules of broom's own. They live in `defaults/oxlint-rules.mjs` as an oxlint JS plugin, so they need Node.
+- TS/JS get `unused_params` and `broad_test_asserts` from oxlint and its Jest rules.
+- Python gets `nested_ternary`, and Go gets `type_escape`.
+- Swift gets `debug_output`, `nested_ternary`, `globals` and unlabeled `bool_params` as SwiftLint custom rules.
+- Python and TS/JS now have a source for every smell.
+- `commented_code` is a hint in TS/JS and Go, whose detectors guess. It blocks in Python.
 - Rust and CSS files count for `file_lines` and `duplicate_lines`.
 
 ---
 
 ### Fixes
 
-- Swift 6.4 colors its diagnostics even into a pipe, which hid every compile error from broom, so a commit that
-  broke a call in another file went through; and it words a missing XCTest as `unable to resolve module
-  dependency`, so the fallback that builds the sources without the tests never ran. Both are read now.
+- Swift 6.4 colors its diagnostics even into a pipe. That hid every compile error from broom, so a commit that broke a call in another file went through. They are read now.
+- Swift 6.4 words a missing XCTest as `unable to resolve module dependency`, so the fallback that builds the sources without the tests never ran. It runs now.
 
 ---
 
@@ -763,16 +748,17 @@
 
 ### Cleanup
 
-- `broom smells` ends its list with how many smells `--top` cut off. The clean skill gets a table of the usual
-  fix for each smell, and a rule for a repo whose tests already fail.
+- `broom smells` ends its list with how many smells `--top` cut off.
+- The clean skill gets a table of the usual fix for each smell. It also gets a rule for a repo whose tests already fail.
 
 ---
 
 ### Internals
 
-- broom measured by its own bar again: 23 smells, now none. `checks.py` (529 lines) became four modules of 44 to
-  234 lines, `measure.py` (412) three, `broom init` its own module, and the longest functions were split. 131
-  tests, none failing on a machine where five Swift tests failed before.
+- broom was measured by its own bar again: 23 smells, now none.
+- `checks.py` became four modules of 44 to 234 lines, where it had 529. `measure.py` became three, where it had 412 lines.
+- `broom init` got its own module, and the longest functions were split.
+- 131 tests pass, also on a machine where five Swift tests failed before.
 
 ---
 
@@ -782,29 +768,28 @@
 
 ### Settings
 
-- A linked worktree without a `.broom.json` reads the main worktree's. One repo's `.broom.json` was ignored by a
-  global gitignore, so the worktrees its agents worked in never had it and ran with broom's defaults instead of
-  the repo's limits and excludes. `broom doctor` says where the file was read from, and when git ignores it.
+- A linked worktree without a `.broom.json` reads the main worktree's.
+- One repo's `.broom.json` was ignored by a global gitignore. The worktrees its agents worked in never had it, so they ran with broom's defaults instead of the repo's limits and excludes.
+- `broom doctor` says where the file was read from, and when git ignores it.
 
 ---
 
 ### Fixes
 
-- Files outside any git repo, such as a subagent's draft script in a temp directory, are neither recorded for the
-  turn's end nor formatted per edit. Style findings in one such draft once stopped a session's turn; 0.16.3's pass
-  records already happened to drop these files, and now it is deliberate.
-- jscpd gets a baseline only from a base git can resolve, and a failure note quotes jscpd: a missing git ref had
-  read as "version 5 or later needed".
+- Files outside any git repo are neither formatted per edit nor recorded for the turn's end, such as a subagent's draft script in a temp folder.
+- Style findings in one such draft once stopped a session's turn. 0.16.3's pass records happened to drop these files already, and now it is deliberate.
+- jscpd gets a baseline only from a base git can resolve. A missing git ref had read as "version 5 or later needed", so a failure note now quotes jscpd.
 
 ---
 
 ### Internals
 
-- broom measured by its own bar: 35 smells, 4 of them past the hard limit, now 23 and none past it. `diagnose`
-  (184 lines, complexity 45) becomes a method per language; `plan` (complexity 25) a grouping class; the
-  1001-line test file five files of 161 to 257 lines; `common.py` (577 lines) four modules of 92 to 274 lines;
-  the commit gate leaves `hooks.py` (409 to 231 lines) for its own module. Files over 400 lines: 5 to 1. No
-  behavior changes beyond the three above: 111 tests, every subcommand's `--help` unchanged.
+- broom was measured by its own bar: 35 smells with 4 past the hard limit, now 23 with none past it.
+- `diagnose` became a method per language, where it had 184 lines and a complexity of 45. `plan` became a grouping class, where it had a complexity of 25.
+- The 1001-line test file became five files of 161 to 257 lines. `common.py` became four modules of 92 to 274 lines, where it had 577.
+- The commit gate left `hooks.py` for its own module, which took `hooks.py` from 409 lines to 231.
+- Files over 400 lines went from 5 to 1.
+- Nothing else changed in behavior: 111 tests pass, and every subcommand's `--help` is unchanged.
 
 ---
 
@@ -814,35 +799,29 @@
 
 ### Sweep
 
-- `broom install-hook` adds git's own pre-commit hook, for commits Claude Code's commit hook never sees: a
-  wrapper's (`kgf save`, an integration script) or a person's. It checks the staged files the same way, without
-  formatting; it never replaces another tool's hook, and passes over a broom too old to know it.
-- `BROOM_NO_ACCEPT=1` turns `broom known --accept` off, and the block message stops offering it, for agents that
-  must fix what they break.
+- `broom install-hook` adds git's own pre-commit hook. It checks the commits Claude Code's commit hook never sees, such as a wrapper script's or a person's.
+- That hook checks the staged files the same way, without formatting. It never replaces another tool's hook, and it passes over a broom too old to know it.
+- `BROOM_NO_ACCEPT=1` turns `broom known --accept` off for agents that must fix what they break. The block message then stops offering it.
 
 ---
 
 ### Speed
 
-- File content that passed a check, with nothing blocked, hinted or timed out, is recorded by git's blob id for a
-  day, and no hook checks it again. On a TypeScript repo where checking a 29-file commit took 55 to 81 s, the skip
-  takes about 30 ms.
+- File content that passed a check is recorded by git's blob id for a day, and no hook checks it again. It counts as passed when nothing blocked, hinted or timed out.
+- On a TypeScript repo where checking a 29-file commit took 55 to 81 s, the skip takes about 30 ms.
 
 ---
 
 ### Settings
 
-- `.broom.json` `legacy` names code on its way out: new code that repeats it isn't a duplicate, as during a
-  migration that writes the new code beside the old before deleting it.
-- `.broom.json` `test_limits` moves the smell limits for test files on top of `limits`. A repo with 150- and
-  200-line file limits for its source had split a test file into four numbered parts to fit.
+- `legacy` in `.broom.json` names code on its way out. New code that repeats it isn't a duplicate, as during a migration that writes the new code beside the old.
+- `test_limits` in `.broom.json` moves the smell limits for test files, on top of `limits`. A repo with file limits of 150 and 200 lines for its source had split a test file into four numbered parts to fit.
 
 ---
 
 ### Cleanup
 
-- `broom smells` names missing tools in its first line, where counts without them read as cleaner than the code
-  is.
+- `broom smells` names the missing tools in its first line. Without them its counts read as cleaner than the code is.
 
 ---
 
@@ -852,23 +831,18 @@
 
 ### Speed
 
-- Session start no longer waits for a smell scan. The scan runs in an async hook and its note reaches Claude with
-  the next turn; the session hook says only what a cached scan knows. On a 2,376-file repo the session hook takes
-  0.13 to 0.24 s, where the scan inside it took 13 to 36 s and passed its 30 s timeout once in six runs, losing the
-  result and the cache.
+- Session start no longer waits for a smell scan. The scan runs in an async hook, and its note reaches Claude with the next turn. The session hook says only what a cached scan knows.
+- On a 2,376-file repo the session hook takes 0.13 to 0.24 s. The scan inside it took 13 to 36 s. Once in six runs it passed its 30 s timeout and lost the result and the cache.
 
 ---
 
 ### Sweep
 
-- The turn-end check waits while background work runs (a test suite, a build, a subagent), for half an hour at
-  most, and checks at the turn that work wakes. A hint no longer stops Claude in a pause and has it change files
-  under a running test suite.
-- The turn-end check sees what Bash changed (sed, a codemod, `git mv`) and what a wrapper committed (`kgf save`, an
-  integration script), measured against HEAD as the prompt found it. An async prompt hook notes the working tree;
-  it took 0.2 s on the same repo, which no prompt waits for.
-- A subagent's edits are checked at its own end (SubagentStop) and the block goes to it, so it fixes its own work;
-  the main session's turn end no longer checks them for it.
+- The turn-end check waits while background work runs, such as a test suite, a build or a subagent. It waits half an hour at most and checks at the turn that work wakes.
+- A hint no longer stops Claude in a pause and has it change files under a running test suite.
+- The turn-end check sees what Bash changed, such as sed, a codemod or `git mv`. It also sees what a wrapper script committed.
+- Both are measured against HEAD as the prompt found it. An async prompt hook notes the working tree, which took 0.2 s on the same repo and holds up no prompt.
+- A subagent's edits are checked at its own end, and the block goes to it, so it fixes its own work. The main session's turn end no longer checks them for it.
 
 ---
 
@@ -878,31 +852,28 @@
 
 ### Smells
 
-- `build`, `out`, `release` and `target` count as build output only where git doesn't track the files. A repo
-  that keeps hand-written code in a `release/` directory had its smells there unreported, and five files only that
-  directory imported were called dead. Untracked ones stay skipped: the list was made for an unignored
-  `node_modules` and app build. A note lists the tracked directories still skipped by name (`vendor`,
-  `generated`, ...), and generated code counts as using code, so what only it calls isn't dead.
-- A renamed file (`git mv`, or a move staged with `git add`) is measured against its old path, and none of its
-  lines count as changed: a moved file over the hard limit no longer blocks as "new", and its old lint findings
-  and dead code stay quiet.
-- A long file whose lines besides imports didn't grow isn't longer for the change: rewiring imports after a move,
-  wrapped by a formatter, no longer blocks a commit.
+- `build`, `out`, `release` and `target` count as build output only where git doesn't track their files.
+- A repo that keeps hand-written code in a `release/` folder had its smells there unreported. Five files only that folder imported were called dead.
+- Untracked build folders stay skipped, since the list was made for an unignored `node_modules` and app build.
+- A note lists the tracked folders still skipped by name, such as `vendor` and `generated`.
+- Generated code counts as using code, so what only it calls isn't dead.
+- A renamed file is measured against its old path, and none of its lines count as changed. That holds for `git mv` and for a move staged with `git add`.
+- A moved file over the hard limit no longer blocks as new. Its old lint findings and dead code stay quiet.
+- A long file whose lines other than imports didn't grow isn't longer for the change. Rewiring imports after a move no longer blocks a commit when a formatter wraps them.
 
 ---
 
 ### Cleanup
 
-- `broom smells --base REV` lists only what the changes since REV made worse, with each smell's size or count at
-  REV as `was` in the JSON.
+- `broom smells --base REV` lists only what the changes since REV made worse. The JSON gives each smell's size or count at REV as `was`.
 - `broom smells` and the session note leave out `.broom.json`'s `exclude`, as formatting and checks already did.
 
 ---
 
 ### Speed
 
-- On a 2,376-file TypeScript repo the new steps add about 0.25 s to a whole-repo scan of 15 to 20 s, and about
-  0.2 s to a hook's check; the scan finds the same 915 smells as 0.16.0.
+- On a 2,376-file TypeScript repo the new steps add about 0.25 s to a whole-repo scan of 15 to 20 s. They add about 0.2 s to a hook's check.
+- The scan finds the same 915 smells as 0.16.0.
 
 ---
 
@@ -912,15 +883,12 @@
 
 ### Cleanup
 
-- `broom smells [paths] [--top N] [--json]`: the code smells of the repo or some paths, ranked: the hotspot files
-  and the worst smells, furthest past their limit first.
-- `/broom:clean`: a cleanup worst first, in small batches the user agrees to, behavior kept and each batch
-  re-checked and committed.
-- At session start, when the repo has smells past the hard limit, broom asks Claude to raise them and offer
-  `/broom:clean` at a natural point, not to clean up unasked. The scan runs once per commit. `broom smells
-  --dismiss` quiets it until the count grows.
-- A whole-repo scan no longer calls its smells "new". `broom doctor` shows `.broom.json`'s `limits` and
-  `smells_off`.
+- `broom smells [paths] [--top N] [--json]` ranks the code smells of the repo or some paths. It lists the hotspot files and the worst smells, furthest past their limit first.
+- `/broom:clean` cleans up worst first, in small batches the user agrees to. It keeps behavior, and each batch is checked again and committed.
+- At session start broom asks Claude to raise the repo's smells past the hard limit at a natural point. Claude offers `/broom:clean` and doesn't clean up unasked.
+- That scan runs once per commit. `broom smells --dismiss` quiets it until the count grows.
+- A whole-repo scan no longer calls its smells new.
+- `broom doctor` shows `limits` and `smells_off` from `.broom.json`.
 
 ---
 
@@ -930,9 +898,8 @@
 
 ### Smells
 
-- Dead code, with jscpd's `--dead-code`: a file, export, symbol or import that nothing uses, in TS/JS and Python,
-  gets a hint when the change added it. Tests and entry points are left out. `smells_off: ["dead_code"]` turns
-  it off where code loads dynamically.
+- Dead code is found with jscpd's `--dead-code`: a file, export, symbol or import that nothing uses. In TS/JS and Python a change that adds one gets a hint.
+- Tests and entry points are left out. `smells_off: ["dead_code"]` turns it off where code loads dynamically.
 
 ---
 
@@ -942,15 +909,15 @@
 
 ### Smells
 
-- Duplicate code, with jscpd 5: a new duplicate block with a side in the change's files hints past 10 lines and
-  blocks past 30. It's found anywhere in the repo, and compared with the base revision so old copies stay quiet.
-  Clones between two test files, and of generated or vendored code, don't count.
+- Duplicate code is found with jscpd 5. A new duplicate block with a side in the change's files hints past 10 lines and blocks past 30.
+- It is found anywhere in the repo and compared with the base revision, so old copies stay quiet.
+- Clones between two test files don't count, nor clones of generated or vendored code.
 
 ---
 
 ### Setup
 
-- `broom doctor` checks for jscpd (`npm i -g jscpd`) wherever smells measure code, so `/broom:setup` offers it.
+- `broom doctor` checks for jscpd wherever smells measure code, so `/broom:setup` offers it: `npm i -g jscpd`.
 
 ---
 
@@ -960,21 +927,19 @@
 
 ### Smells
 
-- Smells that count by occurrence. A change that adds a lint suppression without a reason, a swallowed error or
-  empty block, or commented-out code is blocked; one that adds unused parameters, magic numbers, debug prints,
-  TODOs, type escapes, globals, boolean flag parameters or too broad test assertions gets a hint. Long types (over
-  250 lines) hint too.
-- An occurrence counts when the change raises the count in a file; a moved or edited line that keeps its
-  occurrence doesn't. Magic numbers in tests don't count.
-- Go measures only what linters reading syntax alone can see: repeated literals, globals and debug prints need
-  types, and the scratch copy's imports don't resolve.
+- Smells that count each time they appear. A change is blocked when it adds a lint suppression without a reason, a swallowed error or empty block, or commented-out code.
+- A change gets a hint when it adds unused parameters, magic numbers, debug prints, TODOs, type escapes, globals, boolean flag parameters or too broad test assertions.
+- Long types hint too, past 250 lines.
+- Such a smell counts when the change raises its count in a file. A moved or edited line that keeps it doesn't count.
+- Magic numbers in tests don't count.
+- Go measures only what linters that read syntax alone can see. Repeated literals, globals and debug prints need types, and the scratch copy's imports don't resolve.
 - `Generated/` and `testdata/` are skipped like other generated and fixture code.
 
 ---
 
 ### Settings
 
-- `.broom.json` `smells_off` turns single smells off.
+- `smells_off` in `.broom.json` turns single smells off.
 
 ---
 
@@ -984,18 +949,15 @@
 
 ### Smells
 
-- Smells skip dependencies, environments and build output (`node_modules`, `.venv`, `dist`, `release`, `target`,
-  ...), minified files, `.d.ts` and generated code. A repo with an unignored `node_modules` and app build put
-  58,000 files in a sweep's scope; the smell pass over them now takes under 3 seconds.
-- Less noise, measured on four of the author's repos: complexity in tests doesn't count (each assertion's `if`
-  adds to it), and neither do `describe`/`it` callbacks, which are containers.
+- Smells skip dependencies, environments and build output, such as `node_modules`, `.venv`, `dist`, `release` and `target`. They also skip minified files, `.d.ts` files and generated code.
+- A repo with an unignored `node_modules` and app build put 58,000 files in a sweep's scope. The smell pass over them now takes under 3 seconds.
+- Less noise, measured on four of the author's repos. Complexity in tests doesn't count, since each assertion's `if` adds to it. Neither do `describe` and `it` callbacks, which are containers.
 
 ---
 
 ### Speed
 
-- The base version of the files is read with one `git cat-file --batch` instead of a `git show` per file, and a
-  path with a space no longer breaks the read.
+- The base version of the files is read with one `git cat-file --batch` instead of a `git show` per file. A path with a space no longer breaks the read.
 
 ---
 
@@ -1005,21 +967,20 @@
 
 ### Smells
 
-- Code smells: long functions and files, many parameters, deep nesting, high complexity and nested ternaries,
-  measured against broom's own limits in every repo (soft 50/400/5/4/10 for function lines, file lines,
-  parameters, nesting and complexity; hard 100/1000/8/6/20) with ruff and Python's `ast`, oxlint, golangci-lint
-  and SwiftLint. Only what a change made worse counts: pushed past a limit, or grown while past the hard one.
-- Past the soft limit a smell is a hint, in the commit's context and once at a turn's end. Past the hard limit it
-  blocks the commit, and like a type error passes only fixed or accepted with `broom known --accept "<why>"`.
-- `broom sweep` lists the smells the changes made worse, `--all` every smell in the repo. Turn them off with the
-  `smells` setting; `.broom.json` `limits` moves them per repo.
+- Code smells: long functions and files, many parameters, deep nesting, high complexity and nested ternaries. They are measured against broom's own limits in every repo.
+- The soft limits are 50 for function lines, 400 for file lines, 5 for parameters, 4 for nesting and 10 for complexity. The hard limits are 100, 1000, 8, 6 and 20.
+- They are measured with ruff and Python's `ast`, oxlint, golangci-lint and SwiftLint.
+- Only what a change made worse counts: pushed past a limit, or grown while past the hard one.
+- Past the soft limit a smell is a hint, in the commit's context and once at a turn's end.
+- Past the hard limit it blocks the commit. Like a type error it passes only fixed or accepted with `broom known --accept "<why>"`.
+- `broom sweep` lists the smells the changes made worse, and `--all` every smell in the repo.
+- The `smells` setting turns them off, and `limits` in `.broom.json` moves them per repo.
 
 ---
 
 ### Sweep
 
-- Stopping a turn twice no longer records type errors or severe smells as known, so the commit still stops on
-  them.
+- Stopping a turn twice no longer records type errors or severe smells as known, so the commit still stops on them.
 
 ---
 
@@ -1029,11 +990,10 @@
 
 ### Settings
 
-- Settings start at defaults and are never asked. `/broom:setup` asks at most two questions, both before acting
-  on your machine or repo: install the missing tools, add formatter configs. Change a setting in `/config` or
-  `.broom.json` when you disagree with its default.
-- `check_on` defaults to `stop`: broom checks the files Claude edited at every turn end, as well as at commit. The
-  commit hook only sees Claude's own commits, so with the old default a user who commits by hand got no checks.
+- Settings start at defaults and are never asked. Change one in `/config` or `.broom.json` when you disagree with its default.
+- `/broom:setup` asks at most two questions, both before acting on your machine or repo: install the missing tools, and add formatter configs.
+- `check_on` defaults to `stop`, so broom checks the files Claude edited at every turn's end as well as at a commit.
+- The commit hook sees only Claude's own commits. With the old default, a user who commits by hand got no checks.
 
 ---
 
@@ -1049,10 +1009,10 @@
 
 ### Sweep
 
-- Type and compile errors don't pass on a retry alone. A blocked commit that holds them passes once they're fixed,
-  or after `broom known --accept "<why>"`, which records the blocked result as known with the reason. Lint findings
-  still pass the second time unchanged. Before, a subagent could commit 167 tsc errors by running the same commit
-  twice, without a word.
+- Type and compile errors don't pass on a retry alone. A blocked commit that holds them passes once they're fixed, or after `broom known --accept "<why>"`.
+- `broom known --accept` records the blocked result as known with the reason.
+- Lint findings still pass the second time unchanged.
+- Before, a subagent could commit 167 tsc errors by running the same commit twice, without a word.
 - `broom known` lists the reason next to each accepted issue.
 
 ---
@@ -1063,33 +1023,31 @@
 
 ### Languages
 
-- Swift. Linted with SwiftLint: the project's `.swiftlint.yml` where it has one (run from the outermost, so nested
-  configs apply and `excluded` holds), else broom's defaults, which are bug-finders only: SwiftLint's "lint" and
-  "performance" rules plus `force_cast` and `force_try`, no naming or length rules, CocoaPods, Carthage and `.build`
-  skipped.
-- SwiftPM packages are compile-checked with `swift build --build-tests`; errors count anywhere, so a changed
-  signature blocks on its callers. Warnings don't count: SwiftPM prints them only for the files it recompiles. With
-  the Command Line Tools and no Xcode, which have no XCTest or swift-testing, the tests are left out with a note
-  instead of blocking on `no such module 'XCTest'`. Xcode projects aren't built.
-- Swift is formatted where the project configures swift-format (`.swift-format`) or SwiftFormat (`.swiftformat`).
-  `broom init` adds a `.swift-format` with Xcode's 4-space indent and 120 columns; swift-format comes with Swift 6
-  and later, so there's nothing to install.
+- Swift is linted with SwiftLint. The project's `.swiftlint.yml` is used where it has one, run from the outermost so nested configs apply and `excluded` holds.
+- Without one, broom's defaults find bugs only: SwiftLint's "lint" and "performance" rules plus `force_cast` and `force_try`.
+- The defaults hold no naming or length rule. They skip CocoaPods, Carthage and `.build`.
+- SwiftPM packages are compile-checked with `swift build --build-tests`. Errors count anywhere, so a changed signature blocks on its callers.
+- Warnings don't count, since SwiftPM prints them only for the files it recompiles.
+- The Command Line Tools without Xcode have neither XCTest nor swift-testing. There the tests are left out with a note, instead of blocking on `no such module 'XCTest'`.
+- Xcode projects aren't built.
+- Swift is formatted where the project configures swift-format with `.swift-format` or SwiftFormat with `.swiftformat`.
+- `broom init` adds a `.swift-format` with Xcode's 4-space indent and 120 columns. swift-format comes with Swift 6 and later, so there's nothing to install.
 
 ---
 
 ### Language servers
 
-- A language server for `.swift`: sourcekit-lsp, which pushes diagnostics (checked in Claude Code 2.1.283). In an
-  Xcode project without a `Package.swift` it reads one file at a time, so calls into other files show as errors.
-  `format_scope=function` counts computed properties, SwiftUI's `body` among them, as functions.
+- A language server for `.swift`: sourcekit-lsp, which pushes diagnostics. It was checked in Claude Code 2.1.283.
+- In an Xcode project without a `Package.swift` it reads one file at a time, so calls into other files show as errors.
+- `format_scope=function` counts computed properties as functions, SwiftUI's `body` among them.
 
 ---
 
 ### Setup
 
-- `broom doctor` finds Swift by the files git tracks, in packages and Xcode apps alike, checks that the toolchain
-  runs (on macOS `swift` and `sourcekit-lsp` are shims until Xcode or the Command Line Tools are installed) and
-  flags the official `swift-lsp` plugin, which serves the same files.
+- `broom doctor` finds Swift by the files git tracks, in packages and Xcode apps alike.
+- It checks that the toolchain runs. On macOS `swift` and `sourcekit-lsp` are shims until Xcode or the Command Line Tools are installed.
+- It flags the official `swift-lsp` plugin, which serves the same files.
 
 ---
 
@@ -1099,12 +1057,11 @@
 
 ### Setup
 
-- Set up once for every repo. Setup answers are remembered by kind of gap, not per repo: a gap you left alone in
-  one repo isn't raised in the next. `broom setup --reset` forgets them.
-- `/broom:setup` recommends installing JS/TS tools machine-wide (`fix_global` in `broom doctor --json`), with
-  devDependencies as the alternative, and skips the when-to-run and scope questions once they're user settings.
-- `broom doctor --json` reports each setting's value and source (`repo`, `user`, `default`) and marks gaps
-  already answered.
+- Setup is done once for every repo. Its answers are remembered by kind of gap instead of per repo, so a gap you left alone in one repo isn't raised in the next.
+- `broom setup --reset` forgets them.
+- `/broom:setup` recommends installing JS/TS tools machine-wide, with devDependencies as the other way. `broom doctor --json` gives the first as `fix_global`.
+- `/broom:setup` skips the when-to-run and scope questions once they're user settings.
+- `broom doctor --json` gives each setting's value and its source: `repo`, `user` or `default`. It marks the gaps already answered.
 
 ---
 
@@ -1114,20 +1071,18 @@
 
 ### Language servers
 
-- TypeScript language server: `broom lsp typescript` starts typescript-language-server wherever it's installed.
-  It uses the project's TypeScript (6 and older), or its bundled TypeScript 6 for TypeScript 7 projects and repos
-  without one. Before, broom ran TypeScript 7's `tsc --lsp`, which sends diagnostics only on request; Claude Code
-  never makes that request, so Claude saw no type errors from broom's server. It is now the fallback when
-  typescript-language-server is missing.
-- This covers what the official `typescript-lsp` plugin does, so it can go; `broom doctor` still flags it, since
-  only one server per extension runs.
+- `broom lsp typescript` starts typescript-language-server wherever it's installed.
+- It uses the project's TypeScript up to 6. A TypeScript 7 project and a repo without TypeScript get its bundled TypeScript 6.
+- Before, broom ran TypeScript 7's `tsc --lsp`, which sends diagnostics only on request. Claude Code never makes that request, so Claude saw no type errors from broom's server.
+- `tsc --lsp` is now the fallback when typescript-language-server is missing.
+- This covers what the official `typescript-lsp` plugin does, so that plugin can go. `broom doctor` still flags it, since only one server per extension runs.
 
 ---
 
 ### Setup
 
-- `broom doctor` reports the TypeScript server the launcher will start and asks for typescript-language-server
-  where it's missing. It no longer calls a TypeScript older than 7 broken.
+- `broom doctor` reports the TypeScript server the launcher will start, and asks for typescript-language-server where it's missing.
+- It no longer calls a TypeScript older than 7 broken.
 
 ---
 
@@ -1137,12 +1092,10 @@
 
 ### Fixes
 
-- Commits written as `T=~/repo; git -C $T commit` or `git -c key=val commit` are checked. Claude Code's `if`
-  patterns never matched them, so they committed unchecked. The commit hook now sees every Bash call: a shell
-  prefilter (`hooks/commit.sh`, ~13 ms) lets through only input that mentions `git` and `commit`, and the command
-  parser follows the variables a command sets.
-- Go: golangci-lint gets a results cache per module path. The shared cache replayed another directory's file
-  paths, from a worktree of the same repo or a deleted copy, and broom then dropped every issue as not in the commit.
+- Commits written as `T=~/repo; git -C $T commit` or `git -c key=val commit` are checked. Claude Code's `if` patterns never matched them, so they committed unchecked.
+- The commit hook now sees every Bash call. A shell prefilter in `hooks/commit.sh` lets through only input that mentions `git` and `commit`, in about 13 ms.
+- The command parser follows the variables a command sets.
+- Go: golangci-lint gets a results cache per module path. The shared cache replayed file paths from another folder, such as a worktree of the same repo or a deleted copy. broom then dropped every issue as not in the commit.
 
 ---
 
@@ -1158,10 +1111,10 @@
 
 ### Languages
 
-- Less (`.less`) joins CSS and SCSS: linted with the project's stylelint, else with broom's defaults, which extend
-  `stylelint-config-recommended-less` (install it in the project) and accept CSS modules. Two changes to that
-  config: stylelint's core hex check also covers declarations, and the duplicate-variable rule is off, since
-  redefining a variable is legal Less. One known false positive: a detached ruleset call (`@r();`).
+- Less joins CSS and SCSS. It is linted with the project's stylelint, else with broom's defaults.
+- The defaults extend `stylelint-config-recommended-less`, which you install in the project, and accept CSS modules.
+- They change two things in that config. stylelint's core hex check covers declarations too, and the duplicate-variable rule is off, since redefining a variable is legal Less.
+- One false positive is known: a detached ruleset call, `@r();`.
 
 ---
 
@@ -1183,8 +1136,8 @@
 
 ### Fixes
 
-- broom's stylelint defaults skip build output (`dist`, `build`, `out`, `coverage`) and `*.min.css`, as its oxlint
-  defaults do. A committed built or vendored CSS file no longer blocks a commit once.
+- broom's stylelint defaults skip build output and `*.min.css`, as its oxlint defaults do. Build output is `dist`, `build`, `out` and `coverage`.
+- A committed built or vendored CSS file no longer blocks a commit.
 
 ---
 
@@ -1194,17 +1147,16 @@
 
 ### Languages
 
-- CSS and SCSS are linted: with the project's stylelint, biome or ESLint with `@eslint/css` (the last two plain
-  CSS only), else with stylelint and broom's defaults. The defaults report errors, not style:
-  stylelint-config-recommended's rules for CSS, `stylelint-config-recommended-scss` for SCSS, both accepting
-  Tailwind (v3 and v4) and CSS modules. Without that SCSS config in the project, SCSS is skipped with a note.
+- CSS and SCSS are linted with the project's stylelint, biome or ESLint with `@eslint/css`. The last two lint plain CSS only.
+- Without any of them, stylelint runs with broom's defaults, which report errors and not style.
+- The defaults use stylelint-config-recommended's rules for CSS and `stylelint-config-recommended-scss` for SCSS. Both accept Tailwind v3 and v4 and CSS modules.
+- Without that SCSS config in the project, SCSS is skipped with a note.
 
 ---
 
 ### Language servers
 
-- A language server for `.css` and `.scss` (vscode-css-language-server), set up to accept Tailwind's at-rules and
-  `composes`.
+- A language server for `.css` and `.scss`: vscode-css-language-server, set up to accept Tailwind's at-rules and `composes`.
 
 ---
 
@@ -1216,9 +1168,9 @@
 
 ### Setup
 
-- `broom doctor` finds CSS and SCSS at any depth and reports their linter, formatter and language server;
-  `broom init` turns on oxfmt for CSS outside JS projects. Formatting itself is unchanged: CSS and SCSS were
-  already formatted by the project's biome, oxfmt or prettier.
+- `broom doctor` finds CSS and SCSS at any depth and reports their linter, formatter and language server.
+- `broom init` turns on oxfmt for CSS outside JS projects.
+- Formatting itself is unchanged. The project's biome, oxfmt or prettier already formatted CSS and SCSS.
 
 ---
 
@@ -1228,21 +1180,23 @@
 
 ### Formatting
 
-- `format_scope=function`: widens the changed lines to the functions around them, asking the language servers in
-  broom's `.lsp.json` (`documentSymbol`). Falls back to changed lines, with a note, when no server answers.
+- `format_scope=function` widens the changed lines to the functions around them. It asks the language servers in broom's `.lsp.json` for them with `documentSymbol`.
+- When no server answers it falls back to the changed lines, with a note.
 
 ---
 
 ### Settings
 
-- Per-repo `.broom.json`: `format_on`, `check_on` and `format_scope` override the user settings in that repo;
-  `exclude` globs keep generated or vendored paths out of everything. `broom doctor` validates the file.
+- A `.broom.json` per repo: `format_on`, `check_on` and `format_scope` override the user settings in that repo.
+- Its `exclude` globs keep generated or vendored paths out of everything.
+- `broom doctor` validates the file.
 
 ---
 
 ### Install
 
-- Runs on Python 3.9+ (tested on macOS's system Python). MIT `LICENSE`.
+- broom runs on Python 3.9 and later, and is tested on macOS's system Python.
+- It has an MIT `LICENSE`.
 
 ---
 
@@ -1252,41 +1206,42 @@
 
 ### Setup
 
-- `broom doctor`: languages, missing or broken tools (a rustup proxy without its component, TypeScript older than
-  7 for the language server), missing configs, dependencies not installed, and plugins whose language servers
-  compete with broom's, with the commands that fix each. One root config covers a monorepo.
-- A SessionStart hook runs the doctor (cached, ~0.1 s) and, when the repo has gaps, asks Claude to offer
-  `/broom:setup`. Once per session; not again after `broom setup --done` / `--dismiss` until the gaps change.
-- `/broom:setup` replaces `/broom:init`: it asks what to install (JS/TS tools as devDependencies, with `-w`/`-W`
-  at pnpm/yarn workspace roots), whether to turn formatting on, when broom runs, and the format scope.
+- `broom doctor` lists the repo's languages, missing or broken tools, missing configs and dependencies not installed. Each comes with the command that fixes it.
+- A broken tool is such as a rustup proxy without its component, or a TypeScript older than 7 for the language server.
+- It names the plugins whose language servers compete with broom's.
+- One config at the root covers a monorepo.
+- A SessionStart hook runs the doctor, cached in about 0.1 s. When the repo has gaps it asks Claude to offer `/broom:setup`.
+- That happens once per session. After `broom setup --done` or `--dismiss` it doesn't happen again until the gaps change.
+- `/broom:setup` replaces `/broom:init`. It asks what to install, whether to turn formatting on, when broom runs and the format scope.
+- JS/TS tools are installed as devDependencies, with `-w` or `-W` at pnpm and yarn workspace roots.
 
 ---
 
 ### Formatting
 
-- `format_scope` option: `changed` (default) keeps only the formatter's edits on changed lines, for every
-  formatter; `file` formats whole files.
+- The `format_scope` option: `changed`, the default, keeps only the formatter's edits on changed lines, for every formatter. `file` formats whole files.
 
 ---
 
 ### Sweep
 
-- `/broom:sweep` takes plain language; `broom sweep` gained `--staged`, `--base REV`, `--all` (report only unless
-  `--fix`), `--scope` and `--include-known`, and summarizes big results.
-- `broom known` lists and clears accepted issues; sweeps say how many are hidden.
-- Missing tools never block a commit; the report suggests `/broom:setup`.
+- `/broom:sweep` takes plain language.
+- `broom sweep` gained `--staged`, `--base REV`, `--all`, `--scope` and `--include-known`. `--all` reports only, unless `--fix` is given.
+- `broom sweep` sums up big results.
+- `broom known` lists and clears accepted issues, and sweeps say how many are hidden.
+- Missing tools never block a commit, and the report suggests `/broom:setup`.
 
 ---
 
 ### Languages
 
-- Solution-style tsconfigs (`"files": []` plus references) are type-checked per referenced config.
+- Solution-style tsconfigs, with `"files": []` and references, are type-checked per referenced config.
 
 ---
 
 ### Settings
 
-- Bash-run `broom` reads the plugin options from the settings file, since only hooks get them as variables.
+- `broom` run from Bash reads the plugin options from the settings file, since only hooks get them as variables.
 
 ---
 
@@ -1302,28 +1257,28 @@
 
 ### Sweep
 
-- Runs on `git commit` by default: formats the files the commit takes, re-stages them, lints and type-checks,
-  and denies the commit while issues remain. Partially staged files are left unformatted; `--no-verify` skips.
-- `bin/broom` on the Bash PATH (`sweep`, `fmt`, `init`); skills call it instead of script paths.
+- broom runs on `git commit` by default. It formats the files the commit takes and stages them again, lints and type-checks them, and denies the commit while issues remain.
+- Files only partly staged are left unformatted, and `--no-verify` skips the check.
+- `bin/broom` is on the Bash PATH with `sweep`, `fmt` and `init`. Skills call it instead of script paths.
 
 ---
 
 ### Settings
 
-- `userConfig` options `format_on` (commit / edit / off) and `check_on` (commit / stop / off), shown in `/config`.
-  The per-edit and end-of-turn hooks now exit in ~15 ms unless enabled.
+- The `userConfig` options `format_on` and `check_on` show in `/config`. `format_on` takes commit, edit or off, and `check_on` takes commit, stop or off.
+- The hooks after each edit and at each turn's end exit in about 15 ms unless enabled.
 
 ---
 
 ### Fixes
 
-- Hooks use exec form; no more "re-read the file" message after formatting.
+- Hooks use the exec form, so the "re-read the file" message after formatting is gone.
 
 ---
 
 ### Internals
 
-- End-to-end test suite in `tests/`.
+- An end-to-end test suite in `tests/`.
 
 ---
 
@@ -1333,4 +1288,4 @@
 
 ### Sweep
 
-- Format on every edit, lint gate at every stop, language servers for Go, TS/JS, Rust and Python.
+- Format on every edit, a lint gate at every stop, and language servers for Go, TS/JS, Rust and Python.
