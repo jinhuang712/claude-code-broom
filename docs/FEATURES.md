@@ -2,7 +2,7 @@
 
 The marks: ✅ built · 🚧 built, with a gap named beside it · ❔ claimed and not yet run, with the reason beside it · ⬜ planned.
 
-A ✅ here means the test suite covers the feature and passed on 2026-11-19, or for a skill that a fresh session ran it end to end.
+A ✅ here means the test suite covers the feature and passed on 2026-11-19, or for a skill or a language server that a fresh session ran it end to end.
 
 ---
 
@@ -58,8 +58,8 @@ Features
 │   ├── ✅ F5.1: Ranking — the smells of a repo or an area, worst first
 │   ├── ✅ F5.2: Session note — Claude raises severe smells at a natural point
 │   └── ❔ F5.3: Cleanup on the user's word — a skill Claude loads, not run in this pass
-├── ❔ F6: Language servers — the docs say checked in Claude Code 2.1.280 and 2.1.283, not run in this pass
-│   └── ❔ F6.1: Diagnostics as Claude edits — six servers
+├── ✅ F6: Language servers — run in fresh sessions of Claude Code 2.1.329 on 2026-11-20
+│   └── ✅ F6.1: Diagnostics as Claude edits — six servers
 ├── ✅ F7: Settings — defaults that are never asked
 │   ├── ✅ F7.1: User settings — four choices in /config
 │   └── ✅ F7.2: Per-repo file — .broom.json

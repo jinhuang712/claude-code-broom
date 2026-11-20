@@ -14,6 +14,7 @@ record), `event`, `where` (the hook: commit, pre-commit, stop, subagent-stop) an
 - hint: a nit, a slight smell, was given as context, without a block.
 - skip: a tool didn't run (`note` is the timeout or missing note, `tool` the tool).
 - time: seconds one check (`check`) took in a hook.
+- run: seconds a whole check of a commit or a turn's end took (`seconds`), once it ran a tool: lint, types and smells.
 - error: a hook failed and let the action through.
 - waiver: a change loosened the bar: `kind` (config, suppression or no-verify), `file` and a short `note`.
 
@@ -29,7 +30,7 @@ import re
 import time
 from collections import Counter
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Set, Tuple
+from typing import Dict, Iterable, Iterator, List, Optional, Set, Tuple
 
 from .gitutil import git_root, main_worktree
 from .state import DATA_ROOT, locked
@@ -244,6 +245,12 @@ def timed(seconds: Dict[str, float]) -> None:
         check, _, where = key.partition(":")
         rows.append(line("time", repo_of(Path(where)) if where else "", check=check, seconds=round(took, 2)))
     write(rows)
+
+
+def ran(repos: Iterable[Path], took: float) -> None:
+    """A check of a commit or a turn's end ran at least one tool and took `took` seconds, all of it: one line per repo
+    it covered."""
+    write([line("run", repo_of(r), seconds=round(took, 2)) for r in repos])
 
 
 def errored(error: Exception) -> None:

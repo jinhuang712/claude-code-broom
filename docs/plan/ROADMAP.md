@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP8: Lighter](#cp8-lighter), which waits for a week of the ledger's numbers, about 2026-11-24. CP10.1 ended on 2026-11-19 with 0.25.3, and CP10.2 comes after the checkpoints before it. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
+**Current checkpoint**: [CP8: Lighter](#cp8-lighter), which waits for a week of the ledger's numbers: about 2026-11-24 for the fix rate and 2026-11-27 for the check time. CP10.1 ended on 2026-11-19 with 0.25.3, and CP10.2 comes after the checkpoints before it. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
 
 ---
 
@@ -76,14 +76,14 @@ broom keeps no record of what it stopped and what was fixed, so nobody can say w
 
 **Status**: 🟨
 
-The three features shipped in 0.18.2 on 2026-11-17. The measures get their first value after a week of sessions on the new version.
+The three features shipped in 0.18.2 on 2026-11-17. The measures get their first value after a week of sessions on the new version. The ledger holds a whole check's seconds since 0.25.10 on 2026-11-20, so the check time waits a week from then.
 
 **Delivers** (4):
 
 - [F9.1: Ledger](../features/F9-record.md#f91-ledger)
 - [F9.2: Turn summary](../features/F9-record.md#f92-turn-summary)
 - [F9.3: Report](../features/F9-record.md#f93-report)
-- [I19: The report can't give the two measures their first value](ISSUES.md#i19-the-report-cant-give-the-two-measures-their-first-value)
+- The report gives the seconds of a whole check, leaves out the throwaway repos in temporary folders and starts on a day with `--since`, done on 2026-11-20.
 
 **Exit criteria** (2):
 
@@ -414,7 +414,7 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 **Status**: 🟨
 
-The user set this on 2026-11-19: what a stranger meets first, and what can only be proven in real sessions of every language, comes just before a public release. `/broom:status` shipped in 0.25.1 that day, and a fresh session with no tools on its PATH ran it end to end. The commands became three in 0.25.4 that day: setup, status and scan. Three fresh sessions ran a scan of a whole repo, a scan of two commits and a status, and none changed a file. One of them named the old cleanup command, which 0.25.5 put right.
+The user set this on 2026-11-19: what a stranger meets first, and what can only be proven in real sessions of every language, comes just before a public release. `/broom:status` shipped in 0.25.1 that day, and a fresh session with no tools on its PATH ran it end to end. The commands became three in 0.25.4 that day: setup, status and scan. Three fresh sessions ran a scan of a whole repo, a scan of two commits and a status, and none changed a file. One of them named the old cleanup command, which 0.25.5 put right. On 2026-11-20 a fresh session per language saw the server's diagnostic after an edit, in all six, so the hero image is what is left.
 
 **Delivers** (8):
 
@@ -430,7 +430,7 @@ The user set this on 2026-11-19: what a stranger meets first, and what can only 
 **Exit criteria** (1):
 
 - **Objectives**
-  - [O3: Mistakes seen while editing](GOALS.md#o3-mistakes-seen-while-editing)
+  - [O3: Mistakes seen while editing](GOALS.md#o3-mistakes-seen-while-editing): ✅ 2026-11-20, six languages in fresh sessions
 
 ---
 

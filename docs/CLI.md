@@ -225,20 +225,21 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 **Status**: ✅
 
-`broom report [paths...] [--days N] [--all] [--json]` prints what broom stopped, what was fixed and what went through.
+`broom report [paths...] [--days N | --since YYYY-MM-DD] [--all] [--json]` prints what broom stopped, what was fixed and what went through.
 
 | Flag | Means | Default |
 |---|---|---|
 | `paths` | limit to these files or directories | the repo |
 | `--days N` | how far back to look | 30 |
-| `--all` | every repo in the ledger | off |
+| `--since YYYY-MM-DD` | look from that day on, in place of `--days` | off |
+| `--all` | every repo in the ledger but those in a temporary folder | off |
 | `--json` | print JSON | off |
 
 **Called by**: a person, Claude and the `/broom:status` skill.
 
-**Prints**: stdout gets a line of totals with the fix rate, then a table per rule, the self-waivers by kind, the skips by tool and the median and longest seconds per check. With nothing recorded it prints `broom: nothing recorded for <repo> in the last N days`. stderr gets `broom: not inside a git repository`.
+**Prints**: stdout gets a line of totals with the fix rate, then a table per rule, the skips by tool, the median and longest seconds of a whole check at a commit and at a turn's end, the same per tool and the self-waivers by kind. With `--all` the first line says how many repos in a temporary folder were left out. With nothing recorded it prints `broom: nothing recorded for <repo> in the last N days`. stderr gets `broom: not inside a git repository`.
 
-**Fails**: exit 1 outside a repo without `--all`.
+**Fails**: exit 1 outside a repo without `--all`. Exit 2 for a `--since` that is no day.
 
 **Example**: `broom report --days 7` prints `blocked 41, fixed 33, let through 8, still open 0` with the fix rate, then the rules behind it.
 
@@ -370,7 +371,7 @@ An uncaught error exits 1 with a traceback.
 - **`broom compare --json`**: `repo` · `base` · `base_commit` · `summary` · `kinds` · `gone` · `new` · `shrank` · `grew` · `hotspots` · `not_comparable` · `notes` · `quote` · `seconds`.
 - **`broom stats --json`**: `repo` · `paths` · `files` · `days` · `size` · `tests` · `rot` · `history`. Each section holds a `note` that says what is missing, or null.
 - **`broom fixes --json`**: one key per smell, with its fix line.
-- **`broom report --json`**: `days` · `repos` · `blocked` · `fixed` · `let_through` · `open` · `asked` · `how` · `fix_rate` · `rules` · `waivers` · `skips` · `seconds` · `errors`.
+- **`broom report --json`**: `days` · `since` · `repos` · `left_out` · `blocked` · `fixed` · `let_through` · `open` · `asked` · `how` · `fix_rate` · `rules` · `waivers` · `skips` · `seconds` · `checks` · `errors`.
 
 Each item of `checks` holds 6 keys: `language` · `check` · `status` · `tool` · `why` · `fix`. Its `status` is `on`, `off` or `none`.
 

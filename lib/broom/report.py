@@ -11,10 +11,11 @@ outcome: it stays open until it is fixed or let through, and the report says how
 from __future__ import annotations
 
 import statistics
+import tempfile
 import time
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Set, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple
 
 from . import ledger
 from .gate import display
@@ -22,6 +23,10 @@ from .gitutil import git_root, main_worktree
 
 OUTCOMES = {"block": "open", "fix": "fixed", "pass": "let through"}
 NUMBERS = {2, 3, 5, 6}  # the columns of the rule table that hold numbers
+MOMENTS = {"commit": "at a commit", "pre-commit": "at a commit", "stop": "at a turn's end",
+           "subagent-stop": "at a turn's end"}  # the hooks a whole check runs in, by the moment of Claude's flow
+TEMP_ROOTS = tuple(dict.fromkeys(p for root in (tempfile.gettempdir(), "/tmp", "/var/folders")
+                                 for p in (root.rstrip("/"), str(Path(root).resolve()))))
 
 
 def scope(roots: List[Path]) -> Tuple[Set[str], Dict[str, List[str]]]:
@@ -48,10 +53,14 @@ def wanted(row: dict, repos: Optional[Set[str]], narrow: Dict[str, List[str]]) -
     return not (rels and file) or any(file == p or file.startswith(p + "/") for p in rels)
 
 
-def window(days: int, repos: Optional[Set[str]], narrow: Dict[str, List[str]]) -> List[dict]:
-    """The ledger rows of the last `days` days that `wanted` keeps, oldest first; a row without a numeric time is
-    skipped."""
-    cutoff = time.time() - days * 86400
+def throwaway(repo: str) -> bool:
+    """Whether a repo lies in a temporary folder, where only a test or a trial puts one."""
+    return any(repo == root or repo.startswith(root + "/") for root in TEMP_ROOTS)
+
+
+def window(cutoff: float, repos: Optional[Set[str]], narrow: Dict[str, List[str]]) -> List[dict]:
+    """The ledger rows from `cutoff` (epoch seconds) on that `wanted` keeps, oldest first; a row without a numeric
+    time is skipped."""
     rows = [r for r in ledger.read(ledger.LEDGER) if isinstance(r.get("t"), (int, float)) and r["t"] >= cutoff]
     return sorted((r for r in rows if wanted(r, repos, narrow)), key=lambda r: r["t"])
 
@@ -106,15 +115,26 @@ def skips(rows: List[dict]) -> Dict[str, Dict[str, int]]:
     return {tool: dict(kinds) for tool, kinds in sorted(out.items())}
 
 
-def seconds(rows: List[dict]) -> Dict[str, dict]:
-    """Per check, from the `time` rows: the number of runs, the median and the longest seconds; the checks sorted by
-    name."""
+def spread(rows: List[dict], event: str, name: Callable[[dict], str]) -> Dict[str, dict]:
+    """Per `name` of the `event` rows that hold seconds: the number of runs, the median and the longest seconds,
+    sorted by name."""
     runs: Dict[str, List[float]] = defaultdict(list)
     for r in rows:
-        if r.get("event") == "time" and isinstance(r.get("seconds"), (int, float)):
-            runs[str(r.get("check", "?"))].append(float(r["seconds"]))
+        if r.get("event") == event and isinstance(r.get("seconds"), (int, float)):
+            runs[name(r)].append(float(r["seconds"]))
     return {c: {"runs": len(s), "median": round(statistics.median(s), 2), "max": max(s)}
             for c, s in sorted(runs.items())}
+
+
+def seconds(rows: List[dict]) -> Dict[str, dict]:
+    """Per tool, from the `time` rows: the number of runs, the median and the longest seconds."""
+    return spread(rows, "time", lambda r: str(r.get("check", "?")))
+
+
+def whole_checks(rows: List[dict]) -> Dict[str, dict]:
+    """Per moment (at a commit, at a turn's end), from the `run` rows: how many whole checks ran a tool, with their
+    median and longest seconds."""
+    return spread(rows, "run", lambda r: MOMENTS.get(str(r.get("where")), str(r.get("where") or "?")))
 
 
 def waivers(rows: List[dict]) -> dict:
@@ -125,14 +145,18 @@ def waivers(rows: List[dict]) -> dict:
             "config": [f"{r.get('file', '')} {r.get('note', '')}".strip() for r in found if r.get("kind") == "config"]}
 
 
-def report(roots: List[Path], days: int) -> dict:
-    """The record of the repos `roots` are in (every repo without roots) over the last `days` days."""
+def report(roots: List[Path], days: int, since: Optional[float] = None) -> dict:
+    """The record of the repos `roots` are in over the last `days` days, or from `since` (epoch seconds) when it is
+    given. Without roots it covers every repo but those in a temporary folder, which it counts in `left_out`."""
     repos, narrow = scope(roots) if roots else (None, {})
-    rows = window(days, repos, narrow)
+    rows = window(since if since is not None else time.time() - days * 86400, repos, narrow)
+    left = {str(r.get("repo")) for r in rows if throwaway(str(r.get("repo")))} if repos is None else set()
+    rows = [r for r in rows if str(r.get("repo")) not in left]
     found = ended(rows)
-    return {"days": days, "repos": sorted(repos) if repos is not None else "all", **tally(found.values()),
-            "rules": by_rule(found), "skips": skips(rows), "seconds": seconds(rows), "waivers": waivers(rows),
-            "errors": sum(1 for r in rows if r.get("event") == "error")}
+    return {"days": days, "since": time.strftime("%Y-%m-%d", time.localtime(since)) if since is not None else None,
+            "repos": sorted(repos) if repos is not None else "all", "left_out": len(left), **tally(found.values()),
+            "rules": by_rule(found), "skips": skips(rows), "seconds": seconds(rows), "checks": whole_checks(rows),
+            "waivers": waivers(rows), "errors": sum(1 for r in rows if r.get("event") == "error")}
 
 
 # ---------------------------------------------------------------- text
@@ -169,7 +193,7 @@ def skip_rows(skips: Dict[str, Dict[str, int]]) -> List[str]:
 
 
 def second_rows(checks: Dict[str, dict]) -> List[str]:
-    """One line per check in the seconds (from `seconds`): median, longest and the number of runs."""
+    """One line per name in the seconds (from `spread`): median, longest and the number of runs."""
     return [f"  {c}: median {v['median']}, max {v['max']} ({v['runs']} run{'' if v['runs'] == 1 else 's'})"
             for c, v in checks.items()]
 
@@ -185,16 +209,21 @@ def render(data: dict) -> str:
     """The text `broom report` prints for `data` (from `report`): a summary, then each section that has something to
     show. With nothing recorded it is one line."""
     where = "every repo" if data["repos"] == "all" else ", ".join(display(Path(r)) for r in data["repos"])
-    if not (data["blocked"] or data["skips"] or data["seconds"] or data["errors"] or data["waivers"]["count"]):
-        return f"broom: nothing recorded for {where} in the last {data['days']} days"
+    if data["left_out"]:
+        where += f" but {data['left_out']} in a temporary folder"
+    period = f"since {data['since']}" if data["since"] else f"in the last {data['days']} days"
+    if not (data["blocked"] or data["skips"] or data["seconds"] or data["checks"] or data["errors"]
+            or data["waivers"]["count"]):
+        return f"broom: nothing recorded for {where} {period}"
     asked = f"asked the user {data['asked']}, " if data["asked"] else ""
-    out = [f"broom report: {where}, the last {data['days']} days",
+    out = [f"broom report: {where}, {period}",
            f"blocked {data['blocked']}, fixed {data['fixed']}, let through {data['let_through']}, "
            f"still open {data['open']}, {asked}fix rate {percent(data['fix_rate'])}"]
     sections = [("By rule (each finding counts once; fix rate is fixed over fixed plus let through):",
                  [f"  {row}" for row in rule_rows(data["rules"])] if data["rules"] else []),
                 ("Skipped checks, by tool:", skip_rows(data["skips"])),
-                ("Seconds per check:", second_rows(data["seconds"])),
+                ("Seconds per whole check that ran a tool:", second_rows(data["checks"])),
+                ("Seconds per tool:", second_rows(data["seconds"])),
                 ("Self-waivers (changes that loosened the bar; shown, never blocked):", waiver_rows(data["waivers"]))]
     for title, rows in sections:
         out += ["", title, *rows] if rows else []

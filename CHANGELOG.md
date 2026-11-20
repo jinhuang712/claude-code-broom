@@ -6,6 +6,24 @@
 
 ---
 
+## 0.25.10 — 2026-11-20
+
+---
+
+### Record
+
+- `broom report` gives the seconds of a whole check at a commit and at a turn's end, with the smells, beside the seconds per tool. Before, it gave only the seconds per tool, which leave out the smells and say nothing of how long a commit waited. The ledger keeps these seconds from this version on.
+- `broom report --all` leaves out repos in a temporary folder, where a test or a trial puts them, and says how many. Before, they counted with your own repos.
+- `broom report --since 2026-11-18` starts the period on that day, so a rule's numbers can be read from the day it changed.
+
+---
+
+### Language servers
+
+- Checked in Claude Code 2.1.329: after an edit that adds a type error, Claude sees the diagnostic of broom's server in Go, TS/JS, Rust, Python, Swift and CSS.
+
+---
+
 ## 0.25.9 — 2026-11-19
 
 ---

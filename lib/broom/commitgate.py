@@ -76,7 +76,9 @@ def checked(files: List[Path], base: str = "HEAD", turn: Optional[Path] = None
     """What stops (lint and type issues not yet known, smells past a limit: blocks and hints), the smell notes that
     are only told, and the tool notes, for what changed since `base`. Content that passed before isn't checked
     again; content that passes now is recorded. What the change loosens (a suppression it adds, a looser
-    .broom.json) is noted for `turn`, the directory of the turn it belongs to."""
+    .broom.json) is noted for `turn`, the directory of the turn it belongs to. A check that ran leaves its seconds in
+    the ledger."""
+    start = time.monotonic()
     files = [f for repo, group in by_repo(files).items() for f in unpassed(repo, group, worktree_blobs(repo, group))]
     if not files:
         return [], [], []
@@ -92,6 +94,7 @@ def checked(files: List[Path], base: str = "HEAD", turn: Optional[Path] = None
         notes += smell_notes
     ledger.waived(waivers.detect(groups, changed, base), turn)
     record_passed(files, blocking, told, notes)
+    ledger.ran(groups, time.monotonic() - start)
     return blocking, told, notes
 
 

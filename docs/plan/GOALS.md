@@ -11,7 +11,7 @@ Goals
 ├── Objectives
 │   ├── ✅ O1: Clean work without asking — Claude's changes meet the project's rules
 │   ├── ✅ O2: Tooling in one conversation — a bare repo ends with no gap
-│   ├── ⬜ O3: Mistakes seen while editing — a diagnostic after an edit
+│   ├── ✅ O3: Mistakes seen while editing — a diagnostic after an edit
 │   ├── ✅ O4: Nothing passes silently — every pass has a reason the user can see
 │   ├── ✅ O5: A full diagnosis of an old repo — every smell, with no time cut
 │   ├── ✅ O6: A number that got worse is told once — the check-up speaks only then
@@ -87,7 +87,7 @@ Claude sees its mistakes as it edits, through language servers.
 
 **Acceptance**: After an edit that adds a type error, Claude Code shows the server's diagnostic, in each of the six languages.
 
-**Status**: ⬜
+**Status**: ✅ 2026-11-20, with 0.25.9 in Claude Code 2.1.329. One fresh `claude -p` session per language edited a small throwaway project to add a type error, an unknown property for CSS. Each transcript holds the diagnostic Claude Code gave the model after the edit: gopls, typescript-language-server through broom's launcher, rust-analyzer, pyright, sourcekit-lsp and vscode-css-language-server. Each needed one try. The debug log of the CSS run shows that Claude Code loaded broom's six servers and started its CSS one, and no other plugin served these files.
 
 ---
 
@@ -217,7 +217,7 @@ How much of what broom blocks gets fixed. A low rate for one rule means the rule
 - [F9.3: Report](../features/F9-record.md#f93-report)
 - [F9.4: Tiers by fix rate](../features/F9-record.md#f94-tiers-by-fix-rate)
 
-**How**: The ledger of the author's machine over 30 days.
+**How**: The ledger of the author's machine over 30 days, read with `broom report --all`, which leaves out the throwaway repos in temporary folders. `--since` splits a rule's numbers at the day the rule changed.
 
 **Formula**:
 
@@ -237,7 +237,7 @@ The seconds a commit check takes when it has to run.
 
 **Checks**: [F2.7: Time limit](../features/F2-sweep.md#f27-time-limit)
 
-**How**: The ledger of the author's machine over 30 days.
+**How**: The ledger of the author's machine over 30 days, read from the `at a commit` line of `broom report --all`. The ledger holds a whole check's seconds since 0.25.10 on 2026-11-20, so the days count from then.
 
 **Formula**:
 
@@ -245,7 +245,7 @@ The seconds a commit check takes when it has to run.
 M2 = median seconds of a commit check that ran at least one tool
 ```
 
-**Last value**: open. Single runs recorded on 2026-11-16: 3.8 s for a second check of 30 Go files, and 9.7 s beside a busy job.
+**Last value**: open, since the ledger began to hold a whole check's seconds on 2026-11-20. Single runs recorded on 2026-11-16: 3.8 s for a second check of 30 Go files, and 9.7 s beside a busy job.
 
 ---
 

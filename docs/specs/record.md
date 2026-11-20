@@ -20,7 +20,7 @@ ledger.jsonl ◀─────────────────────�
 
 The ledger is `ledger.jsonl` in the data directory, one JSON object per line. Every line holds the time, the repo, the event and the hook it came from. The repo is the main worktree's root, so a repo and its linked worktrees share one record. A file is given relative to its own worktree's root.
 
-9 events:
+10 events:
 
 - **block**: A finding stopped a commit or a turn's end.
 - **fix**: A finding of an earlier block is gone.
@@ -29,7 +29,8 @@ The ledger is `ledger.jsonl` in the data directory, one JSON object per line. Ev
 - **hint**: A nit, which is a slight smell, was told without a block. The event keeps its older name.
 - **waiver**: A change loosened the bar, with its kind.
 - **skip**: A tool didn't run, with the timeout or missing-tool note.
-- **time**: The seconds one check took in a hook.
+- **time**: The seconds one tool took in a hook.
+- **run**: The seconds a whole check of a commit or a turn's end took, once it ran a tool: lint, types and smells. Content that passed before runs no tool and writes none.
 - **error**: A hook failed and let the action through.
 
 A pass says how it went through, in 2 ways:
@@ -83,3 +84,7 @@ The notes are cleared at the next prompt. With `check_on` at `commit` no stop ho
 `broom report` counts distinct findings by repo and key, each by how it ended last: fixed, let through or still open. A finding blocked three times and then fixed counts once as blocked and once as fixed.
 
 The fix rate is the fixed over the fixed plus the let through, so a finding that hasn't ended counts against no rule. A block of self-waivers gives their count by kind and the notes of the config ones. The lines of notes are written and not yet shown.
+
+The run lines give the seconds of a whole check, grouped by moment: git's hook and Claude Code's commit hook are both at a commit, and a subagent's end is at a turn's end. The time lines give the seconds per tool beside them. Before 0.25.10 the ledger held only the time lines, which leave out the smells.
+
+Without paths and with `--all`, a repo in a temporary folder is left out: the system's temporary folder, `/tmp` and `/var/folders`, as given and resolved. The first line says how many were left out.

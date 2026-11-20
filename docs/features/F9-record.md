@@ -42,7 +42,9 @@ When a turn let something through, the user sees one line at its end, such as `b
 
 ## F9.3: Report
 
-`broom report` prints the record of a repo over a period: findings blocked, fixed and let through with the fix rate, then the same per rule, the skips by tool and the seconds per check. It covers 30 days and this repo unless told otherwise.
+`broom report` prints the record of a repo over a period: findings blocked, fixed and let through with the fix rate, then the same per rule, the skips by tool and the seconds a check takes at a commit and at a turn's end. It covers 30 days and this repo unless told otherwise. `--since` starts the period on a day, such as the day a rule changed.
+
+`--all` covers every repo but those in a temporary folder, where only a test or a trial puts one, and says how many it left out.
 
 A finding counts once, however often it was blocked. Notes told without a block are recorded and not yet shown.
 
