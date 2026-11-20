@@ -1,0 +1,66 @@
+# TypeScript's imports, as js-imports.yml reads them in JavaScript, for .ts and .tsx.
+id: ts-import-decl
+language: TypeScript
+message: an import declaration
+metadata: {smell: import_decl}
+rule:
+  any:
+    - kind: import_statement
+    - {kind: export_statement, has: {field: source, kind: string}}
+    - any: [kind: lexical_declaration, kind: variable_declaration]
+      has:
+        kind: variable_declarator
+        has:
+          field: value
+          kind: call_expression
+          has: {field: function, kind: identifier, regex: '^require$'}
+---
+id: ts-import-source
+language: TypeScript
+message: the module an import names
+metadata: {smell: import_source}
+rule:
+  pattern: $TEXT
+  all:
+    - any: [kind: string, kind: template_string]
+    - any:
+        - inside: {kind: import_statement, field: source}
+        - inside: {kind: export_statement, field: source}
+        - inside:
+            kind: arguments
+            inside:
+              kind: call_expression
+              has: {field: function, any: [{kind: identifier, regex: '^require$'}, {kind: import}]}
+---
+id: tsx-import-decl
+language: Tsx
+message: an import declaration
+metadata: {smell: import_decl}
+rule:
+  any:
+    - kind: import_statement
+    - {kind: export_statement, has: {field: source, kind: string}}
+    - any: [kind: lexical_declaration, kind: variable_declaration]
+      has:
+        kind: variable_declarator
+        has:
+          field: value
+          kind: call_expression
+          has: {field: function, kind: identifier, regex: '^require$'}
+---
+id: tsx-import-source
+language: Tsx
+message: the module an import names
+metadata: {smell: import_source}
+rule:
+  pattern: $TEXT
+  all:
+    - any: [kind: string, kind: template_string]
+    - any:
+        - inside: {kind: import_statement, field: source}
+        - inside: {kind: export_statement, field: source}
+        - inside:
+            kind: arguments
+            inside:
+              kind: call_expression
+              has: {field: function, any: [{kind: identifier, regex: '^require$'}, {kind: import}]}

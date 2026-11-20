@@ -40,7 +40,7 @@ metadata: {smell: marked_comment}
 rule:
   any: [kind: line_comment, kind: block_comment]
   pattern: $TEXT
-  regex: 'TODO|FIXME|HACK|XXX|noqa|ignore|disable|nolint|@ts-|allow\('
+  regex: 'TODO|FIXME|HACK|XXX|noqa|ignore|disable|nolint|@ts-|allow\(|DO NOT EDIT|@generated'
 ---
 # A lint suppression in Rust is an attribute, `#[allow(…)]` or `#![allow(…)]`, not a comment. Its text is handed on
 # as a marked comment's is, where the suppression markers (waivers.py) read its kind.

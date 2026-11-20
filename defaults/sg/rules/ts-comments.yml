@@ -1,4 +1,4 @@
-# A TypeScript comment that may hold a TODO marker or a lint suppression, as js-comments.yml reads it, for .ts and .tsx.
+# A TypeScript comment with a marker word, as js-comments.yml reads it in JavaScript, for .ts and .tsx.
 id: ts-comment
 language: TypeScript
 message: a comment with a marker word
@@ -6,7 +6,7 @@ metadata: {smell: marked_comment}
 rule:
   kind: comment
   pattern: $TEXT
-  regex: 'TODO|FIXME|HACK|XXX|noqa|ignore|disable|nolint|@ts-|allow\('
+  regex: 'TODO|FIXME|HACK|XXX|noqa|ignore|disable|nolint|@ts-|allow\(|DO NOT EDIT|@generated'
 ---
 id: tsx-comment
 language: Tsx
@@ -15,4 +15,4 @@ metadata: {smell: marked_comment}
 rule:
   kind: comment
   pattern: $TEXT
-  regex: 'TODO|FIXME|HACK|XXX|noqa|ignore|disable|nolint|@ts-|allow\('
+  regex: 'TODO|FIXME|HACK|XXX|noqa|ignore|disable|nolint|@ts-|allow\(|DO NOT EDIT|@generated'

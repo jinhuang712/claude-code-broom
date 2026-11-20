@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set, Tuple
 
 from . import ledger
 from .config import REPO_FILE, SMELL_LIMITS
@@ -18,15 +18,17 @@ from .gitcmd import GitOp, parse_commit
 from .gitutil import ChangedLines, git, git_root
 from .smells import moved
 from .state import parse_jsonc, read_jsonc, short_hash
+from .treefacts import comment_trees
 
-# What a lint suppression looks like: the tool's own marker. Each is on a line without a comment sign before it, or
-# this file would hold suppressions itself.
+# What a lint suppression looks like: the tool's own marker. It is tested only on a comment, or on a Rust `allow`
+# attribute, that a syntax tree isolated (treefacts.comment_trees), so a marker in a string never counts. Each is
+# on a line without a comment sign before it, or this file would hold suppressions itself.
 MARKERS = re.compile("|".join((
     r"\bnoqa\b", r"type:\s*ignore", "eslint-disable", "oxlint-disable", "@ts-ignore", "@ts-expect-error",
     r"\bnolint\b", "swiftlint:disable", "biome-ignore", "stylelint-disable",
     r"[#]!?\[allow\(",
 )))
-COMMENT = re.compile(r"#|//|/\*")  # a marker counts after one of these on its line, or when it is a Rust attribute
+MARKER_WORDS = ("noqa", "ignore", "disable", "nolint", "@ts-", "allow(")  # a word each marker holds
 NO_VERIFY_NOTE = "git commit --no-verify"
 
 
@@ -40,32 +42,38 @@ def waiver(kind: str, repo: str, file: str, note: str, text: str = "") -> dict:
 # ---------------------------------------------------------------- suppressions
 
 
-def suppression_in(line: str) -> Optional[str]:
-    """The suppression marker on a line, such as `noqa`, or None. A marker in a string, outside a comment, doesn't
-    count."""
-    for m in MARKERS.finditer(line):
-        if m.group().startswith("#") or COMMENT.search(line, 0, m.start()):
-            return m.group()
-    return None
+def has_words(text: str, added: Optional[Set[int]]) -> bool:
+    """Whether a line of `text` the change added (every line when `added` is None) holds a word of a suppression
+    marker: what a file needs before its tree is read, since a marker on an added line is in that line's text."""
+    rows = text.splitlines()
+    return any(word in rows[n - 1] for n in (added if added is not None else range(1, len(rows) + 1))
+               if 0 < n <= len(rows) for word in MARKER_WORDS)
 
 
-def suppression_waivers(files: List[Path], changed: ChangedLines) -> List[dict]:
-    """A waiver for each line the change added that holds a suppression, in `files`. Only a file whose text holds a
-    marker asks git which of its lines changed."""
-    out = []
+def suppression_waivers(root: Path, files: List[Path], changed: ChangedLines) -> List[dict]:
+    """A waiver for each comment (or Rust `allow` attribute) on a line the change added that is a suppression, in
+    `files` of the repo at `root`. Only a file whose text holds a marker's word asks git which of its lines changed,
+    and only one whose added lines hold one has its tree read."""
+    texts: Dict[str, str] = {}
+    lines: Dict[str, Tuple[Path, Optional[Set[int]]]] = {}
     for f in files:
         try:
-            rows = f.read_text(errors="replace").splitlines()
-        except OSError:
+            text = f.read_text(errors="replace")
+            rel = f.resolve().relative_to(root.resolve()).as_posix()
+        except (OSError, ValueError):
             continue
-        if not MARKERS.search("\n".join(rows)):
-            continue
-        added = changed.get(f)
-        repo, rel = ledger.locate(f)
-        for n, text in enumerate(rows, 1):
-            marker = suppression_in(text) if added is None or n in added else None
-            if marker:
-                out.append(waiver("suppression", repo, rel, marker, text.strip()))
+        if any(word in text for word in MARKER_WORDS) and has_words(text, changed.get(f)):
+            texts[rel], lines[rel] = text, (f, changed.get(f))
+    out = []
+    for rel, comments in comment_trees(root, texts, []).items():
+        f, added = lines[rel]
+        repo, shown = ledger.locate(f)
+        rows = texts[rel].splitlines()
+        for n, comment in sorted(comments.items()):
+            marker = MARKERS.search(comment) if added is None or n in added else None
+            if marker:  # the line's text only tells two waivers of one file apart: an identity, not a reading
+                line = rows[n - 1].strip() if n <= len(rows) else comment
+                out.append(waiver("suppression", repo, shown, marker.group(), line))
     return out
 
 
@@ -125,7 +133,7 @@ def config_waivers(root: Path, base: str) -> List[dict]:
 def detect(groups: Dict[Path, List[Path]], changed: ChangedLines, base: str) -> List[dict]:
     """The waivers in what a check covers: `groups` is its files by repo, `changed` their changed lines and `base`
     what they are measured against."""
-    found = [w for files in groups.values() for w in suppression_waivers(files, changed)]
+    found = [w for root, files in groups.items() for w in suppression_waivers(root, files, changed)]
     return found + [w for root in groups for w in config_waivers(root, base)]
 
 

@@ -11,7 +11,6 @@ up, except that an old sized smell in a function or file the change touches is a
 
 from __future__ import annotations
 
-import re
 import tempfile
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
@@ -24,8 +23,9 @@ from .clones import Clone, Unused, find_clones, find_unused
 from .config import DEAD_CODE, LIMIT_PAIR, NIT, NOTED, SMELL_LIMITS, SMELL_PRESENCE, repo_config, setting
 from .gate import issue_key
 from .gitutil import ChangedLines, renamed, run_bytes
-from .maintained import GENERATED, Maintained, generated
-from .measure import SMELL_EXTS, Limits, Raw, code_lines
+from .maintained import Maintained, generated, generated_among
+from .imports import import_lines
+from .measure import SMELL_EXTS, Limits, Raw
 from .realtree import Budget, Found, find_in_real_tree
 from .rowcache import RowCache
 from .smell import Scan, Smell, level, made_worse
@@ -33,7 +33,6 @@ from .testrot import TEST_FILE, UNTESTED_FILE, skip_rows, test_clones, untested_
 from .touched import old_smells, touched, touches
 from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS, SWIFT_EXTS
 
-TEST_BLOCK = re.compile(r"(describe|it|test|suite|context)(\.\w+)?\(")
 GIT_TIMEOUT = 60
 
 NITS_SHOWN = 10
@@ -74,11 +73,9 @@ TEST_NOISE = ("complexity", "magic_numbers", "missing_docs")
 
 
 def noise(r: Raw) -> bool:
-    """Findings that measure the tool, not the code: in tests, what `TEST_NOISE` names; a test framework's
-    describe/it callbacks are containers, long by nature."""
-    if r.metric in TEST_NOISE and TEST_FILE.search(r.rel):
-        return True
-    return r.metric in ("function_lines", "complexity") and bool(TEST_BLOCK.match(r.key))
+    """Findings that measure the tool, not the code: in tests, what `TEST_NOISE` names. A test framework's
+    describe/it callbacks, long by nature, are left out where they are measured (jsmeasure.drop_test_callbacks)."""
+    return r.metric in TEST_NOISE and bool(TEST_FILE.search(r.rel))
 
 
 def compare_sizes(now: List[Raw], before: Optional[List[Raw]], lim: RepoLimits, repo: Path) -> List[Smell]:
@@ -165,10 +162,9 @@ def current_texts(repo: Path, files: List[Path], keep: Maintained) -> Dict[str, 
         except ValueError:
             continue
         if f.suffix in SMELL_EXTS and keep.record(rel) and f.is_file():
-            text = f.read_text(errors="replace")
-            if not GENERATED.search("\n".join(text.splitlines()[:5])):
-                out[rel] = text
-    return out
+            out[rel] = f.read_text(errors="replace")
+    made = generated_among(repo, out)
+    return {rel: text for rel, text in out.items() if rel not in made}
 
 
 def base_texts(repo: Path, base: str, rels: List[str], was: Optional[Dict[str, str]] = None) -> Dict[str, str]:
@@ -316,11 +312,19 @@ def real_tree_smells(found: List[Found], change: Change, lim: RepoLimits, off: T
     return out
 
 
-def drop_import_growth(rows: List[Raw], now: Dict[str, str], before: Optional[Dict[str, str]]) -> List[Raw]:
+def drop_import_growth(rows: List[Raw], now: Dict[str, str], before: Optional[Dict[str, str]],
+                       notes: List[str]) -> List[Raw]:
     """`rows` without the file length of files whose lines besides imports didn't grow since `before`: rewired
-    imports (a moved module's new paths, a formatter's line breaks) don't make a long file worse."""
-    steady: Set[str] = {rel for rel, text in now.items()
-                        if before and rel in before and code_lines(rel, text) <= code_lines(rel, before[rel])}
+    imports (a moved module's new paths, a formatter's line breaks) don't make a long file worse. The imports are
+    read from each version's tree, in one run for all."""
+    was = before or {}
+    long = sorted({r.rel for r in rows if r.metric == "file_lines" and r.rel in was and r.rel in now})
+    if not long:
+        return rows
+    texts = {**{f"now/{rel}": now[rel] for rel in long}, **{f"was/{rel}": was[rel] for rel in long}}
+    imports = import_lines(texts, notes)
+    code = {key: len(text.splitlines()) - imports[key] for key, text in texts.items()}
+    steady = {rel for rel in long if code[f"now/{rel}"] <= code[f"was/{rel}"]}
     return [r for r in rows if not (r.metric == "file_lines" and r.rel in steady)]
 
 
@@ -354,7 +358,7 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str],
         unused = None if DEAD_CODE in off else pool.submit(find_unused, repo, keep.dead_code_skips(), notes)
         unmeasured = [] if base else None  # a base with no file at it makes every row new; no base, a sweep
         old_rows = with_skips(before.result() if before else unmeasured, old_text, notes)
-        rows_now = drop_import_growth(now.result(), now_text, old_text) + skip_rows(now_text, notes)
+        rows_now = drop_import_growth(now.result(), now_text, old_text, notes) + skip_rows(now_text, notes)
         found = compare(rows_now, old_rows, lim, repo, off)
         if base:  # the old smells in what the change touches
             found += touched(old_smells(counted(rows_now, off), old_rows, lim.of, repo), base, now_text)

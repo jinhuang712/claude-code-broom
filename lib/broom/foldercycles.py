@@ -11,13 +11,13 @@ from __future__ import annotations
 
 import json
 import posixpath
-import re
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Set, Tuple
 
 from .gitutil import git, run
 from .pycycles import ImportGraph
 from .depcruise import pick
+from .imports import import_sources
 from .toolchain import JS_EXTS, find_up
 
 Place = Tuple[str, int]  # a file, relative to the repo, and the line of an import in it
@@ -94,17 +94,16 @@ def run_depcruise(root: Path, exe: str, timeout: float) -> Tuple[list, str]:
         return [], f"failed: {(err or out).strip()[:120]}"
 
 
-def import_line(text: str, specifiers: List[str]) -> int:
-    """The line of the first import in `text` of one of `specifiers`, 0 when none is there."""
-    for number, row in enumerate(text.splitlines(), 1):
-        if any(re.search(r"""["'`]""" + re.escape(spec) + r"""["'`]""", row) for spec in specifiers):
-            return number
-    return 0
+def import_line(sources: List[Tuple[int, str]], specifiers: List[str]) -> int:
+    """The line of the first of `sources` (a file's imported modules as (line, string), imports.import_sources) that
+    names one of `specifiers`, 0 when none does."""
+    return next((line for line, name in sources if name in specifiers), 0)
 
 
 def package_cycles(repo: Path, prefix: str, group: List[str], modules: list, notes: List[str]) -> List[Place]:
     """The imports in the changed files `group` of one package that lead into a folder that leads back. `prefix`
-    is the package's folder, which dependency-cruiser's paths leave out."""
+    is the package's folder, which dependency-cruiser's paths leave out. The line of each is read from the file's
+    tree, in one run for the files that hold one."""
     deps = {m["source"]: m.get("dependencies", []) for m in modules}
     imports = {src: [d["resolved"] for d in found if d.get("resolved") in deps and not d.get("couldNotResolve")]
                for src, found in deps.items()}
@@ -112,19 +111,17 @@ def package_cycles(repo: Path, prefix: str, group: List[str], modules: list, not
     for source in imports:
         in_folder.setdefault(folder_of(source), []).append(source)
     folders = Folders(lambda d: {folder_of(t) for f in in_folder.get(d, []) for t in imports[f]})
-    out: List[Place] = []
+    wanted: Dict[str, List[List[str]]] = {}  # per changed file, the specifiers of each import that closes a cycle
     for rel in group:
         source = rel[len(prefix):]
         if source not in imports:
             notes.append(f"dependency-cruiser didn't read {rel}: it needs a TypeScript below 7 beside it; broom doctor has the fix")
             continue
-        text = (repo / rel).read_text(errors="replace")
-        for target in imports[source]:
-            if folder_of(target) != folder_of(source) and folders.reaches(folder_of(target), folder_of(source)):
-                line = import_line(text, [d["module"] for d in deps[source] if d.get("resolved") == target])
-                if line:
-                    out.append((rel, line))
-    return sorted(set(out))
+        wanted[rel] = [[d["module"] for d in deps[source] if d.get("resolved") == target] for target in imports[source]
+                       if folder_of(target) != folder_of(source) and folders.reaches(folder_of(target), folder_of(source))]
+    found = import_sources(repo, sorted(rel for rel, specs in wanted.items() if specs), notes)
+    return sorted({(rel, line) for rel, specs in wanted.items() for spec in specs
+                   for line in (import_line(found.get(rel, []), spec),) if line})
 
 
 def js_folder_cycles(repo: Path, rels: List[str], notes: List[str], timeout: Callable[[], float]) -> List[Place]:

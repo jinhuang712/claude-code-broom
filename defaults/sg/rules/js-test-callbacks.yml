@@ -1,0 +1,68 @@
+# A function passed to a test framework's `describe`, `it`, `test`, `suite` or `context`, or to one of their forms
+# such as `it.only` or `describe.each(table)`: a container, long by nature, whose length and complexity
+# jsmeasure.py doesn't count. Read from the tree, so a `describe(` in a string is never one.
+id: js-test-callback
+language: JavaScript
+message: a test framework's callback
+metadata: {smell: test_callback}
+rule:
+  any: [kind: arrow_function, kind: function_expression]
+  inside:
+    kind: arguments
+    inside:
+      kind: call_expression
+      has:
+        field: function
+        any:
+          - {kind: identifier, regex: '^(describe|it|test|suite|context)$'}
+          - kind: member_expression
+            has: {field: object, kind: identifier, regex: '^(describe|it|test|suite|context)$'}
+          - kind: call_expression
+            has:
+              field: function
+              kind: member_expression
+              has: {field: object, kind: identifier, regex: '^(describe|it|test|suite|context)$'}
+---
+id: ts-test-callback
+language: TypeScript
+message: a test framework's callback
+metadata: {smell: test_callback}
+rule:
+  any: [kind: arrow_function, kind: function_expression]
+  inside:
+    kind: arguments
+    inside:
+      kind: call_expression
+      has:
+        field: function
+        any:
+          - {kind: identifier, regex: '^(describe|it|test|suite|context)$'}
+          - kind: member_expression
+            has: {field: object, kind: identifier, regex: '^(describe|it|test|suite|context)$'}
+          - kind: call_expression
+            has:
+              field: function
+              kind: member_expression
+              has: {field: object, kind: identifier, regex: '^(describe|it|test|suite|context)$'}
+---
+id: tsx-test-callback
+language: Tsx
+message: a test framework's callback
+metadata: {smell: test_callback}
+rule:
+  any: [kind: arrow_function, kind: function_expression]
+  inside:
+    kind: arguments
+    inside:
+      kind: call_expression
+      has:
+        field: function
+        any:
+          - {kind: identifier, regex: '^(describe|it|test|suite|context)$'}
+          - kind: member_expression
+            has: {field: object, kind: identifier, regex: '^(describe|it|test|suite|context)$'}
+          - kind: call_expression
+            has:
+              field: function
+              kind: member_expression
+              has: {field: object, kind: identifier, regex: '^(describe|it|test|suite|context)$'}

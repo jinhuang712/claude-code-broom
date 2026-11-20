@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import List, Optional, Set
+from typing import Dict, List, Optional, Set
 
 from .config import glob_matcher, repo_config
 from .gitutil import git
@@ -26,16 +26,36 @@ GENERATED_DIRS = {"testdata", "Generated", "generated"}
 OUTPUT_DIRS = {"build", "out", "release", "target"}
 MINIFIED = (".min.js", ".d.ts")
 NOTE_DIRS = 5
-GENERATED = re.compile(r"DO NOT EDIT|@generated")  # in the first lines of a file that a tool wrote
+GENERATED = re.compile(r"DO NOT EDIT|@generated")  # tested on the text of a comment a tree isolated
+MARKS = ("DO NOT EDIT", "@generated")
+HEAD = 5  # a generated header's comment starts within a file's first lines
+
+
+def head_marked(text: str) -> bool:
+    """Whether the first lines of `text` hold a mark at all: what a generated file needs before its tree is read."""
+    head = "\n".join(text.split("\n", HEAD)[:HEAD])
+    return any(mark in head for mark in MARKS)
+
+
+def generated_among(root: Path, texts: Dict[str, str]) -> Set[str]:
+    """Those of `texts` (a path under `root` to its text) that are generated: a comment on one of their first lines
+    says "DO NOT EDIT" or "@generated". Comments are read from the file's tree (treefacts.comment_trees), so a mark
+    in a string is never one; a file in a language broom has no tree for is never taken for generated."""
+    from .treefacts import comment_trees  # the tree readers load only for a file whose head holds a mark
+
+    maybe = {rel: text for rel, text in texts.items() if head_marked(text)}
+    found = comment_trees(root, maybe, []) if maybe else {}
+    return {rel for rel, comments in found.items()
+            if any(n <= HEAD and GENERATED.search(text) for n, text in comments.items())}
 
 
 def generated(path: Path) -> bool:
-    """Whether `path` is generated: "DO NOT EDIT" or "@generated" in its first five lines; False if unreadable."""
+    """Whether the file at `path` is generated, as `generated_among` has it; False if unreadable."""
     try:
-        with path.open(errors="replace") as f:
-            return bool(GENERATED.search("".join(f.readline() for _ in range(5))))
+        text = path.read_text(errors="replace")
     except OSError:
         return False
+    return bool(generated_among(path.parent, {path.name: text}))
 
 
 def tracked_output(repo: Path) -> Set[str]:

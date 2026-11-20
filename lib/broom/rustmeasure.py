@@ -16,14 +16,13 @@ from typing import Dict, Iterator, List, Optional, Set, Tuple
 
 from .reading import TOOL_TIMEOUT, Limits, Reader
 from .state import DEFAULTS
-from .syntax import Match, Rules, matches
+from .syntax import Match, Rules, Span, inside, matches, parsed
 
 TYPE_LINES = "type_lines"
 PROBE = DEFAULTS / "sg" / "probe" / "sgconfig.yml"
 # A file of tests by its path: what lies under `tests/`, `tests.rs`, `*_test.rs` and `*_tests.rs`.
 TEST_PATH = re.compile(r"(^|/)tests(/|\.rs$)|_tests?\.rs$")
 TEST_ITEM = "rust-test-item"
-UNPARSED = "rust-unparsed"
 # Smells a rule's match is on its own, anywhere; and those that count outside test code, or only inside it.
 WHOLE = {"globals", "broad_catch", "nested_ternary"}
 OUTSIDE_TESTS = {"magic_numbers"}
@@ -35,7 +34,6 @@ LITERAL = re.compile(r"(?:(?P<int>0[xX][\da-fA-F]+|0[oO][0-7]+|0[bB][01]+)(?:[iu
 EVERY_LINE = (1, 1 << 30)
 PROBE_HEAD = 2  # the line of a probe file that holds the comment's first line: it follows `fn broom_probe() {`
 PROBE_LINES = 3  # the lines one comment takes when each has a probe function of its own
-Span = Tuple[int, int]
 BATCH = 2000  # files per run of ast-grep: a command line holds only so many paths
 RUST_RULES = Rules(only="^rust-")  # the smells; the cycle graph and clippy's reading each need fewer
 FN_RULES = Rules(only="^rust-(fn-|unparsed)")  # the functions and parameters clippy's messages are read against
@@ -48,22 +46,12 @@ def rust_tree(root: Path, rels: List[str], notes: List[str], rules: Rules = RUST
     for start in range(0, len(rels), BATCH):
         for m in matches(root, rels[start:start + BATCH], notes, TOOL_TIMEOUT, rules):
             found.setdefault(m.file, []).append(m)
-    for rel, ms in found.items():
-        broken = spans(ms, UNPARSED)
-        if broken:
-            notes.append(f"ast-grep can't parse {rel} from line {broken[0][0]}: smells there go unmeasured")
-            found[rel] = [m for m in ms if m.rule != UNPARSED and not inside(m.line, broken)]
-    return found
+    return parsed(found, notes)
 
 
 def spans(found: List[Match], rule: str) -> List[Span]:
     """The first and last line of each match of `rule`."""
     return [(m.line, m.end) for m in found if m.rule == rule]
-
-
-def inside(line: int, among: List[Span]) -> bool:
-    """Whether `line` lies in one of the spans."""
-    return any(first <= line <= last for first, last in among)
 
 
 def test_spans(rel: str, found: List[Match]) -> List[Span]:

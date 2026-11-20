@@ -1,0 +1,36 @@
+# A JavaScript import, read from the tree so an `import` in a string or a comment is never one: each declaration
+# (`import`, `export … from`, a `require` bound to a name), whose lines imports.py leaves out of a file's growth,
+# and the string that names the module of an import, an `export … from`, a `require()` or an `import()`, whose
+# line foldercycles.py gives for the import dependency-cruiser named.
+id: js-import-decl
+language: JavaScript
+message: an import declaration
+metadata: {smell: import_decl}
+rule:
+  any:
+    - kind: import_statement
+    - {kind: export_statement, has: {field: source, kind: string}}
+    - any: [kind: lexical_declaration, kind: variable_declaration]
+      has:
+        kind: variable_declarator
+        has:
+          field: value
+          kind: call_expression
+          has: {field: function, kind: identifier, regex: '^require$'}
+---
+id: js-import-source
+language: JavaScript
+message: the module an import names
+metadata: {smell: import_source}
+rule:
+  pattern: $TEXT
+  all:
+    - any: [kind: string, kind: template_string]
+    - any:
+        - inside: {kind: import_statement, field: source}
+        - inside: {kind: export_statement, field: source}
+        - inside:
+            kind: arguments
+            inside:
+              kind: call_expression
+              has: {field: function, any: [{kind: identifier, regex: '^require$'}, {kind: import}]}

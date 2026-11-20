@@ -12,7 +12,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from .coverage import section as coverage_section
 from .hotspots import repo_files
-from .maintained import GENERATED, Maintained
+from .maintained import Maintained, generated_among
 from .statscan import Facts, scan
 from .syntax import MISSING
 from .statsgit import DAY, OLD_DAYS, blame, history, top_counts
@@ -41,9 +41,10 @@ def texts(repo: Path, paths: List[Path]) -> List[Tuple[str, str, str]]:
             text = f.read_text(errors="replace") if lang and keep(rel) else None
         except (OSError, ValueError):  # gone from the disk, or a link that leads out of the repo
             continue
-        if lang and text is not None and not GENERATED.search("\n".join(text.splitlines()[:5])):
+        if lang and text is not None:
             out.append((rel, lang, text))
-    return out
+    made = generated_among(repo, {rel: text for rel, _, text in out})
+    return [row for row in out if row[0] not in made]
 
 
 def ranked(counts: Dict[object, int], top: int, label: str = "count") -> List[dict]:

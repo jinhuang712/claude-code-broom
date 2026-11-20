@@ -13,7 +13,7 @@ from .swiftcalls import skips, test_cases
 from .swiftkit import comment_lines, open_text
 from .testrot import TEST_FILE
 from .treefacts import TREE_LANGS, Tree, py_comments, py_tests
-from .waivers import MARKERS, suppression_in
+from .waivers import MARKERS
 
 
 # The word as a marker in a comment: its first word, or followed by a colon or a bracket. "a TODO in the list" is
@@ -42,9 +42,9 @@ def kind_of(marker: str) -> str:
     return "allow" if marker.startswith("#") else " ".join(marker.split())
 
 
-def suppression_kinds(rows: List[str]) -> List[str]:
-    """The kind of each lint suppression in `rows`, one per line that has one."""
-    return [kind_of(k) for k in map(suppression_in, rows) if k]
+def suppression_kinds(comments: List[str]) -> List[str]:
+    """The kind of each lint suppression in `comments`, the text of comments a tree isolated, one per comment line."""
+    return [kind_of(m.group()) for comment in comments for m in (MARKERS.search(comment),) if m]
 
 
 def python_tree(text: str, facts: Facts) -> Tree:
@@ -65,7 +65,7 @@ def from_tree(facts: Facts, tree: Optional[Tree]) -> Facts:
         facts.cases, facts.skipped = tree.cases, len(tree.skips)
     lines = sorted(tree.comments.items())
     facts.todos = [n for n, comment in lines if TODO_MARK.search(comment)]
-    facts.suppressions = [kind_of(m.group()) for _, comment in lines for m in (MARKERS.search(comment),) if m]
+    facts.suppressions = suppression_kinds([comment for _, comment in lines])
     return facts
 
 

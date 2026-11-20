@@ -12,6 +12,7 @@ from .config import SMELL_PRESENCE
 from .gitutil import run
 from .reading import TOOL_TIMEOUT, Limits, Reader, number, quoted_name
 from .state import DEFAULTS
+from .syntax import Rules, matches
 from .toolchain import resolve_bin
 
 OXLINT_METRICS = {
@@ -109,6 +110,22 @@ def broom_rule_metric(rule: str, _msg: str) -> Optional[str]:
     return BROOM_RULE_METRICS.get(rule)
 
 
+CALLBACK_RULES = Rules(only="-test-callback$")  # js-test-callbacks.yml
+CONTAINER_METRICS = ("function_lines", "complexity")
+
+
+def drop_test_callbacks(r: Reader, rels: List[str]) -> None:
+    """Leave out the length and complexity of each function a test framework's `describe`, `it` or the like is given:
+    a container, long by nature. ast-grep's tree tells such a callback (js-test-callbacks.yml), by the line oxlint
+    reports a function on, its first; without ast-grep they stay, with its note. `rels` are the TS/JS files."""
+    mine = set(rels)
+    sized = sorted({row.rel for row in r.rows if row.metric in CONTAINER_METRICS and row.rel in mine})
+    if not sized:
+        return
+    found = {(m.file, m.line) for m in matches(r.root, sized, r.notes, TOOL_TIMEOUT, CALLBACK_RULES)}
+    r.rows = [row for row in r.rows if row.metric not in CONTAINER_METRICS or (row.rel, row.line) not in found]
+
+
 def measure_js(r: Reader, rels: List[str], lim: Limits, start: Path) -> None:
     """Measure the JS and TS files with oxlint, and with broom's own rules when node is there; no oxlint is a note."""
     exe = resolve_bin("oxlint", start, start)
@@ -116,6 +133,7 @@ def measure_js(r: Reader, rels: List[str], lim: Limits, start: Path) -> None:
         r.notes.append("missing:oxlint (npm i -g oxlint), so TS/JS smells aren't measured")
         return
     read_oxlint(r, run_oxlint(r, exe, "oxlint", oxlint_config(lim), rels), oxlint_metric)
+    drop_test_callbacks(r, rels)
     if shutil.which("node"):
         read_oxlint(r, run_oxlint(r, exe, "oxlint-rules", broom_rules_config(lim), rels),
                     broom_rule_metric)

@@ -4,6 +4,7 @@ never blocked."""
 from __future__ import annotations
 
 import json
+import shutil
 import time
 import unittest
 from pathlib import Path
@@ -18,19 +19,47 @@ NOQA = "# no" + "qa: E501"
 TYPE_IGNORE = "# type" + ": ignore[assignment]"
 
 
+class Added:
+    """ChangedLines' answer for given files: the lines each added, every line for any other."""
+
+    def __init__(self, lines: dict) -> None:
+        self.lines = lines
+
+    def get(self, f: Path):
+        return self.lines.get(f)
+
+
 class SuppressionTest(LedgerCase):
     def waived(self, kind: str = "") -> list:
         return [x for x in lines("waiver") if not kind or x["kind"] == kind]
 
     def test_what_counts_as_a_suppression(self) -> None:
-        yes = [f"x = 1  {NOQA}", f"x = 1  {TYPE_IGNORE}", "// eslint" + "-disable-next-line no-console",
+        yes = [NOQA, TYPE_IGNORE, "// eslint" + "-disable-next-line no-console",
                "/* style" + "lint-disable */", "//no" + "lint:errcheck", "// @ts" + "-ignore",
                "#[al" + "low(dead_code)]", "// biome" + "-ignore lint/x: why",
                "// swift" + "lint:disable:next force_cast", "// oxlint" + "-disable"]
-        for text in yes:
-            self.assertTrue(waivers.suppression_in(text), text)
-        for text in ("x = 1", 'text = "no' + 'qa"', "# a comment", "// plain"):
-            self.assertIsNone(waivers.suppression_in(text), text)
+        for comment in yes:
+            self.assertTrue(waivers.MARKERS.search(comment), comment)
+        for comment in ("# a comment", "// plain", "/* ignore the rest */"):
+            self.assertIsNone(waivers.MARKERS.search(comment), comment)
+
+    @unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
+    def test_a_suppression_is_a_comment_the_tree_isolated_never_a_string(self) -> None:
+        r = self.repo({})
+        files = {
+            "a.py": f'x = 1  {NOQA}\ntext = "{NOQA}"\ny = 2  # {"no" + "qa"} in a later comment\n',
+            "b.ts": f'const s = "// eslint{"-disable"}";\nconst t = 1; // @ts{"-ignore"}\n',
+            "c.go": f'package c\n\nvar s = "//no{"lint"}"\nvar t = 1 //no{"lint"}\n',
+            "d.rs": f'#[al{"low"}(dead_code)]\nfn f() {{}}\nconst S: &str = "#[al{"low"}(x)]";\n',
+        }
+        for name, text in files.items():
+            (r / name).write_text(text)
+        found = waivers.suppression_waivers(r, [r / name for name in files], Added({}))
+        self.assertEqual(sorted((w["file"], w["note"]) for w in found),
+                         [("a.py", "no" + "qa"), ("a.py", "no" + "qa"), ("b.ts", "@ts" + "-ignore"),
+                          ("c.go", "no" + "lint"), ("d.rs", "#[al" + "low(")])
+        only_first = waivers.suppression_waivers(r, [r / "a.py"], Added({r / "a.py": {2}}))
+        self.assertEqual(only_first, [], "line 2's marker is in a string, and line 1 is no change")
 
     @unittest.skipUnless(HAS_PY, "ruff missing")
     def test_a_suppression_the_change_adds_is_recorded_and_one_it_didnt_add_is_not(self) -> None:

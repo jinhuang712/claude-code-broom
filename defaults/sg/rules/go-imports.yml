@@ -1,0 +1,7 @@
+# A Go import declaration, single or grouped, whose lines imports.py leaves out of a file's growth.
+id: go-import-decl
+language: Go
+message: an import declaration
+metadata: {smell: import_decl}
+rule:
+  kind: import_declaration

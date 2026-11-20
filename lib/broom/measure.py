@@ -7,10 +7,9 @@ is past the soft limit as Raw rows: file, line, metric, the function's name (els
 from __future__ import annotations
 
 import ast
-import re
 import shutil
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from .config import NOTED, SMELL_PRESENCE
 from .gitutil import run
@@ -18,7 +17,6 @@ from .gomeasure import go_text
 from .jsmeasure import measure_js
 from .reading import TOOL_TIMEOUT, Limits, Raw, Reader, match, number, quoted_name
 from .rustmeasure import rust_text
-from .swiftkit import import_lines
 from .swiftmeasure import swift_text
 from .toolchain import CSS_EXTS, GO_EXTS, JS_EXTS, PY_EXTS, RS_EXTS, SWIFT_EXTS
 
@@ -34,33 +32,6 @@ def measure_files(r: Reader, rels: List[str], lim: Limits) -> None:
     for rel in rels:
         count = len((r.root / rel).read_text(errors="replace").splitlines())
         r.add(rel, 1, "file_lines", count if count > lim["file_lines"][0] else None, "file")
-
-
-# A line that starts an import; one that opens a bracket runs on to the line that closes it.
-JS_IMPORT = re.compile(r"import[\s{*'\"]|export\s+(\*|\{|type\s*\{)|(const|let|var)\s+[\w{},:\s]+=\s*require\(")
-IMPORT_START = {
-    **{ext: re.compile(r"import\s+[\w.]|from\s+[\w.]+\s+import\b") for ext in PY_EXTS},
-    **{ext: JS_IMPORT for ext in JS_EXTS},
-    **{ext: re.compile(r"import\b") for ext in GO_EXTS},
-}
-
-
-def code_lines(rel: str, text: str) -> int:
-    """The file's lines besides its imports, for telling a longer file from longer imports. Swift's imports are its
-    `import` keywords, as SourceKit's tokens give them."""
-    rows = text.splitlines()
-    if Path(rel).suffix in SWIFT_EXTS:
-        return len(rows) - import_lines(text)
-    start = IMPORT_START.get(Path(rel).suffix)
-    if start is None:
-        return len(rows)
-    imports = depth = 0
-    for row in rows:
-        s = row.strip()
-        if depth or start.match(s):
-            imports += 1
-            depth = max(0, depth + s.count("(") + s.count("{") - s.count(")") - s.count("}"))
-    return len(rows) - imports
 
 
 def nested_ternaries(r: Reader, rel: str, tree: ast.AST) -> None:
@@ -109,15 +80,28 @@ RUFF_METRICS = {
 }
 
 
-TYPING_IMPORT = re.compile(r"\s*from\s+typing(_extensions)?\s+import\b")
+TYPING_MODULES = {"typing", "typing_extensions"}
+
+
+def typing_lines(path: Path) -> Set[int]:
+    """The lines of the `from typing import` statements (or typing_extensions') of the Python file at `path`, read
+    from its tree; none when it doesn't parse."""
+    try:
+        tree = ast.parse(path.read_text(errors="replace"))
+    except (OSError, SyntaxError, ValueError):
+        return set()
+    return {n for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.module in TYPING_MODULES
+            for n in range(node.lineno, (node.end_lineno or node.lineno) + 1)}
 
 
 def typing_alias(r: Reader, d: dict) -> bool:
-    """Whether a ruff finding is UP035 on a `from typing import` line: the aliases deprecated since Python 3.9 (List,
-    Dict, Callable, ...). No version has dropped them, and every codebase older than that holds them, so counting
-    them would bury the calls that are going."""
+    """Whether a ruff finding is UP035 on a `from typing import` statement: the aliases deprecated since Python 3.9
+    (List, Dict, Callable, ...). No version has dropped them, and every codebase older than that holds them, so
+    counting them would bury the calls that are going."""
+    if d.get("code") != "UP035":
+        return False
     row = int((d.get("location") or {}).get("row") or 0)
-    return d.get("code") == "UP035" and bool(TYPING_IMPORT.match(r.line_text(r.rel(d.get("filename", "")), row)))
+    return row in typing_lines(r.root / r.rel(d.get("filename", "")))
 
 
 def ruff_name(metric: str, msg: str) -> Optional[str]:

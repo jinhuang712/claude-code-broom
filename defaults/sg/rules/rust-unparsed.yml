@@ -3,5 +3,6 @@
 id: rust-unparsed
 language: rust
 message: a region the grammar can't read
+metadata: {smell: unparsed}
 rule:
   kind: ERROR

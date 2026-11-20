@@ -1,0 +1,37 @@
+# A region of a Go, TS/JS or CSS file that ast-grep's grammar can't read, as rust-unparsed.yml has it for Rust.
+# syntax.parsed leaves the matches inside it out and says so in a note: a smell the parser can't see is not
+# guessed (decision 038). A run takes these only when its rules' filter names `unparsed`.
+id: go-unparsed
+language: Go
+message: a region the grammar can't read
+metadata: {smell: unparsed}
+rule:
+  kind: ERROR
+---
+id: js-unparsed
+language: JavaScript
+message: a region the grammar can't read
+metadata: {smell: unparsed}
+rule:
+  kind: ERROR
+---
+id: ts-unparsed
+language: TypeScript
+message: a region the grammar can't read
+metadata: {smell: unparsed}
+rule:
+  kind: ERROR
+---
+id: tsx-unparsed
+language: Tsx
+message: a region the grammar can't read
+metadata: {smell: unparsed}
+rule:
+  kind: ERROR
+---
+id: css-unparsed
+language: css
+message: a region the grammar can't read
+metadata: {smell: unparsed}
+rule:
+  kind: ERROR

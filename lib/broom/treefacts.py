@@ -1,6 +1,7 @@
-"""What a file's syntax tree tells the check-up's counters and the skipped-test smell (decision 038): the comments that
-hold a marker word, the test cases, and the skipped tests, each with whether a condition decides it. Python is read in
-broom's own process with the standard library's `tokenize` and `ast`; Go and TS/JS by ast-grep's rules `*-tests.yml`
+"""What a file's syntax tree tells the check-up's counters, the skipped-test smell, the suppressions a change adds and
+the header of generated code (decision 038): the comments that hold a marker word, the test cases, and the skipped
+tests, each with whether a condition decides it. Python is read in broom's own process with the standard library's
+`tokenize` and `ast`, Swift's comments by SourceKit, and Go, TS/JS, Rust and CSS by ast-grep's rules `*-tests.yml`
 and `*-comments.yml` under `defaults/sg/rules/` (syntax.py), in one run for many files. Nothing here reads source text
 by pattern: a comment's text is tested only once the tree has isolated it."""
 
@@ -15,16 +16,19 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from .reading import TOOL_TIMEOUT
-from .syntax import Match, Rules, matches
+from .swiftkit import comment_lines, open_text
+from .syntax import Match, Rules, by_file, matches, parsed
 from .toolchain import lang_of
 
 TREE_LANGS = ("py", "go", "js", "rust", "css")  # the languages whose counters and skips come from a tree here
 SG_LANGS = ("go", "js", "rust", "css")  # those ast-grep reads
-FACT_RULES = Rules(only="(test-case|skip|comment|suppression)$")  # the rules of these facts, and none of the smells'
+FACT_RULES = Rules(only="(test-case|skip|comment|suppression|unparsed)$")  # these facts' rules, none of the smells'
+COMMENT_RULES = Rules(only="(comment|suppression)$")  # the comments alone, and Rust's `allow` attributes
 BATCH = 2000  # files per ast-grep run, well inside the length of a command line
-# The words of every TODO marker and lint suppression. A Python file with none of them holds no such comment, so it
-# isn't tokenized; ast-grep's comment rules look for the same words.
-WORDS = ("TODO", "FIXME", "HACK", "XXX", "noqa", "ignore", "disable", "nolint", "@ts-", "allow(")
+# The words of every TODO marker, lint suppression and generated header. A Python file with none of them holds no
+# such comment, so it isn't tokenized; ast-grep's comment rules look for the same words.
+WORDS = ("TODO", "FIXME", "HACK", "XXX", "noqa", "ignore", "disable", "nolint", "@ts-", "allow(", "DO NOT EDIT",
+         "@generated")
 
 
 @dataclass
@@ -124,19 +128,25 @@ def py_tests(text: str) -> Tree:
 # ---------------------------------------------------------------- Go and TS/JS, by ast-grep
 
 
-def sg_trees(root: Path, rels: List[str], notes: List[str]) -> Dict[str, Tree]:
-    """The tree facts of the Go and TS/JS files `rels` under `root`. Empty, with a note, when ast-grep is missing or a
-    run of it failed: the files are then unread, not clean."""
-    trees = {rel: Tree() for rel in rels}
+def sg_trees(root: Path, rels: List[str], notes: List[str], rules: Rules = FACT_RULES) -> Dict[str, Tree]:
+    """The tree facts of the Go, TS/JS, Rust and CSS files `rels` under `root`. Empty, with a note, when ast-grep is
+    missing or a run of it failed: the files are then unread, not clean. What lies in a region the grammar can't read
+    is left out, with a note."""
+    found: List[Match] = []
     mine: List[str] = []  # this run's own notes: other threads may add to `notes` meanwhile
     for start in range(0, len(rels), BATCH):
-        for m in matches(root, rels[start:start + BATCH], mine, TOOL_TIMEOUT, FACT_RULES):
-            if m.file in trees:
-                trees[m.file].add(m)
+        found += matches(root, rels[start:start + BATCH], mine, TOOL_TIMEOUT, rules)
     notes += mine
+    if mine:
+        return {}
+    trees = {rel: Tree() for rel in rels}
+    for rel, ms in parsed(by_file(found, rels), notes).items():
+        for m in ms:
+            if rel in trees:
+                trees[rel].add(m)
     for tree in trees.values():
         tree.skips.sort()  # in line order: ast-grep gives each rule's matches in turn
-    return {} if mine else trees
+    return trees
 
 
 def skip_trees(texts: Dict[str, str], notes: List[str]) -> Dict[str, Tree]:
@@ -150,4 +160,30 @@ def skip_trees(texts: Dict[str, str], notes: List[str]) -> Dict[str, Tree]:
                 (Path(tmp) / rel).parent.mkdir(parents=True, exist_ok=True)
                 (Path(tmp) / rel).write_text(texts[rel], encoding="utf-8")
             out.update(sg_trees(Path(tmp), sg, notes))
+    return out
+
+
+def swift_comments(text: str) -> Dict[int, str]:
+    """Per line, the text of the Swift comments on it, as SourceKit's tokens give them; none without SourceKit."""
+    source = open_text(text)
+    found: Dict[int, str] = {}
+    for n, row in comment_lines(source) if source else []:
+        found[n] = f"{found[n]} {row}" if n in found else row
+    return found
+
+
+def comment_trees(root: Path, texts: Dict[str, str], notes: List[str]) -> Dict[str, Dict[int, str]]:
+    """Per file of `texts` (a path under `root` to its text), per line, the text of the comments on it that hold a
+    marker word, and Rust's `allow` attributes: Python's from its tokens, Swift's from SourceKit's, the others' from
+    ast-grep, which reads them from `root`. A file of another language, or one whose tree couldn't be read, has
+    none."""
+    out: Dict[str, Dict[int, str]] = {}
+    for rel, text in texts.items():
+        lang = lang_of(Path(rel))
+        if lang == "py":
+            out[rel] = py_comments(text)
+        elif lang == "swift":
+            out[rel] = swift_comments(text)
+    sg = [rel for rel in texts if lang_of(Path(rel)) in SG_LANGS]
+    out.update((rel, tree.comments) for rel, tree in sg_trees(root, sg, notes, COMMENT_RULES).items())
     return out

@@ -65,5 +65,19 @@ class SyntaxTest(BroomCase):
         self.assertEqual([n for n in notes if n.startswith("failed:")], [], "every rule in defaults/sg parses")
 
 
+    @unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
+    def test_a_region_the_grammar_cant_read_is_left_out_with_a_note_in_every_language(self) -> None:
+        broken = {"m.go": "package m\n\nfunc F( {\n// TODO: x\n",
+                  "m.ts": "// TODO: a\nconst x = ;\n", "m.js": "// TODO: a\nconst x = ;\n",
+                  "m.tsx": "// TODO: a\nconst x = ;\n", "m.css": "/* TODO: a */\na { color: red; }}}\n"}
+        for name, text in broken.items():
+            (self.tmp / name).write_text(text)
+        notes: list = []
+        found = syntax.parsed(syntax.by_file(syntax.matches(self.tmp, list(broken), notes, 30,
+                                                            syntax.Rules(only="unparsed$")), list(broken)), notes)
+        self.assertEqual(sorted(n.split()[3] for n in notes), sorted(broken), notes)
+        self.assertEqual([m for ms in found.values() for m in ms], [], "the region itself is no finding")
+
+
 if __name__ == "__main__":
     unittest.main()

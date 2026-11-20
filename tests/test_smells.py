@@ -10,7 +10,9 @@ from pathlib import Path
 from support import HAS_PY, BroomCase, no_depcruise, py_function
 
 from broom.hotspots import render
+from broom.jsmeasure import drop_test_callbacks
 from broom.measure import Raw
+from broom.reading import Reader
 from broom.smells import compare_occurrences, find_smells, made_worse, noise
 
 
@@ -69,9 +71,8 @@ class SmellTest(BroomCase):
         self.assertIn("and 4 more; `--top 5` lists them all", render(data))
         self.assertNotIn("more;", render({**data, "total": 1}))
 
-    def test_test_complexity_and_describe_blocks_are_noise(self) -> None:
+    def test_test_complexity_is_noise(self) -> None:
         self.assertTrue(noise(Raw("pkg/a_test.go", 1, "complexity", "TestX", 30, "go")))
-        self.assertTrue(noise(Raw("src/a.test.ts", 1, "function_lines", 'describe("x", () => {', 120, "js")))
         self.assertFalse(noise(Raw("pkg/a.go", 1, "complexity", "Run", 30, "go")))
         self.assertFalse(noise(Raw("pkg/a_test.go", 1, "function_lines", "TestX", 120, "go")), "long tests count")
 
@@ -259,3 +260,16 @@ class SmellTest(BroomCase):
                 self.assertEqual(notes, [])
                 self.assertIn("takes 9 parameters (hard limit 8; new)", " ".join(s.text() for s in found))
 
+
+class TestCallbackTest(BroomCase):
+    @unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
+    def test_a_describe_or_it_callback_is_told_by_the_call_it_is_given_to(self) -> None:
+        (self.tmp / "a.test.ts").write_text(
+            'describe("x", () => {\n  it.each([1])("y", function (n) {\n  });\n});\n'
+            'const s = \'describe("x", () => {\';\nconst f = () => {\n  run();\n};\n'
+            'describe(\n  "z",\n  async () => {},\n);\n')
+        r = Reader(self.tmp, "js", [])
+        for line in (1, 2, 5, 6, 11):
+            r.add("a.test.ts", line, "function_lines", 120, f"f{line}")
+        drop_test_callbacks(r, ["a.test.ts"])
+        self.assertEqual([row.line for row in r.rows], [5, 6], "a `describe(` in a string, or a plain function, counts")

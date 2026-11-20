@@ -1,4 +1,4 @@
-# A JavaScript comment that may hold a TODO marker or a lint suppression (statscan.py tests its text): the comment
+# A JavaScript comment that may hold a TODO marker, a lint suppression or a generated header (treefacts.py): the comment
 # node, so a marker in a string or a template is never one.
 id: js-comment
 language: JavaScript
@@ -7,4 +7,4 @@ metadata: {smell: marked_comment}
 rule:
   kind: comment
   pattern: $TEXT
-  regex: 'TODO|FIXME|HACK|XXX|noqa|ignore|disable|nolint|@ts-|allow\('
+  regex: 'TODO|FIXME|HACK|XXX|noqa|ignore|disable|nolint|@ts-|allow\(|DO NOT EDIT|@generated'

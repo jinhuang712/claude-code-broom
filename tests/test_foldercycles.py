@@ -71,7 +71,7 @@ class JsFolderTests(BroomCase):
     def fake_depcruise(self, modules: list) -> dict:
         report = self.tmp / "report.json"
         report.write_text(json.dumps({"modules": modules}))
-        return self.fake_path(fakes={"depcruise": f"cat {report}"}, keep=("cat",))
+        return self.fake_path(fakes={"depcruise": f"cat {report}"}, keep=("cat", "ast-grep"))
 
     def dep(self, resolved: str, module: str) -> dict:
         return {"resolved": resolved, "module": module, "couldNotResolve": False, "coreModule": False}

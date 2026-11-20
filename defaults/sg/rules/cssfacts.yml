@@ -1,5 +1,5 @@
-# A CSS, SCSS or Less comment that may hold a TODO marker or a lint suppression (treefacts.py, for statscan.py): the
-# comment node, so a marker in a string is never one. `//` comments are SCSS's and Less's.
+# A CSS, SCSS or Less comment that may hold a TODO marker, a lint suppression or a generated header (treefacts.py):
+# the comment node, so a marker in a string is never one. `//` comments are SCSS's and Less's.
 id: cssfacts-comment
 language: css
 message: a comment with a marker word
@@ -7,4 +7,4 @@ metadata: {smell: marked_comment}
 rule:
   any: [kind: comment, kind: js_comment]
   pattern: $TEXT
-  regex: 'TODO|FIXME|HACK|XXX|noqa|ignore|disable|nolint|@ts-|allow\('
+  regex: 'TODO|FIXME|HACK|XXX|noqa|ignore|disable|nolint|@ts-|allow\(|DO NOT EDIT|@generated'
