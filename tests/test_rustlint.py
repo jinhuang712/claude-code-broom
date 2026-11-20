@@ -10,7 +10,7 @@ from support import BroomCase
 
 from broom.config import SMELL_LIMITS
 from broom.realtree import rust_messages
-from broom.rustlint import FN_NAME, RUST_FLAGS, RUST_LINTS, config_text, in_parameters, thresholds
+from broom.rustlint import FN_NAME, RUST_FLAGS, RUST_LINTS, RUSTC_ASKED, config_text, in_parameters, thresholds
 
 SOFT = {metric: pair[0] for metric, pair in SMELL_LIMITS.items()}
 
@@ -81,5 +81,7 @@ class RustMessageTest(BroomCase):
         for line in ("too-many-lines-threshold = 30", "cognitive-complexity-threshold = 7",
                      "excessive-nesting-threshold = 4", "too-many-arguments-threshold = 5"):
             self.assertIn(line, text)
-        self.assertEqual(len(RUST_FLAGS), 2 * len([c for c in RUST_LINTS if c.startswith("clippy::")]))
+        asked = [c for c in RUST_LINTS if c.startswith("clippy::") or c in RUSTC_ASKED]
+        self.assertEqual(len(RUST_FLAGS), 2 * len(asked))
+        self.assertIn("missing_docs", RUST_FLAGS)
         self.assertNotIn("-W dead_code", " ".join(RUST_FLAGS))

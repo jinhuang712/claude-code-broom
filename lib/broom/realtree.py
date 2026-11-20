@@ -21,6 +21,7 @@ from .gitutil import run
 from .jsmeasure import OXLINT_CATEGORIES
 from .langlint import golangci_cache
 from .pycycles import import_cycles
+from .rustcycles import rust_folder_cycles, rust_import_cycles
 from .rustlint import RUST_LINTS, RUST_FLAGS, config_text, read as rust_read, thresholds
 from .state import DATA_ROOT, prune_dirs, short_hash
 from .swiftcheck import swift_deprecated
@@ -306,8 +307,9 @@ def find_in_real_tree(repo: Path, rels: List[str], soft: Dict[str, int], notes: 
     first, so clippy, which may be building a crate cold, gets what is left of a `budget`."""
     budget = budget or Budget()
     found = go_found(repo, rels, notes, budget) + js_found(repo, rels, notes, budget)
-    found += [Found(rel, line, "import_cycle", "broom") for rel, line in import_cycles(repo, rels)]
-    found += [Found(rel, line, "folder_cycle", "broom") for rel, line in python_folder_cycles(repo, rels)]
+    for metric, cycles in (("import_cycle", import_cycles), ("import_cycle", rust_import_cycles),
+                           ("folder_cycle", python_folder_cycles), ("folder_cycle", rust_folder_cycles)):
+        found += [Found(rel, line, metric, "broom") for rel, line in cycles(repo, rels)]
     found += [Found(rel, line, "folder_cycle", "dependency-cruiser")
               for rel, line in js_folder_cycles(repo, rels, notes, budget.timeout)]
     found += [Found(rel, line, DEAD_CODE, "broom", what) for rel, line, what in swift_unused(repo, rels)]

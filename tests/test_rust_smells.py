@@ -131,7 +131,8 @@ class RustSmellTest(BroomCase):
         self.assertEqual(sorted((s.level, s.metric, s.key) for s in found if s.metric not in {"todo", "unused_params"}),
                          [("block", "complexity", "branchy_hard"), ("block", "function_lines", "long_hard"),
                           ("hint", "complexity", "branchy_soft"), ("hint", "function_lines", "long_soft"),
-                          ("hint", "nesting", "function"), ("nit", "dead_code", "never_called"),
+                          ("hint", "missing_docs", "missing_docs"), ("hint", "nesting", "function"),
+                          ("nit", "dead_code", "never_called"), ("nit", "magic_numbers", "magic_numbers"),
                           ("nit", "swallowed_error", "swallowed_error")])
         lines = (CLEAN + "\n" + SMELLY).splitlines()
         by = {s.metric: s for s in found if s.metric in {"todo", "unused_params"}}

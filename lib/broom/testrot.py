@@ -101,21 +101,48 @@ def non_blank(text: str) -> int:
     return sum(1 for row in text.splitlines() if row.strip())
 
 
+# Rust keeps unit tests in the file they test, so a file needs a test file only when it holds no test. These files
+# hold none to test, or are tests, benchmarks and examples themselves.
+RUST_NO_TEST_NEEDED = {"main.rs", "lib.rs", "mod.rs", "build.rs"}
+RUST_NOT_CODE = re.compile(r"(^|/)(tests|benches|examples)/")
+RUST_TESTS_INSIDE = re.compile(r"#\[(?:test|cfg\(test\))\]")
+
+
+def rust_untested(rel: str, text: str, listed: Set[str]) -> bool:
+    """Whether the Rust file `rel` with `text` has no test: none in it, and no `tests/<stem>.rs`, `<stem>/tests.rs`
+    or `<stem>_test.rs` among the repo's files `listed`."""
+    if rel.rsplit("/", 1)[-1] in RUST_NO_TEST_NEEDED or RUST_NOT_CODE.search(rel) or RUST_TESTS_INSIDE.search(text):
+        return False
+    stem, base = stem_of(rel), rel[:-3]
+    beside = {f"{base}/tests.rs", f"{base}_test.rs"}
+    return not (beside & listed or any(f == f"tests/{stem}.rs" or f.endswith(f"/tests/{stem}.rs") for f in listed))
+
+
 def untested_smells(repo: Path, now: Dict[str, str], old: Optional[Dict[str, str]]) -> List[Smell]:
     """A hint for each code file among `now` (path to text) that `old`, the same files at the base, lacks, that holds at
-    least `MIN_CODE_LINES` non-blank lines and has no test file named for it anywhere in the repo, as the pairing goes.
-    Without a base (`old` is None) a sweep of the whole repo is no change adding a file, so it finds none."""
+    least `MIN_CODE_LINES` non-blank lines and has no test file named for it anywhere in the repo, as the pairing goes
+    (in Rust, no test in it or beside it either). Without a base (`old` is None) a sweep of the whole repo is no change
+    adding a file, so it finds none."""
     if old is None:
         return []
-    added = [rel for rel, text in now.items()
-             if rel not in old and needs_test(rel, lang_of(Path(rel))) and non_blank(text) >= MIN_CODE_LINES]
+    added = [rel for rel, text in now.items() if rel not in old and non_blank(text) >= MIN_CODE_LINES
+             and (needs_test(rel, lang_of(Path(rel))) or lang_of(Path(rel)) == "rust")]
     if not added:
         return []
     listed = (git(["ls-files", "--cached", "--others", "--exclude-standard"], repo) or "").splitlines()
     named = tested((rel, lang_of(Path(rel))) for rel in listed)
+
+    every = set(listed)
+
+    def untested(rel: str) -> bool:
+        """Whether the added file `rel` has no test, by its language's way of keeping tests."""
+        if lang_of(Path(rel)) == "rust":
+            return rust_untested(rel, now[rel], every)
+        return (lang_of(Path(rel)), stem_of(rel)) not in named
+
     return [Smell(repo, repo / rel, 1, UNTESTED_FILE, UNTESTED_FILE, 1, None, "broom", SMELL_PRESENCE[UNTESTED_FILE],
                   0, [1])
-            for rel in added if (lang_of(Path(rel)), stem_of(rel)) not in named]
+            for rel in added if untested(rel)]
 
 
 # ---------------------------------------------------------------- tests that repeat one another

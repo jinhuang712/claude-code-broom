@@ -25,6 +25,8 @@ EVERY_SMELL = {*SMELL_LIMITS, *SMELL_PRESENCE, DEAD_CODE}
 GO_EXEMPT = {"nested_ternary", "import_cycle", "folder_cycle"}
 # Swift's compiler refuses modules that import one another; cycles between its folders aren't read yet.
 SWIFT_EXEMPT = {"import_cycle", "folder_cycle"}
+# Rust has no ternary operator either: `if` is an expression, and whether a nested one is the smell is not settled.
+RUST_EXEMPT = {"nested_ternary"}
 
 
 REAL_OWN = DEFAULT_DATA / "node"  # broom's own dependency-cruiser in the user's real data directory, read only

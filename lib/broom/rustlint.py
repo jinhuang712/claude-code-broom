@@ -24,8 +24,13 @@ RUST_LINTS = {
     "clippy::let_underscore_must_use": "swallowed_error",
     "dead_code": DEAD_CODE, "unused_variables": "unused_params",
     "deprecated": "deprecated_api",  # a call to an item marked #[deprecated]; the message holds its note
+    "clippy::map_err_ignore": "broad_catch",  # `.map_err(|_| ...)`: the error is replaced unread
+    "missing_docs": "missing_docs",  # a public item, or the crate, with no doc comment
 }
-RUST_FLAGS = [flag for lint in RUST_LINTS if lint.startswith("clippy::") for flag in ("-W", lint)]
+# rustc's lints that are off unless asked for, like clippy's.
+RUSTC_ASKED = ("missing_docs",)
+RUST_FLAGS = [flag for lint in RUST_LINTS if lint.startswith("clippy::") or lint in RUSTC_ASKED
+              for flag in ("-W", lint)]
 # The limits clippy takes, one threshold per lint, so it gets the soft one and the message says how far past it went.
 # They come from a clippy.toml in a directory of broom's own, so the project's is never read and nothing is written
 # into the crate. Tests are never built (`cargo clippy` leaves #[cfg(test)] and tests/ out), so a test may be long,

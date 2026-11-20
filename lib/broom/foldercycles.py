@@ -3,7 +3,7 @@ one module importing back what imports it; a folder-level one is `auth` importin
 imports `auth`, however the files in between are arranged, which is where a layering that was meant to go one way
 stops doing so.
 
-Python's imports are read here (pycycles.py has the reader). TS/JS's are read by dependency-cruiser, which resolves
+Python's imports are read here (pycycles.py has the reader), and Rust's `use` statements (rustcycles.py). TS/JS's are read by dependency-cruiser, which resolves
 tsconfig paths, index files and re-exports; it needs a TypeScript below 7 beside it to read .ts files at all, and says
 nothing when it hasn't one (depcruise.py picks the one to run), so a changed file it didn't read is said so. An import counts where the change added it."""
 
@@ -65,13 +65,19 @@ def python_folder_cycles(repo: Path, rels: List[str]) -> List[Place]:
     if not listing:
         return []
     files = [f for f in listing.splitlines() if f]
-    graph = ImportGraph(repo, files)
+    return graph_folder_cycles(ImportGraph(repo, files), files, changed)
+
+
+def graph_folder_cycles(graph: ImportGraph, files: List[str], changed: List[str],
+                        folder: Callable[[str], str] = folder_of) -> List[Place]:
+    """The imports in the `changed` files of `graph` that lead into another folder, which leads back to this one.
+    `files` are all the files the graph holds; `folder` says which folder a file belongs to."""
     in_folder: Dict[str, List[str]] = {}
     for f in files:
-        in_folder.setdefault(folder_of(f), []).append(f)
-    folders = Folders(lambda d: {folder_of(t) for f in in_folder.get(d, []) for _, t in graph.edges(f)})
+        in_folder.setdefault(folder(f), []).append(f)
+    folders = Folders(lambda d: {folder(t) for f in in_folder.get(d, []) for _, t in graph.edges(f)})
     return sorted({(rel, line) for rel in changed for line, target in graph.edges(rel)
-                   if folder_of(target) != folder_of(rel) and folders.reaches(folder_of(target), folder_of(rel))})
+                   if folder(target) != folder(rel) and folders.reaches(folder(target), folder(rel))})
 
 
 def run_depcruise(root: Path, exe: str, timeout: float) -> Tuple[list, str]:

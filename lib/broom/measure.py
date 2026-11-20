@@ -17,6 +17,7 @@ from .gitutil import run
 from .gomeasure import go_text
 from .jsmeasure import measure_js
 from .reading import TOOL_TIMEOUT, Limits, Raw, Reader, match, number, quoted_name
+from .rustmeasure import rust_text
 from .swiftmeasure import swift_text
 from .toolchain import CSS_EXTS, GO_EXTS, JS_EXTS, PY_EXTS, RS_EXTS, SWIFT_EXTS
 
@@ -304,12 +305,18 @@ def measure_swift(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None
             r.add(d.get("file", ""), int(d.get("line") or 0), metric, value)
 
 
+def measure_rust(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None:
+    """Measure the Rust files from their text: clippy, which needs the crate, runs in the real tree (realtree.py)."""
+    rust_text(r, rels, lim)
+
+
 MEASURES: List[Tuple[set, Callable[[Reader, List[str], Limits, Path], None]]] = [
     (PY_EXTS, measure_python), (JS_EXTS, measure_js), (GO_EXTS, measure_go), (SWIFT_EXTS, measure_swift),
+    (RS_EXTS, measure_rust),
 ]
-# Rust and CSS have no smell tool here, but a file's length needs none, and jscpd reads them for duplicates.
-LINES_ONLY_EXTS = RS_EXTS | CSS_EXTS
-SMELL_EXTS = PY_EXTS | JS_EXTS | GO_EXTS | SWIFT_EXTS | LINES_ONLY_EXTS
+# CSS has no smell tool here, but a file's length needs none, and jscpd reads it for duplicates.
+LINES_ONLY_EXTS = CSS_EXTS
+SMELL_EXTS = PY_EXTS | JS_EXTS | GO_EXTS | SWIFT_EXTS | RS_EXTS | LINES_ONLY_EXTS
 
 
 def measure(root: Path, contents: Dict[str, str], lim: Limits, start: Path, notes: List[str]) -> List[Raw]:

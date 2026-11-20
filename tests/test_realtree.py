@@ -99,7 +99,7 @@ class RealTreeTest(BroomCase):
         (r / "src/lib.rs").write_text(RS_SMELLY)
         self.assertEqual(self.metrics(r, "src/lib.rs"),
                          [("block", "suppression"), ("hint", "bool_params"), ("hint", "debug_output"),
-                          ("hint", "params"), ("hint", "type_escape")])
+                          ("hint", "missing_docs"), ("hint", "params"), ("hint", "type_escape")])
 
     @unittest.skipUnless(HAS_CLIPPY, "cargo clippy missing")
     def test_a_rust_smell_the_change_did_not_add_stays_quiet(self) -> None:

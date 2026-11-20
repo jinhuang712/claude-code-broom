@@ -103,7 +103,7 @@ def one_per_line(rows: List[Raw]) -> List[Raw]:
 
 # Where a smell is found by a guess, not a parse, it is only a nit even when the same smell blocks in another
 # language. In Rust `let _ = f();` drops a Result by design as often as by mistake, and clippy can't tell which.
-GUESSED = {"commented_code": JS_EXTS | GO_EXTS | SWIFT_EXTS, "swallowed_error": RS_EXTS}
+GUESSED = {"commented_code": JS_EXTS | GO_EXTS | RS_EXTS | SWIFT_EXTS, "swallowed_error": RS_EXTS}
 
 
 def presence_level(metric: str, rel: str) -> str:
