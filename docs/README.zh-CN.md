@@ -32,12 +32,12 @@ broom 是给 Coding Agent 用的工具，自己不带任何模型。它让 Claud
 
 ## 安装
 
-```text
-/plugin marketplace add jinhuang712/claude-code-broom
-/plugin install broom@claude-code-broom
+```sh
+claude plugin marketplace add jinhuang712/claude-code-broom
+claude plugin install broom@claude-code-broom
 ```
 
-需要 macOS、Claude Code 2.1.271 或更高版本、Python 3.9+（命令名 `python3`）和 git。其余内容在 [INSTALL.md](INSTALL.md)（英文）：终端里的装法、每种语言的工具、更新和卸载。
+需要 macOS、Claude Code 2.1.271 或更高版本、Python 3.9+（命令名 `python3`）和 git。其余内容在 [INSTALL.md](INSTALL.md)（英文）：在 Claude Code 里的装法、每种语言的工具、更新和卸载。
 
 > [!WARNING]
 > Linux 没有测试过，Windows 不支持。

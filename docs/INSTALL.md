@@ -9,6 +9,15 @@
 
 ---
 
+## From a shell
+
+1. Run `claude plugin marketplace add jinhuang712/claude-code-broom`.
+2. Run `claude plugin install broom@claude-code-broom`.
+
+To check that it worked, start a session in a repo and run `broom doctor`.
+
+---
+
 ## From inside Claude Code
 
 1. Add the marketplace with `/plugin marketplace add jinhuang712/claude-code-broom`.
@@ -18,15 +27,6 @@
 When the repo lacks a tool or a config, Claude offers `/broom:setup`. It asks at most two questions: whether to install the missing tools, and whether to add formatter configs. It installs what the user picks and checks the result.
 
 To check that it worked, run `broom doctor` in the repo. It lists each language with its tools and says what is missing.
-
----
-
-## From a shell
-
-1. Run `claude plugin marketplace add jinhuang712/claude-code-broom`.
-2. Run `claude plugin install broom@claude-code-broom`.
-
-To check that it worked, start a session in a repo and run `broom doctor`.
 
 ---
 

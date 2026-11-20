@@ -32,12 +32,12 @@ broom is a tool for the coding agent, with no model of its own. It holds Claude'
 
 ## Install
 
-```text
-/plugin marketplace add jinhuang712/claude-code-broom
-/plugin install broom@claude-code-broom
+```sh
+claude plugin marketplace add jinhuang712/claude-code-broom
+claude plugin install broom@claude-code-broom
 ```
 
-It needs macOS, Claude Code 2.1.271 or later, Python 3.9+ as `python3`, and git. [INSTALL.md](docs/INSTALL.md) has the rest: the shell way, the tools per language, updating and removing.
+It needs macOS, Claude Code 2.1.271 or later, Python 3.9+ as `python3`, and git. [INSTALL.md](docs/INSTALL.md) has the rest: the way from inside Claude Code, the tools per language, updating and removing.
 
 > [!WARNING]
 > Linux is untested, and Windows is not supported.
