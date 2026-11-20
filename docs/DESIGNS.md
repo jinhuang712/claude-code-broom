@@ -2,7 +2,7 @@
 
 Claude's edits, commits and turn ends go in. Formatted files, a block with a report or a short message come out. Between the two sit hooks that start, run the project's tools on what changed and exit. Beside the hooks sits the `broom` command, which Claude runs to measure a repo and which never blocks.
 
-broom is designed around 8 guidelines:
+broom is designed around 9 guidelines:
 
 1. **Only Claude Code's plugin parts and Python's standard library**: Nothing runs between hooks, and nothing is installed beyond the tools themselves.
 2. **An idle hook exits in milliseconds**: A hook with nothing to do costs a process start.
@@ -12,6 +12,7 @@ broom is designed around 8 guidelines:
 6. **A finding ends fixed or with a reason the user sees**: Nothing is waved through, and nothing traps Claude for good.
 7. **Nothing is installed or set without a yes**: A hook tells Claude, and Claude asks the user.
 8. **A repo's config holds choices, never commands**: Honoring it in an untrusted repo is safe.
+9. **A smell is read from a syntax tree, never from a text pattern**: What no linter covers is read by a parser.
 
 ---
 
@@ -133,3 +134,17 @@ The machine and the repo are the user's. Hooks can't ask, so they tell Claude, a
 - **Stance**: [The project's tools, not ours](PHILOSOPHY.md#whose-rules-decide-what-is-clean)
 - **How it works**:
   - [Settings](specs/settings.md)
+
+---
+
+## 9. A smell is read from a syntax tree, never from a text pattern
+
+A text pattern holds only for the code its author thought of, and code varies without end: a raw string, a new attribute or a call over two lines breaks it without a word. A parser holds for any code the language accepts. So what no linter covers is read from a tree, the language's own where it runs with no build and ast-grep's elsewhere. The cost is one more tool to install, and grammars that lag their languages.
+
+**Ask**: Would the check still hold for valid code its author never pictured?
+
+- **Stance**: [Say what happened](PHILOSOPHY.md#what-happens-to-what-was-skipped)
+- **Decisions**:
+  - [038: Smells are read from a syntax tree](specs/decisions/038-syntax-trees.md)
+- **How it works**:
+  - [Smells](specs/smells.md)

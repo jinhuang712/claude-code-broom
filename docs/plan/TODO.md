@@ -6,21 +6,6 @@
 
 ---
 
-### [P0][DISCUSSION] Smells read from a syntax tree, not from text patterns
-
-- description:
-  - The user asked on 2026-11-20 for checks that rest on a mechanism and not on hard-coded text patterns, so that they hold up as code varies.
-  - broom reads several smells from text today: Go's three in `gomeasure.py`, Swift's in `swiftmeasure.py` and its SwiftLint custom rules, Rust's in `rustmeasure.py` and `rustcycles.py`, and skipped tests in `testrot.py`.
-  - ast-grep runs structural rules on tree-sitter grammars it bundles for Python, TS/JS, Go, Rust, Swift, CSS and Bash. It is a CLI like jscpd, so the standard library stays the only package broom needs.
-  - The other ways: a parser of each language's own run as a helper, a language server's symbols, or the text patterns kept with more tests.
-- created: 2026-11-20
-- status: OPEN
-- found: the user, after the Swift and Rust smells of 0.25.11
-- blocks: Rust's nested ternary in [CP10.2: Swift and Rust](ROADMAP.md#cp102-swift-and-rust)
-- next: the user picks the mechanism, then it becomes a guideline in DESIGNS and the text reads move to it
-
----
-
 ### [P2][DISCUSSION] A hero image for the README
 
 - description: The README opens with no image. Which image stands for broom is the user's pick, from options shown side by side.

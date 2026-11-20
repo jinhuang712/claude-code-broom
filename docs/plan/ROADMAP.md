@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP8: Lighter](#cp8-lighter), which waits for a week of the ledger's numbers: about 2026-11-24 for the fix rate and 2026-11-27 for the check time. CP10.1 ended on 2026-11-19 with 0.25.3, and CP10.2 waits for Rust's nested ternary, which waits for how smells are read. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
+**Current checkpoint**: [CP8: Lighter](#cp8-lighter), which waits for a week of the ledger's numbers: about 2026-11-24 for the fix rate and 2026-11-27 for the check time. CP10.1 ended on 2026-11-19 with 0.25.3, and CP10.2 waits for Rust's nested ternary, which [CP11: Read from a syntax tree](#cp11-read-from-a-syntax-tree) brings. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
 
 ---
 
@@ -31,7 +31,8 @@ Roadmap
 ├── 🟨 CP10: The same smells in every language — in the order the user set
 │   ├── ✅ CP10.1: Python, TS/JS and Go
 │   └── 🟨 CP10.2: Swift and Rust
-└── ⬜ CP11: Waits for a need
+├── ⬜ CP11: Read from a syntax tree — what no linter covers, read by a parser
+└── ⬜ CP12: Waits for a need
 ```
 
 ---
@@ -471,7 +472,7 @@ TS/JS lacked 1 smell and Go lacked 3 that the language allows. All 4 shipped in 
 
 **Status**: 🟨
 
-Swift gained 6 smells and Rust 10 in 0.25.11 on 2026-11-20, so Swift measures 25 and Rust 26. The user settled two questions that day: Swift rules out both cycles, and a nested `if` expression in Rust is a nested ternary. That last one waits for [Smells read from a syntax tree, not from text patterns](TODO.md#p0discussion-smells-read-from-a-syntax-tree-not-from-text-patterns).
+Swift gained 6 smells and Rust 10 in 0.25.11 on 2026-11-20, so Swift measures 25 and Rust 26. The user settled two questions that day: Swift rules out both cycles, and a nested `if` expression in Rust is a nested ternary. That last one waits for [I21: Rust's smells are read from text](ISSUES.md#i21-rusts-smells-are-read-from-text).
 
 **Delivers** (2):
 
@@ -485,7 +486,29 @@ Swift gained 6 smells and Rust 10 in 0.25.11 on 2026-11-20, so Swift measures 25
 
 ---
 
-## CP11: Waits for a need
+## CP11: Read from a syntax tree
+
+**Status**: ⬜
+
+The user set this on 2026-11-20: a check rests on a mechanism and not on a text pattern, so it holds up as code varies. It moves every smell broom reads from text to a parser.
+
+**Delivers** (5):
+
+- `broom doctor` offers ast-grep like jscpd, and a note names the smells it would read when it is missing.
+- [I20: Swift's smells are read from text](ISSUES.md#i20-swifts-smells-are-read-from-text)
+- [I21: Rust's smells are read from text](ISSUES.md#i21-rusts-smells-are-read-from-text)
+- [I22: Go's three smells are read from text](ISSUES.md#i22-gos-three-smells-are-read-from-text)
+- [I23: Skipped tests and the check-up's comment counters are read from text](ISSUES.md#i23-skipped-tests-and-the-check-ups-comment-counters-are-read-from-text)
+
+**Exit criteria** (2):
+
+- **Objectives**
+  - [O9: The first three languages measure every smell](GOALS.md#o9-the-first-three-languages-measure-every-smell)
+  - [O10: Swift and Rust measure every smell](GOALS.md#o10-swift-and-rust-measure-every-smell)
+
+---
+
+## CP12: Waits for a need
 
 **Status**: ⬜
 
