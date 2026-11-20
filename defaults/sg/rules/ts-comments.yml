@@ -1,0 +1,18 @@
+# A TypeScript comment that may hold a TODO marker or a lint suppression, as js-comments.yml reads it, for .ts and .tsx.
+id: ts-comment
+language: TypeScript
+message: a comment with a marker word
+metadata: {smell: marked_comment}
+rule:
+  kind: comment
+  pattern: $TEXT
+  regex: 'TODO|FIXME|HACK|XXX|noqa|ignore|disable|nolint|@ts-|allow\('
+---
+id: tsx-comment
+language: Tsx
+message: a comment with a marker word
+metadata: {smell: marked_comment}
+rule:
+  kind: comment
+  pattern: $TEXT
+  regex: 'TODO|FIXME|HACK|XXX|noqa|ignore|disable|nolint|@ts-|allow\('

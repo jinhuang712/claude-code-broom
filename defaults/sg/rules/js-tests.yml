@@ -1,0 +1,54 @@
+# JavaScript's test cases and skipped tests (testrot.py, statscan.py): `it(`, `test(` and their forms, and
+# `it.skip`, `describe.skip`, `xit` and the like, with or without an `if` or a branch around them that decides them.
+id: js-test-case
+language: JavaScript
+message: a test case
+metadata: {smell: test_case}
+rule:
+  kind: call_expression
+  has:
+    field: function
+    any:
+      - {kind: identifier, regex: '^x?(it|test)$'}
+      - kind: member_expression
+        all:
+          - has: {field: object, kind: identifier, regex: '^x?(it|test)$'}
+          - has: {field: property, regex: '^(only|skip|each|concurrent|fails)$'}
+---
+id: js-skip
+language: JavaScript
+message: a skipped test
+metadata: {smell: skipped_test}
+rule:
+  kind: call_expression
+  has: {field: function, matches: js-skipper}
+  not: {inside: {stopBy: end, matches: js-guard}}
+utils:
+  js-skipper:
+    any:
+      - {kind: identifier, regex: '^x(it|describe|test)$'}
+      - kind: member_expression
+        all:
+          - has: {field: object, kind: identifier, regex: '^(it|test|describe|context|suite)$'}
+          - has: {field: property, regex: '^skip$'}
+  js-guard:
+    any: [kind: if_statement, kind: ternary_expression, kind: switch_case, kind: catch_clause]
+---
+id: js-guarded-skip
+language: JavaScript
+message: a skip a condition decides
+metadata: {smell: guarded_skip}
+rule:
+  kind: call_expression
+  has: {field: function, matches: js-skipper}
+  inside: {stopBy: end, matches: js-guard}
+utils:
+  js-skipper:
+    any:
+      - {kind: identifier, regex: '^x(it|describe|test)$'}
+      - kind: member_expression
+        all:
+          - has: {field: object, kind: identifier, regex: '^(it|test|describe|context|suite)$'}
+          - has: {field: property, regex: '^skip$'}
+  js-guard:
+    any: [kind: if_statement, kind: ternary_expression, kind: switch_case, kind: catch_clause]

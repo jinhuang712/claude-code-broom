@@ -9,12 +9,14 @@ import shutil
 import unittest
 from datetime import date
 from pathlib import Path
+from unittest import mock
 
 from gitwork import GitWork, days_ago
 from support import HAS_PY, py_function
 
 from broom import checkup
 from broom.gitutil import CLOCK
+from broom.stats import collect
 
 NOQA = "# no" + "qa: E501"
 TELL = "At a natural point tell the user; don't interrupt their task. `broom diagnose` shows where each number sits."
@@ -55,6 +57,12 @@ class CheckupCase(GitWork):
 
 
 class TellingTest(CheckupCase):
+    def test_a_file_whose_tree_went_unread_leaves_the_counters_from_the_files_uncounted(self) -> None:
+        r = self.repo({"a.py": suppressed(1), "b.ts": "export {};\n"})
+        with mock.patch.object(shutil, "which", return_value=None):
+            now = checkup.counters(r, collect(r, []), None)
+        self.assertEqual((now["suppressions"], now["skipped_tests"], now["old_todos"]), (None, None, None))
+
     def test_the_first_numbers_are_the_baseline_and_nothing_is_said(self) -> None:
         r = self.repo({"a.py": suppressed(2), "tests/test_a.py": skipped(1)})
         self.assertEqual(self.scan(r, "s1"), "")

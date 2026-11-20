@@ -1,0 +1,19 @@
+# testify's assertions that any error or any panic passes, on `assert`, `require`, `X.Assert()` or `X.Require()`
+# (gomeasure.py reads them in test files). `ErrorIs`, `ErrorAs`, `EqualError` and `PanicsWithValue` say which one.
+id: go-broad-test-assert
+language: Go
+message: an assertion that any error passes
+metadata: {smell: broad_test_asserts}
+rule:
+  kind: call_expression
+  has:
+    field: function
+    kind: selector_expression
+    all:
+      - has: {field: field, regex: '^(Error|Panics)f?$'}
+      - has:
+          field: operand
+          any:
+            - {kind: identifier, regex: '^(assert|require)$'}
+            - pattern: $S.Assert()
+            - pattern: $S.Require()

@@ -37,6 +37,14 @@ class SyntaxTest(BroomCase):
         self.assertEqual((m.file, m.line, m.lines, m.smell, m.caught["N"]), ("m.rs", 1, 1, "globals", "X"))
         self.assertEqual(notes, [])
 
+    @unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
+    def test_a_line_separator_inside_a_match_keeps_it_one_match(self) -> None:
+        src = self.tmp / "src"
+        src.mkdir()
+        (src / "m.rs").write_text('static mut X: &str = "a\u2028b\u0085c";\n')
+        notes: list = []
+        self.assertEqual([m.caught["N"] for m in syntax.matches(src, ["m.rs"], notes, 30, self.config())], ["X"])
+
     def test_without_ast_grep_nothing_is_read_and_a_note_says_so(self) -> None:
         notes: list = []
         with mock.patch.object(shutil, "which", return_value=None):

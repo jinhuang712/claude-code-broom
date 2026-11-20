@@ -64,11 +64,13 @@ def old_todos(repo: Path, facts: List[Facts]) -> Optional[Counts]:
 
 def counters(repo: Path, facts: List[Facts], from_smells: Optional[Counted]) -> Counted:
     """Every counter, per file, as the repo is now. `from_smells` holds those the smell scan counted (hotspots.
-    smell_counts); a counter is None when it couldn't be counted: it is then neither compared nor recorded."""
+    smell_counts); a counter is None when it couldn't be counted: it is then neither compared nor recorded. The three
+    read from the files are None when some file's tree couldn't be read, as a count without it would read as a fall."""
+    whole = all(f.read for f in facts)
     now: Counted = {
-        "suppressions": {f.rel: len(f.suppressions) for f in facts if f.suppressions},
-        "skipped_tests": {f.rel: f.skipped for f in facts if f.skipped},
-        "old_todos": old_todos(repo, facts),
+        "suppressions": {f.rel: len(f.suppressions) for f in facts if f.suppressions} if whole else None,
+        "skipped_tests": {f.rel: f.skipped for f in facts if f.skipped} if whole else None,
+        "old_todos": old_todos(repo, facts) if whole else None,
         UNCOVERED: coverage.missed(repo, {f.rel for f in facts if not f.test})}
     return {**now, **{name: (from_smells or {}).get(name) for name in SMELL_COUNTERS}}
 

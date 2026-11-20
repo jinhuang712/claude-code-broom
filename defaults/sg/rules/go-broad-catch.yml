@@ -1,0 +1,10 @@
+# A `recover()` whose value is dropped: a statement of its own, or assigned to `_` (gomeasure.py).
+id: go-broad-catch
+language: Go
+message: recover() catches every panic and looks at none
+metadata: {smell: broad_catch}
+rule:
+  any:
+    - kind: expression_statement
+      has: {pattern: recover()}
+    - pattern: _ = recover()

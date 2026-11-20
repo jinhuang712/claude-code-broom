@@ -1,0 +1,10 @@
+# A Go comment that may hold a TODO marker or a lint suppression (statscan.py tests its text): the comment node, so a
+# marker in a string is never one.
+id: go-comment
+language: Go
+message: a comment with a marker word
+metadata: {smell: marked_comment}
+rule:
+  kind: comment
+  pattern: $TEXT
+  regex: 'TODO|FIXME|HACK|XXX|noqa|ignore|disable|nolint|@ts-|allow\('

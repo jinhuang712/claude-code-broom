@@ -1,5 +1,7 @@
-"""What one pass over a code file's text gives `broom stats`: its non-blank lines, its test cases and skipped tests, its
-lint suppressions and its TODO comments. Plain counting, by each language's own forms; no linter or parser runs."""
+"""What one pass over a code file gives `broom stats`: its non-blank lines, its test cases and skipped tests, its lint
+suppressions and its TODO comments. No linter runs. Python, Go and TS/JS are read from their syntax trees (treefacts):
+a marker counts only in a comment the tree isolated, never in a string. The other languages are still counted by
+their text's own forms."""
 
 from __future__ import annotations
 
@@ -8,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Pattern, Tuple
 
 from .testrot import SKIPS, TEST_FILE
+from .treefacts import TREE_LANGS, Tree, py_comments, py_tests
 from .waivers import MARKERS, suppression_in
 
 
@@ -16,12 +19,9 @@ def rx(pattern: str) -> Pattern[str]:
     return re.compile(pattern, re.M)
 
 
-# Per language: how a test case is written, and how one is skipped (testrot). Go, Python, JS/TS and Swift are read in
-# test files only (`it(` and `.disabled` mean other things elsewhere); Rust keeps its tests next to the code.
+# Per language no tree reads yet: how a test case is written, and how one is skipped (testrot). Swift is read in test
+# files only (`.disabled` means other things elsewhere); Rust keeps its tests next to the code.
 FORMS: Dict[str, Tuple[Pattern[str], Pattern[str]]] = {
-    "py": (rx(r"^[ \t]*(?:async[ \t]+)?def[ \t]+test_"), SKIPS["py"]),
-    "js": (rx(r"(?<![\w.$])(?:x?it|x?test)(?:\.(?:only|skip|each|concurrent|fails))?[ \t]*\("), SKIPS["js"]),
-    "go": (rx(r"^func[ \t]+Test\w*[ \t]*\("), SKIPS["go"]),
     "rust": (rx(r"#\[(?:\w+::)*test\b[^\]]*\]"), SKIPS["rust"]),
     "swift": (rx(r"^[ \t]*(?:@\w+[ \t]+)*func[ \t]+test\w*[ \t]*\(|^[ \t]*@Test\b"), SKIPS["swift"]),
 }
@@ -32,9 +32,6 @@ TODO_MARK = re.compile(r"^\W*(?:TODO|FIXME|HACK|XXX)\b(?![./-]\w)|\b(?:TODO|FIXM
 STRING = r"\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*'"  # a string that ends on its line
 # What opens a comment or a string that may run past its line, per language: opener -> (closer, is a comment).
 BLOCKS: Dict[str, Dict[str, Tuple[str, bool]]] = {
-    "py": {'"""': ('"""', False), "'''": ("'''", False)},
-    "js": {"/*": ("*/", True), "`": ("`", False)},
-    "go": {"/*": ("*/", True), "`": ("`", False)},
     "rust": {"/*": ("*/", True)},
     "swift": {"/*": ("*/", True), '"""': ('"""', False)},
     "css": {"/*": ("*/", True)},
@@ -54,6 +51,7 @@ class Facts:
     skipped: int = 0
     suppressions: List[str] = field(default_factory=list)
     todos: List[int] = field(default_factory=list)
+    read: bool = True  # False when its tree couldn't be read (no ast-grep): its counts are then unknown, not zero
 
 
 class Comments:
@@ -106,10 +104,36 @@ def todo_lines(lang: str, rows: List[str]) -> List[int]:
     return [n for n, row in enumerate(rows, 1) if TODO_MARK.search(comments.of(row))]
 
 
+def kind_of(marker: str) -> str:
+    """A suppression's kind from its marker: `noqa`, `type: ignore`, `allow`..."""
+    return "allow" if marker.startswith("#") else " ".join(marker.split())
+
+
 def suppression_kinds(rows: List[str]) -> List[str]:
-    """The kind of each lint suppression in `rows`, one per line that has one: `noqa`, `type: ignore`, `allow`..."""
-    kinds = [suppression_in(row) for row in rows]
-    return ["allow" if k.startswith("#") else " ".join(k.split()) for k in kinds if k]
+    """The kind of each lint suppression in `rows`, one per line that has one."""
+    return [kind_of(k) for k in map(suppression_in, rows) if k]
+
+
+def python_tree(text: str, facts: Facts) -> Tree:
+    """The tree of a Python file: its marked comments, and its cases and skips when `facts` say it is a test file."""
+    tree = py_tests(text) if facts.test else Tree()
+    tree.comments = py_comments(text)
+    return tree
+
+
+def from_tree(facts: Facts, tree: Optional[Tree]) -> Facts:
+    """`facts` with what the file's tree shows: in a test file its cases and skips; a TODO comment where a comment's
+    line holds a marker as `TODO_MARK` has it; a suppression for each comment line that holds a marker. With no tree
+    the file is marked unread."""
+    if tree is None:
+        facts.read = False
+        return facts
+    if facts.test:
+        facts.cases, facts.skipped = tree.cases, len(tree.skips)
+    lines = sorted(tree.comments.items())
+    facts.todos = [n for n, comment in lines if TODO_MARK.search(comment)]
+    facts.suppressions = [kind_of(m.group()) for _, comment in lines for m in (MARKERS.search(comment),) if m]
+    return facts
 
 
 def count_tests(lang: str, text: str) -> Tuple[int, int]:
@@ -118,11 +142,14 @@ def count_tests(lang: str, text: str) -> Tuple[int, int]:
     return (len(form[0].findall(text)), len(form[1].findall(text))) if form else (0, 0)
 
 
-def scan(rel: str, lang: str, text: str) -> Facts:
-    """The facts of one file, from its `text`. A marker or a TODO word is looked for in the whole text first, so a file
-    without one is never read line by line."""
+def scan(rel: str, lang: str, text: str, tree: Optional[Tree] = None) -> Facts:
+    """The facts of one file, from its `text`. A Python file is read from its tree here; a Go or TS/JS file from `tree`,
+    which ast-grep read for many files at once (treefacts.sg_trees). In the other languages a marker or a TODO word is
+    looked for in the whole text first, so a file without one is never read line by line."""
     rows = text.splitlines()
     facts = Facts(rel, lang, bool(TEST_FILE.search(rel)), sum(1 for row in rows if row.strip()))
+    if lang in TREE_LANGS:
+        return from_tree(facts, python_tree(text, facts) if lang == "py" else tree)
     if facts.test or lang == "rust":
         facts.cases, facts.skipped = count_tests(lang, text)
     if MARKERS.search(text):

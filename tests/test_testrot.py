@@ -83,6 +83,16 @@ class SkippedTestTest(SkipCase):
             with self.subTest(name):
                 self.assertEqual(self.changed(rel, "x = 1\n", text("x = 1", *rows)), [])
 
+    def test_a_skip_in_a_string_or_a_comment_is_no_skip(self) -> None:
+        quiet = {
+            "python docstring": ("tests/test_a.py", ["def test_a():", '    """', f"    {SKIP}(\"x\")", '    """']),
+            "go string": ("svc/a_test.go", ["func TestA(t *testing.T) {", '\tt.Log("t.Skip()")', "\t// t.Skip()", "}"]),
+            "ts template": ("src/a.test.ts", ["const s = `", "it.skip('a', () => {});", "`;"]),
+        }
+        for name, (rel, rows) in quiet.items():
+            with self.subTest(name):
+                self.assertEqual(self.changed(rel, "x = 1\n", text("x = 1", *rows)), [])
+
     def test_a_skip_that_was_there_stays_quiet_and_so_does_one_that_moved(self) -> None:
         old = text(*PY_BODY, "", f"    {SKIP}(\"later\")", "    def test_skipped(self):", "        pass")
         self.assertEqual(self.changed("tests/test_a.py", old, old.replace("pass", "pass  # edited")), [])

@@ -14,14 +14,24 @@ from .coverage import section as coverage_section
 from .hotspots import repo_files
 from .maintained import GENERATED, Maintained
 from .statscan import Facts, scan
+from .syntax import MISSING
 from .statsgit import DAY, OLD_DAYS, blame, history, top_counts
 from .testrot import needs_test, stem_of, tested
 from .toolchain import lang_of
+from .treefacts import SG_LANGS, sg_trees
 
 
 def collect(repo: Path, paths: List[Path]) -> List[Facts]:
     """The facts of every code file within `paths` (the repo when empty): the files `repo_files` gives, less what nobody
-    maintains here (dependencies, build output) and generated code, found by its header."""
+    maintains here (dependencies, build output) and generated code, found by its header. ast-grep reads the trees of
+    the Go and TS/JS files among them in one run."""
+    read = texts(repo, paths)
+    trees = sg_trees(repo, [rel for rel, lang, _ in read if lang in SG_LANGS], [])
+    return [scan(rel, lang, text, trees.get(rel)) for rel, lang, text in read]
+
+
+def texts(repo: Path, paths: List[Path]) -> List[Tuple[str, str, str]]:
+    """(path from the root, language, text) of each code file `collect` reads."""
     keep = Maintained(repo)
     out = []
     for f in repo_files(repo, paths):
@@ -32,7 +42,7 @@ def collect(repo: Path, paths: List[Path]) -> List[Facts]:
         except (OSError, ValueError):  # gone from the disk, or a link that leads out of the repo
             continue
         if lang and text is not None and not GENERATED.search("\n".join(text.splitlines()[:5])):
-            out.append(scan(rel, lang, text))
+            out.append((rel, lang, text))
     return out
 
 
@@ -125,13 +135,20 @@ def todo_part(repo: Path, facts: List[Facts], top: int) -> dict:
             "capped": blamed.capped, "files": ranked(counts, top)}
 
 
+def unread_note(facts: List[Facts]) -> Optional[str]:
+    """What a count leaves out when ast-grep couldn't read some files' trees; None when every file was read."""
+    unread = sum(not f.read for f in facts)
+    return f"{unread} Go or TS/JS files unread: {MISSING}" if unread else None
+
+
 def rot_section(repo: Path, facts: List[Facts], top: int, note: Optional[str]) -> dict:
     """Lint suppressions by kind, with the `top` files holding most; the TODO comments; skipped tests as one number."""
     kinds = Counter(k for f in facts for k in f.suppressions)
     suppressed = {f.rel: len(f.suppressions) for f in facts if f.suppressions}
     return {"suppressions": {"total": sum(kinds.values()), "kinds": dict(kinds.most_common()),
                              "files": ranked(suppressed, top)},
-            "todos": todo_part(repo, facts, top), "skipped_tests": sum(f.skipped for f in facts), "note": note}
+            "todos": todo_part(repo, facts, top), "skipped_tests": sum(f.skipped for f in facts),
+            "note": note or unread_note(facts)}
 
 
 # ---------------------------------------------------------------- the report
@@ -153,6 +170,6 @@ def report(repo: Path, paths: List[Path], top: int, days: int, facts: Optional[L
     shown = [relative(repo, p) for p in paths]
     note = None if facts else "no code files " + (f"under {', '.join(shown)}" if shown else "in the repo")
     return {"repo": str(repo), "paths": shown, "files": len(facts), "days": days,
-            "size": size_section(facts, top, note), "tests": tests_section(repo, facts, top, note),
+            "size": size_section(facts, top, note), "tests": tests_section(repo, facts, top, note or unread_note(facts)),
             "rot": rot_section(repo, facts, top, note),
             "history": history(repo, {f.rel for f in facts}, days, top, note)}

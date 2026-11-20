@@ -1,0 +1,42 @@
+# Go's test cases and skipped tests (testrot.py, statscan.py): `func TestX(`, and `t.Skip`, `t.Skipf` or `t.SkipNow`
+# with or without an `if` or a `case` around it that decides it.
+id: go-test-case
+language: Go
+message: a test case
+metadata: {smell: test_case}
+rule:
+  kind: function_declaration
+  has: {field: name, regex: '^Test'}
+---
+id: go-skip
+language: Go
+message: a skipped test
+metadata: {smell: skipped_test}
+rule:
+  kind: call_expression
+  has:
+    field: function
+    kind: selector_expression
+    all:
+      - has: {field: field, regex: '^Skip(f|Now)?$'}
+      - has: {field: operand, kind: identifier, regex: '^(t|b|tb)$'}
+  not:
+    inside:
+      stopBy: end
+      any: [kind: if_statement, kind: expression_case, kind: type_case, kind: communication_case]
+---
+id: go-guarded-skip
+language: Go
+message: a skip a condition decides
+metadata: {smell: guarded_skip}
+rule:
+  kind: call_expression
+  has:
+    field: function
+    kind: selector_expression
+    all:
+      - has: {field: field, regex: '^Skip(f|Now)?$'}
+      - has: {field: operand, kind: identifier, regex: '^(t|b|tb)$'}
+  inside:
+    stopBy: end
+    any: [kind: if_statement, kind: expression_case, kind: type_case, kind: communication_case]

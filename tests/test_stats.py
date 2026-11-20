@@ -5,7 +5,9 @@ starts a line of this file: broom reads its own tests too."""
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
+import unittest
 from pathlib import Path
 from unittest import mock
 
@@ -252,10 +254,27 @@ class ScanTest(StatsCase):
         self.assertEqual((f.suppressions, f.todos), ([], [6]))
 
     def test_comments_carry_over_lines_per_language(self) -> None:
-        rows = ["/* one", "TODO two */ x()", "y() // XXX three", "`TODO", "four` + 1"]
-        self.assertEqual(statscan.todo_lines("js", rows), [2, 3])
         self.assertEqual(statscan.todo_lines("css", ["a { color: red } /* HACK */"]), [1])
-        self.assertEqual(statscan.todo_lines("go", ["// TODO: go"]), [1])
+
+    @unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
+    def test_go_and_ts_comments_come_from_the_tree_and_a_marker_in_a_string_is_none(self) -> None:
+        r = self.repo({
+            "a.ts": text("/* one", "TODO two */ x()", "y() // XXX three", "`TODO", "four` + 1", 'z("// TODO: no");'),
+            "a_test.go": text("package a", "// TODO: go", "func TestA(t *testing.T) {", '\ts := "// TODO: no" + `',
+                              "TODO: raw", "` // no" + "lint", '\tt.Log("t.Skip()")', "}")})
+        facts = {f.rel: f for f in stats.collect(r, [])}
+        self.assertEqual(facts["a.ts"].todos, [2, 3])
+        go = facts["a_test.go"]
+        self.assertEqual((go.todos, go.suppressions, go.cases, go.skipped), ([2], ["nolint"], 1, 0))
+
+    def test_without_ast_grep_a_go_or_ts_file_is_unread_and_a_note_says_so(self) -> None:
+        r = self.repo({"a.ts": text("// TODO: one"), "b.py": text("# TODO: two")})
+        with mock.patch.object(shutil, "which", return_value=None):
+            d = self.report(r)
+            facts = {f.rel: f.read for f in stats.collect(r, [])}
+        self.assertEqual(facts, {"a.ts": False, "b.py": True})
+        self.assertEqual(d["rot"]["todos"]["total"], 1)
+        self.assertIn("ast-grep", d["rot"]["note"])
 
 
 class CommandTest(StatsCase):

@@ -1,0 +1,106 @@
+# TypeScript's test cases and skipped tests, as js-tests.yml reads them in JavaScript, for .ts and .tsx.
+id: ts-test-case
+language: TypeScript
+message: a test case
+metadata: {smell: test_case}
+rule:
+  kind: call_expression
+  has:
+    field: function
+    any:
+      - {kind: identifier, regex: '^x?(it|test)$'}
+      - kind: member_expression
+        all:
+          - has: {field: object, kind: identifier, regex: '^x?(it|test)$'}
+          - has: {field: property, regex: '^(only|skip|each|concurrent|fails)$'}
+---
+id: ts-skip
+language: TypeScript
+message: a skipped test
+metadata: {smell: skipped_test}
+rule:
+  kind: call_expression
+  has: {field: function, matches: ts-skipper}
+  not: {inside: {stopBy: end, matches: ts-guard}}
+utils:
+  ts-skipper:
+    any:
+      - {kind: identifier, regex: '^x(it|describe|test)$'}
+      - kind: member_expression
+        all:
+          - has: {field: object, kind: identifier, regex: '^(it|test|describe|context|suite)$'}
+          - has: {field: property, regex: '^skip$'}
+  ts-guard:
+    any: [kind: if_statement, kind: ternary_expression, kind: switch_case, kind: catch_clause]
+---
+id: ts-guarded-skip
+language: TypeScript
+message: a skip a condition decides
+metadata: {smell: guarded_skip}
+rule:
+  kind: call_expression
+  has: {field: function, matches: ts-skipper}
+  inside: {stopBy: end, matches: ts-guard}
+utils:
+  ts-skipper:
+    any:
+      - {kind: identifier, regex: '^x(it|describe|test)$'}
+      - kind: member_expression
+        all:
+          - has: {field: object, kind: identifier, regex: '^(it|test|describe|context|suite)$'}
+          - has: {field: property, regex: '^skip$'}
+  ts-guard:
+    any: [kind: if_statement, kind: ternary_expression, kind: switch_case, kind: catch_clause]
+---
+id: tsx-test-case
+language: Tsx
+message: a test case
+metadata: {smell: test_case}
+rule:
+  kind: call_expression
+  has:
+    field: function
+    any:
+      - {kind: identifier, regex: '^x?(it|test)$'}
+      - kind: member_expression
+        all:
+          - has: {field: object, kind: identifier, regex: '^x?(it|test)$'}
+          - has: {field: property, regex: '^(only|skip|each|concurrent|fails)$'}
+---
+id: tsx-skip
+language: Tsx
+message: a skipped test
+metadata: {smell: skipped_test}
+rule:
+  kind: call_expression
+  has: {field: function, matches: tsx-skipper}
+  not: {inside: {stopBy: end, matches: tsx-guard}}
+utils:
+  tsx-skipper:
+    any:
+      - {kind: identifier, regex: '^x(it|describe|test)$'}
+      - kind: member_expression
+        all:
+          - has: {field: object, kind: identifier, regex: '^(it|test|describe|context|suite)$'}
+          - has: {field: property, regex: '^skip$'}
+  tsx-guard:
+    any: [kind: if_statement, kind: ternary_expression, kind: switch_case, kind: catch_clause]
+---
+id: tsx-guarded-skip
+language: Tsx
+message: a skip a condition decides
+metadata: {smell: guarded_skip}
+rule:
+  kind: call_expression
+  has: {field: function, matches: tsx-skipper}
+  inside: {stopBy: end, matches: tsx-guard}
+utils:
+  tsx-skipper:
+    any:
+      - {kind: identifier, regex: '^x(it|describe|test)$'}
+      - kind: member_expression
+        all:
+          - has: {field: object, kind: identifier, regex: '^(it|test|describe|context|suite)$'}
+          - has: {field: property, regex: '^skip$'}
+  tsx-guard:
+    any: [kind: if_statement, kind: ternary_expression, kind: switch_case, kind: catch_clause]

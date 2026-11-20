@@ -324,10 +324,10 @@ def drop_import_growth(rows: List[Raw], now: Dict[str, str], before: Optional[Di
     return [r for r in rows if not (r.metric == "file_lines" and r.rel in steady)]
 
 
-def with_skips(rows: Optional[List[Raw]], texts: Optional[Dict[str, str]]) -> Optional[List[Raw]]:
+def with_skips(rows: Optional[List[Raw]], texts: Optional[Dict[str, str]], notes: List[str]) -> Optional[List[Raw]]:
     """`rows` and the skipped tests of the files in `texts`; None stays None, as a sweep of the whole repo has no base
     to set the rows against."""
-    return None if rows is None else rows + skip_rows(texts or {})
+    return None if rows is None else rows + skip_rows(texts or {}, notes)
 
 
 def find_smells(repo: Path, files: List[Path], base: Optional[str],
@@ -353,8 +353,8 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str],
             find_clones, repo, base, lim.measured["duplicate_lines"][0] + 1, keep.clone_skips(), notes)
         unused = None if DEAD_CODE in off else pool.submit(find_unused, repo, keep.dead_code_skips(), notes)
         unmeasured = [] if base else None  # a base with no file at it makes every row new; no base, a sweep
-        old_rows = with_skips(before.result() if before else unmeasured, old_text)
-        rows_now = drop_import_growth(now.result(), now_text, old_text) + skip_rows(now_text)
+        old_rows = with_skips(before.result() if before else unmeasured, old_text, notes)
+        rows_now = drop_import_growth(now.result(), now_text, old_text) + skip_rows(now_text, notes)
         found = compare(rows_now, old_rows, lim, repo, off)
         if base:  # the old smells in what the change touches
             found += touched(old_smells(counted(rows_now, off), old_rows, lim.of, repo), base, now_text)

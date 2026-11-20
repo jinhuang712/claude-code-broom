@@ -1,0 +1,26 @@
+# A Go type's length with its methods (gomeasure.py): the struct or interface declaration, alone or in a `type ( … )`
+# group, and each method, caught with the name of the type its receiver is.
+id: go-type
+language: Go
+message: a struct or interface type
+metadata: {smell: type_lines}
+rule:
+  kind: type_spec
+  has: {field: name, pattern: $NAME}
+  any:
+    - has: {field: type, kind: struct_type}
+    - has: {field: type, kind: interface_type}
+---
+id: go-method
+language: Go
+message: a method, with the type it is on
+metadata: {smell: type_lines}
+rule:
+  kind: method_declaration
+  has:
+    field: receiver
+    has:
+      stopBy: end
+      kind: type_identifier
+      pattern: $NAME
+      not: {inside: {kind: type_arguments, stopBy: end}}

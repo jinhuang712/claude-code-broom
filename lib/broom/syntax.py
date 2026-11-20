@@ -65,7 +65,7 @@ def matches(root: Path, rels: List[str], notes: List[str], timeout: float, confi
         notes.append("timeout:ast-grep reading the syntax tree")
         return []
     found: List[Match] = []
-    for raw in out.splitlines():
+    for raw in out.split("\n"):  # not splitlines: JSON leaves a U+2028 or a U+0085 in a match's text as it is
         try:
             found.append(parse(json.loads(raw)))
         except (ValueError, TypeError, AttributeError):

@@ -29,7 +29,7 @@ LOCKFILES = (("pnpm-lock.yaml", "pnpm"), ("bun.lock", "bun"), ("bun.lockb", "bun
              ("package-lock.json", "npm"))
 ADD_DEV = {"pnpm": "pnpm add -D", "bun": "bun add -d", "yarn": "yarn add -D", "npm": "npm i -D"}
 DEFAULTS_DETAIL = "broom's defaults (no project config)"
-SYNTAX_LANGS = ("go", "rust")  # the languages whose smells ast-grep reads from a syntax tree (syntax.py)
+SYNTAX_LANGS = ("go", "rust", "js")  # the languages whose smells ast-grep reads from a syntax tree (syntax.py)
 DEPS_DETAIL = "configured, but the project's dependencies aren't installed"
 Machine = Tuple[str, str, str, str]  # a tool on PATH to probe: (lang, role, tool, name on PATH)
 

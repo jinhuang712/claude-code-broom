@@ -1,16 +1,18 @@
 """What broom reads from Go source itself: a type's length with its methods, a `recover()` whose value is dropped and
-a testify assertion any error passes. None of it needs golangci-lint, so none of these tests do. Sample code is a list
-of lines, so that a handler of it never stands in this file as one."""
+a testify assertion any error passes, each read from the syntax tree by ast-grep. None of it needs golangci-lint, so
+none of these tests do. Sample code is a list of lines, so that a handler of it never stands in this file as one."""
 
 from __future__ import annotations
 
 import json
+import shutil
 import unittest
 from typing import List, Tuple
 
 from support import BroomCase
 
 from broom.gomeasure import type_sizes
+from broom.syntax import matches
 from broom.smells import find_smells
 
 METRICS = ("type_lines", "broad_catch", "broad_test_asserts")
@@ -40,6 +42,7 @@ def with_line(row: str) -> str:
     return text(*(row if line == "\t\tX" else line for line in FN))
 
 
+@unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
 class GoTextCase(BroomCase):
     def changed(self, rel: str, before: str, after: str) -> List[Tuple[str, str, List[int]]]:
         """The (smell, key, added lines) a change from `before` to `after` of the file `rel` makes."""
@@ -57,8 +60,21 @@ class TypeLinesTest(GoTextCase):
     def test_a_short_type_is_quiet(self) -> None:
         self.assertEqual(self.changed("a.go", SMALL, SMALLER), [])
 
+    def sizes(self, body: str) -> dict:
+        """The (first line, lines) of each type in the Go file `body`, by name."""
+        (self.tmp / "a.go").write_text(body)
+        notes: list = []
+        found = type_sizes(matches(self.tmp, ["a.go"], notes, 30))
+        self.assertEqual(notes, [])
+        return {name: size for (_, name), size in found.items()}
+
     def test_a_one_line_method_counts_one_line(self) -> None:
-        self.assertEqual(type_sizes(SMALLER.splitlines())["Big"], [3, 3 + 20 + 1])
+        self.assertEqual(self.sizes(SMALLER)["Big"], [3, 3 + 20 + 1])
+
+    def test_a_type_in_a_group_counts_and_a_brace_in_a_raw_string_ends_nothing(self) -> None:
+        body = text("package a", "", "type (", "\tSmall int", "\tGrouped struct {", "\t\tx int", "\t}", ")", "",
+                    "func (g Grouped) Raw() string {", "\treturn `", "}", "`", "}")
+        self.assertEqual(self.sizes(body), {"Grouped": [5, 3 + 5]})
 
     def test_an_old_long_type_is_not_reported_as_touched(self) -> None:
         r = self.repo({"a.go": BIGGER, ".broom.json": json.dumps({"smells_off": ["dead_code"]})})
@@ -76,8 +92,9 @@ class RecoverTest(GoTextCase):
             with self.subTest(row=row):
                 self.assertEqual([f[2] for f in self.added(row)], [[5]])
 
-    def test_a_recover_whose_value_is_used_and_a_comment_are_quiet(self) -> None:
-        for row in ("\t\tif r := recover(); r != nil {\n\t\t\tlog(r)\n\t\t}", "\t\t// calls recover() here"):
+    def test_a_recover_whose_value_is_used_or_in_a_comment_or_a_string_is_quiet(self) -> None:
+        for row in ("\t\tif r := recover(); r != nil {\n\t\t\tlog(r)\n\t\t}", "\t\t// calls recover() here",
+                    "\t\t/*\n\t\trecover()\n\t\t*/", "\t\t_ = `\n\t\trecover()\n\t\t`"):
             with self.subTest(row=row):
                 self.assertEqual(self.added(row), [])
 
@@ -97,8 +114,9 @@ class AnyErrorTest(GoTextCase):
             with self.subTest(row=row):
                 self.assertEqual([f[2] for f in self.asserted("a_test.go", row)], [[5]])
 
-    def test_an_assertion_that_says_which_error_a_plain_report_and_a_non_test_file_are_quiet(self) -> None:
-        for rel, row in (("a_test.go", "\tassert.ErrorIs(t, err, e)"), ("a_test.go", '\tt.Error("no")'), ("a.go", ERR)):
+    def test_an_assertion_that_says_which_error_a_plain_report_a_non_test_file_and_a_string_are_quiet(self) -> None:
+        for rel, row in (("a_test.go", "\tassert.ErrorIs(t, err, e)"), ("a_test.go", '\tt.Error("no")'), ("a.go", ERR),
+                         ("a_test.go", '\tmsg := "assert.Error(t, err)"')):
             with self.subTest(rel=rel, row=row):
                 self.assertEqual(self.asserted(rel, row), [])
 
