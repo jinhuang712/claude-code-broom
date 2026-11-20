@@ -6,6 +6,20 @@
 
 ---
 
+### [P1][DISCUSSION] What it takes for a second user to install broom and stay
+
+- description:
+  - Every number in the ledger and every end-to-end run comes from the author's machine. The repo had no star, no fork and no issue on 2026-11-20.
+  - The user set the order that day: broom gets lighter first, then it finds a second user.
+  - 3 points are open: which systems count while Linux and Windows are unsupported · where broom is announced · what "stay" means and how it is checked.
+- created: 2026-11-20
+- status: HALT
+- found: the user, in the session of 2026-11-20
+- blocks: the checkpoint that follows CP8
+- next: settle the 3 points with the user once CP8 has its numbers
+
+---
+
 ### [P2][DISCUSSION] Where a contributor asks first
 
 - description: CONTRIBUTING states the bar for a change and names no place to ask before starting one.
@@ -193,7 +207,6 @@
 - created: 2026-11-20
 - found: the look for missed rot at the end of CP11
 - related: [F2.8: Self-waivers shown](../features/F2-sweep.md#f28-self-waivers-shown)
-
 
 ---
 
