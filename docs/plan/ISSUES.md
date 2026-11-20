@@ -6,8 +6,6 @@
 
 ```
 Issues
-├── docs
-│   └── I1: The moved text doesn't meet the wording rules
 ├── refactor
 │   ├── I2: Three paths call the same tools
 │   ├── I5: Six rules sit on an alpha plugin API
@@ -15,17 +13,6 @@ Issues
 └── fix
     └── I3: The cause of the reported Stop hang is unconfirmed
 ```
-
----
-
-## I1: The moved text doesn't meet the wording rules
-
-- type: docs
-- why:
-  - The changelog's sections before 0.18.2 keep their old wording, with long bullets of several commas.
-  - README has no hero image.
-- found: the docs pass, 2026-11-17
-- next: [A hero image for the README](TODO.md#p2discussion-a-hero-image-for-the-readme)
 
 ---
 

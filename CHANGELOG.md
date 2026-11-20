@@ -6,6 +6,17 @@
 
 ---
 
+## 0.28.0 — 2026-11-20
+
+---
+
+### Docs
+
+- The README opens with a picture of what broom covers: the six languages, the 27 smell detectors and what else it does. It follows GitHub's dark or light mode.
+- The changelog's sections before 0.18.2 read like the newer ones, in short sentences with no hard wraps.
+
+---
+
 ## 0.27.0 — 2026-11-20
 
 ---

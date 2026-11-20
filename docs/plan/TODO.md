@@ -194,3 +194,15 @@
 - found: the look for missed rot at the end of CP11
 - related: [F2.8: Self-waivers shown](../features/F2-sweep.md#f28-self-waivers-shown)
 
+
+---
+
+### [P2][IDEA] Counts in docs that drift from the code
+
+- description:
+  - A doc or an image that says how many things the code has goes stale when one is added, and no change to that doc is at fault.
+  - The README's hero lists the 27 smells by name, and the docs say how many checks `broom doctor` runs and how many smells each language measures.
+  - A counter could compare such a number with the code's own list, where a project names that list.
+- created: 2026-11-20
+- found: the look for missed rot at the end of CP9
+- related: [F11.1: Counters](../features/F11-checkup.md#f111-counters)
