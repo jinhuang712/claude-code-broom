@@ -501,11 +501,13 @@ The user set this on 2026-11-20: a check rests on a mechanism and not on a text 
 - Skipped tests, test cases and the comment counters are read from trees in every language, done on 2026-11-20.
 - [I24: Six checks still read code by a text pattern](ISSUES.md#i24-six-checks-still-read-code-by-a-text-pattern)
 
-**Exit criteria** (2):
+**Exit criteria** (3):
 
 - **Objectives**
   - [O9: The first three languages measure every smell](GOALS.md#o9-the-first-three-languages-measure-every-smell): ✅ 2026-11-20, 27 in Python, 27 in TS/JS and 24 in Go
   - [O10: Swift and Rust measure every smell](GOALS.md#o10-swift-and-rust-measure-every-smell): ✅ 2026-11-20
+- **Constraints**
+  - [R6: No check reads code by a text pattern](GOALS.md#r6-no-check-reads-code-by-a-text-pattern)
 
 ---
 

@@ -33,7 +33,8 @@ Goals
     ├── ✅ R2: A false positive costs one round
     ├── ✅ R3: An old smell in untouched code never comes up
     ├── ✅ R4: Setup asks at most two questions
-    └── ✅ R5: Nothing is waved through
+    ├── ✅ R5: Nothing is waved through
+    └── ⬜ R6: No check reads code by a text pattern
 ```
 
 ---
@@ -181,7 +182,7 @@ Python, TS/JS and Go each measure every smell of the bar, bar what the language 
 
 **Acceptance**: A test adds each of the 27 smells in Python, in TS/JS and in Go, and expects broom to find it. Go is let off 3: a nested ternary and both cycles. A smell with no sample fails the test.
 
-**Status**: ✅ 2026-11-19, by `tests/test_language_matrix_python.py`, `tests/test_language_matrix_ts.py` and `tests/test_language_matrix_go.py`: 27 samples in Python, 27 in TS/JS and 24 in Go were found. The folder cycle of TS/JS needs dependency-cruiser, which this machine lacks, so that one sample ran with a copy installed in a temporary folder.
+**Status**: ✅ 2026-11-20, by `tests/test_language_matrix_python.py`, `tests/test_language_matrix_ts.py` and `tests/test_language_matrix_go.py`, after the smells moved to syntax trees in 0.26.0: 27 samples in Python, 27 in TS/JS and 24 in Go were found. The folder cycle of TS/JS ran with broom's own dependency-cruiser.
 
 ---
 
@@ -409,3 +410,21 @@ An edit must not be felt, since Claude makes many in a row.
 **How**: A test commits a change with a hint and expects the block, and another stops twice and expects the second block.
 
 **Status**: ✅ 2026-11-18, by `tests/test_nowave.py`: a commit with a hint is denied, a turn's end blocks three times without an edit, and the fourth stop gives up with the loud line.
+
+---
+
+#### R6: No check reads code by a text pattern
+
+**Want**: a ruler in everyday work.
+
+**Checks**:
+
+- [9. A smell is read from a syntax tree, never from a text pattern](../DESIGNS.md#9-a-smell-is-read-from-a-syntax-tree-never-from-a-text-pattern)
+- [F4: Smells](../features/F4-smells.md)
+
+**Condition**: Every regular expression in `lib/broom` reads a tool's output, a path, a command or the text of one token a syntax tree isolated, and none reads source code.
+
+**How**: A test lists each regular expression in `lib/broom` with what it reads, and fails on one the list doesn't hold.
+
+**Status**: ⬜
+
