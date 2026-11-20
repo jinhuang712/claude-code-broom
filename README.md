@@ -1,8 +1,8 @@
 # broom 🧹
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-dark.svg">
-  <img alt="broom: the languages it reads, its 27 smell detectors and what else it does" src="docs/assets/hero-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/hero-dark.svg">
+  <img alt="broom: the languages it reads, its 27 smell detectors and what else it does" src="assets/hero-light.svg">
 </picture>
 
 > A ruler for code quality in Claude Code, and a tool for refactoring.

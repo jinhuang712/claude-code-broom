@@ -46,8 +46,8 @@ The other docs are read when the work needs them.
 
 - The root holds 3 files: `README.md` · `AGENTS.md` · `CHANGELOG.md`.
 - `.claude/CLAUDE.md` only loads this file.
+- [assets/](assets/) holds the README's hero in a dark and a light version, and the broom logo in black and in white.
 - [docs/](docs/) holds the reasons and the contract: PROPOSAL · PHILOSOPHY · DESIGNS · FEATURES · CLI · INSTALL · GLOSSARY · CONTRIBUTING.
-- [docs/assets/](docs/assets/) holds the README's hero in a dark and a light version, each with the broom embedded.
 - [docs/features/](docs/features/) holds one file per feature group.
 - [docs/specs/](docs/specs/) holds how each part works, with [docs/specs/decisions/](docs/specs/decisions/) under it.
 - [docs/plan/](docs/plan/) holds 4 docs: GOALS · ROADMAP · ISSUES · TODO.

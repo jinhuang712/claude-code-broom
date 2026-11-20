@@ -1,8 +1,8 @@
 # broom 🧹
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/hero-dark.svg">
-  <img alt="broom：支持的语言、27 种坏味道检测和其他功能" src="assets/hero-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/hero-dark.svg">
+  <img alt="broom：支持的语言、27 种坏味道检测和其他功能" src="../assets/hero-light.svg">
 </picture>
 
 > Claude Code 里的代码质量标尺，也是重构时的工具。
