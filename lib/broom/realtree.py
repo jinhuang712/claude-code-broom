@@ -23,6 +23,8 @@ from .langlint import golangci_cache
 from .pycycles import import_cycles
 from .rustlint import RUST_LINTS, RUST_FLAGS, config_text, read as rust_read, thresholds
 from .state import DATA_ROOT, prune_dirs, short_hash
+from .swiftcheck import swift_deprecated
+from .swiftmeasure import swift_unused
 from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS, find_up, resolve_bin
 
 TOOL_TIMEOUT = 150
@@ -308,4 +310,7 @@ def find_in_real_tree(repo: Path, rels: List[str], soft: Dict[str, int], notes: 
     found += [Found(rel, line, "folder_cycle", "broom") for rel, line in python_folder_cycles(repo, rels)]
     found += [Found(rel, line, "folder_cycle", "dependency-cruiser")
               for rel, line in js_folder_cycles(repo, rels, notes, budget.timeout)]
+    found += [Found(rel, line, DEAD_CODE, "broom", what) for rel, line, what in swift_unused(repo, rels)]
+    found += [Found(rel, line, "deprecated_api", "swiftc", what)
+              for rel, line, what in swift_deprecated(repo, rels, notes, budget.timeout)]
     return found + rust_found(repo, rels, soft, notes, budget)

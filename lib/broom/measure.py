@@ -17,6 +17,7 @@ from .gitutil import run
 from .gomeasure import go_text
 from .jsmeasure import measure_js
 from .reading import TOOL_TIMEOUT, Limits, Raw, Reader, match, number, quoted_name
+from .swiftmeasure import swift_text
 from .toolchain import CSS_EXTS, GO_EXTS, JS_EXTS, PY_EXTS, RS_EXTS, SWIFT_EXTS
 
 UNREACHABLE = 1_000_000  # a SwiftLint error level nothing reaches: broom tells hints from blocks itself
@@ -252,6 +253,17 @@ SWIFT_CUSTOM_RULES = {
     # An unlabeled Bool (`_ flag: Bool`) is called as `f(true)`: the boolean trap. A labeled one reads fine there.
     "bool_params": {"regex": r"func\s+\w+[^\n]*[(,]\s*_\s+\w+\s*:\s*Bool\b",
                     "excluded_match_kinds": ["comment", "string"]},
+    # A `//` comment, not a `///` doc comment, that holds a declaration, an assignment, a call or a `return`, or
+    # ends as a statement or a block does.
+    "commented_code": {"regex": r"//(?!/)[ \t]*(?:(?:let|var)\s+\w+\s*[:=]|func\s+\w+\(|return\b[^\n]*$|"
+                                r"[\w.\[\]]+\s*[-+*/]?=\s*\S|[\w.]+\([^\n]*\)[ \t]*$|[^\n]*[;{}][ \t]*$)",
+                       "match_kinds": ["comment"]},
+    # In a test file, a check that some error is thrown, any error: `XCTAssertThrowsError` with no handler to look
+    # at it, or swift-testing's `#expect(throws: (any Error).self)`.
+    "broad_test_asserts": {"regex": r"\bXCTAssertThrowsError\((?![^\n]*errorHandler)[^\n]*\)[ \t]*$|"
+                                    r"#(?:expect|require)\(\s*throws:\s*\(?(?:any\s+)?Error\)?\.self",
+                           "included": r".*(/[Tt]ests?/.*|Tests?\.swift)$",
+                           "excluded_match_kinds": ["comment", "string"]},
 }
 
 
@@ -272,7 +284,9 @@ def swiftlint_config(lim: Limits) -> str:
 
 
 def measure_swift(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None:
-    """Measure the Swift files with swiftlint, under a config with the size and custom rules; no swiftlint, a note."""
+    """Measure the Swift files: the smells read from the source, then the rest with swiftlint, under a config with
+    the size and custom rules; no swiftlint, a note."""
+    swift_text(r, rels, lim)
     exe = shutil.which("swiftlint")
     if not exe:
         r.notes.append("missing:swiftlint (brew install swiftlint)")

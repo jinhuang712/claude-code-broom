@@ -31,7 +31,7 @@ from .rowcache import RowCache
 from .smell import Scan, Smell, level, made_worse
 from .testrot import TEST_FILE, UNTESTED_FILE, skip_rows, test_clones, untested_smells
 from .touched import old_smells, touched, touches
-from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS
+from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS, SWIFT_EXTS
 
 TEST_BLOCK = re.compile(r"(describe|it|test|suite|context)(\.\w+)?\(")
 GIT_TIMEOUT = 60
@@ -103,7 +103,7 @@ def one_per_line(rows: List[Raw]) -> List[Raw]:
 
 # Where a smell is found by a guess, not a parse, it is only a nit even when the same smell blocks in another
 # language. In Rust `let _ = f();` drops a Result by design as often as by mistake, and clippy can't tell which.
-GUESSED = {"commented_code": JS_EXTS | GO_EXTS, "swallowed_error": RS_EXTS}
+GUESSED = {"commented_code": JS_EXTS | GO_EXTS | SWIFT_EXTS, "swallowed_error": RS_EXTS}
 
 
 def presence_level(metric: str, rel: str) -> str:

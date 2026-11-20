@@ -23,6 +23,8 @@ from broom.smells import find_smells
 EVERY_SMELL = {*SMELL_LIMITS, *SMELL_PRESENCE, DEAD_CODE}
 # What the language itself rules out: Go has no ternary operator, and its compiler refuses a package cycle.
 GO_EXEMPT = {"nested_ternary", "import_cycle", "folder_cycle"}
+# Swift's compiler refuses modules that import one another; cycles between its folders aren't read yet.
+SWIFT_EXEMPT = {"import_cycle", "folder_cycle"}
 
 
 REAL_OWN = DEFAULT_DATA / "node"  # broom's own dependency-cruiser in the user's real data directory, read only
