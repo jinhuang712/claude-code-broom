@@ -17,6 +17,23 @@ broom is a tool for the coding agent, with no model of its own. It holds Claude'
 
 ## What it does
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/flow-dark.svg">
+  <img alt="Six moments start broom: who causes each, what broom does at it, and what broom rests on" src="assets/flow-light.svg">
+</picture>
+
+Six moments start broom: at three it tells Claude or takes a note, and at the other three it is a gate that holds the work back.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/gate-dark.svg">
+  <img alt="What becomes of a finding at a gate: clean work lands, and a finding is blocked until it is fixed or accepted with a reason" src="assets/gate-light.svg">
+</picture>
+
+A gate lets clean work land, and a finding stays blocked until it is fixed or accepted with a reason you see.
+
+<details>
+<summary>The same in words</summary>
+
 - 🧰 **Sets up**: When a session opens in a repo, broom notices what's missing and Claude offers to install and configure it.
 - 🧹 **Sweeps**: After an edit it formats the file and tells Claude what a fast linter finds. At a commit and at a turn's end it formats, lints and type-checks Claude's changes and holds them back until they're clean.
 - 🧪 **Tests ran**: A turn that changed code ends once the project's tests ran on it, or with a reason the user sees.
@@ -24,6 +41,8 @@ broom is a tool for the coding agent, with no model of its own. It holds Claude'
 - 👀 **Sees**: Language servers for six languages give Claude diagnostics as it edits.
 - 📊 **Diagnoses**: `broom diagnose`, `broom stats` and `broom compare` give a whole repo's numbers before a refactor and after it.
 - 🩺 **Checks up**: At session start it counts a repo's rot and tells Claude once when a number grew.
+
+</details>
 
 > [!IMPORTANT]
 > Nothing is installed without the user's yes. A finding passes fixed, or accepted with a reason on record.

@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="490" viewBox="0 0 1280 490"><defs><marker id="mute" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6e7681"/></marker><marker id="green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#56a074"/></marker><marker id="warm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#b8735f"/></marker><marker id="violet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#9580b5"/></marker></defs>
+<rect x="1" y="1" width="1278" height="488" rx="20" fill="#0d1117" stroke="none" stroke-width="2"/>
+<text x="64" y="66" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#6e7681" text-anchor="start" font-weight="700" letter-spacing="2">WHO</text>
+<text x="250" y="66" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#6e7681" text-anchor="start" font-weight="700" letter-spacing="2">A HOOK FIRES WHEN</text>
+<text x="566" y="66" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#6e7681" text-anchor="start" font-weight="700" letter-spacing="2">BROOM</text>
+<text x="1022" y="66" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#6e7681" text-anchor="start" font-weight="700" letter-spacing="2">RESTS ON</text>
+<rect x="64" y="96" width="150" height="106" rx="14" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<text x="139.0" y="147.0" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#ffffff" text-anchor="middle" font-weight="700">you</text>
+<text x="139.0" y="169.0" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#9aa4af" text-anchor="middle">ask, and read</text>
+<rect x="64" y="220" width="150" height="168" rx="14" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<text x="139.0" y="302.0" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#ffffff" text-anchor="middle" font-weight="700">Claude</text>
+<text x="139.0" y="324.0" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#9aa4af" text-anchor="middle">the agent</text>
+<rect x="64" y="406" width="150" height="44" rx="14" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<text x="139.0" y="433.5" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" fill="#b1bac4" text-anchor="middle" font-weight="700">git</text>
+<rect x="566" y="84" width="420" height="378" rx="16" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<path d="M214,118.0 L247,118.0" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#mute)"/>
+<rect x="250" y="96" width="280" height="44" rx="22.0" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<text x="390.0" y="123.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#b1bac4" text-anchor="middle">a session starts</text>
+<path d="M530,118.0 L563,118.0" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#mute)"/>
+<text x="586" y="123.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#b1bac4" text-anchor="start">missing tools · limits · rot</text>
+<rect x="902" y="104" width="68" height="28" rx="14.0" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<text x="936" y="123" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#9aa4af" text-anchor="middle">tells</text>
+<path d="M214,180.0 L247,180.0" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#mute)"/>
+<rect x="250" y="158" width="280" height="44" rx="22.0" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<text x="390.0" y="185.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#b1bac4" text-anchor="middle">you send a prompt</text>
+<path d="M530,180.0 L563,180.0" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#mute)"/>
+<text x="586" y="185.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#b1bac4" text-anchor="start">notes the working tree</text>
+<rect x="902" y="166" width="68" height="28" rx="14.0" fill="none" stroke="#30363d" stroke-width="1.5" stroke-dasharray="4 4"/>
+<text x="936" y="185" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#6e7681" text-anchor="middle">quiet</text>
+<path d="M214,242.0 L247,242.0" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#mute)"/>
+<rect x="250" y="220" width="280" height="44" rx="22.0" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<text x="390.0" y="247.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#b1bac4" text-anchor="middle">Claude edits a file</text>
+<path d="M530,242.0 L563,242.0" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#mute)"/>
+<text x="586" y="247.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#b1bac4" text-anchor="start">formats · fast lint</text>
+<rect x="902" y="228" width="68" height="28" rx="14.0" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<text x="936" y="247" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#9aa4af" text-anchor="middle">tells</text>
+<path d="M214,304.0 L247,304.0" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#mute)"/>
+<rect x="250" y="282" width="280" height="44" rx="22.0" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<text x="390.0" y="309.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#b1bac4" text-anchor="middle">Claude runs a command</text>
+<path d="M530,304.0 L563,304.0" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#mute)"/>
+<text x="586" y="309.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#b1bac4" text-anchor="start">checks a commit · notes tests</text>
+<rect x="902" y="290" width="68" height="28" rx="14.0" fill="none" stroke="#b8735f" stroke-width="1.5"/>
+<text x="936" y="309" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#b8735f" text-anchor="middle">gate</text>
+<path d="M214,366.0 L247,366.0" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#mute)"/>
+<rect x="250" y="344" width="280" height="44" rx="22.0" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<text x="390.0" y="371.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#b1bac4" text-anchor="middle">Claude or a subagent stops</text>
+<path d="M530,366.0 L563,366.0" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#mute)"/>
+<text x="586" y="371.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#b1bac4" text-anchor="start">the turn's changes · tests ran</text>
+<rect x="902" y="352" width="68" height="28" rx="14.0" fill="none" stroke="#b8735f" stroke-width="1.5"/>
+<text x="936" y="371" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#b8735f" text-anchor="middle">gate</text>
+<path d="M214,428.0 L247,428.0" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#mute)"/>
+<rect x="250" y="406" width="280" height="44" rx="22.0" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<text x="390.0" y="433.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#b1bac4" text-anchor="middle">a commit outside Claude</text>
+<path d="M530,428.0 L563,428.0" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#mute)"/>
+<text x="586" y="433.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#b1bac4" text-anchor="start">checks the staged files</text>
+<rect x="902" y="414" width="68" height="28" rx="14.0" fill="none" stroke="#b8735f" stroke-width="1.5"/>
+<text x="936" y="433" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#b8735f" text-anchor="middle">gate</text>
+<rect x="1022" y="84" width="194" height="92" rx="14" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<text x="1038" y="112" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" fill="#ffffff" text-anchor="start" font-weight="700">the project's tools</text>
+<text x="1038" y="134" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#9aa4af" text-anchor="start">formatter · linter</text>
+<text x="1038" y="154" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#9aa4af" text-anchor="start">type checker</text>
+<path d="M986,130.0 L1019,130.0" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#mute)"/>
+<rect x="1022" y="188" width="194" height="72" rx="14" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<text x="1038" y="216" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" fill="#ffffff" text-anchor="start" font-weight="700">smell check</text>
+<text x="1038" y="238" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#9aa4af" text-anchor="start">27 smells, one bar</text>
+<path d="M986,224.0 L1019,224.0" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#mute)"/>
+<rect x="1022" y="272" width="194" height="72" rx="14" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<text x="1038" y="300" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" fill="#ffffff" text-anchor="start" font-weight="700">the record</text>
+<text x="1038" y="322" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#9aa4af" text-anchor="start">every block, fix, pass</text>
+<path d="M986,308.0 L1019,308.0" fill="none" stroke="#6e7681" stroke-width="1.5" marker-end="url(#mute)"/>
+<rect x="1022" y="356" width="194" height="92" rx="14" fill="none" stroke="#9580b5" stroke-width="1.5"/>
+<text x="1038" y="384" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" fill="#ffffff" text-anchor="start" font-weight="700">language servers</text>
+<text x="1038" y="406" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#9aa4af" text-anchor="start">diagnostics go</text>
+<text x="1038" y="426" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#9aa4af" text-anchor="start">straight to Claude</text>
+<path d="M986,402.0 L1019,402.0" fill="none" stroke="#9580b5" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#violet)"/>
+</svg>

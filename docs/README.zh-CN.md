@@ -17,6 +17,23 @@ broom 是给 Coding Agent 用的工具，自己不带任何模型。它让 Claud
 
 ## 它做什么
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/flow-dark.svg">
+  <img alt="六个时机会启动 broom：谁引起的、broom 做什么、broom 底下靠什么" src="../assets/flow-light.svg">
+</picture>
+
+六个时机会启动 broom：其中三个它只告知 Claude 或记一笔，另外三个是拦截点，问题解决前不放行。
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/gate-dark.svg">
+  <img alt="拦截点发现问题后怎么收场：干净的改动放行，有问题的拦住，直到修好或带理由放行" src="../assets/gate-light.svg">
+</picture>
+
+拦截点放行干净的改动；有问题的会一直拦着，直到修好，或带着你看得到的理由放行。
+
+<details>
+<summary>文字版</summary>
+
 - 🧰 **配置**：在仓库里开会话时，broom 发现缺什么，Claude 就提议帮你安装和配置。
 - 🧹 **清扫**：每次编辑后，它格式化文件，并把快速 lint 发现的问题告诉 Claude。提交时和每轮对话结束时，它对 Claude 的改动做格式化、lint 和类型检查，问题解决前不放行。
 - 🧪 **测过才算完**：改了代码的一轮对话，要等项目的测试在这些代码上跑过才能结束，否则要留下你看得到的理由。
@@ -24,6 +41,8 @@ broom 是给 Coding Agent 用的工具，自己不带任何模型。它让 Claud
 - 👀 **看见**：六种语言的语言服务器让 Claude 边改边看到诊断。
 - 📊 **诊断**：`broom diagnose`、`broom stats` 和 `broom compare` 给出整个仓库在重构前后的数字。
 - 🩺 **体检**：会话开始时它数一遍仓库里的腐化，某个数字变大了就告诉 Claude 一次。
+
+</details>
 
 > [!IMPORTANT]
 > 没有你的同意，什么都不装。被拦下的问题要么修好，要么带着记录在案的理由放行。

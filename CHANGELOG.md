@@ -6,6 +6,12 @@
 
 ---
 
+### Docs
+
+- The README shows how broom works in two pictures: the six moments that start it, and what becomes of a finding at a gate. The list of what it does is folded under them.
+
+---
+
 ## 0.28.1 — 2026-11-20
 
 ---

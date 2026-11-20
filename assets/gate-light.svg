@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="346" viewBox="0 0 1280 346"><defs><marker id="mute" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8c959f"/></marker><marker id="green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#4f9468"/></marker><marker id="warm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#b8735f"/></marker><marker id="violet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#8268b0"/></marker></defs>
+<rect x="1" y="1" width="1278" height="344" rx="20" fill="#ffffff" stroke="#d0d7de" stroke-width="2"/>
+<text x="64" y="66" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="15" fill="#8c959f" text-anchor="start" font-weight="700" letter-spacing="2">WHEN A GATE FINDS SOMETHING</text>
+<rect x="64" y="144" width="170" height="44" rx="22.0" fill="none" stroke="#b8735f" stroke-width="1.5"/>
+<text x="149.0" y="171.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#b8735f" text-anchor="middle">a gate checks</text>
+<path d="M234,166 L277,166" fill="none" stroke="#8c959f" stroke-width="1.5" marker-end="url(#mute)"/>
+<rect x="280" y="144" width="110" height="44" rx="22.0" fill="none" stroke="#d0d7de" stroke-width="1.5"/>
+<text x="335.0" y="171.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#4a535c" text-anchor="middle">clean?</text>
+<path d="M390,156 L420,156 L420,118 L447,118" fill="none" stroke="#4f9468" stroke-width="1.5" marker-end="url(#green)"/>
+<text x="398" y="140" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#4f9468" text-anchor="start">yes</text>
+<rect x="450" y="96" width="130" height="44" rx="22.0" fill="none" stroke="#4f9468" stroke-width="1.5"/>
+<text x="515.0" y="123.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#4f9468" text-anchor="middle">it lands</text>
+<path d="M390,176 L420,176 L420,214 L447,214" fill="none" stroke="#b8735f" stroke-width="1.5" marker-end="url(#warm)"/>
+<text x="398" y="202" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#b8735f" text-anchor="start">no</text>
+<rect x="450" y="192" width="270" height="44" rx="22.0" fill="none" stroke="#b8735f" stroke-width="1.5"/>
+<text x="585.0" y="219.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#b8735f" text-anchor="middle">blocked, with how to fix</text>
+<path d="M720,214 L745,214 L745,186 L767,186" fill="none" stroke="#8c959f" stroke-width="1.5" marker-end="url(#mute)"/>
+<path d="M745,214 L745,242 L767,242" fill="none" stroke="#8c959f" stroke-width="1.5" marker-end="url(#mute)"/>
+<rect x="770" y="164" width="120" height="44" rx="22.0" fill="none" stroke="#4f9468" stroke-width="1.5"/>
+<text x="830.0" y="191.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#4a535c" text-anchor="middle">✓ fixed</text>
+<rect x="770" y="220" width="330" height="44" rx="22.0" fill="none" stroke="#4f9468" stroke-width="1.5"/>
+<text x="935.0" y="247.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#4a535c" text-anchor="middle">✓ accepted with a reason you see</text>
+<path d="M890,186 L1124,186 L1124,242" fill="none" stroke="#8c959f" stroke-width="1.5"/>
+<path d="M1100,242 L1124,242 L1124,296 L149,296 L149,191" fill="none" stroke="#8c959f" stroke-width="1.5" marker-end="url(#mute)"/>
+<text x="600" y="288" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#57606a" text-anchor="middle">checked again</text>
+<text x="1216" y="318" font-family="ui-rounded, -apple-system, 'SF Pro Rounded', 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" fill="#8c959f" text-anchor="end">trying again passes nothing</text>
+<path d="M580,118 L767,118" fill="none" stroke="#4f9468" stroke-width="1.5" marker-end="url(#green)"/>
+<rect x="770" y="96" width="446" height="44" rx="22.0" fill="none" stroke="#d0d7de" stroke-width="1.5"/>
+<text x="993.0" y="123.5" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="#4a535c" text-anchor="middle">you get one line: what passed, and why</text>
+</svg>
