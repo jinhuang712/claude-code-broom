@@ -6,6 +6,17 @@
 
 ---
 
+## 0.28.1 — 2026-11-20
+
+---
+
+### Sweep
+
+- A finding accepted in a linked git worktree stays known once the work lands on the main checkout. Before, the turn's end there stopped on it again, and the same reason had to be given twice.
+- `broom known` lists such a finding from the worktree and from the main checkout alike, at its place in the main checkout.
+
+---
+
 ## 0.28.0 — 2026-11-20
 
 ---

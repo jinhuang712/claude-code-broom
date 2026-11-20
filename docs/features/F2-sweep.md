@@ -97,7 +97,7 @@ It never replaces another tool's hook and prints the line to add to it instead. 
 
 ## F2.5: Known issues
 
-A finding Claude accepted with a reason is known and not raised again for 30 days. `broom known` lists and clears them.
+A finding Claude accepted with a reason is known and not raised again for 30 days. One accepted in a linked worktree stays known in the main checkout, where the work lands. `broom known` lists and clears them.
 
 - **Design**: [6. A finding ends fixed or with a reason the user sees](../DESIGNS.md#6-a-finding-ends-fixed-or-with-a-reason-the-user-sees)
 - **Commands**: [broom known](../CLI.md#broom-known)

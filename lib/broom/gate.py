@@ -18,7 +18,7 @@ from . import ledger
 from .findings import Issue
 from .config import OPTIONAL_NOTE, TESTS_TOOL, excluded
 from .fixes import how_to_fix
-from .gitutil import ChangedLines
+from .gitutil import ChangedLines, git_root, main_worktree
 from .state import DATA_ROOT, load_json, say, short_hash, update_json
 
 BASELINE = DATA_ROOT / "baseline.json"
@@ -43,10 +43,24 @@ def line_text(f: Path, n: int) -> str:
     return rows[n - 1].strip() if 0 < n <= len(rows) else ""
 
 
+def checkout_path(f: Path) -> Path:
+    """`f` as the main checkout of its repo names it: a file or a folder of a linked worktree is the one at the same
+    place under the main checkout, and any other path is itself."""
+    root = git_root(f if f.is_dir() else f.parent)
+    main = main_worktree(root) if root else None
+    if main is None or main == root:
+        return f
+    try:
+        return main / f.resolve().relative_to(root)
+    except ValueError:
+        return f
+
+
 def issue_key(i: Issue) -> str:
     """A short id for a finding: its file, tool, rule and message plus the text of its line, not its number."""
-    # Keyed on the line's text, not its number, so a known issue stays known when lines above it move.
-    return short_hash(f"{i.file}|{i.tool}|{i.rule}|{i.msg}|{line_text(i.file, i.line)}")
+    # Keyed on the line's text, not its number, so a known issue stays known when lines above it move. And on the file
+    # as the main checkout names it, so what was accepted in a linked worktree stays known once the work lands.
+    return short_hash(f"{checkout_path(i.file)}|{i.tool}|{i.rule}|{i.msg}|{line_text(i.file, i.line)}")
 
 
 def issue_entry(i: Issue) -> Dict[str, object]:
@@ -173,7 +187,8 @@ def accept_blocked(repo: Path, why: str, *, agreed: bool = False) -> Tuple[int, 
     if pending:
         now = time.time()
         once = {k: v for k, v in pending.items() if v.get("tool") == TESTS_TOOL}  # no test ran: accepted for this turn only
-        baseline_add_entries({k: {**v, "t": now, "why": why} for k, v in pending.items() if k not in once})
+        baseline_add_entries({k: {**v, "file": str(checkout_path(Path(str(v.get("file") or "")))), "t": now, "why": why}
+                              for k, v in pending.items() if k not in once})
         turn = Path(prior["turn"]) if prior.get("turn") else None
         ledger.let_through(pending, "accept", turn, why=why, where=where, agreed=agreed or None)
         if turn is not None and once:
@@ -187,7 +202,9 @@ def accept_blocked(repo: Path, why: str, *, agreed: bool = False) -> Tuple[int, 
 
 
 def baseline_under(roots: List[Path]) -> Dict[str, dict]:
-    """Known issues in files under any of `roots`."""
+    """Known issues in files under any of `roots`, each root as the main checkout names it: an accept keeps its file
+    that way, so a linked worktree and the main checkout list the same ones."""
+    roots = [checkout_path(r) for r in roots]
     out = {}
     for k, v in baseline_load().items():
         f = Path(str(v.get("file", "")))

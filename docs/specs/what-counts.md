@@ -16,7 +16,7 @@ Files the repo's `.broom.json` excludes never count. Files outside any git repo 
 
 ## Known issues
 
-A finding Claude accepted with a reason is recorded as known and not raised again. Its key is the file, the tool, the rule, the message and the text of the line, so it stays known when lines above it move.
+A finding Claude accepted with a reason is recorded as known and not raised again. Its key is the file, the tool, the rule, the message and the text of the line, so it stays known when lines above it move. The file is named as the main checkout holds it, so a finding accepted in a linked worktree stays known once the work lands.
 
 A known issue expires after 30 days. `broom known` lists and clears them, with the reason beside each accepted one.
 

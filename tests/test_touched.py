@@ -10,7 +10,10 @@ from pathlib import Path
 
 from support import HAS_PY, BroomCase, no_depcruise, py_function
 
+from broom.findings import Issue
+from broom.gate import issue_key, line_text
 from broom.smells import find_smells
+from broom.state import short_hash
 
 QUIET = {"smells_off": ["dead_code"]}  # a function nothing calls is dead code too: not what these tests are about
 TOUCHED = "you touched it, clean it up in this change"
@@ -36,6 +39,30 @@ class TouchedCase(BroomCase):
 
     def stop(self, repo: Path) -> dict:
         return self.hook("stop", {"session_id": "s1", "cwd": str(repo), "permission_mode": "default"})
+
+
+class AcceptedInAWorktreeTest(TouchedCase):
+    def test_what_was_accepted_in_a_linked_worktree_stays_known_in_the_main_checkout(self) -> None:
+        text = py_function("legacy", 60)
+        r = self.repo({"a.py": text})
+        linked = self.tmp / "linked"
+        self.sh(r, "git", "worktree", "add", "-q", str(linked), "-b", "side")
+        for tree in (linked, r):  # the same change in both, as when the worktree's work lands on the main checkout
+            (tree / "a.py").write_text(text.replace("x += 3\n", "x += 333\n"))
+            self.sh(tree, "git", "add", "a.py")
+        self.assertIn(TOUCHED, self.denied(self.commit(linked, "git commit -m touch")))
+        self.assertIn("accepted 1 issue(s)", self.cli(linked, "known", "--accept", "its refactor comes next").stdout)
+        self.assertEqual(self.denied(self.commit(linked, "git commit -m touch")), "")
+        self.assertEqual(self.denied(self.commit(r, "git commit -m touch")), "", "known there, so known here")
+        listed = [self.cli(tree, "known").stdout for tree in (linked, r)]
+        self.assertIn(f"{r / 'a.py'}:1  smells function_lines", listed[1], "listed where the work lands")
+        self.assertEqual(listed[0], listed[1], "and the worktree lists the same")
+
+    def test_a_finding_of_the_main_checkout_keeps_the_key_it_had(self) -> None:
+        r = self.repo({"a.py": py_function("legacy", 60)})
+        issue = Issue("smells", r, r / "a.py", 1, 0, "function_lines", "legacy is 60 lines long (over 50)")
+        old = short_hash(f"{issue.file}|{issue.tool}|{issue.rule}|{issue.msg}|{line_text(issue.file, issue.line)}")
+        self.assertEqual(issue_key(issue), old, "so what was accepted before this version stays known")
 
 
 class TouchedHintTest(TouchedCase):
