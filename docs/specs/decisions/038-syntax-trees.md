@@ -34,3 +34,8 @@ A smell that a language's parser shows as unparsable code is not guessed: the re
 ## Consequences
 
 ast-grep is one more tool to install, which the doctor offers like jscpd. Without it the smells it reads go unmeasured, with a note, and nothing blocks. Its grammars lag their languages: on the same day 31 of 5,000 Rust files and 20 of 3,000 TS files held a region it couldn't parse, and 0 of 651 Go files. A rule is data and not code, so a smell's rule can change without touching broom's Python.
+
+Go stays on ast-grep while 2 things hold. Its grammar failed on 49 of 20,000 Go files of the module cache on 2026-11-20, most of them test data written to fail and code in syntax newer than the grammar. The 3 Go smells read from the tree need no types, and golangci-lint, built on Go's own parser and type checker, covers the rest. A helper on `go/ast` and `go/types`, built once into broom's data directory as its dependency-cruiser is, takes over when one of 2 things comes:
+
+- A Go smell needs types that no golangci-lint linter gives.
+- The share of Go files ast-grep can't parse grows past what the grammar's lag explains.

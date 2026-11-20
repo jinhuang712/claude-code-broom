@@ -86,8 +86,9 @@ function looksLikeCode(text) {
   try {
     new vm.Script(`(function () {\n${body}\n})`); // compiled, never run
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    if (error instanceof SyntaxError) return false; // prose: it doesn't compile
+    throw error;
   }
 }
 
@@ -131,14 +132,28 @@ const commentedCode = {
 // a lint directive is no comment on the code.
 const DIRECTIVE = /^\s*\*?\s*(eslint-|oxlint-|@ts-|prettier-|biome-|istanbul |c8 |v8 )/;
 
+const CLASSES = ["ClassDeclaration", "ClassExpression"];
+
+// The name a declaration gives, or `default` for an anonymous default export.
+function nameOf(d) {
+  return d.id?.name ?? "default";
+}
+
+// The one function a `const f = () => ...` declares, or null for anything else.
+function constFunction(d) {
+  if (d.type !== "VariableDeclaration" || d.declarations.length !== 1) return null;
+  const only = d.declarations[0];
+  return FUNCTIONS.includes(only.init?.type) ? only : null;
+}
+
 // What an export statement declares, when that is a function or a class: its kind and its name.
 function exported(node) {
   const d = node.declaration;
   if (!d) return null;
-  if (d.type === "ClassDeclaration" || d.type === "ClassExpression") return { kind: "class", name: d.id?.name ?? "default" };
-  if (FUNCTIONS.includes(d.type)) return { kind: "function", name: d.id?.name ?? "default" };
-  const only = d.type === "VariableDeclaration" && d.declarations.length === 1 ? d.declarations[0] : null;
-  return only && FUNCTIONS.includes(only.init?.type) ? { kind: "function", name: only.id.name } : null;
+  if (CLASSES.includes(d.type)) return { kind: "class", name: nameOf(d) };
+  if (FUNCTIONS.includes(d.type)) return { kind: "function", name: nameOf(d) };
+  const only = constFunction(d);
+  return only ? { kind: "function", name: only.id.name } : null;
 }
 
 const missingDocs = {

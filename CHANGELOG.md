@@ -6,6 +6,16 @@
 
 ---
 
+## 0.26.1 — 2026-11-20
+
+---
+
+### Smells
+
+- broom's own TS/JS rule for commented-out code takes only a comment that fails to compile for prose. Before, any error while compiling it read as prose, so a fault of the rule itself passed unseen.
+
+---
+
 ## 0.26.0 — 2026-11-20
 
 ---

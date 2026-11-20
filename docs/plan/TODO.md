@@ -180,3 +180,28 @@
 - created: 2026-11-19
 - found: the user's question
 - related: [F1.5: Protection list](../features/F1-setup.md#f15-protection-list)
+
+---
+
+### [P2][IDEA] Unsafe code as a counter
+
+- description:
+  - Rust's `unsafe` blocks, Go's `unsafe` package and Swift's unsafe pointers each step outside what the compiler checks.
+  - A change that adds one is no smell broom knows, and nothing counts them across the repo, so a codebase can lean on them more each month with no change at fault.
+  - The syntax trees of 0.26.0 make the count cheap and exact: an `unsafe_block` node in Rust, an import of `unsafe` in Go, a call to `withUnsafe…` in Swift.
+- created: 2026-11-20
+- found: the look for missed rot at the end of CP10
+- related: [F11.1: Counters](../features/F11-checkup.md#f111-counters)
+
+---
+
+### [P2][IDEA] Tests that no runner collects
+
+- description:
+  - A test file outside every pattern the project's runner collects, a Rust test behind a feature that no build turns on, or a Swift test outside any test target, passes by never running.
+  - broom counts it as a test and pairs code with it, so the code reads as tested.
+  - Telling it needs each runner's own config: pytest's `testpaths`, a Jest or Vitest `include`, Cargo's features and SwiftPM's targets.
+- created: 2026-11-20
+- found: the look for missed rot at the end of CP10
+- related: [F4.2.3: Untested file](../features/F4-smells.md#f423-untested-file)
+
