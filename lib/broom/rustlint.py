@@ -1,13 +1,15 @@
 """What clippy and rustc say, read as smells: which lint stands for which smell, the thresholds clippy runs with, and
 what a message holds that its text alone doesn't (the name of a dead item, whether an unused variable is a parameter).
-realtree.py runs clippy and keeps the findings on lines a change added."""
+realtree.py runs clippy and keeps the findings on lines a change added. The functions and parameters a message points
+at are read from the file's syntax tree (`defaults/sg/rules/rust-fn.yml`), as rustmeasure.rust_tree gives it."""
 
 from __future__ import annotations
 
 import re
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from .config import DEAD_CODE
+from .syntax import Match
 
 # The lints, by the smell they find. clippy's are asked for with -W; rustc's warn on their own, so a crate that allows
 # them keeps them off. `unused_variables` stands for unused parameters: read() drops the variables that aren't.
@@ -45,10 +47,7 @@ allow-unwrap-in-tests = true
 allow-print-in-tests = true
 allow-dbg-in-tests = true
 """
-FN_NAME = re.compile(r"\bfn\s+(\w+)")
-SIZE = re.compile(r"\((\d+)/\d+\)")  # "(8/7)": the size, then the threshold
-FN_BEFORE = re.compile(r"\bfn\s+\w+\s*(?:<[^;{}]*>)?\s*$")  # what ends just before a function's parameter list
-LOOKBACK = 1000
+SIZE = re.compile(r"\((\d+)/\d+\)")  # "(8/7)": the size, then the threshold (in the message, not the source)
 
 
 def thresholds(soft: Dict[str, int]) -> Dict[str, int]:
@@ -68,36 +67,28 @@ def highlighted(span: dict) -> str:
     return row.get("text", "")[row.get("highlight_start", 1) - 1:row.get("highlight_end", 1) - 1]
 
 
-def in_parameters(source: str, line: int, col: int) -> bool:
-    """Whether the place in `source` (1-based line and column, as rustc counts) is in a function's parameter list,
-    not in its body or a closure's: the nearest `(` that nothing closes before the place follows `fn name`."""
-    rows = source.splitlines(keepends=True)[:line]
-    if not rows:
-        return False
-    head = "".join(rows[:-1]) + rows[-1][:col - 1]
-    depth = 0
-    for i in range(len(head) - 1, -1, -1):
-        if head[i] == ")":
-            depth += 1
-        elif head[i] == "(" and depth:
-            depth -= 1
-        elif head[i] == "(":
-            return bool(FN_BEFORE.search(head[max(0, i - LOOKBACK):i]))
-    return False
+def in_parameters(tree: List[Match], line: int, name: str) -> bool:
+    """Whether `name` on `line` of a file with the syntax-tree matches `tree` is a parameter of a function, not a
+    local or a closure's parameter."""
+    return any(m.rule == "rust-fn-param" and m.line == line and m.caught.get("P") == name for m in tree)
 
 
-def read(metric: str, message: dict, span: dict, source: str, soft: Dict[str, int]) -> Optional[Tuple[str, int]]:
+def fn_name(tree: List[Match], line: int) -> str:
+    """The name of the function that starts on `line` of a file with the syntax-tree matches `tree`."""
+    return next((m.caught["NAME"] for m in tree if m.rule == "rust-fn-item" and m.line == line), "function")
+
+
+def read(metric: str, message: dict, span: dict, tree: List[Match], soft: Dict[str, int]) -> Optional[Tuple[str, int]]:
     """What a message says of one of its primary spans, as the name of what has the smell and its size; None when
-    the span isn't the smell (an unused variable that isn't a parameter). `source` is the span's file."""
+    the span isn't the smell (an unused variable that isn't a parameter). `tree` holds the span's file's matches."""
     line = int(span["line_start"])
     if metric == DEAD_CODE:
         return highlighted(span), 1
     if metric == "deprecated_api":
         return message.get("message", ""), 1
-    if metric == "unused_params" and not in_parameters(source, line, int(span["column_start"])):
+    if metric == "unused_params" and not in_parameters(tree, line, highlighted(span)):
         return None
     if metric == "nesting":  # the message names no depth, and clippy lints only the outermost block past it
         return "function", thresholds(soft)["nesting"]
     size = SIZE.search(message.get("message", ""))
-    name = FN_NAME.search((source.splitlines()[line - 1:line] or [""])[0])
-    return (name[1] if name else "function"), int(size[1]) if size else 1
+    return fn_name(tree, line), int(size[1]) if size else 1

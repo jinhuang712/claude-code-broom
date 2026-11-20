@@ -1,0 +1,29 @@
+# Functions and their parameters, for what clippy and rustc say of them (lib/broom/rustlint.py): the name of the
+# function a message's line starts ($NAME), and each parameter's name ($P), which tells an unused parameter from an
+# unused local or closure parameter. These name no smell.
+id: rust-fn-item
+language: rust
+message: a function
+rule:
+  any: [{kind: function_item}, {kind: function_signature_item}]
+  has: {field: name, pattern: $NAME}
+---
+id: rust-fn-param
+language: rust
+message: a parameter of a function
+utils:
+  fn-parameter:
+    kind: parameter
+    inside:
+      kind: parameters
+      inside: {any: [{kind: function_item}, {kind: function_signature_item}]}
+rule:
+  kind: identifier
+  pattern: $P
+  any:
+    - inside: {field: pattern, matches: fn-parameter}
+    - inside:
+        stopBy: end
+        any: [{kind: tuple_pattern}, {kind: struct_pattern}, {kind: tuple_struct_pattern}, {kind: mut_pattern},
+              {kind: ref_pattern}, {kind: reference_pattern}, {kind: slice_pattern}]
+        inside: {field: pattern, matches: fn-parameter}

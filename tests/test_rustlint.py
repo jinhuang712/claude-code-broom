@@ -4,13 +4,16 @@ disk, the place of a parameter, and the config clippy runs with."""
 from __future__ import annotations
 
 import json
+import shutil
+import unittest
 from typing import Tuple
 
 from support import BroomCase
 
 from broom.config import SMELL_LIMITS
 from broom.realtree import rust_messages
-from broom.rustlint import FN_NAME, RUST_FLAGS, RUST_LINTS, RUSTC_ASKED, config_text, in_parameters, thresholds
+from broom.rustlint import RUST_FLAGS, RUST_LINTS, RUSTC_ASKED, config_text, fn_name, in_parameters, thresholds
+from broom.rustmeasure import rust_tree
 
 SOFT = {metric: pair[0] for metric, pair in SMELL_LIMITS.items()}
 
@@ -69,12 +72,16 @@ class RustMessageTest(BroomCase):
                 for line, name in ((3, "spare"), (5, "local"), (6, "unused"))]
         self.assertEqual(self.found(source, *rows), [("unused_params", 3, "function", 1)])
 
+    @unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
     def test_the_place_of_a_parameter_is_told_from_the_body_and_from_a_closure(self) -> None:
-        source = "pub fn apply<F: Fn(i32) -> i32>(f: F, x: i32) -> i32 {\n    let y = f(x);\n    y\n}\n"
-        self.assertTrue(in_parameters(source, 1, source.index("x: i32") + 1))
-        self.assertFalse(in_parameters(source, 2, 9))
-        self.assertFalse(in_parameters("", 1, 1))
-        self.assertEqual(FN_NAME.search("    pub(crate) async fn run<T>(x: T) {")[1], "run")
+        (self.tmp / "a.rs").write_text("pub fn apply<F: Fn(i32) -> i32>(f: F, (x, _): (i32, u8)) -> i32 {\n"
+                                       "    let y = |x: i32| f(x);\n    y(1)\n}\n"
+                                       "    pub(crate) async fn run<T>(t: T) {}\n")
+        tree = rust_tree(self.tmp, ["a.rs"], [])["a.rs"]
+        self.assertTrue(in_parameters(tree, 1, "x"))
+        self.assertFalse(in_parameters(tree, 2, "x"))
+        self.assertFalse(in_parameters([], 1, "x"))
+        self.assertEqual((fn_name(tree, 5), fn_name(tree, 2)), ("run", "function"))
 
     def test_the_config_holds_the_soft_limits_and_each_lint_is_asked_for_once(self) -> None:
         text = config_text({**SOFT, "function_lines": 30, "complexity": 7, "nesting": 3})

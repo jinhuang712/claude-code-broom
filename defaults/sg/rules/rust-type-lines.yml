@@ -1,0 +1,31 @@
+# A Rust type is long with its impls: its struct, enum, trait or union item and each impl block for it in the same
+# file, joined by the type's name ($NAME). Items in a function body don't count, nor do impls for a reference to a
+# type or for a generic parameter.
+id: rust-type-item
+language: rust
+message: a type
+metadata: {smell: type_lines}
+rule:
+  any: [{kind: struct_item}, {kind: enum_item}, {kind: trait_item}, {kind: union_item}]
+  has: {field: name, pattern: $NAME}
+  inside:
+    any: [{kind: source_file}, {kind: declaration_list, inside: {kind: mod_item}}]
+---
+id: rust-type-impl
+language: rust
+message: an impl of a type
+metadata: {smell: type_lines}
+utils:
+  named:
+    any:
+      - {kind: type_identifier, pattern: $NAME}
+      - {kind: scoped_type_identifier, has: {field: name, pattern: $NAME}}
+rule:
+  kind: impl_item
+  inside:
+    any: [{kind: source_file}, {kind: declaration_list, inside: {kind: mod_item}}]
+  has:
+    field: type
+    any:
+      - matches: named
+      - {kind: generic_type, has: {field: type, matches: named}}

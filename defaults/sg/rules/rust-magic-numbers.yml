@@ -1,0 +1,38 @@
+# A number that is compared, computed with, ranged over, returned, passed or given as a match arm's value, outside a
+# const or static item, an enum's discriminant and an attribute. broom's Python leaves out 0, 1 and 2, and test code.
+# A number in an array length, an index, a tuple field or a generic argument is in none of these places. A macro's
+# arguments are tokens and not a tree: there a number counts when it stands in parentheses, after an operator, a comma
+# or the opening parenthesis, or before an operator; not in a macro's own definition.
+id: rust-magic-number
+language: rust
+message: a number with no name
+metadata: {smell: magic_numbers}
+utils:
+  used-here:
+    any:
+      - kind: binary_expression
+      - kind: compound_assignment_expr
+      - kind: range_expression
+      - kind: return_expression
+      - kind: arguments
+      - kind: match_arm
+  operator:
+    regex: ^(==|!=|<|>|<=|>=|\+|-|\*|/|%|&|\||\^|<<|>>|\.\.|\.\.=|&&|\|\|)$
+  macro-argument:
+    inside: {kind: token_tree, regex: ^\(}
+    not: {inside: {kind: macro_definition, stopBy: end}}
+    any:
+      - follows: {any: [{matches: operator}, {regex: '^[,(]$'}]}
+      - precedes: {matches: operator}
+rule:
+  pattern: $N
+  all:
+    - any: [{kind: integer_literal}, {kind: float_literal}]
+    - any:
+        - inside: {matches: used-here}
+        - inside: {kind: unary_expression, inside: {matches: used-here}}
+        - matches: macro-argument
+  not:
+    inside:
+      stopBy: end
+      any: [{kind: const_item}, {kind: static_item}, {kind: enum_variant}, {kind: attribute_item}]

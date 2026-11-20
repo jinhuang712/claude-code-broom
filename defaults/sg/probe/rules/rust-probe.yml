@@ -1,0 +1,58 @@
+# What a comment's text is, once broom's Python has put it in a function body of its own (`fn broom_probe`):
+# code when it parses with no error and holds a statement, an item, or an expression that does something (a call,
+# an assignment, a return), with no token missing: a node with no text is one the parser made up (`------` lacks an
+# operand). A bare comparison or sum with no `;` (`a + b`, `t1 <- stack`) is how prose writes math, not code.
+id: rust-probe-error
+language: rust
+message: not Rust
+rule:
+  kind: ERROR
+---
+id: rust-probe-code
+language: rust
+message: Rust code
+utils:
+  word:
+    any:
+      - {kind: identifier}
+      - {kind: integer_literal}
+      - {kind: float_literal}
+      - {kind: string_literal}
+      - {kind: boolean_literal}
+rule:
+  inside:
+    kind: block
+    inside: {kind: function_item, has: {field: name, regex: ^broom_probe$}}
+  not: {has: {stopBy: end, regex: ^$}}
+  any:
+    - kind: expression_statement
+      not: {has: {matches: word}}
+      has:
+        any:
+          - regex: ^;$
+          - kind: if_expression
+          - kind: match_expression
+          - kind: for_expression
+          - kind: while_expression
+          - kind: loop_expression
+          - kind: unsafe_block
+    - kind: let_declaration
+    - kind: use_declaration
+    - kind: function_item
+    - kind: struct_item
+    - kind: enum_item
+    - kind: impl_item
+    - kind: trait_item
+    - kind: const_item
+    - kind: static_item
+    - kind: mod_item
+    - kind: macro_invocation
+    - kind: call_expression
+    - kind: assignment_expression
+    - kind: compound_assignment_expr
+    - kind: return_expression
+    - kind: try_expression
+    - kind: await_expression
+    - kind: struct_expression
+    - kind: match_expression
+    - kind: if_expression

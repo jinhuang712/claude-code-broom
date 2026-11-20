@@ -1,0 +1,52 @@
+# Rust's ternary is an `if` with an `else` that gives a value. It nests when a branch's value is itself such an
+# `if`: the block's last expression, or an `else if`. The outer `if` must stand where a value goes: a let's
+# initializer, an argument, a return, a function's or closure's last expression, an assignment's right side or a
+# match arm's value. An `if` that is a statement doesn't count, nor one without an `else`, which gives no value.
+id: rust-nested-ternary
+language: rust
+message: an if expression whose branch is another
+metadata: {smell: nested_ternary}
+utils:
+  valued-if:
+    kind: if_expression
+    has: {field: alternative, kind: else_clause}
+  branch-is-if:
+    any:
+      - has:
+          field: consequence
+          has: {matches: last-is-if}
+      - has:
+          field: alternative
+          any:
+            - has: {matches: valued-if}
+            - has: {kind: block, has: {matches: last-is-if}}
+  last-is-if:
+    nthChild: {position: 1, reverse: true}
+    any:
+      - matches: valued-if
+      - kind: expression_statement
+        has: {matches: valued-if}
+        not: {has: {regex: ^;$}}
+  value-place:
+    any:
+      - inside: {kind: let_declaration, field: value}
+      - inside: {kind: arguments}
+      - inside: {kind: return_expression}
+      - inside: {kind: assignment_expression, field: right}
+      - inside: {kind: match_arm, field: value}
+      - inside:
+          kind: block
+          nthChild: {position: 1, reverse: true}
+          inside: {any: [{kind: function_item}, {kind: closure_expression}]}
+      - inside:
+          kind: expression_statement
+          not: {has: {regex: ^;$}}
+          nthChild: {position: 1, reverse: true}
+          inside:
+            kind: block
+            inside: {any: [{kind: function_item}, {kind: closure_expression}]}
+rule:
+  matches: valued-if
+  all:
+    - matches: value-place
+    - matches: branch-is-if

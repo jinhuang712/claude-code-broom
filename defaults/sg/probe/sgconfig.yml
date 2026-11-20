@@ -1,0 +1,3 @@
+# ast-grep reads what a Rust comment says from here, to tell code from prose (lib/broom/rustmeasure.py).
+ruleDirs:
+  - rules

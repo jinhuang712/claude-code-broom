@@ -1,0 +1,25 @@
+# Tests that any error passes: `#[should_panic]` with no expected message, `assert!(x.is_err())` and
+# `assert!(matches!(x, Err(_)))`. broom's Python keeps only those in test code.
+id: rust-bare-should-panic
+language: rust
+message: a test that passes on any panic
+metadata: {smell: broad_test_asserts}
+rule:
+  kind: attribute_item
+  has:
+    kind: attribute
+    all:
+      - has: {kind: identifier, regex: ^should_panic$}
+      - not: {has: {field: arguments, kind: token_tree}}
+      - not: {has: {field: value, regex: .}}
+---
+id: rust-assert-any-err
+language: rust
+message: an assertion that any error passes
+metadata: {smell: broad_test_asserts}
+rule:
+  kind: macro_invocation
+  any:
+    - pattern: assert!($$$X.is_err())
+    - pattern: assert!($$$X.is_err(), $$$M)
+    - pattern: assert!(matches!($$$X, Err(_)))

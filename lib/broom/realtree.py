@@ -23,9 +23,11 @@ from .langlint import golangci_cache
 from .pycycles import import_cycles
 from .rustcycles import rust_folder_cycles, rust_import_cycles
 from .rustlint import RUST_LINTS, RUST_FLAGS, config_text, read as rust_read, thresholds
+from .rustmeasure import rust_tree
 from .state import DATA_ROOT, prune_dirs, short_hash
 from .swiftcheck import swift_deprecated
 from .swiftmeasure import swift_unused
+from .syntax import Match
 from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS, find_up, resolve_bin
 
 TOOL_TIMEOUT = 150
@@ -228,8 +230,9 @@ def diagnostics(out: str) -> Iterator[dict]:
             yield message
 
 
-def message_found(repo: Path, crate: Path, message: dict, soft: Dict[str, int], sources: Dict[str, str]) -> Iterator[Found]:
-    """The smells one compiler message holds. `sources` keeps the text of the files it has read."""
+def message_found(repo: Path, crate: Path, message: dict, soft: Dict[str, int],
+                  trees: Dict[str, List[Match]]) -> Iterator[Found]:
+    """The smells one compiler message holds. `trees` keeps the syntax-tree matches of the files it has read."""
     metric = RUST_LINTS.get((message.get("code") or {}).get("code") or "")
     if not metric:
         return
@@ -238,9 +241,9 @@ def message_found(repo: Path, crate: Path, message: dict, soft: Dict[str, int], 
         rel = locate(repo, crate, span["file_name"])
         if rel is None:
             continue
-        if rel not in sources:
-            sources[rel] = (repo / rel).read_text(errors="replace")
-        read = rust_read(metric, message, span, sources[rel], soft)
+        if rel not in trees:
+            trees[rel] = rust_tree(repo, [rel], []).get(rel, [])
+        read = rust_read(metric, message, span, trees[rel], soft)
         if read:
             yield Found(rel, int(span["line_start"]), metric, "clippy", *read)
 
@@ -248,9 +251,9 @@ def message_found(repo: Path, crate: Path, message: dict, soft: Dict[str, int], 
 def rust_messages(repo: Path, crate: Path, out: str, soft: Dict[str, int]) -> List[Found]:
     """What clippy and rustc found, as the smells RUST_LINTS names. `soft` holds the soft limits clippy ran with."""
     found: Dict[Tuple[str, int, str, str], Found] = {}
-    sources: Dict[str, str] = {}
+    trees: Dict[str, List[Match]] = {}
     for message in diagnostics(out):
-        for row in message_found(repo, crate, message, soft, sources):
+        for row in message_found(repo, crate, message, soft, trees):
             found.setdefault((row.rel, row.line, row.metric, row.key), row)  # a crate built twice says things twice
     return list(found.values())
 

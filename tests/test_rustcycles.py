@@ -3,17 +3,25 @@ Sample code is a list of lines, so that none of it stands in this file as code o
 
 from __future__ import annotations
 
+import shutil
 import unittest
 
 from support import BroomCase
 
-from broom.rustcycles import rust_folder_cycles, rust_import_cycles, use_paths
+from broom.rustcycles import rust_folder_cycles, rust_import_cycles, use_path
+from broom.rustmeasure import rust_tree
 
 
-class UseTest(unittest.TestCase):
-    def test_a_use_tree_names_each_path(self) -> None:
-        self.assertEqual(use_paths("crate::{a::X, b::{self, Y as Z}}"),
-                         [["crate", "a", "X"], ["crate", "b"], ["crate", "b", "Y"]])
+@unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
+class UseTest(BroomCase):
+    def test_a_use_tree_names_each_path_and_a_comment_or_string_names_none(self) -> None:
+        (self.tmp / "a.rs").write_text("\n".join(["use crate::{a::X, b::{self, Y as Z}};", "pub use self::m::*;",
+                                                  "// use crate::hidden;", 'const S: &str = "use crate::nope;";',
+                                                  "use crate::{", "    multi::Line,", "};", ""]))
+        found = [m for m in rust_tree(self.tmp, ["a.rs"], [])["a.rs"] if m.rule.startswith("rust-use-")]
+        self.assertEqual(sorted((m.line, use_path(m)) for m in found),
+                         [(1, ["crate", "a", "X"]), (1, ["crate", "b"]), (1, ["crate", "b", "Y"]), (2, ["m"]),
+                          (6, ["crate", "multi", "Line"])])
 
 
 class CycleTest(BroomCase):

@@ -1,0 +1,31 @@
+# Test code inside a Rust file: an item under `#[cfg(test)]`, and a function marked as a test (`#[test]`,
+# `#[tokio::test]` and the like). These name no smell: broom's Python reads them to tell test code from the rest.
+# An item's attributes are the attribute items just before it.
+id: rust-test-item
+language: rust
+message: test code
+utils:
+  test-attribute:
+    kind: attribute_item
+    has:
+      kind: attribute
+      any:
+        - all:
+            - has: {kind: identifier, regex: ^cfg$}
+            - has: {kind: token_tree, has: {kind: identifier, regex: ^test$}}
+        - all:
+            - has: {kind: identifier, regex: ^test$}
+            - not: {has: {kind: token_tree}}
+        - has: {kind: scoped_identifier, has: {field: name, regex: ^test$}}
+rule:
+  any:
+    - kind: mod_item
+    - kind: function_item
+    - kind: impl_item
+    - kind: use_declaration
+    - kind: const_item
+    - kind: static_item
+  follows:
+    matches: test-attribute
+    stopBy:
+      not: {any: [{kind: attribute_item}, {kind: line_comment}, {kind: block_comment}]}

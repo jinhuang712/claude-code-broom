@@ -18,6 +18,7 @@ from .config import SMELL_PRESENCE
 from .gitutil import git
 from .maintained import Maintained, generated
 from .reading import Limits, Raw
+from .rustmeasure import files_with_tests
 from .smell import Smell, level
 from .toolchain import lang_of
 from .treefacts import TREE_LANGS, skip_trees
@@ -116,13 +117,13 @@ def non_blank(text: str) -> int:
 # hold none to test, or are tests, benchmarks and examples themselves.
 RUST_NO_TEST_NEEDED = {"main.rs", "lib.rs", "mod.rs", "build.rs"}
 RUST_NOT_CODE = re.compile(r"(^|/)(tests|benches|examples)/")
-RUST_TESTS_INSIDE = re.compile(r"#\[(?:test|cfg\(test\))\]")
 
 
-def rust_untested(rel: str, text: str, listed: Set[str]) -> bool:
-    """Whether the Rust file `rel` with `text` has no test: none in it, and no `tests/<stem>.rs`, `<stem>/tests.rs`
-    or `<stem>_test.rs` among the repo's files `listed`."""
-    if rel.rsplit("/", 1)[-1] in RUST_NO_TEST_NEEDED or RUST_NOT_CODE.search(rel) or RUST_TESTS_INSIDE.search(text):
+def rust_untested(rel: str, with_tests: Set[str], listed: Set[str]) -> bool:
+    """Whether the Rust file `rel` has no test: it isn't among the files `with_tests` (those with tests inside, read
+    from their syntax trees), and no `tests/<stem>.rs`, `<stem>/tests.rs` or `<stem>_test.rs` is among the repo's
+    files `listed`."""
+    if rel.rsplit("/", 1)[-1] in RUST_NO_TEST_NEEDED or RUST_NOT_CODE.search(rel) or rel in with_tests:
         return False
     stem, base = stem_of(rel), rel[:-3]
     beside = {f"{base}/tests.rs", f"{base}_test.rs"}
@@ -144,11 +145,13 @@ def untested_smells(repo: Path, now: Dict[str, str], old: Optional[Dict[str, str
     named = tested((rel, lang_of(Path(rel))) for rel in listed)
 
     every = set(listed)
+    with_tests = files_with_tests(repo, [rel for rel in added if lang_of(Path(rel)) == "rust"])
 
     def untested(rel: str) -> bool:
-        """Whether the added file `rel` has no test, by its language's way of keeping tests."""
+        """Whether the added file `rel` has no test, by its language's way of keeping tests; a Rust file whose tree
+        can't be read is not taken for one."""
         if lang_of(Path(rel)) == "rust":
-            return rust_untested(rel, now[rel], every)
+            return with_tests is not None and rust_untested(rel, with_tests, every)
         return (lang_of(Path(rel)), stem_of(rel)) not in named
 
     return [Smell(repo, repo / rel, 1, UNTESTED_FILE, UNTESTED_FILE, 1, None, "broom", SMELL_PRESENCE[UNTESTED_FILE],

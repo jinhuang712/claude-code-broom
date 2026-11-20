@@ -1,0 +1,27 @@
+# Global state in Rust: a `static mut`, a static behind a lock, a cell, an atomic or a lazy value, and the
+# thread_local! and lazy_static! blocks. A plain `static` of a constant value is not state.
+id: rust-static-state
+language: rust
+message: a static that holds mutable state
+metadata: {smell: globals}
+rule:
+  kind: static_item
+  any:
+    - has: {kind: mutable_specifier}
+    - has:
+        field: type
+        stopBy: end
+        kind: type_identifier
+        regex: ^(Mutex|RwLock|RefCell|Cell|Atomic\w+|OnceLock|OnceCell|LazyLock|LazyCell|Lazy)$
+---
+id: rust-state-macro
+language: rust
+message: a block of global state
+metadata: {smell: globals}
+rule:
+  kind: macro_invocation
+  has:
+    field: macro
+    any:
+      - {kind: identifier, regex: ^(thread_local|lazy_static)$}
+      - {kind: scoped_identifier, has: {field: name, regex: ^(thread_local|lazy_static)$}}

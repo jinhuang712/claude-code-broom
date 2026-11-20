@@ -1,0 +1,44 @@
+# Handlers that catch every error unread: a match arm for `Err(_)`, and a `catch_unwind` whose result is dropped,
+# assigned to `_` or a statement of its own (with or without `.ok()`).
+id: rust-any-err-arm
+language: rust
+message: an arm for any error
+metadata: {smell: broad_catch}
+rule:
+  kind: match_arm
+  has:
+    field: pattern
+    has:
+      pattern: {context: "match x { Err(_) => 0 }", selector: tuple_struct_pattern}
+---
+id: rust-dropped-unwind
+language: rust
+message: a caught panic that nobody looks at
+metadata: {smell: broad_catch}
+utils:
+  unwind:
+    kind: call_expression
+    has:
+      field: function
+      any:
+        - {kind: identifier, regex: ^catch_unwind$}
+        - {kind: scoped_identifier, has: {field: name, regex: ^catch_unwind$}}
+rule:
+  any:
+    - kind: let_declaration
+      all:
+        - has: {field: pattern, regex: ^_$}
+        - has: {field: value, matches: unwind}
+    - kind: expression_statement
+      all:
+        - has: {regex: ^;$}
+        - has:
+            any:
+              - matches: unwind
+              - kind: call_expression
+                has:
+                  field: function
+                  kind: field_expression
+                  all:
+                    - has: {field: value, matches: unwind}
+                    - has: {field: field, regex: ^ok$}

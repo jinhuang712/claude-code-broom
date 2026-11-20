@@ -1,4 +1,4 @@
-"""The language matrix for Rust: one sample per smell it can have, which leaves out the ternary its syntax rules out.
+"""The language matrix for Rust: one sample per smell it can have, all of them: its ternary is a nested `if` expression.
 Most samples change the crate root, so clippy builds them. See language_matrix."""
 
 from __future__ import annotations
@@ -64,6 +64,8 @@ SAMPLES = {
                               CLIPPY),
     "commented_code": Sample(lib("/// F.", "pub fn f() -> i32 {", "    // let y = compute(1, 2);", "    1", "}")),
     "unused_params": Sample(lib("/// F.", "pub fn f(a: i32, unused: i32) -> i32 {", "    a", "}"), CLIPPY),
+    "nested_ternary": Sample(lib("/// F.", "pub fn f(a: bool, b: bool) -> i32 {",
+                                 "    let x = if a { if b { 1 } else { 2 } } else { 3 };", "    x", "}")),
     "magic_numbers": Sample(lib("/// F.", "pub fn f(x: u64) -> u64 {", "    x * 86400", "}")),
     "debug_output": Sample(lib("/// F.", "pub fn f(x: i32) {", '    println!("x is {}", x);', "}"), CLIPPY),
     "todo": Sample(lib("/// Later.", "pub fn later() {", f"    {TODO}", "}"), CLIPPY),

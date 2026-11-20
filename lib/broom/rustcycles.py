@@ -1,5 +1,6 @@
 """Rust `use` statements that close a cycle, between files or between folders. The compiler allows a cycle of
-modules, so no tool reports one; broom reads the `use` statements itself.
+modules, so no tool reports one; broom reads the `use` declarations from the syntax tree, with ast-grep's rules in
+`defaults/sg/rules/rust-use.yml`.
 
 A crate's modules are its files under `src/`: `src/a/b.rs` and `src/a/b/mod.rs` are `crate::a::b`, and `src/lib.rs`
 (else `src/main.rs`) is the crate root. A path is read from the module it is written in (`crate::`, `super::`,
@@ -18,10 +19,11 @@ from typing import Dict, List, Optional, Tuple
 from .foldercycles import Place, folder_of, graph_folder_cycles
 from .gitutil import git
 from .pycycles import Edge, ImportGraph
-from .rustmeasure import clean, test_start
+from .rustmeasure import inside, rust_tree, test_spans
+from .syntax import Match
 
-USE = re.compile(r"^[ \t]*(?:pub(?:\([^)]*\))?\s+)?use\s+([^;]*);", re.M)
 Module = Tuple[str, Tuple[str, ...]]  # a crate's `src/` folder and a module's path in it
+GROUPS = ("P1", "P2", "P3")
 
 
 def module_of(rel: str) -> Optional[Module]:
@@ -36,25 +38,14 @@ def module_of(rel: str) -> Optional[Module]:
     return m[1], () if parts in (("lib",), ("main",)) else parts
 
 
-def split_top(group: str) -> List[str]:
-    """The parts of a `{...}` group's inside, split at its own commas, not those of a group inside it."""
-    parts, depth, start = [], 0, 0
-    for i, ch in enumerate(group):
-        depth += {"{": 1, "}": -1}.get(ch, 0)
-        if ch == "," and not depth:
-            parts.append(group[start:i])
-            start = i + 1
-    return [p for p in parts + [group[start:]] if p]
+def segments(path: str) -> List[str]:
+    """The names of a path node the tree isolated (`crate::a`), with `self` left out: `b::{self}` is `b`."""
+    return [p.strip() for p in path.split("::") if p.strip() not in ("", "self")]
 
 
-def use_paths(tree: str) -> List[List[str]]:
-    """Each path a use tree names: `crate::{a::X, b::{self, Y}}` is crate/a/X, crate/b and crate/b/Y."""
-    tree = re.sub(r"\s", "", re.sub(r"\s+as\s+\w+", "", tree))
-    at = tree.find("{")
-    if at < 0:
-        return [[p for p in tree.split("::") if p and p != "self"]]
-    head = [p for p in tree[:at].split("::") if p and p != "self"]
-    return [head + tail for part in split_top(tree[at + 1:tree.rfind("}")]) for tail in use_paths(part)]
+def use_path(m: Match) -> List[str]:
+    """The path a match of a `use` rule names: the groups around its leaf, outer first, then the leaf."""
+    return [name for key in (*GROUPS, "LEAF") for name in segments(m.caught.get(key, ""))]
 
 
 def absolute(here: Tuple[str, ...], path: List[str]) -> List[str]:
@@ -72,6 +63,7 @@ class RustGraph(ImportGraph):
 
     def __init__(self, repo: Path, files: List[str]) -> None:
         super().__init__(repo, [])
+        self.uses: Optional[Dict[str, List[Match]]] = None
         self.modules: Dict[Module, str] = {}
         for rel in sorted(files):  # lib.rs before main.rs: the crate root of a crate that has both
             key = module_of(rel)
@@ -94,17 +86,22 @@ class RustGraph(ImportGraph):
             return None
         return self.target(src, absolute(here, path))
 
+    def paths(self, rel: str) -> List[Match]:
+        """The `use` paths and test items of the file `rel`, read with every module's in one pass of ast-grep."""
+        if self.uses is None:
+            self.uses = rust_tree(self.repo, sorted(set(self.modules.values())), [])
+        return self.uses.get(rel, [])
+
     def _read(self, rel: str) -> List[Edge]:
         key = module_of(rel)
-        try:
-            rows = clean((self.repo / rel).read_text(errors="replace"))[0] if key else []
-        except OSError:
-            return []
-        text = "\n".join(rows[:test_start(rel, rows)])
+        found = self.paths(rel) if key else []
+        tests = test_spans(rel, found)
         out = set()
-        for m in USE.finditer(text):
-            found = {self.resolve(key, path) for path in use_paths(m[1])} - {None, rel}
-            out |= {(text.count("\n", 0, m.start()) + 1, f) for f in found if f}
+        for m in found:
+            if m.rule.startswith("rust-use-") and not inside(m.line, tests):
+                target = self.resolve(key, use_path(m))
+                if target and target != rel:
+                    out.add((m.line, target))
         return sorted(out)
 
 

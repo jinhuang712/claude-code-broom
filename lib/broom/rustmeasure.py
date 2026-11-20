@@ -1,263 +1,203 @@
 """What broom reads from Rust source itself, for the smells clippy has no lint for: magic numbers, commented-out code,
-global state, how long a type is with its impls, tests that any error passes, and handlers that catch every error.
+global state, how long a type is with its impls, tests that any error passes, handlers that catch every error and an
+`if` expression nested in another's branch.
 
-The text is read with its strings and comments blanked out, so a number in a string or a brace in a comment isn't
-code. rustfmt's layout is what makes that enough: an item starts at the first column, and the brace that closes it
-stands at the first column too. Test code is a file under `tests/` or named as a test, or what follows a
-`#[cfg(test)]`, which rustfmt and custom keep at the end of the file.
+Each is read from the syntax tree by ast-grep (decision 038), with the rules in `defaults/sg/rules/rust-*.yml`; this
+file only joins what they match. A region the grammar can't read is left out, with a note. Test code is a file under
+`tests/` or named as a test, or an item under `#[cfg(test)]` or marked as a test.
 """
 
 from __future__ import annotations
 
 import re
-from typing import Dict, Iterator, List, Set, Tuple
+import tempfile
+from pathlib import Path
+from typing import Dict, Iterator, List, Optional, Set, Tuple
 
-from .reading import Limits, Reader
+from .reading import TOOL_TIMEOUT, Limits, Reader
+from .state import DEFAULTS
+from .syntax import Match, matches
 
 TYPE_LINES = "type_lines"
-# What is code to step over: a `//` comment, a `/*` comment, a raw string, a string, a char literal. A lifetime
-# (`'a`) has no closing quote, so it stays code.
-TOKEN = re.compile(r"""(?P<line>//[^\n]*)|(?P<block>/\*)|(?P<raw>\bb?r(?P<hashes>\#*)")|(?P<str>\bb?"|")"""
-                   r"""|(?P<char>\bb?'(?:\\[^\n]+?|[^\\'\n])'|'(?:\\[^\n]+?|[^\\'\n])')""")
-STRING_END = re.compile(r'(?:\\.|[^"\\])*"', re.S)
-BLOCK_MARK = re.compile(r"/\*|\*/")
-Comment = Tuple[int, str]  # the line of a comment that starts its line, and its text
+PROBE = DEFAULTS / "sg" / "probe" / "sgconfig.yml"
+# A file of tests by its path: what lies under `tests/`, `tests.rs`, `*_test.rs` and `*_tests.rs`.
+TEST_PATH = re.compile(r"(^|/)tests(/|\.rs$)|_tests?\.rs$")
+TEST_ITEM = "rust-test-item"
+UNPARSED = "rust-unparsed"
+# Smells a rule's match is on its own, anywhere; and those that count outside test code, or only inside it.
+WHOLE = {"globals", "broad_catch", "nested_ternary"}
+OUTSIDE_TESTS = {"magic_numbers"}
+INSIDE_TESTS = {"broad_test_asserts"}
+PLAIN = {0, 1, 2}
+# A number token: a based integer, or a decimal one, each with the suffix of its type.
+LITERAL = re.compile(r"(?:(?P<int>0[xX][\da-fA-F]+|0[oO][0-7]+|0[bB][01]+)(?:[iu](?:8|16|32|64|128|size))?"
+                     r"|(?P<float>[\d.]+(?:[eE][+-]?\d+)?)(?:[iu](?:8|16|32|64|128|size)|f32|f64)?)")
+EVERY_LINE = (1, 1 << 30)
+PROBE_HEAD = 2  # the line of a probe file that holds the comment's first line: it follows `fn broom_probe() {`
+PROBE_LINES = 3  # the lines one comment takes when each has a probe function of its own
+Span = Tuple[int, int]
+BATCH = 2000  # files per run of ast-grep: a command line holds only so many paths
 
 
-def blank(text: str) -> str:
-    """`text` with all but its line breaks turned into spaces."""
-    return re.sub(r"[^\n]", " ", text)
+def rust_tree(root: Path, rels: List[str], notes: List[str]) -> Dict[str, List[Match]]:
+    """The matches of broom's rules in the Rust files `rels` under `root`, per file. What lies in a region the grammar
+    can't read is left out, with a note for the file."""
+    found: Dict[str, List[Match]] = {rel: [] for rel in rels}
+    for start in range(0, len(rels), BATCH):
+        for m in matches(root, rels[start:start + BATCH], notes, TOOL_TIMEOUT):
+            found.setdefault(m.file, []).append(m)
+    for rel, ms in found.items():
+        broken = spans(ms, UNPARSED)
+        if broken:
+            notes.append(f"ast-grep can't parse {rel} from line {broken[0][0]}: smells there go unmeasured")
+            found[rel] = [m for m in ms if m.rule != UNPARSED and not inside(m.line, broken)]
+    return found
 
 
-def token_end(text: str, m: re.Match) -> int:
-    """Where the comment, string or char literal that `m` starts ends in `text`."""
-    if m["line"] or m["char"]:
-        return m.end()
-    if m["raw"]:
-        end = text.find('"' + m["hashes"], m.end())
-        return len(text) if end < 0 else end + 1 + len(m["hashes"])
-    if m["str"]:
-        found = STRING_END.match(text, m.end())
-        return found.end() if found else len(text)
-    depth, at = 1, m.end()  # a block comment: they nest
-    while depth and at < len(text):
-        nxt = BLOCK_MARK.search(text, at)
-        if not nxt:
-            return len(text)
-        depth += 1 if nxt.group() == "/*" else -1
-        at = nxt.end()
-    return at
+def spans(found: List[Match], rule: str) -> List[Span]:
+    """The first and last line of each match of `rule`."""
+    return [(m.line, m.end) for m in found if m.rule == rule]
 
 
-def clean(text: str) -> Tuple[List[str], List[Comment]]:
-    """The rows of `text` with strings and comments blanked, and the `//` comments that start their line."""
-    text = "\n".join(text.splitlines())  # one kind of line break, so lines count as the file's do
-    out: List[str] = []
-    comments: List[Comment] = []
-    pos = line = 0
-    while True:
-        m = TOKEN.search(text, pos)
-        if not m:
-            break
-        line += text.count("\n", pos, m.start())
-        end = token_end(text, m)
-        if m["line"] and not text[text.rfind("\n", 0, m.start()) + 1:m.start()].strip():
-            comments.append((line + 1, m.group()))
-        out += [text[pos:m.start()], blank(text[m.start():end])]
-        line += text.count("\n", m.start(), end)
-        pos = end
-    return "".join(out + [text[pos:]]).splitlines(), comments
+def inside(line: int, among: List[Span]) -> bool:
+    """Whether `line` lies in one of the spans."""
+    return any(first <= line <= last for first, last in among)
 
 
-def test_start(rel: str, rows: List[str]) -> int:
-    """The index of the first row of test code: 0 in a file under `tests/` or named `tests.rs`, `*_test.rs` or
-    `*_tests.rs`, else the first `#[cfg(test)]`; past the end when there is none."""
-    if re.search(r"(^|/)tests(/|\.rs$)|_tests?\.rs$", rel):
-        return 0
-    return next((n for n, row in enumerate(rows) if re.match(r"\s*#\[cfg\(test\)\]", row)), len(rows))
-
-
-# ---------------------------------------------------------------- magic numbers
-
-NUMBER = re.compile(r"(?:(?<![\w.])|(?<=\.\.))(0x[\da-fA-F_]+|0o[0-7_]+|0b[01_]+|\d[\d_]*(?:\.\d[\d_]*)?(?:[eE][+-]?\d+)?)"
-                    r"(?:_?[iuf](?:8|16|32|64|128|size))?\b")
-# What stands before a number that is compared, computed with, returned or passed; or after one that is compared or
-# computed with. `= 5`, `[0; 64]`, `x[3]` and `field: 8` are none of these.
-# rustfmt sets a comparison's `<` and `>` apart with spaces, and a generic's `<` against its name.
-BEFORE = re.compile(r"(?:==|!=|\s[<>]=?|=>|\.\.=?|<<=?|>>=?|[-+*/%&|^]=?|\breturn)\s*$")
-AFTER = re.compile(r"\s*(?:==|!=|[-+*/%^]|\.\.|<<|>>)|\s+(?:[<>]|&&?|\|\|?)\s")
-ARGUMENT = re.compile(r"[(,]\s*$")
-OPENS = {")": "(", "]": "[", "}": "{", ">": "<"}
-DECLARED = re.compile(r"\s*(?:pub(?:\([^)]*\))?\s+)?(?:const|static)\s")
-ENUM = re.compile(r"\s*(?:pub(?:\([^)]*\))?\s+)?enum\s")
-PLAIN = {"0", "1", "2"}
-
-
-def declared_lines(rows: List[str]) -> Set[int]:
-    """The indexes of rows whose numbers name themselves: attributes, const and static items to their `;`, and enums
-    to their closing brace."""
-    out: Set[int] = set()
-    n = 0
-    while n < len(rows):
-        row = rows[n]
-        if row.lstrip().startswith("#"):
-            out.add(n)
-        elif DECLARED.match(row) or ENUM.match(row):
-            closer = ";" if DECLARED.match(row) else "}"
-            end = next((k for k in range(n, len(rows)) if rows[k].rstrip().endswith(closer)), n)
-            out.update(range(n, end + 1))
-            n = end
-        n += 1
-    return out
+def test_spans(rel: str, found: List[Match]) -> List[Span]:
+    """The lines of test code in the file `rel`: all of a test file, else each item under `#[cfg(test)]` or marked
+    as a test."""
+    return [EVERY_LINE] if TEST_PATH.search(rel) else spans(found, TEST_ITEM)
 
 
 def plain(literal: str) -> bool:
-    """Whether a number literal is 0, 1 or 2, which count things and need no name."""
-    digits = literal.replace("_", "")
-    if digits[:2] in ("0x", "0o", "0b"):
-        return str(int(digits, 0)) in PLAIN
-    try:
-        value = float(digits)
-    except ValueError:
+    """Whether a number literal (one token the tree isolated) is 0, 1 or 2, which count things and need no name."""
+    m = LITERAL.fullmatch(literal.replace("_", ""))
+    if not m:
         return True
-    return value in (0, 1, 2)
-
-
-def innermost(head: str) -> str:
-    """The bracket still open at the end of `head`, the start of a row: `(` of a call, `[` of an array, `<` of a
-    generic (one that follows a name); "" when the row opens none."""
-    closed: List[str] = []
-    for i in range(len(head) - 1, -1, -1):
-        ch = head[i]
-        before = head[i - 1] if i else " "
-        generic = before.isalnum() or before in ("_:" if ch == "<" else "_>)]")
-        if ch in OPENS and (ch != ">" or generic):
-            closed.append(OPENS[ch])
-        elif ch in "([{" or ch == "<" and generic:
-            if not closed:
-                return ch
-            closed.pop()
-    return ""
-
-
-def magic_lines(rows: List[str], start: int) -> Iterator[int]:
-    """The 1-based lines before the test code with a number in a comparison, a computation, a return or a call."""
-    skip = declared_lines(rows)
-    for n, row in enumerate(rows[:start]):
-        if n in skip:
-            continue
-        for m in NUMBER.finditer(row):
-            head = row[:m.start()]
-            used = BEFORE.search(head) or AFTER.match(row, m.end())
-            if not plain(m[1]) and (used or ARGUMENT.search(head) and innermost(head) == "("):
-                yield n + 1
-                break
-
-
-# ---------------------------------------------------------------- comments, globals, tests, handlers
-
-CODE_COMMENT = re.compile(r"//(?![/!])\s*(?:(?:let|fn|use|return)\s.*|.*[;{}])\s*$")
-GLOBAL = re.compile(r"\s*(?:pub(?:\([^)]*\))?\s+)?static\s+(?:mut\b|\w+\s*:[^=]*\b(?:Mutex|RwLock|RefCell|Cell|Atomic\w+"
-                    r"|OnceLock|OnceCell|LazyLock|LazyCell|Lazy)\b)|.*\b(?:thread_local|lazy_static)!\s*[{(]")
-ANY_ERROR = re.compile(r"#\[should_panic\s*\]|\bassert!\s*\(.*\.is_err\(\)\s*\)"
-                       r"|\bassert!\s*\(\s*matches!\s*\(.*,\s*Err\s*\(\s*_\s*\)\s*\)")
-ANY_ERR_ARM = re.compile(r"\bErr\s*\(\s*_\s*\)\s*=>")
-# `catch_unwind(` that starts a statement, alone or assigned to `_`: every panic is caught, and none looked at.
-UNWIND = re.compile(r"^\s*(?P<drop>(?:let\s+)?_\s*(?::[^=]*)?=\s*)?(?:[\w:]+::)?catch_unwind\s*\(")
-
-
-def call_end(text: str, at: int) -> int:
-    """The index just past the `)` that closes the `(` before index `at` in `text`."""
-    depth = 1
-    for i in range(at, len(text)):
-        depth += {"(": 1, ")": -1}.get(text[i], 0)
-        if not depth:
-            return i + 1
-    return len(text)
-
-
-def dropped_unwinds(rows: List[str]) -> Iterator[int]:
-    """The 1-based lines of a `catch_unwind` whose result is dropped: assigned to `_`, or a statement of its own."""
-    text = "\n".join(rows)
-    offsets = [0]
-    for row in rows:
-        offsets.append(offsets[-1] + len(row) + 1)
-    for n, row in enumerate(rows):
-        m = UNWIND.match(row)
-        if m and (m["drop"] or re.match(r"\s*(?:\.ok\(\))?\s*;", text[call_end(text, offsets[n] + m.end()):])):
-            yield n + 1
+    value = int(m["int"], 0) if m["int"] else float(m["float"])
+    return value in PLAIN
 
 
 # ---------------------------------------------------------------- types with their impls
 
-TYPE_START = re.compile(r"(?:pub(?:\([^)]*\))?\s+)?(?:unsafe\s+)?(?:struct|enum|trait|union)\s+(\w+)")
 
-
-def impl_target(row: str) -> str:
-    """The name of the type an `impl` row is for: `impl<T> Trait for path::Name<T> {` is for `Name`; "" for a row
-    that isn't an impl."""
-    head = re.match(r"(?:unsafe\s+)?impl\b", row)
-    if not head:
-        return ""
-    rest, depth = "", 0
-    for ch in row[head.end():].replace("->", "  "):  # leave out every generic argument
-        depth += {"<": 1, ">": -1}.get(ch, 0)
-        rest += ch if not depth and ch != ">" else ""
-    rest = re.split(r"\bfor\b", rest)[-1] if re.search(r"\bfor\b", rest) else rest
-    name = re.match(r"\s*(?:[&*]\s*(?:mut\s+)?)?(?:dyn\s+)?((?:\w+::)*\w+)", rest)
-    return name[1].rsplit("::", 1)[-1] if name else ""
-
-
-def block_end(rows: List[str], start: int) -> int:
-    """The index of the row that closes the item opened on row `start`: that row when it ends in `;` or `}`, else
-    the next row with `}` or `)` at its first column."""
-    if rows[start].rstrip().endswith((";", "}")):
-        return start
-    return next((n for n in range(start + 1, len(rows)) if rows[n].startswith(("}", ")"))), len(rows) - 1)
-
-
-def type_sizes(rows: List[str]) -> Dict[str, List[int]]:
-    """Per type declared or implemented at the top level of the file, the line it is first seen on and its lines
-    there: its declaration plus every impl of it. impls in other files aren't added."""
+def type_sizes(found: List[Match]) -> Dict[str, List[int]]:
+    """Per type declared or implemented in the file, the line it is first seen on and its lines there: its item plus
+    every impl of it. impls in other files aren't added."""
     sizes: Dict[str, List[int]] = {}
-    n = 0
-    while n < len(rows):
-        found = TYPE_START.match(rows[n])
-        name = found[1] if found else impl_target(rows[n])
-        if not name:
-            n += 1
-            continue
-        end = block_end(rows, n)
-        sizes.setdefault(name, [n + 1, 0])[1] += end - n + 1
-        n = end + 1
+    for m in sorted(found, key=lambda m: m.line):
+        name = m.caught.get("NAME")
+        if m.smell == TYPE_LINES and name:
+            sizes.setdefault(name, [m.line, 0])[1] += m.lines
     return sizes
 
 
-def line_smells(rows: List[str], start: int) -> Iterator[Tuple[int, str]]:
-    """The 1-based line and smell of each row of cleaned code that holds one on its own: global state, an arm for
-    any error and, from the test code at index `start` on, an assertion that any error passes."""
-    for n, row in enumerate(rows):
-        if GLOBAL.match(row):
-            yield n + 1, "globals"
-        if ANY_ERR_ARM.search(row):
-            yield n + 1, "broad_catch"
-        if n >= start and ANY_ERROR.search(row):
-            yield n + 1, "broad_test_asserts"
+# ---------------------------------------------------------------- commented-out code
+
+Comment = Tuple[str, int, str]  # the file, the line and the text after `//` of a comment
+
+
+def own_lines(root: Path, rel: str, found: List[Match]) -> List[Match]:
+    """The comments among `found` that start their line in the file `rel`: one after code on its line is a note on
+    that code."""
+    try:
+        rows = (root / rel).read_text(errors="replace").splitlines()
+    except OSError:
+        return []
+    return [m for m in found if m.smell == "commented_code" and m.line <= len(rows)
+            and rows[m.line - 1].lstrip().startswith(m.caught.get("C", "//"))]
+
+
+def comment_runs(root: Path, found: Dict[str, List[Match]]) -> List[List[Comment]]:
+    """The `//` comments of each file that aren't doc comments and start their line, in runs of comments on lines
+    one after another."""
+    runs: List[List[Comment]] = []
+    for rel, ms in found.items():
+        last = -1
+        for m in sorted(own_lines(root, rel, ms), key=lambda m: m.line):
+            comment = (rel, m.line, m.caught.get("C", "")[2:])
+            if m.line == last + 1:
+                runs[-1].append(comment)
+            else:
+                runs.append([comment])
+            last = m.line
+    return runs
+
+
+def as_one_body(lines: List[str]) -> str:
+    """A probe file that holds comment texts `lines` as the body of one function."""
+    return "fn broom_probe() {\n" + "\n".join(lines) + "\n}\n"
+
+
+def one_body_each(lines: List[str]) -> str:
+    """A probe file that holds each of the comment texts `lines` as the body of a function of its own, which takes
+    `PROBE_LINES` lines."""
+    return "".join(f"fn broom_probe() {{\n{line}\n}}\n" for line in lines)
+
+
+def probe(sources: List[str], notes: List[str]) -> List[Tuple[List[Span], bool]]:
+    """Per probe file of `sources`, the lines (1-based) of each statement, item or expression of more than one word
+    that ast-grep reads as a probe function's body and that no unreadable region touches; and whether the file holds
+    such a region at all."""
+    with tempfile.TemporaryDirectory() as tmp:
+        names = [f"c{n}.rs" for n in range(len(sources))]
+        for name, source in zip(names, sources):
+            (Path(tmp) / name).write_text(source)
+        found = matches(Path(tmp), names, notes, TOOL_TIMEOUT, PROBE) if names else []
+    code: Dict[str, List[Span]] = {name: [] for name in names}
+    broken: Dict[str, List[Span]] = {name: [] for name in names}
+    for m in found:
+        (code if m.rule == "rust-probe-code" else broken)[m.file].append((m.line, m.end))
+    return [([(first, last) for first, last in code[name] if not any(a <= last and first <= b for a, b in broken[name])],
+             bool(broken[name])) for name in names]
+
+
+def commented_code(root: Path, found: Dict[str, List[Match]], notes: List[str]) -> Iterator[Tuple[str, int]]:
+    """The file and line of each comment where code starts: read with the comments around it as one body, and where
+    prose around it breaks that, each comment alone."""
+    runs = comment_runs(root, found)
+    whole = probe([as_one_body([c[2] for c in run]) for run in runs], notes)
+    starts = [{first - PROBE_HEAD for first, _ in spans} for spans, _ in whole]
+    broken = [n for n, (_, bad) in enumerate(whole) if bad and len(runs[n]) > 1]
+    alone = probe([one_body_each([c[2] for c in runs[n]]) for n in broken], notes)
+    for n, (spans, _) in zip(broken, alone):
+        covered = [(a - PROBE_HEAD, b - PROBE_HEAD) for a, b in whole[n][0]]
+        found_alone = {(a - PROBE_HEAD) // PROBE_LINES for a, _ in spans if (a - PROBE_HEAD) % PROBE_LINES == 0}
+        starts[n] |= {k for k in found_alone if not inside(k, covered)}
+    for run, indexes in zip(runs, starts):
+        yield from (run[n][:2] for n in sorted(indexes))
+
+
+# ---------------------------------------------------------------- the rows
+
+
+def file_rows(r: Reader, rel: str, found: List[Match], lim: Limits) -> None:
+    """Add the rows of one file's matches: its long types, and each smell a match is where it stands."""
+    for name, (line, size) in type_sizes(found).items():
+        r.add(rel, line, TYPE_LINES, size if size > lim[TYPE_LINES][0] else None, name)
+    tests = test_spans(rel, found)
+    for m in found:
+        if m.smell in WHOLE or m.smell in INSIDE_TESTS and inside(m.line, tests):
+            r.add(rel, m.line, m.smell, 1)
+        elif m.smell in OUTSIDE_TESTS and not inside(m.line, tests) and not plain(m.caught.get("N", "0")):
+            r.add(rel, m.line, m.smell, 1)
 
 
 def rust_text(r: Reader, rels: List[str], lim: Limits) -> None:
-    """Add the rows read from the text of the Rust files `rels`."""
-    for rel in rels:
-        rows, comments = clean((r.root / rel).read_text(errors="replace"))
-        for name, (line, size) in type_sizes(rows).items():
-            r.add(rel, line, TYPE_LINES, size if size > lim[TYPE_LINES][0] else None, name)
-        start = test_start(rel, rows)
-        for line in magic_lines(rows, start):
-            r.add(rel, line, "magic_numbers", 1)
-        for line, comment in comments:
-            if CODE_COMMENT.match(comment):
-                r.add(rel, line, "commented_code", 1)
-        for line in dropped_unwinds(rows):
-            r.add(rel, line, "broad_catch", 1)
-        for line, metric in line_smells(rows, start):
-            r.add(rel, line, metric, 1)
+    """Add the rows read from the syntax trees of the Rust files `rels`."""
+    found = rust_tree(r.root, rels, r.notes)
+    for rel, ms in found.items():
+        file_rows(r, rel, ms, lim)
+    for rel, line in commented_code(r.root, found, r.notes):
+        r.add(rel, line, "commented_code", 1)
+
+
+def files_with_tests(root: Path, rels: List[str]) -> Optional[Set[str]]:
+    """Those of the Rust files `rels` under `root` that hold a test or a `#[cfg(test)]` item; None when the tree
+    can't be read (no ast-grep), so that no file is taken for untested."""
+    notes: List[str] = []
+    found = rust_tree(root, rels, notes)
+    if any(n.startswith(("missing:", "timeout:", "failed:")) for n in notes):
+        return None
+    return {rel for rel, ms in found.items() if spans(ms, TEST_ITEM)}

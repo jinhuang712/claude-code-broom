@@ -1,0 +1,10 @@
+# A `//` comment that isn't a doc comment, with its text ($C). Whether it holds code is decided by parsing what it
+# says: broom's Python hands each one to ast-grep again, in a function body of its own (defaults/sg/probe/).
+id: rust-line-comment
+language: rust
+message: a line comment
+metadata: {smell: commented_code}
+rule:
+  kind: line_comment
+  pattern: $C
+  not: {has: {field: doc, kind: doc_comment}}

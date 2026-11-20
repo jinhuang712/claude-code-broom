@@ -1,0 +1,91 @@
+# Each path a Rust `use` declaration names, for the cycles between files and folders (lib/broom/rustcycles.py): a
+# leaf of its use tree ($LEAF: a path, an alias's path, a glob's path) and the paths of the groups around it, outer
+# first ($P1, $P2, $P3). `use crate::{a::X, b::{self, Y as Z}}` names crate::a::X, crate::b::self and crate::b::Y.
+# These name no smell. A group nested deeper than three is left out.
+id: rust-use-0
+language: rust
+message: a path a use names
+utils:
+  leaf:
+    any:
+      - any: [{kind: identifier}, {kind: scoped_identifier}, {kind: self}, {kind: crate}, {kind: super}]
+        pattern: $LEAF
+      - {kind: use_as_clause, has: {field: path, pattern: $LEAF}}
+      - {kind: use_wildcard, has: {nthChild: 1, pattern: $LEAF}}
+rule:
+  matches: leaf
+  any:
+    - inside: {kind: use_declaration}
+    - inside: {kind: use_list, inside: {kind: use_declaration}}
+---
+id: rust-use-1
+language: rust
+message: a path a use names
+utils:
+  leaf:
+    any:
+      - any: [{kind: identifier}, {kind: scoped_identifier}, {kind: self}, {kind: crate}, {kind: super}]
+        pattern: $LEAF
+      - {kind: use_as_clause, has: {field: path, pattern: $LEAF}}
+      - {kind: use_wildcard, has: {nthChild: 1, pattern: $LEAF}}
+rule:
+  matches: leaf
+  inside:
+    kind: use_list
+    inside:
+      kind: scoped_use_list
+      has: {field: path, pattern: $P1}
+      inside: {kind: use_declaration}
+---
+id: rust-use-2
+language: rust
+message: a path a use names
+utils:
+  leaf:
+    any:
+      - any: [{kind: identifier}, {kind: scoped_identifier}, {kind: self}, {kind: crate}, {kind: super}]
+        pattern: $LEAF
+      - {kind: use_as_clause, has: {field: path, pattern: $LEAF}}
+      - {kind: use_wildcard, has: {nthChild: 1, pattern: $LEAF}}
+rule:
+  matches: leaf
+  inside:
+    kind: use_list
+    inside:
+      kind: scoped_use_list
+      has: {field: path, pattern: $P2}
+      inside:
+        kind: use_list
+        inside:
+          kind: scoped_use_list
+          has: {field: path, pattern: $P1}
+          inside: {kind: use_declaration}
+---
+id: rust-use-3
+language: rust
+message: a path a use names
+utils:
+  leaf:
+    any:
+      - any: [{kind: identifier}, {kind: scoped_identifier}, {kind: self}, {kind: crate}, {kind: super}]
+        pattern: $LEAF
+      - {kind: use_as_clause, has: {field: path, pattern: $LEAF}}
+      - {kind: use_wildcard, has: {nthChild: 1, pattern: $LEAF}}
+rule:
+  matches: leaf
+  inside:
+    kind: use_list
+    inside:
+      kind: scoped_use_list
+      has: {field: path, pattern: $P3}
+      inside:
+        kind: use_list
+        inside:
+          kind: scoped_use_list
+          has: {field: path, pattern: $P2}
+          inside:
+            kind: use_list
+            inside:
+              kind: scoped_use_list
+              has: {field: path, pattern: $P1}
+              inside: {kind: use_declaration}

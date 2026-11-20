@@ -1,0 +1,7 @@
+# A region of a Rust file that ast-grep's grammar can't read. broom's Python leaves the matches inside it out and
+# says so in a note: a smell the parser can't see is not guessed (decision 038).
+id: rust-unparsed
+language: rust
+message: a region the grammar can't read
+rule:
+  kind: ERROR

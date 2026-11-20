@@ -306,7 +306,8 @@ def measure_swift(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None
 
 
 def measure_rust(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None:
-    """Measure the Rust files from their text: clippy, which needs the crate, runs in the real tree (realtree.py)."""
+    """Measure the Rust files from their syntax trees: clippy, which needs the crate, runs in the real tree
+    (realtree.py)."""
     rust_text(r, rels, lim)
 
 
