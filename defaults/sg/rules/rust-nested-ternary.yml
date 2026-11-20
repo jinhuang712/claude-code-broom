@@ -1,5 +1,6 @@
 # Rust's ternary is an `if` with an `else` that gives a value. It nests when a branch's value is itself such an
-# `if`: the block's last expression, or an `else if`. The outer `if` must stand where a value goes: a let's
+# `if`: a block's last expression. An `else if` chain is Rust's way to write several cases and stays flat, so it
+# doesn't count. The outer `if` must stand where a value goes: a let's
 # initializer, an argument, a return, a function's or closure's last expression, an assignment's right side or a
 # match arm's value. An `if` that is a statement doesn't count, nor one without an `else`, which gives no value.
 id: rust-nested-ternary
@@ -17,9 +18,7 @@ utils:
           has: {matches: last-is-if}
       - has:
           field: alternative
-          any:
-            - has: {matches: valued-if}
-            - has: {kind: block, has: {matches: last-is-if}}
+          has: {kind: block, has: {matches: last-is-if}}
   last-is-if:
     nthChild: {position: 1, reverse: true}
     any:

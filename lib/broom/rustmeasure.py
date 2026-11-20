@@ -16,7 +16,7 @@ from typing import Dict, Iterator, List, Optional, Set, Tuple
 
 from .reading import TOOL_TIMEOUT, Limits, Reader
 from .state import DEFAULTS
-from .syntax import Match, matches
+from .syntax import Match, Rules, matches
 
 TYPE_LINES = "type_lines"
 PROBE = DEFAULTS / "sg" / "probe" / "sgconfig.yml"
@@ -37,14 +37,16 @@ PROBE_HEAD = 2  # the line of a probe file that holds the comment's first line: 
 PROBE_LINES = 3  # the lines one comment takes when each has a probe function of its own
 Span = Tuple[int, int]
 BATCH = 2000  # files per run of ast-grep: a command line holds only so many paths
+RUST_RULES = Rules(only="^rust-")  # the smells; the cycle graph and clippy's reading each need fewer
+FN_RULES = Rules(only="^rust-(fn-|unparsed)")  # the functions and parameters clippy's messages are read against
 
 
-def rust_tree(root: Path, rels: List[str], notes: List[str]) -> Dict[str, List[Match]]:
-    """The matches of broom's rules in the Rust files `rels` under `root`, per file. What lies in a region the grammar
-    can't read is left out, with a note for the file."""
+def rust_tree(root: Path, rels: List[str], notes: List[str], rules: Rules = RUST_RULES) -> Dict[str, List[Match]]:
+    """The matches of broom's Rust `rules` in the Rust files `rels` under `root`, per file. What lies in a region the
+    grammar can't read is left out, with a note for the file."""
     found: Dict[str, List[Match]] = {rel: [] for rel in rels}
     for start in range(0, len(rels), BATCH):
-        for m in matches(root, rels[start:start + BATCH], notes, TOOL_TIMEOUT):
+        for m in matches(root, rels[start:start + BATCH], notes, TOOL_TIMEOUT, rules):
             found.setdefault(m.file, []).append(m)
     for rel, ms in found.items():
         broken = spans(ms, UNPARSED)
@@ -144,7 +146,7 @@ def probe(sources: List[str], notes: List[str]) -> List[Tuple[List[Span], bool]]
         names = [f"c{n}.rs" for n in range(len(sources))]
         for name, source in zip(names, sources):
             (Path(tmp) / name).write_text(source)
-        found = matches(Path(tmp), names, notes, TOOL_TIMEOUT, PROBE) if names else []
+        found = matches(Path(tmp), names, notes, TOOL_TIMEOUT, Rules(PROBE)) if names else []
     code: Dict[str, List[Span]] = {name: [] for name in names}
     broken: Dict[str, List[Span]] = {name: [] for name in names}
     for m in found:

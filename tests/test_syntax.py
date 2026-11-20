@@ -20,12 +20,15 @@ rule:
 
 
 class SyntaxTest(BroomCase):
+    def config_path(self):
+        return self.tmp / "sg" / "sgconfig.yml"
+
     def config(self):
         rules = self.tmp / "sg" / "rules"
         rules.mkdir(parents=True)
         (rules / "static.yml").write_text(RULE)
         (self.tmp / "sg" / "sgconfig.yml").write_text("ruleDirs:\n  - rules\n")
-        return self.tmp / "sg" / "sgconfig.yml"
+        return syntax.Rules(self.tmp / "sg" / "sgconfig.yml")
 
     @unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
     def test_a_rule_matches_the_node_and_not_the_same_text_in_a_string(self) -> None:
@@ -36,6 +39,8 @@ class SyntaxTest(BroomCase):
         (m,) = syntax.matches(src, ["m.rs"], notes, 30, self.config())
         self.assertEqual((m.file, m.line, m.lines, m.smell, m.caught["N"]), ("m.rs", 1, 1, "globals", "X"))
         self.assertEqual(notes, [])
+        narrowed = syntax.Rules(self.config_path(), only="^other-")
+        self.assertEqual(syntax.matches(src, ["m.rs"], notes, 30, narrowed), [], "a run applies only the rules it names")
 
     @unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
     def test_a_line_separator_inside_a_match_keeps_it_one_match(self) -> None:

@@ -78,7 +78,7 @@ class TreeTest(BroomCase):
         self.assertEqual(self.lines("broad_test_asserts", *body, rel="tests/it.rs"), [2, 4, 5, 6])
         self.assertEqual(self.lines("broad_test_asserts", "fn f() {", "    assert!(f().is_err());", "}"), [])
 
-    def test_a_nested_if_counts_where_it_gives_a_value(self) -> None:
+    def test_a_nested_if_counts_where_it_gives_a_value_and_an_else_if_chain_stays_flat(self) -> None:
         self.assertEqual(self.lines("nested_ternary", "fn f() -> i32 {",
                                     "    let x = if a { if b { 1 } else { 2 } } else { 3 };",
                                     "    let y = if a { 1 } else if b { 2 } else { 3 };",
@@ -86,7 +86,7 @@ class TreeTest(BroomCase):
                                     "    if a { if b { g() } else { h() } } else { k() }",
                                     "    g(if a { 1 } else { if b { 2 } else { 3 } });",
                                     "    if a { if b { g(); } }",
-                                    "    if a { if b { 1 } else { 2 } } else { 3 }", "}"), [2, 3, 6, 8])
+                                    "    if a { if b { 1 } else { 2 } } else { 3 }", "}"), [2, 6, 8])
 
     def test_a_region_the_grammar_cannot_read_is_left_out_with_a_note(self) -> None:
         (self.tmp / "a.rs").write_text("fn f() {\n    @ x * 86400 @\n}\n")

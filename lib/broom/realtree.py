@@ -23,7 +23,7 @@ from .langlint import golangci_cache
 from .pycycles import import_cycles
 from .rustcycles import rust_folder_cycles, rust_import_cycles
 from .rustlint import RUST_LINTS, RUST_FLAGS, config_text, read as rust_read, thresholds
-from .rustmeasure import rust_tree
+from .rustmeasure import FN_RULES, rust_tree
 from .state import DATA_ROOT, prune_dirs, short_hash
 from .swiftcheck import swift_deprecated
 from .swiftmeasure import swift_unused
@@ -241,9 +241,7 @@ def message_found(repo: Path, crate: Path, message: dict, soft: Dict[str, int],
         rel = locate(repo, crate, span["file_name"])
         if rel is None:
             continue
-        if rel not in trees:
-            trees[rel] = rust_tree(repo, [rel], []).get(rel, [])
-        read = rust_read(metric, message, span, trees[rel], soft)
+        read = rust_read(metric, message, span, trees.get(rel, []), soft)
         if read:
             yield Found(rel, int(span["line_start"]), metric, "clippy", *read)
 
@@ -251,8 +249,11 @@ def message_found(repo: Path, crate: Path, message: dict, soft: Dict[str, int],
 def rust_messages(repo: Path, crate: Path, out: str, soft: Dict[str, int]) -> List[Found]:
     """What clippy and rustc found, as the smells RUST_LINTS names. `soft` holds the soft limits clippy ran with."""
     found: Dict[Tuple[str, int, str, str], Found] = {}
-    trees: Dict[str, List[Match]] = {}
-    for message in diagnostics(out):
+    messages = list(diagnostics(out))
+    named = {rel for m in messages for s in m.get("spans") or [] if s.get("is_primary")
+             for rel in [locate(repo, crate, s["file_name"])] if rel is not None}
+    trees = rust_tree(repo, sorted(named), [], FN_RULES)  # one run of ast-grep for every file the messages name
+    for message in messages:
         for row in message_found(repo, crate, message, soft, trees):
             found.setdefault((row.rel, row.line, row.metric, row.key), row)  # a crate built twice says things twice
     return list(found.values())

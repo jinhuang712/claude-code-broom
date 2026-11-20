@@ -20,7 +20,9 @@ from .foldercycles import Place, folder_of, graph_folder_cycles
 from .gitutil import git
 from .pycycles import Edge, ImportGraph
 from .rustmeasure import inside, rust_tree, test_spans
-from .syntax import Match
+from .syntax import Match, Rules
+
+USE_RULES = Rules(only="^rust-(use-|test-item|unparsed)")  # the graph needs the `use` paths and where tests are
 
 Module = Tuple[str, Tuple[str, ...]]  # a crate's `src/` folder and a module's path in it
 GROUPS = ("P1", "P2", "P3")
@@ -89,7 +91,7 @@ class RustGraph(ImportGraph):
     def paths(self, rel: str) -> List[Match]:
         """The `use` paths and test items of the file `rel`, read with every module's in one pass of ast-grep."""
         if self.uses is None:
-            self.uses = rust_tree(self.repo, sorted(set(self.modules.values())), [])
+            self.uses = rust_tree(self.repo, sorted(set(self.modules.values())), [], USE_RULES)
         return self.uses.get(rel, [])
 
     def _read(self, rel: str) -> List[Edge]:

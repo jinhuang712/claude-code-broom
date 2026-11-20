@@ -50,8 +50,24 @@ def parse(row: dict) -> Match:
                  caught={k: str(v.get("text", "")) for k, v in single.items()})
 
 
-def matches(root: Path, rels: List[str], notes: List[str], timeout: float, config: Path = SG_CONFIG) -> List[Match]:
-    """Every match of broom's rules in the files `rels` (relative to `root`). A missing ast-grep, a timeout or a
+@dataclass(frozen=True)
+class Rules:
+    """Which rules a run applies: those under `config`, narrowed to the ids the regular expression `only` matches
+    (ast-grep's `--filter`), or all of them when it is empty. A run that needs a few rules pays for those alone."""
+
+    config: Path = SG_CONFIG
+    only: str = ""
+
+    def args(self) -> List[str]:
+        """The arguments of `ast-grep scan` that pick these rules."""
+        return ["--config", str(self.config), *(["--filter", self.only] if self.only else [])]
+
+
+ALL = Rules()
+
+
+def matches(root: Path, rels: List[str], notes: List[str], timeout: float, rules: Rules = ALL) -> List[Match]:
+    """Every match of the `rules` in the files `rels` (relative to `root`). A missing ast-grep, a timeout or a
     failure gives nothing and a note."""
     if not rels:
         return []
@@ -59,7 +75,7 @@ def matches(root: Path, rels: List[str], notes: List[str], timeout: float, confi
     if not exe:
         notes.append(MISSING)
         return []
-    rc, out, err = run([exe, "scan", "--config", str(config), "--json=stream", "--include-metadata", *rels], root,
+    rc, out, err = run([exe, "scan", *rules.args(), "--json=stream", "--include-metadata", *rels], root,
                        timeout=timeout)
     if rc is None:
         notes.append("timeout:ast-grep reading the syntax tree")
