@@ -9,6 +9,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Pattern, Tuple
 
+from .swiftcalls import skips, test_cases
+from .swiftkit import comment_lines, open_text
 from .testrot import SKIPS, TEST_FILE
 from .treefacts import TREE_LANGS, Tree, py_comments, py_tests
 from .waivers import MARKERS, suppression_in
@@ -19,11 +21,10 @@ def rx(pattern: str) -> Pattern[str]:
     return re.compile(pattern, re.M)
 
 
-# Per language no tree reads yet: how a test case is written, and how one is skipped (testrot). Swift is read in test
-# files only (`.disabled` means other things elsewhere); Rust keeps its tests next to the code.
+# Per language no tree reads yet: how a test case is written, and how one is skipped (testrot). Python, Go and TS/JS
+# are read from their trees (treefacts) and Swift from its own (swift_facts); Rust keeps its tests next to the code.
 FORMS: Dict[str, Tuple[Pattern[str], Pattern[str]]] = {
     "rust": (rx(r"#\[(?:\w+::)*test\b[^\]]*\]"), SKIPS["rust"]),
-    "swift": (rx(r"^[ \t]*(?:@\w+[ \t]+)*func[ \t]+test\w*[ \t]*\(|^[ \t]*@Test\b"), SKIPS["swift"]),
 }
 TODO_WORD = re.compile(r"\b(?:TODO|FIXME|HACK|XXX)\b")
 # The word as a marker in a comment: its first word, or followed by a colon or a bracket. "a TODO in the list" is
@@ -33,7 +34,6 @@ STRING = r"\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*'"  # a string that ends on its 
 # What opens a comment or a string that may run past its line, per language: opener -> (closer, is a comment).
 BLOCKS: Dict[str, Dict[str, Tuple[str, bool]]] = {
     "rust": {"/*": ("*/", True)},
-    "swift": {"/*": ("*/", True), '"""': ('"""', False)},
     "css": {"/*": ("*/", True)},
 }
 
@@ -150,10 +150,26 @@ def scan(rel: str, lang: str, text: str, tree: Optional[Tree] = None) -> Facts:
     facts = Facts(rel, lang, bool(TEST_FILE.search(rel)), sum(1 for row in rows if row.strip()))
     if lang in TREE_LANGS:
         return from_tree(facts, python_tree(text, facts) if lang == "py" else tree)
+    if lang == "swift":
+        return swift_facts(facts, text)
     if facts.test or lang == "rust":
         facts.cases, facts.skipped = count_tests(lang, text)
     if MARKERS.search(text):
         facts.suppressions = suppression_kinds(rows)
     if TODO_WORD.search(text):
         facts.todos = todo_lines(lang, rows)
+    return facts
+
+
+def swift_facts(facts: Facts, text: str) -> Facts:
+    """`facts` with what a Swift file's tree and tokens hold (swiftcalls): its test cases and skipped tests, and the
+    suppressions and TODOs of its comments. Without SourceKit, none."""
+    source = open_text(text)
+    if source is None:
+        return facts
+    if facts.test:
+        facts.cases, facts.skipped = test_cases(source), sum(1 for _ in skips(source))
+    lines = comment_lines(source)
+    facts.suppressions = suppression_kinds([comment for _, comment in lines])
+    facts.todos = [n for n, comment in lines if TODO_MARK.search(comment)]
     return facts

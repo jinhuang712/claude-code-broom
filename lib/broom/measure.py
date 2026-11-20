@@ -18,6 +18,7 @@ from .gomeasure import go_text
 from .jsmeasure import measure_js
 from .reading import TOOL_TIMEOUT, Limits, Raw, Reader, match, number, quoted_name
 from .rustmeasure import rust_text
+from .swiftkit import import_lines
 from .swiftmeasure import swift_text
 from .toolchain import CSS_EXTS, GO_EXTS, JS_EXTS, PY_EXTS, RS_EXTS, SWIFT_EXTS
 
@@ -41,13 +42,15 @@ IMPORT_START = {
     **{ext: re.compile(r"import\s+[\w.]|from\s+[\w.]+\s+import\b") for ext in PY_EXTS},
     **{ext: JS_IMPORT for ext in JS_EXTS},
     **{ext: re.compile(r"import\b") for ext in GO_EXTS},
-    **{ext: re.compile(r"(@testable\s+)?import\s") for ext in SWIFT_EXTS},
 }
 
 
 def code_lines(rel: str, text: str) -> int:
-    """The file's lines besides its imports, for telling a longer file from longer imports."""
+    """The file's lines besides its imports, for telling a longer file from longer imports. Swift's imports are its
+    `import` keywords, as SourceKit's tokens give them."""
     rows = text.splitlines()
+    if Path(rel).suffix in SWIFT_EXTS:
+        return len(rows) - import_lines(text)
     start = IMPORT_START.get(Path(rel).suffix)
     if start is None:
         return len(rows)
@@ -242,51 +245,17 @@ SWIFTLINT_METRICS = {
 }
 
 
-# SwiftLint custom rules of broom's own, for what it has no rule for: what a regex on the source can see.
-SWIFT_CUSTOM_RULES = {
-    # The name must not follow a dot or a word character: `printer.print(` is a method, not the global function.
-    "debug_output": {"regex": r"(?<![\w.])(print|debugPrint|NSLog|dump)\(", "match_kinds": ["identifier"]},
-    # Two `?` and two `:` with spaces around them on one line: a ternary in a ternary. `x?.y` and `[k: v]` have none.
-    "nested_ternary": {"regex": r"\s\?\s[^\n]*?\s\?\s[^\n]*?\s:\s[^\n]*?\s:\s",
-                       "excluded_match_kinds": ["comment", "string"]},
-    # A `var` at the start of a line is file-level state; a script's main.swift is made of it.
-    "globals": {"regex": r"^(public |internal |fileprivate |private )?var\s", "excluded": r".*main\.swift"},
-    # An unlabeled Bool (`_ flag: Bool`) is called as `f(true)`: the boolean trap. A labeled one reads fine there.
-    "bool_params": {"regex": r"func\s+\w+[^\n]*[(,]\s*_\s+\w+\s*:\s*Bool\b",
-                    "excluded_match_kinds": ["comment", "string"]},
-    # A `//` comment, not a `///` doc comment, that holds a declaration, an assignment, a call or a `return`, or
-    # ends as a statement or a block does.
-    "commented_code": {"regex": r"//(?!/)[ \t]*(?:(?:let|var)\s+\w+\s*[:=]|func\s+\w+\(|return\b[^\n]*$|"
-                                r"[\w.\[\]]+\s*[-+*/]?=\s*\S|[\w.]+\([^\n]*\)[ \t]*$|[^\n]*[;{}][ \t]*$)",
-                       "match_kinds": ["comment"]},
-    # In a test file, a check that some error is thrown, any error: `XCTAssertThrowsError` with no handler to look
-    # at it, or swift-testing's `#expect(throws: (any Error).self)`.
-    "broad_test_asserts": {"regex": r"\bXCTAssertThrowsError\((?![^\n]*errorHandler)[^\n]*\)[ \t]*$|"
-                                    r"#(?:expect|require)\(\s*throws:\s*\(?(?:any\s+)?Error\)?\.self",
-                           "included": r".*(/[Tt]ests?/.*|Tests?\.swift)$",
-                           "excluded_match_kinds": ["comment", "string"]},
-}
-
-
-def yaml_value(value: object) -> str:
-    """A YAML scalar for `value`: a list as a flow sequence, anything else as a quoted string."""
-    return f"[{', '.join(value)}]" if isinstance(value, list) else f"'{value}'"
-
-
 def swiftlint_config(lim: Limits) -> str:
-    """The SwiftLint config text: the size rules at the limits in `lim`, and broom's custom rules."""
-    rows = [f"only_rules: [{', '.join([*SWIFTLINT_METRICS, 'custom_rules'])}]"]
+    """The SwiftLint config text: the size rules at the limits in `lim`. What SwiftLint has no rule for is read from
+    the syntax tree (swiftmeasure)."""
+    rows = [f"only_rules: [{', '.join(SWIFTLINT_METRICS)}]"]
     rows += [f"{rule}: {{warning: {lim[metric][0]}, error: {UNREACHABLE}}}" for rule, metric in SWIFTLINT_SIZES.items()]
-    rows.append("custom_rules:")
-    for name, rule in SWIFT_CUSTOM_RULES.items():
-        rows += [f"  {name}:", *(f"    {key}: {yaml_value(value)}" for key, value in rule.items()),
-                 f"    message: {name}", "    severity: warning"]
     return "\n".join(rows) + "\n"
 
 
 def measure_swift(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None:
-    """Measure the Swift files: the smells read from the source, then the rest with swiftlint, under a config with
-    the size and custom rules; no swiftlint, a note."""
+    """Measure the Swift files: the smells read from the syntax tree, then the rest with swiftlint, under a config
+    with the size rules; no swiftlint, a note."""
     swift_text(r, rels, lim)
     exe = shutil.which("swiftlint")
     if not exe:
@@ -298,10 +267,9 @@ def measure_swift(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None
                      timeout=TOOL_TIMEOUT)
     for d in r.json(rc, out, []):
         rule = d.get("rule_id", "")
-        metric = SWIFTLINT_METRICS.get(rule) or (rule if rule in SWIFT_CUSTOM_RULES else None)
+        metric = SWIFTLINT_METRICS.get(rule)
         if metric:
-            counted = metric in SMELL_PRESENCE or metric in SWIFT_CUSTOM_RULES
-            value = 1 if counted else number(r"(\d+)\D*$", d.get("reason", ""))
+            value = 1 if metric in SMELL_PRESENCE else number(r"(\d+)\D*$", d.get("reason", ""))
             r.add(d.get("file", ""), int(d.get("line") or 0), metric, value)
 
 

@@ -281,7 +281,7 @@ def waived(found: List[dict], turn: Optional[Path]) -> None:
 NOTE_NAMES = {"golangci-lint": ("golangci-lint", "go:"), "go vet": ("go vet", "go:"), "clippy": ("clippy", "cargo"),
               "swift build": ("swift",)}
 LANGUAGE_TOOLS = {"py": ("ruff",), "go": ("golangci-lint",), "js": ("oxlint",), "css": ("oxlint",),
-                  "swift": ("swiftlint",), "rust": ("cargo",)}
+                  "swift": ("swiftlint", "swiftc", "sourcekitd"), "rust": ("cargo",)}
 PY_NATIVE = {"function_lines", "type_lines", "file_lines", "nested_ternary"}  # Python's own parser measures these
 TOOLS_OF_RULE = {"duplicate_lines": ("jscpd",), "dead_code": ("jscpd",), "folder_cycle": ("dependency-cruiser",)}
 

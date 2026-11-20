@@ -20,21 +20,21 @@ from .maintained import Maintained, generated
 from .reading import Limits, Raw
 from .rustmeasure import files_with_tests
 from .smell import Smell, level
+from .swiftcalls import skips
+from .swiftkit import open_text
 from .toolchain import lang_of
 from .treefacts import TREE_LANGS, skip_trees
 
 TEST_FILE = re.compile(r"(^|/)(tests?|__tests__|Tests)/|_test\.(go|py)$|(^|/)test_[^/]*\.py$|"
                        r"\.(test|spec)\.[cm]?[jt]sx?$|Tests?\.swift$")
-# How a test is skipped or disabled, in the languages no syntax tree reads it from yet (treefacts reads Python, Go and
-# TS/JS). Swift is read in test files only (`.disabled` means other things elsewhere); Rust keeps its tests next to the
-# code.
+# How a test is skipped or disabled, in the languages no syntax tree reads it from yet: treefacts reads Python,
+# Go and TS/JS, and swiftcalls reads Swift. Rust keeps its tests next to the code.
 SKIPS: Dict[str, Pattern[str]] = {lang: re.compile(pattern, re.M) for lang, pattern in {
     "rust": r"#\[ignore\b",
-    "swift": r"\bXCTSkip\w*[ \t]*\(|\.disabled\b",
 }.items()}
 SKIPPED_TEST = "skipped_test"
 # A skip named for its condition; or one that sits behind an `if` on its own line or the line above: a guard.
-CONDITIONED = re.compile(r"skip(?:If|Unless|if)\b|XCTSkip(?:If|Unless)\b")
+CONDITIONED = re.compile(r"skip(?:If|Unless|if)\b")
 GUARD = re.compile(r"\b(?:if|guard|unless)\b")
 GUARDED = re.compile(r"^(?:\}\s*)?(?:if|elif|else|except|catch|guard|case)\b")
 
@@ -61,6 +61,9 @@ def skip_rows(texts: Dict[str, str], notes: Optional[List[str]] = None) -> List[
     tests = {rel: text for rel, text in texts.items() if TEST_FILE.search(rel) or rel.endswith(".rs")}
     out = tree_skip_rows(tests, [] if notes is None else notes)
     for rel, text in tests.items():
+        if lang_of(Path(rel)) == "swift":
+            out += swift_skip_rows(rel, text)
+            continue
         pattern = SKIPS.get(lang_of(Path(rel)) or "")
         if not pattern or not pattern.search(text):
             continue
@@ -71,6 +74,14 @@ def skip_rows(texts: Dict[str, str], notes: Optional[List[str]] = None) -> List[
                 out.append(Raw(rel, n, SKIPPED_TEST, row.strip(), 1, "broom"))
             before = row.strip() or before
     return out
+
+
+def swift_skip_rows(rel: str, text: str) -> List[Raw]:
+    """A row for each skipped or disabled test of a Swift test file that no condition decides, from its tree."""
+    source = open_text(text)
+    rows = text.splitlines()
+    return [Raw(rel, line, SKIPPED_TEST, rows[line - 1].strip(), 1, "broom")
+            for line, conditional in (skips(source) if source else []) if not conditional and line <= len(rows)]
 
 
 # ---------------------------------------------------------------- code with no test beside it
