@@ -1,6 +1,6 @@
 """What broom reads from Rust source itself, for the smells clippy has no lint for: magic numbers, commented-out code,
-global state, how long a type is with its impls, tests that any error passes, handlers that catch every error and an
-`if` expression nested in another's branch.
+global state, how long a type is with its impls (in code lines, decision 039), tests that any error passes, handlers
+that catch every error and an `if` expression nested in another's branch.
 
 Each is read from the syntax tree by ast-grep (decision 038), with the rules in `defaults/sg/rules/rust-*.yml`; this
 file only joins what they match. A region the grammar can't read is left out, with a note. Test code is a file under
@@ -12,7 +12,7 @@ from __future__ import annotations
 import re
 import tempfile
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Set, Tuple
+from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple
 
 from .reading import TOOL_TIMEOUT, Limits, Reader
 from .state import DEFAULTS
@@ -72,14 +72,15 @@ def plain(literal: str) -> bool:
 # ---------------------------------------------------------------- types with their impls
 
 
-def type_sizes(found: List[Match]) -> Dict[str, List[int]]:
-    """Per type declared or implemented in the file, the line it is first seen on and its lines there: its item plus
-    every impl of it. impls in other files aren't added."""
+def type_sizes(found: List[Match], count: Optional[Callable[[int, int], int]] = None) -> Dict[str, List[int]]:
+    """Per type declared or implemented in the file, the line it is first seen on and its code lines there, as `count`
+    gives them from one line through another (every line without it): its item plus every impl of it. impls in other
+    files aren't added."""
     sizes: Dict[str, List[int]] = {}
     for m in sorted(found, key=lambda m: m.line):
         name = m.caught.get("NAME")
         if m.smell == TYPE_LINES and name:
-            sizes.setdefault(name, [m.line, 0])[1] += m.lines
+            sizes.setdefault(name, [m.line, 0])[1] += count(m.line, m.end) if count else m.lines
     return sizes
 
 
@@ -164,7 +165,7 @@ def commented_code(root: Path, found: Dict[str, List[Match]], notes: List[str]) 
 
 def file_rows(r: Reader, rel: str, found: List[Match], lim: Limits) -> None:
     """Add the rows of one file's matches: its long types, and each smell a match is where it stands."""
-    for name, (line, size) in type_sizes(found).items():
+    for name, (line, size) in type_sizes(found, lambda first, last: r.count(rel, first, last)).items():
         r.add(rel, line, TYPE_LINES, size if size > lim[TYPE_LINES][0] else None, name)
     tests = test_spans(rel, found)
     for m in found:

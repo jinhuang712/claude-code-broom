@@ -20,7 +20,7 @@ from .toolchain import resolve_bin
 ROWS = DATA_ROOT / "rows"
 KEEP_SECONDS = 86400
 MAX_ENTRIES = 20000
-MEASURE_TOOLS = ("ruff", "oxlint", "node", "golangci-lint", "swiftlint")  # what the rows depend on
+MEASURE_TOOLS = ("ruff", "oxlint", "node", "golangci-lint", "swiftlint", "ast-grep")  # what the rows depend on
 Measure = Callable[[Path, Dict[str, str], Limits, Path, List[str]], List[Raw]]
 
 
@@ -57,7 +57,7 @@ class RowCache:
         if not local:
             with self.lock:
                 for rel in todo:
-                    self.entries[keys[rel]] = [time.time(), [[r.rel, r.line, r.metric, r.key, r.value, r.tool]
+                    self.entries[keys[rel]] = [time.time(), [[r.rel, r.line, r.metric, r.key, r.value, r.tool, r.span]
                                                               for r in fresh if r.rel == rel]]
                 self.changed = True
         return rows + fresh

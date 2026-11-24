@@ -11,6 +11,7 @@ import shutil
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
+from .codelines import code_lines
 from .config import NOTED, SMELL_PRESENCE
 from .gitutil import run
 from .gomeasure import go_text
@@ -28,9 +29,9 @@ GO_MOD = "module broomsmells\n\ngo 1.22\n"
 
 
 def measure_files(r: Reader, rels: List[str], lim: Limits) -> None:
-    """Record one row for each file in `rels` over its file-length limit; the sizes are counted in the scratch tree."""
+    """Record one row for each file in `rels` over its file-length limit: a file's length is its code lines."""
     for rel in rels:
-        count = len((r.root / rel).read_text(errors="replace").splitlines())
+        count = len(r.code.get(rel, ()))
         r.add(rel, 1, "file_lines", count if count > lim["file_lines"][0] else None, "file")
 
 
@@ -44,8 +45,8 @@ def nested_ternaries(r: Reader, rel: str, tree: ast.AST) -> None:
 
 
 def python_sizes(r: Reader, rel: str, lim: Limits) -> None:
-    """Function and class lengths from Python's own parser, which ruff doesn't measure in lines, and its nested
-    conditional expressions."""
+    """Function and class lengths from Python's own parser, which ruff doesn't measure in lines, each the code lines
+    from its `def` or `class` line through its last; and its nested conditional expressions."""
     try:
         tree = ast.parse((r.root / rel).read_text(errors="replace"))
     except (SyntaxError, ValueError):
@@ -56,8 +57,8 @@ def python_sizes(r: Reader, rel: str, lim: Limits) -> None:
                 walk(child, prefix)
                 continue
             metric = "type_lines" if isinstance(child, ast.ClassDef) else "function_lines"
-            size = (child.end_lineno or child.lineno) - child.lineno + 1
-            r.add(rel, child.lineno, metric, size if size > lim[metric][0] else None, prefix + child.name)
+            span = (child.lineno, child.end_lineno or child.lineno)
+            r.add_length(rel, span, metric, lim[metric][0], prefix + child.name)
             walk(child, f"{prefix}{child.name}.")
 
     walk(tree, "")
@@ -155,9 +156,8 @@ def golangci_config(lim: Limits) -> str:
         'version: "2"',
         "linters:",
         "  default: none",
-        "  enable: [funlen, nestif, gocognit, revive, mnd, nolintlint, godox]",
+        "  enable: [nestif, gocognit, revive, mnd, nolintlint, godox]",
         "  settings:",
-        f"    funlen: {{lines: {lim['function_lines'][0]}, statements: -1, ignore-comments: false}}",
         f"    nestif: {{min-complexity: {nestif_complexity(lim['nesting'][0]) + 1}}}",
         f"    gocognit: {{min-complexity: {lim['complexity'][0] + 1}}}",
         f"    revive: {{rules: [{', '.join(revive)}]}}",
@@ -171,7 +171,6 @@ def golangci_config(lim: Limits) -> str:
 
 # linter, the text it starts with, metric, value pattern (none: an occurrence), name pattern
 GOLANGCI_READS: List[Tuple[str, str, str, Optional[str], Optional[str]]] = [
-    ("funlen", "", "function_lines", r"too long \((\d+) >", r"Function '([^']+)'"),
     ("gocognit", "", "complexity", r"cognitive complexity (\d+)", r"func `([^`]+)`"),
     ("nestif", "", "nesting", r"\(complexity: (\d+)\)", None),
     ("revive", "argument-limit", "params", r"but got (\d+)", None),
@@ -198,8 +197,8 @@ def golangci_read(linter: str, text: str) -> Optional[Tuple[str, Optional[int], 
 
 
 def measure_go(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None:
-    """Measure the Go files: the text smells from the source, then the rest with golangci-lint in a scratch module;
-    without golangci-lint, a note and no more rows."""
+    """Measure the Go files: what broom reads from their trees (the lengths among it), then the rest with
+    golangci-lint in a scratch module; without golangci-lint, a note and no more rows."""
     go_text(r, rels, lim)
     exe = shutil.which("golangci-lint")
     if not exe:
@@ -267,7 +266,7 @@ MEASURES: List[Tuple[set, Callable[[Reader, List[str], Limits, Path], None]]] = 
     (PY_EXTS, measure_python), (JS_EXTS, measure_js), (GO_EXTS, measure_go), (SWIFT_EXTS, measure_swift),
     (RS_EXTS, measure_rust),
 ]
-# CSS has no smell tool here, but a file's length needs none, and jscpd reads it for duplicates.
+# CSS has no smell tool here, but a file's length needs only its comments read, and jscpd reads it for duplicates.
 LINES_ONLY_EXTS = CSS_EXTS
 SMELL_EXTS = PY_EXTS | JS_EXTS | GO_EXTS | SWIFT_EXTS | RS_EXTS | LINES_ONLY_EXTS
 
@@ -279,6 +278,7 @@ def measure(root: Path, contents: Dict[str, str], lim: Limits, start: Path, note
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text)
     reader = Reader(root, "broom", notes)
+    reader.code = {rel: sorted(lines) for rel, lines in code_lines(contents, notes, root).items()}
     measure_files(reader, list(contents), lim)
     for exts, fn in MEASURES:
         rels = [rel for rel in contents if Path(rel).suffix in exts]

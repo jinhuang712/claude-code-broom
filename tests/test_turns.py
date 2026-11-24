@@ -24,7 +24,7 @@ class TurnTest(BroomCase):
         (r / "a.py").write_text(py_function("huge", 120))
         self.edit(r, r / "a.py", "w1")
         self.assertEqual(self.stop(r, "w1", background_tasks=RUNNING), {}, "a pause: the gate waits")
-        self.assertIn("huge is 120 lines long", self.stop(r, "w1", background_tasks=[])["reason"], "the real end")
+        self.assertIn("huge is 120 code lines long", self.stop(r, "w1", background_tasks=[])["reason"], "the real end")
         done = [{**RUNNING[0], "status": "completed"}]
         (r / "b.py").write_text(py_function("other", 120).replace("+=", "-="))
         self.edit(r, r / "b.py", "w2")
@@ -39,14 +39,14 @@ class TurnTest(BroomCase):
         r = self.repo({"a.py": "x = 1\n", "b.py": "y = 1\n"})
         self.hook("prompt", {"session_id": "t1", "cwd": str(r)})
         (r / "a.py").write_text(py_function("by_sed", 120))  # no Edit: a Bash command wrote it
-        self.assertIn("by_sed is 120 lines long", self.stop(r, "t1")["reason"])
-        self.assertIn("by_sed is 120 lines long", self.stop(r, "t1")["reason"], "stopping again passes nothing")
+        self.assertIn("by_sed is 120 code lines long", self.stop(r, "t1")["reason"])
+        self.assertIn("by_sed is 120 code lines long", self.stop(r, "t1")["reason"], "stopping again passes nothing")
         self.hook("prompt", {"session_id": "t1", "cwd": str(r)})
         (r / "b.py").write_text(py_function("by_wrapper", 120).replace("+=", "-="))
         self.sh(r, "git", "add", "b.py")
         self.sh(r, "git", "commit", "-qm", "a wrapper committed it")  # no `git commit` from Claude to see
         reason = self.stop(r, "t1")["reason"]
-        self.assertIn("by_wrapper is 120 lines long (hard limit 100; new)", reason, "measured from the prompt's HEAD")
+        self.assertIn("by_wrapper is 120 code lines long (hard limit 100; new)", reason, "measured from the prompt's HEAD")
 
     def test_a_subagents_edits_wait_for_its_own_end(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
@@ -55,4 +55,4 @@ class TurnTest(BroomCase):
         self.assertEqual(self.stop(r, "s1"), {}, "not the main session's to fix")
         out = self.hook("subagent-stop", {"session_id": "s1", "cwd": str(r), "agent_id": "ag1", "agent_type": "x"})
         self.assertEqual(out.get("decision"), "block")
-        self.assertIn("worker is 120 lines long", out["reason"])
+        self.assertIn("worker is 120 code lines long", out["reason"])

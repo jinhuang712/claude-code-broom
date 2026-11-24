@@ -35,6 +35,8 @@ const boolParams = {
   },
 };
 
+// A class that takes more than `max` lines of its file. broom counts the code lines among them (jsmeasure.py), so a
+// class long with comments and blank lines is found here and dropped there.
 const DEFAULT_MAX_CLASS_LINES = 250;
 
 const classLines = {

@@ -22,25 +22,25 @@ SOURCE_RULES = Rules(only="-import-source$")
 SG_EXTS = GO_EXTS | JS_EXTS
 
 
-def python_import_lines(text: str) -> int:
-    """How many lines the `import` and `from … import` statements of the Python source `text` span; 0 for source
-    that doesn't parse."""
+def python_import_lines(text: str) -> Set[int]:
+    """The lines the `import` and `from … import` statements of the Python source `text` span; none for source that
+    doesn't parse."""
     try:
         tree = ast.parse(text)
     except (SyntaxError, ValueError):
-        return 0
+        return set()
     lines: Set[int] = set()
     for node in ast.walk(tree):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
             lines.update(range(node.lineno, (node.end_lineno or node.lineno) + 1))
-    return len(lines)
+    return lines
 
 
-def import_lines(texts: Dict[str, str], notes: List[str]) -> Dict[str, int]:
-    """Per file of `texts` (a path to its text), how many lines its import declarations span: Python's and Swift's
-    read here, Go's and TS/JS's by one run of ast-grep. A file of another language, or one whose tree couldn't be
-    read, has none."""
-    out = {rel: 0 for rel in texts}
+def import_lines(texts: Dict[str, str], notes: List[str]) -> Dict[str, Set[int]]:
+    """Per file of `texts` (a path to its text), the lines its import declarations span: Python's and Swift's read
+    here, Go's and TS/JS's by one run of ast-grep. A file of another language, or one whose tree couldn't be read,
+    has none."""
+    out: Dict[str, Set[int]] = {rel: set() for rel in texts}
     for rel, text in texts.items():
         ext = Path(rel).suffix
         if ext in PY_EXTS:
@@ -51,7 +51,7 @@ def import_lines(texts: Dict[str, str], notes: List[str]) -> Dict[str, int]:
     spans: Dict[str, Set[int]] = {}
     for m in text_matches(sg, notes, TOOL_TIMEOUT, DECL_RULES):
         spans.setdefault(m.file, set()).update(range(m.line, m.end + 1))
-    out.update((rel, len(lines)) for rel, lines in spans.items() if rel in out)
+    out.update((rel, lines) for rel, lines in spans.items() if rel in out)
     return out
 
 

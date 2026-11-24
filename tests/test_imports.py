@@ -21,12 +21,12 @@ class ImportsTest(BroomCase):
         py = '"""Doc.\n\nfrom the base\nimport os\n"""\nimport os\nfrom a import (\n    b,\n)\n'
         found = import_lines({"m.ts": ts, "calls.ts": calls, "quoted.js": quoted, "m.py": py,
                               "m.go": 'package m\n\nimport (\n\t"fmt"\n\t"os"\n)\n\nfunc F() {}\n', "m.rs": "use a;\n"}, [])
-        self.assertEqual(found["m.ts"], 7)
-        self.assertEqual(found["calls.ts"], 0, "a call that requires or imports in passing is code")
-        self.assertEqual(found["quoted.js"], 0, "an import in a string or a comment is none")
-        self.assertEqual(found["m.py"], 4, "prose isn't an import, even one that reads like one")
-        self.assertEqual(found["m.go"], 4)
-        self.assertEqual(found["m.rs"], 0, "a language whose imports broom doesn't read: none")
+        self.assertEqual(found["m.ts"], {1, 2, 3, 4, 5, 6, 7})
+        self.assertEqual(found["calls.ts"], set(), "a call that requires or imports in passing is code")
+        self.assertEqual(found["quoted.js"], set(), "an import in a string or a comment is none")
+        self.assertEqual(found["m.py"], {6, 7, 8, 9}, "prose isn't an import, even one that reads like one")
+        self.assertEqual(found["m.go"], {3, 4, 5, 6})
+        self.assertEqual(found["m.rs"], set(), "a language whose imports broom doesn't read: none")
 
     @unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
     def test_the_line_is_the_import_naming_the_module_never_a_string_or_a_comment(self) -> None:

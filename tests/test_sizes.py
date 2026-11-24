@@ -57,9 +57,9 @@ class SizesTest(BroomCase):
         text = self.cli(r, "smells", "--only", "function_lines", "--top", "5").stdout.splitlines()
         self.assertIn("2 code smell(s) of function_lines", text[0])
         self.assertEqual(text[-4:], ["Longest under the limit (not smells):",
-                                     "  mid.py:1  function_lines  mid is 30 lines long",
-                                     "  small.py:1  function_lines  small is 20 lines long",
-                                     "  tiny.py:1  function_lines  tiny is 10 lines long"])
+                                     "  mid.py:1  function_lines  mid is 30 code lines long",
+                                     "  small.py:1  function_lines  small is 20 code lines long",
+                                     "  tiny.py:1  function_lines  tiny is 10 code lines long"])
 
     @unittest.skipUnless(HAS_PY, "ruff missing")
     def test_sizes_fill_only_what_top_leaves_after_the_smells(self) -> None:
@@ -75,7 +75,7 @@ class SizesTest(BroomCase):
         data = self.smells(r, "--only", "function_lines", "--top", "5")
         self.assertEqual((data["total"], data["smells"], [s["name"] for s in data["sizes"]]), (0, [], ["one", "two"]))
         text = self.cli(r, "smells", "--only", "function_lines", "--top", "1").stdout
-        self.assertIn("  a.py:1  function_lines  one is 30 lines long", text)
+        self.assertIn("  a.py:1  function_lines  one is 30 code lines long", text)
         self.assertNotIn("two", text)
 
     @unittest.skipUnless(HAS_PY, "ruff missing")

@@ -1,0 +1,44 @@
+# Every comment of a file, for its code lines (codelines.py, decision 039): a line counts toward a length when
+# something besides space stands on it outside these. Only where each comment starts and ends is used. The ids end in
+# `-all-comments`, so no other run picks them, and Rust's and CSS's keep clear of the smell rules `^rust-` picks.
+id: go-all-comments
+language: Go
+message: a comment
+metadata: {smell: comment}
+rule:
+  kind: comment
+---
+id: js-all-comments
+language: JavaScript
+message: a comment
+metadata: {smell: comment}
+rule:
+  kind: comment
+---
+id: ts-all-comments
+language: TypeScript
+message: a comment
+metadata: {smell: comment}
+rule:
+  kind: comment
+---
+id: tsx-all-comments
+language: Tsx
+message: a comment
+metadata: {smell: comment}
+rule:
+  kind: comment
+---
+id: rustfacts-all-comments
+language: Rust
+message: a comment
+metadata: {smell: comment}
+rule:
+  any: [kind: line_comment, kind: block_comment]
+---
+id: cssfacts-all-comments
+language: css
+message: a comment
+metadata: {smell: comment}
+rule:
+  any: [kind: comment, kind: js_comment]

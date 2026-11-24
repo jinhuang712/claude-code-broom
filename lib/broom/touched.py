@@ -2,11 +2,13 @@
 it at the base and that the change didn't make worse is a hint when the change touches its own unit, so whoever is in
 the code cleans it. A smell in a function or file the change left alone never comes up.
 
-A unit is touched when a changed line lies in it:
+A unit is touched when a changed code line lies in it (decision 039: a comment line or a blank line the change added
+or edited touches nothing):
 
-- a function or a type, from its first line through its length, in every language but for a Go type, whose methods
-  are scattered through the file, so its first line plus its size is not its span and no touch can be told;
-- a file, when it gained lines besides imports (the caller leaves out the file length of one that didn't);
+- a function or a type, from its first line through the lines it takes (its row's span, else its length), in every
+  language but for a Go type, whose methods are scattered through the file, so its first line plus its size is not
+  its span and no touch can be told;
+- a file, when it gained code lines besides imports (the caller leaves out the file length of one that didn't);
 - in Python, where `ast` gives the function's range, a function with too many parameters, nesting or complexity, and
   a nested ternary in one. The other languages' tools give no range for these, so they stay as they were.
 """
@@ -18,12 +20,13 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
+from .codelines import CodeLines
 from .gitutil import ChangedLines
 from .reading import Limits, Raw
 from .smell import Smell, level, made_worse
 from .toolchain import GO_EXTS, PY_EXTS
 
-SPANNED = ("function_lines", "type_lines")  # the row's line starts the unit and its value is the unit's length
+SPANNED = ("function_lines", "type_lines")  # the row's line starts the unit, which takes its span of lines
 FILE = "file_lines"
 IN_FUNCTION = ("complexity", "params", "nesting", "nested_ternary")  # Python's: the function around the row's line
 
@@ -65,22 +68,32 @@ def old_smells(rows: List[Raw], before: Optional[List[Raw]], limits_of: Callable
         old = was.get((r.rel, r.metric, r.key))
         if pair and telling(r) and old is not None and level(r.value, pair) and not made_worse(r.value, old, pair):
             out.append(Smell(repo, repo / r.rel, r.line, r.metric, r.key, r.value, old, r.tool, "hint", pair[0],
-                             touched=True))
+                             touched=True, span=r.span))
     return out
 
 
 def touches(s: Smell, lines: Optional[Set[int]], text: str) -> bool:
-    """Whether a changed line (`lines`, None for every line) lies in the unit of `s`; `text` is the file's source."""
+    """Whether a changed line (`lines`, None for every line) lies in the unit of `s`; `text` is the file's source. A
+    function or a type takes its span of lines; a tool that gives none leaves its length, which is shorter."""
     if s.metric == FILE or lines is None:
         return True
-    span = (s.line, s.line + s.value - 1) if s.metric in SPANNED else span_around(text, s.line)
+    span = (s.line, s.line + (s.span or s.value) - 1) if s.metric in SPANNED else span_around(text, s.line)
     return span is not None and not lines.isdisjoint(range(span[0], span[1] + 1))
 
 
-def touched(old: List[Smell], base: str, texts: Dict[str, str]) -> List[Smell]:
+def changed_code(lines: Optional[Set[int]], code: Optional[Set[int]]) -> Optional[Set[int]]:
+    """The changed `lines` that are code lines (`code`, the file's): a comment or a blank line touches nothing. None
+    for every line stays None, and without the file's code lines every changed line counts."""
+    return lines if lines is None or code is None else lines & code
+
+
+def touched(old: List[Smell], base: str, texts: Dict[str, str], code: Optional[CodeLines] = None) -> List[Smell]:
     """Those of the `old` smells whose unit the files' changes since `base` touch. `texts` holds each file's current
-    source by path, which Python's functions are found in."""
+    source by path, which Python's functions are found in; `code` gives those files' code lines, read here when the
+    caller has none."""
     if not old:
         return []
     changed = ChangedLines(base)
-    return [s for s in old if touches(s, changed.get(s.file), texts.get(str(s.file.relative_to(s.repo)), ""))]
+    placed = [(s, str(s.file.relative_to(s.repo))) for s in old]
+    lines = (code or CodeLines(texts, [])).of(rel for s, rel in placed if s.metric != FILE)
+    return [s for s, rel in placed if touches(s, changed_code(changed.get(s.file), lines.get(rel)), texts.get(rel, ""))]

@@ -27,7 +27,7 @@ def summary_lines(data: dict) -> List[str]:
     """The counts, then each tool that was missing, then the notes: counts without a tool read as cleaner than the
     code is, so the tools come before any table."""
     s = data["summary"]
-    rows = [("files read", s["files"]), ("lines (non-blank)", s["lines"]), ("smells", s["smells"]),
+    rows = [("files read", s["files"]), ("code lines", s["lines"]), ("smells", s["smells"]),
             ("past the hard limit", s["severe"]), ("hints", s["hints"])]
     width = max(len(name) for name, _ in rows)
     out = [f"  {name.ljust(width)}  {value}" for name, value in rows]

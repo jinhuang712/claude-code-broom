@@ -61,7 +61,7 @@ def size_lines(d: dict) -> List[str]:
         folders.append(f"  ... and {d['more_folders']} more folders; `--top N` lists more")
     longest = table(["longest files", "lines"], [[r["file"] + (" (test)" if r["test"] else ""), r["lines"]]
                                                  for r in d["longest"]])
-    return section("Size (non-blank lines)", d["note"], [langs, folders, longest])
+    return section("Size (code lines)", d["note"], [langs, folders, longest])
 
 
 def coverage_lines(c: dict) -> List[str]:

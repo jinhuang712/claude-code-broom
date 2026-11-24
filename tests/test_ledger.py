@@ -42,7 +42,7 @@ class RecordTest(LedgerCase):
     def test_a_block_and_then_a_fix_leave_a_line_each(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
         self.huge(r)
-        self.assertIn("huge is 120 lines long", self.denied(self.commit(r, "git commit -m x")))
+        self.assertIn("huge is 120 code lines long", self.denied(self.commit(r, "git commit -m x")))
         (block,) = lines("block")
         self.assertEqual((block["repo"], block["where"], block["tool"], block["rule"], block["file"]),
                          (str(r), "commit", "smells", "function_lines", "a.py"))
@@ -59,7 +59,7 @@ class RecordTest(LedgerCase):
         self.assertTrue(self.denied(self.commit(r, "git commit -m x")))
         (r / "a.py").write_text(py_function("huge", 110))  # shorter, and still past the hard limit: another message
         self.sh(r, "git", "add", "a.py")
-        self.assertIn("huge is 110 lines long", self.denied(self.commit(r, "git commit -m x")))
+        self.assertIn("huge is 110 code lines long", self.denied(self.commit(r, "git commit -m x")))
         self.assertEqual(len(lines("block")), 2)
         self.assertEqual(lines("fix"), [], "the same finding, not a fixed one")
         (r / "a.py").write_text(py_function("small", 20))

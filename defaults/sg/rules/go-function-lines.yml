@@ -1,0 +1,9 @@
+# A Go function's length (gomeasure.py): each function and method declaration, caught with its name. broom counts the
+# code lines from its `func` line through its closing brace (decision 039), which no linter counts that way.
+id: go-func
+language: Go
+message: a function or a method
+metadata: {smell: function_lines}
+rule:
+  any: [kind: function_declaration, kind: method_declaration]
+  has: {field: name, pattern: $NAME}

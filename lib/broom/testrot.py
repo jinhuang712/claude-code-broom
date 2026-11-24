@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple
 
 from .clones import Clone
+from .codelines import code_lines
 from .config import SMELL_PRESENCE
 from .gitutil import git
 from .maintained import Maintained, generated
@@ -91,11 +92,6 @@ def needs_test(rel: str, lang: Optional[str]) -> bool:
     return lang in PAIRING and not TEST_FILE.search(rel) and rel.rsplit("/", 1)[-1] not in NO_TEST_NEEDED
 
 
-def non_blank(text: str) -> int:
-    """How many lines of `text` have something on them."""
-    return sum(1 for row in text.splitlines() if row.strip())
-
-
 # Rust keeps unit tests in the file they test, so a file needs a test file only when it holds no test. These files
 # hold none to test, or are tests, benchmarks and examples themselves.
 RUST_NO_TEST_NEEDED = {"main.rs", "lib.rs", "mod.rs", "build.rs"}
@@ -115,13 +111,14 @@ def rust_untested(rel: str, with_tests: Set[str], listed: Set[str]) -> bool:
 
 def untested_smells(repo: Path, now: Dict[str, str], old: Optional[Dict[str, str]]) -> List[Smell]:
     """A hint for each code file among `now` (path to text) that `old`, the same files at the base, lacks, that holds at
-    least `MIN_CODE_LINES` non-blank lines and has no test file named for it anywhere in the repo, as the pairing goes
+    least `MIN_CODE_LINES` code lines and has no test file named for it anywhere in the repo, as the pairing goes
     (in Rust, no test in it or beside it either). Without a base (`old` is None) a sweep of the whole repo is no change
     adding a file, so it finds none."""
     if old is None:
         return []
-    added = [rel for rel, text in now.items() if rel not in old and non_blank(text) >= MIN_CODE_LINES
-             and (needs_test(rel, lang_of(Path(rel))) or lang_of(Path(rel)) == "rust")]
+    new = {rel: text for rel, text in now.items() if rel not in old
+           and (needs_test(rel, lang_of(Path(rel))) or lang_of(Path(rel)) == "rust")}
+    added = [rel for rel, lines in code_lines(new, []).items() if len(lines) >= MIN_CODE_LINES]
     if not added:
         return []
     listed = (git(["ls-files", "--cached", "--others", "--exclude-standard"], repo) or "").splitlines()

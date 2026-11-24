@@ -52,7 +52,7 @@ class GateTest(BroomCase):
         self.sh(r, "git", "add", "a.py")
         out = self.git_commit(r)
         self.assertEqual(out.returncode, 1, "no marketplace copy here: the line finds this install")
-        self.assertIn("huge is 120 lines long", out.stderr)
+        self.assertIn("huge is 120 code lines long", out.stderr)
         self.assertNotIn("theirs ran", out.stderr)
         (r / "a.py").write_text(py_function("small", 20))
         self.sh(r, "git", "add", "a.py")
@@ -83,7 +83,7 @@ class GateTest(BroomCase):
         self.sh(r, "git", "add", "a.py")
         out = self.git_commit(r)
         self.assertNotEqual(out.returncode, 0)
-        self.assertIn("huge is 120 lines long", out.stderr)
+        self.assertIn("huge is 120 code lines long", out.stderr)
         (r / "a.py").write_text(py_function("small", 20))
         self.sh(r, "git", "add", "a.py")
         out = self.git_commit(r)
@@ -92,14 +92,14 @@ class GateTest(BroomCase):
     def test_with_gits_hook_installed_the_check_is_gits_and_sees_what_the_commit_really_takes(self) -> None:
         r = self.repo({"a.py": "x = 1\n", "b.py": "y = 1\n"})
         (r / "a.py").write_text(py_function("huge", 120))
-        self.assertIn("huge is 120 lines long", self.denied(self.commit(r, "git add a.py && git commit -m x")),
+        self.assertIn("huge is 120 code lines long", self.denied(self.commit(r, "git add a.py && git commit -m x")),
                       "without git's hook, the command is read and the files it will stage are guessed")
         self.install(r)
         self.assertEqual(self.commit(r, "git add a.py && git commit -m x"), {}, "the hook no longer guesses")
         self.sh(r, "git", "add", "a.py")
         out = self.git_commit(r)
         self.assertEqual(out.returncode, 1, "git's hook, on the staged files, is what stops it")
-        self.assertIn("huge is 120 lines long", out.stderr)
+        self.assertIn("huge is 120 code lines long", out.stderr)
 
     def test_content_that_passed_isnt_checked_again(self) -> None:
         quiet = '{"smells_off": ["dead_code"]'
@@ -167,7 +167,7 @@ class GateTest(BroomCase):
             self.sh(r, "git", "worktree", "add", "-q", str(linked), "-b", f"side-{how}")
             in_main, in_linked = self.hinted_commit(r, how), self.hinted_commit(linked, how)
             self.assertIn("pkg/sub/old.py:", in_main, f"{how}: the hint names the file by its path in the repo")
-            self.assertIn("grown is 60 lines long", in_main, how)
+            self.assertIn("grown is 60 code lines long", in_main, how)
             self.assertNotIn("new code file", in_linked, f"{how}: the file is old")
             self.assertEqual(in_linked, in_main, f"{how}: a linked worktree gets what the main checkout gets")
 
@@ -186,5 +186,5 @@ class GateTest(BroomCase):
         self.install(plain)
         in_plain = self.hinted_commit(plain, "staged")
         in_work = self.hinted_commit(work, "staged", git)
-        self.assertIn("grown is 60 lines long", in_plain)
+        self.assertIn("grown is 60 code lines long", in_plain)
         self.assertEqual(self.smell_lines(in_work), self.smell_lines(in_plain))

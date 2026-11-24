@@ -19,7 +19,9 @@ from typing import Dict, List, Optional, Set, Tuple
 
 from .findings import Issue
 from .fixes import fix_lines
+from .change import Change
 from .clones import Clone, Unused, find_clones, find_unused
+from .codelines import CodeLines, code_lines
 from .config import DEAD_CODE, LIMIT_PAIR, NIT, NOTED, SMELL_LIMITS, SMELL_PRESENCE, repo_config, setting
 from .gate import issue_key
 from .gitutil import ChangedLines, renamed, run_bytes
@@ -237,48 +239,6 @@ def touched_function(repo: Path, f: Found, lines: Set[int], lim: RepoLimits) -> 
     return [s] if touches(s, lines, "") else []
 
 
-def moved_lines(lines: Set[int], now: str, before: str) -> Set[int]:
-    """The changed `lines` of a file whose text, trimmed, it already had at the base: lines a change only moved,
-    such as an import that a sort or a removal above it put elsewhere. A text counts as moved as many times as the
-    base held it beyond the unchanged lines that still hold it."""
-    left = Counter(row.strip() for row in before.splitlines())
-    rows = now.splitlines()
-    left.subtract(row.strip() for n, row in enumerate(rows, 1) if n not in lines)
-    out: Set[int] = set()
-    for n in sorted(lines):
-        text = rows[n - 1].strip() if 0 < n <= len(rows) else ""
-        if text and left[text] > 0:
-            left[text] -= 1
-            out.add(n)
-    return out
-
-
-class Change:
-    """A change against its `base` (None for a sweep of everything): the lines it changed in each file, and which of
-    them it only moved, read from the files `now` and as they were `before`."""
-
-    def __init__(self, repo: Path, base: Optional[str], now: Optional[Dict[str, str]] = None,
-                 before: Optional[Dict[str, str]] = None) -> None:
-        self.repo = repo
-        self.changed = ChangedLines(base) if base else None
-        self.now = now or {}
-        self.before = before or {}
-        self._moved: Dict[str, Set[int]] = {}
-
-    def lines(self, rel: str) -> Optional[Set[int]]:
-        """The changed lines of `rel`; None when every line counts."""
-        return self.changed.get(self.repo / rel) if self.changed else None
-
-    def only_moved(self, rel: str, line: int) -> bool:
-        """Whether `line` of `rel` is a changed line whose text the file already held at the base."""
-        lines = self.lines(rel)
-        if lines is None or rel not in self.now or rel not in self.before:
-            return False
-        if rel not in self._moved:
-            self._moved[rel] = moved_lines(lines, self.now[rel], self.before[rel])
-        return line in self._moved[rel]
-
-
 def real_tree_smells(found: List[Found], change: Change, lim: RepoLimits, off: Tuple[str, ...]) -> List[Smell]:
     """What the tools run in the real tree found on lines the change added, a new file included (all of it when
     there is no base): without a copy of the base, that is what makes a smell the change's own. A long function the
@@ -292,7 +252,7 @@ def real_tree_smells(found: List[Found], change: Change, lim: RepoLimits, off: T
         if f.metric in off:
             continue
         if not (lines is None or f.line in lines):
-            out += touched_function(repo, f, lines, lim)
+            out += touched_function(repo, f, change.code_lines(f.rel) or set(), lim)
             continue
         if f.metric in SMELL_PRESENCE and change.only_moved(f.rel, f.line):
             continue
@@ -314,16 +274,16 @@ def real_tree_smells(found: List[Found], change: Change, lim: RepoLimits, off: T
 
 def drop_import_growth(rows: List[Raw], now: Dict[str, str], before: Optional[Dict[str, str]],
                        notes: List[str]) -> List[Raw]:
-    """`rows` without the file length of files whose lines besides imports didn't grow since `before`: rewired
-    imports (a moved module's new paths, a formatter's line breaks) don't make a long file worse. The imports are
-    read from each version's tree, in one run for all."""
+    """`rows` without the file length of files whose code lines besides imports didn't grow since `before`: rewired
+    imports (a moved module's new paths, a formatter's line breaks) don't make a long file worse, and comments and
+    blank lines are no code lines at all. The imports and the code lines are read from each version's tree."""
     was = before or {}
     long = sorted({r.rel for r in rows if r.metric == "file_lines" and r.rel in was and r.rel in now})
     if not long:
         return rows
     texts = {**{f"now/{rel}": now[rel] for rel in long}, **{f"was/{rel}": was[rel] for rel in long}}
     imports = import_lines(texts, notes)
-    code = {key: len(text.splitlines()) - imports[key] for key, text in texts.items()}
+    code = {key: len(lines - imports[key]) for key, lines in code_lines(texts, notes).items()}
     steady = {rel for rel in long if code[f"now/{rel}"] <= code[f"was/{rel}"]}
     return [r for r in rows if not (r.metric == "file_lines" and r.rel in steady)]
 
@@ -360,12 +320,13 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str],
         old_rows = with_skips(before.result() if before else unmeasured, old_text, notes)
         rows_now = drop_import_growth(now.result(), now_text, old_text, notes) + skip_rows(now_text, notes)
         found = compare(rows_now, old_rows, lim, repo, off)
+        code = CodeLines(now_text, notes)
         if base:  # the old smells in what the change touches
-            found += touched(old_smells(counted(rows_now, off), old_rows, lim.of, repo), base, now_text)
+            found += touched(old_smells(counted(rows_now, off), old_rows, lim.of, repo), base, now_text, code)
         cloned = clones.result() if clones else []
         found += clone_smells(keep, cloned, set(now_text), base, lim)
         found += unused_smells(repo, unused.result() if unused else [], set(now_text), base)
-        found += real_tree_smells(real.result(), Change(repo, base, now_text, old_text), lim, off)
+        found += real_tree_smells(real.result(), Change(repo, base, now_text, old_text, code), lim, off)
         found += [] if UNTESTED_FILE in off else untested_smells(repo, now_text, old_text)
     rows.save()
     for s in found:

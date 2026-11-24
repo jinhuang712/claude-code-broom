@@ -13,13 +13,13 @@ from .config import DEAD_CODE, NOTED, SMELL_PRESENCE
 from .findings import Issue
 
 DESCRIBE = {
-    "function_lines": "{key} is {value} lines long",
-    "file_lines": "the file is {value} lines long",
+    "function_lines": "{key} is {value} code lines long",
+    "file_lines": "the file is {value} code lines long",
     "params": "{key} takes {value} parameters",
     "nesting": "blocks nest {value} levels deep",
     "complexity": "{key} has complexity {value}",
     "nested_ternary": "a ternary nests inside another",
-    "type_lines": "{key} is {value} lines long",
+    "type_lines": "{key} is {value} code lines long",
     "duplicate_lines": "{value} lines repeat {key}",
     DEAD_CODE: "{key} is never used outside tests",  # a test that uses it doesn't count: tests are left out
 }
@@ -63,6 +63,7 @@ class Smell:
     added: List[int] = field(default_factory=list)  # an occurrence smell's lines this change added
     compared: bool = True  # measured against a base; a whole-repo scan isn't, so nothing in it is "new"
     touched: bool = False  # an old smell the change didn't make worse, in a unit it touched
+    span: int = 0  # how many lines of the file a function or a type takes from `line` on, where its tool says
 
     def text(self) -> str:
         """The message for this smell: what it is, its limit, and how it compares with the base (new, or was N)."""

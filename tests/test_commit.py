@@ -45,7 +45,7 @@ class CommitTest(BroomCase):
         r = self.repo({"a.py": "x = 1\n"})
         (r / "a.py").write_text(py_function("huge", 120))
         out = self.commit(r, "git add a.py && git commit -q -F - <<'EOF'\nit's a long one\nEOF\necho done")
-        self.assertIn("huge is 120 lines long", self.denied(out))
+        self.assertIn("huge is 120 code lines long", self.denied(out))
 
     def test_a_redirection_is_no_path_of_the_commit(self) -> None:
         for tail in ("2>&1 | tail -3", "> /dev/null", "2>/dev/null", ">> log.txt 2>&1", "&> /dev/null", "< /dev/null"):
@@ -58,7 +58,7 @@ class CommitTest(BroomCase):
         r = self.repo({"a.py": "x = 1\n"})
         (r / "a.py").write_text(py_function("huge", 120))
         for command in ("git add a.py && git commit -m wip 2>&1 | tail -3", "git commit -qam wip > /dev/null"):
-            self.assertIn("huge is 120 lines long", self.denied(self.commit(r, command)), command)
+            self.assertIn("huge is 120 code lines long", self.denied(self.commit(r, command)), command)
 
     def test_parse_git_dash_c_and_options(self) -> None:
         ops = parse("git -C other -c core.x=1 commit -n --author 'A <a@b>' -m x", self.tmp)

@@ -51,7 +51,7 @@ class CompareTest(GitWork):
         return json.loads(done.stdout)
 
     def names(self, rows: list) -> list:
-        return sorted(re.sub(r" is \d+ lines.*", "", x["text"]) for x in rows)
+        return sorted(re.sub(r" is \d+ code lines.*", "", x["text"]) for x in rows)
 
     def test_the_counts_by_kind_and_the_line_to_quote(self) -> None:
         d = self.compare(self.worked_repo())

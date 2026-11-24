@@ -21,7 +21,7 @@ import shutil
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
-from typing import Iterator, List, Optional, Tuple
+from typing import Iterator, List, Optional, Set, Tuple
 
 from .gitutil import run
 
@@ -251,7 +251,7 @@ def comment_lines(f: SwiftFile) -> List[Tuple[int, str]]:
     return [(f.line(t.offset) + n, text) for t in pieces for n, text in enumerate(t.text.rstrip("\n").split("\n"))]
 
 
-def import_lines(text: str) -> int:
-    """How many lines of the Swift source `text` hold an `import` keyword; 0 without SourceKit."""
+def import_lines(text: str) -> Set[int]:
+    """The lines of the Swift source `text` that hold an `import` keyword; none without SourceKit."""
     f = open_text(text)
-    return len({f.line(t.offset) for t in f.tokens if t.kind == "keyword" and t.text == "import"}) if f else 0
+    return {f.line(t.offset) for t in f.tokens if t.kind == "keyword" and t.text == "import"} if f else set()

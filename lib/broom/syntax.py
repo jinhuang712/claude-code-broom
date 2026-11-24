@@ -27,7 +27,8 @@ Span = Tuple[int, int]  # a first and a last line, 1-based
 @dataclass(frozen=True)
 class Match:
     """One node a rule matched: its file (as given), its first and last line (1-based), the rule's id, the smell its
-    metadata names, its message and the text each single metavariable caught."""
+    metadata names, its message, the text each single metavariable caught, and the bytes of the file it spans (its
+    first, and the one after its last)."""
 
     file: str
     line: int
@@ -36,6 +37,8 @@ class Match:
     smell: str
     message: str = ""
     caught: Dict[str, str] = field(default_factory=dict)
+    start: int = 0
+    stop: int = 0
 
     @property
     def lines(self) -> int:
@@ -46,11 +49,13 @@ class Match:
 def parse(row: dict) -> Match:
     """A Match from one line of `ast-grep scan --json=stream --include-metadata`."""
     span = row.get("range") or {}
+    at = span.get("byteOffset") or {}
     single = (row.get("metaVariables") or {}).get("single") or {}
     return Match(file=str(row.get("file", "")), line=int(span.get("start", {}).get("line", 0)) + 1,
                  end=int(span.get("end", {}).get("line", 0)) + 1, rule=str(row.get("ruleId", "")),
                  smell=str((row.get("metadata") or {}).get("smell", "")), message=str(row.get("message") or ""),
-                 caught={k: str(v.get("text", "")) for k, v in single.items()})
+                 caught={k: str(v.get("text", "")) for k, v in single.items()},
+                 start=int(at.get("start", 0)), stop=int(at.get("end", 0)))
 
 
 @dataclass(frozen=True)

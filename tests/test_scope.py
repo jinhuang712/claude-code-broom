@@ -90,7 +90,7 @@ class ScopeTest(BroomCase):
         self.sh(r, "git", "worktree", "add", "-q", str(wt))
         (wt / "a.py").write_text("".join(f"x{i} = {i}\n" for i in range(25)))
         found, _ = find_smells(wt, [wt / "a.py"], "HEAD")
-        self.assertIn("the file is 25 lines long (hard limit 20; new)", [s.text() for s in found], "main's limits")
+        self.assertIn("the file is 25 code lines long (hard limit 20; new)", [s.text() for s in found], "main's limits")
         item = next(i for i in self.doctor(wt, self.fake_path())["items"] if i["tool"] == ".broom.json")
         self.assertIn("read from the main worktree", item["detail"])
         self.assertIn("ignored by git", item["detail"])
@@ -132,7 +132,7 @@ class ScopeTest(BroomCase):
         self.assertEqual([s.text() for s in found], [], "a move makes nothing new: not the length, not dead code")
         (r / "b.py").write_text(py_function("huge", 125))
         found, _ = find_smells(r, [r / "b.py"], "HEAD")
-        self.assertIn("huge is 125 lines long (hard limit 100; was 120)", [s.text() for s in found])
+        self.assertIn("huge is 125 code lines long (hard limit 100; was 120)", [s.text() for s in found])
 
     def test_a_moved_file_changes_only_the_lines_edited_after_the_move(self) -> None:
         text = "".join(f"x{i} = {i}\n" for i in range(20))
@@ -151,4 +151,4 @@ class ScopeTest(BroomCase):
         self.assertEqual([s.text() for s in found if s.metric == "file_lines"], [], "only imports grew")
         (r / "a.py").write_text(code + "y = 1\n")
         found, _ = find_smells(r, [r / "a.py"], "HEAD")
-        self.assertIn("the file is 26 lines long (hard limit 20; was 25)", [s.text() for s in found])
+        self.assertIn("the file is 26 code lines long (hard limit 20; was 25)", [s.text() for s in found])

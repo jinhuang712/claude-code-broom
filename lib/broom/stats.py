@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
+from .codelines import code_lines
 from .coverage import section as coverage_section
 from .hotspots import repo_files
 from .maintained import Maintained, generated_among
@@ -24,10 +25,11 @@ from .treefacts import SG_LANGS, sg_trees
 def collect(repo: Path, paths: List[Path]) -> List[Facts]:
     """The facts of every code file within `paths` (the repo when empty): the files `repo_files` gives, less what nobody
     maintains here (dependencies, build output) and generated code, found by its header. ast-grep reads the trees of
-    the Go and TS/JS files among them in one run."""
+    the Go and TS/JS files among them in one run, and their comments in another, for the code lines."""
     read = texts(repo, paths)
     trees = sg_trees(repo, [rel for rel, lang, _ in read if lang in SG_LANGS], [])
-    return [scan(rel, lang, text, trees.get(rel)) for rel, lang, text in read]
+    code = code_lines({rel: text for rel, _, text in read}, [], repo)
+    return [scan(rel, lang, text, trees.get(rel), len(code[rel])) for rel, lang, text in read]
 
 
 def texts(repo: Path, paths: List[Path]) -> List[Tuple[str, str, str]]:
@@ -61,7 +63,7 @@ def folder_of(f: Facts) -> str:
 
 
 def totals(facts: List[Facts]) -> dict:
-    """Files and non-blank lines of the `facts`, tests counted apart from the rest."""
+    """Files and code lines of the `facts`, tests counted apart from the rest."""
     code = [f for f in facts if not f.test]
     tests = [f for f in facts if f.test]
     return {"files": len(code), "lines": sum(f.lines for f in code),
@@ -171,6 +173,7 @@ def report(repo: Path, paths: List[Path], top: int, days: int, facts: Optional[L
     shown = [relative(repo, p) for p in paths]
     note = None if facts else "no code files " + (f"under {', '.join(shown)}" if shown else "in the repo")
     return {"repo": str(repo), "paths": shown, "files": len(facts), "days": days,
-            "size": size_section(facts, top, note), "tests": tests_section(repo, facts, top, note or unread_note(facts)),
+            "size": size_section(facts, top, note or unread_note(facts)),
+            "tests": tests_section(repo, facts, top, note or unread_note(facts)),
             "rot": rot_section(repo, facts, top, note),
             "history": history(repo, {f.rel for f in facts}, days, top, note)}

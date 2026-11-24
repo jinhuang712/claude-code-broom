@@ -6,7 +6,7 @@ import json
 import re
 import shutil
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Tuple
 
 from .config import SMELL_PRESENCE
 from .gitutil import run
@@ -29,9 +29,9 @@ OXLINT_MAGIC = {"ignore": [-1, 0, 1, 2], "ignoreArrayIndexes": True, "ignoreDefa
 
 def oxlint_config(lim: Limits) -> dict:
     """The oxlint config for one run: its size and complexity rules at the limits in `lim`, and the smell rules."""
-    whole = {"skipBlankLines": False, "skipComments": False}
+    code = {"skipBlankLines": True, "skipComments": True}  # a length is in code lines (decision 039)
     sized = {
-        "max-lines-per-function": ["warn", {"max": lim["function_lines"][0], **whole}],
+        "max-lines-per-function": ["warn", {"max": lim["function_lines"][0], **code}],
         "max-params": ["warn", {"max": lim["params"][0]}],
         "max-depth": ["warn", {"max": lim["nesting"][0]}],
         "complexity": ["warn", {"max": lim["complexity"][0]}],
@@ -77,15 +77,39 @@ def run_oxlint(r: Reader, exe: str, name: str, config: dict, rels: List[str]) ->
     return r.json(rc, out, {}).get("diagnostics", [])
 
 
-def read_oxlint(r: Reader, diagnostics: List[dict], metric_of: Callable[[str, str], Optional[str]]) -> None:
-    """Add as rows the findings that `metric_of(rule, message)` gives a metric."""
+LENGTHS = ("function_lines", "type_lines")  # broom counts these in code lines, over the lines oxlint labels
+
+
+def label_lines(r: Reader, rel: str, span: dict) -> Optional[Tuple[int, int]]:
+    """The first and last line of what an oxlint label marks in the file `rel`: its `offset` and `length` are bytes
+    of the file. None for a label without them, or a file that can't be read."""
+    line, start, length = (int(span.get(k) or 0) for k in ("line", "offset", "length"))
+    if not line or not length:
+        return None
+    try:
+        data = (r.root / r.rel(rel)).read_bytes()
+    except OSError:
+        return None
+    return line, line + data[start:start + length].count(b"\n")
+
+
+def read_oxlint(r: Reader, diagnostics: List[dict], metric_of: Callable[[str, str], Optional[str]],
+                lim: Limits) -> None:
+    """Add as rows the findings that `metric_of(rule, message)` gives a metric. A function or a class past its length
+    limit is counted in code lines over the lines its label marks; without those, the number oxlint gives stands."""
     for d in diagnostics:
         rule = re.sub(r"^[\w-]+\(|\)$", "", d.get("code", ""))
         msg = d.get("message", "")
         metric = metric_of(rule, msg)
-        if metric:
-            line = int(((d.get("labels") or [{}])[0].get("span") or {}).get("line", 0))
-            r.add(d.get("filename", ""), line, metric, oxlint_value(metric, msg), quoted_name(msg))
+        if not metric:
+            continue
+        rel = d.get("filename", "")
+        span = (d.get("labels") or [{}])[0].get("span") or {}
+        lines = label_lines(r, rel, span) if metric in LENGTHS else None
+        if lines:
+            r.add_length(rel, lines, metric, lim[metric][0], quoted_name(msg))
+        else:
+            r.add(rel, int(span.get("line", 0)), metric, oxlint_value(metric, msg), quoted_name(msg))
 
 
 # broom's own oxlint rules (defaults/oxlint-rules.mjs), for what oxlint has none for. They are JS plugins, an alpha
@@ -132,11 +156,11 @@ def measure_js(r: Reader, rels: List[str], lim: Limits, start: Path) -> None:
     if not exe:
         r.notes.append("missing:oxlint (npm i -g oxlint), so TS/JS smells aren't measured")
         return
-    read_oxlint(r, run_oxlint(r, exe, "oxlint", oxlint_config(lim), rels), oxlint_metric)
+    read_oxlint(r, run_oxlint(r, exe, "oxlint", oxlint_config(lim), rels), oxlint_metric, lim)
     drop_test_callbacks(r, rels)
     if shutil.which("node"):
         read_oxlint(r, run_oxlint(r, exe, "oxlint-rules", broom_rules_config(lim), rels),
-                    broom_rule_metric)
+                    broom_rule_metric, lim)
     else:
         r.notes.append("node is missing, so boolean flag parameters, long classes, module state, commented-out code, "
                        "missing doc comments and broad catches in TS/JS aren't measured")

@@ -1,4 +1,4 @@
-"""What one pass over a code file gives `broom stats`: its non-blank lines, its test cases and skipped tests, its lint
+"""What one pass over a code file gives `broom stats`: its code lines, its test cases and skipped tests, its lint
 suppressions and its TODO comments. No linter runs. Each language is read from its syntax tree: Swift's from its
 compiler and SourceKit (swiftcalls), the others' from treefacts. A marker counts only in a comment the tree isolated,
 never in a string."""
@@ -9,6 +9,7 @@ import re
 from dataclasses import dataclass, field
 from typing import List, Optional
 
+from .codelines import code_lines
 from .swiftcalls import skips, test_cases
 from .swiftkit import comment_lines, open_text
 from .testrot import TEST_FILE
@@ -23,7 +24,7 @@ TODO_MARK = re.compile(r"^\W*(?:TODO|FIXME|HACK|XXX)\b(?![./-]\w)|\b(?:TODO|FIXM
 
 @dataclass
 class Facts:
-    """What `scan` found in one file: `rel` is its path from the repo root, `lines` its non-blank lines, `test` whether
+    """What `scan` found in one file: `rel` is its path from the repo root, `lines` its code lines, `test` whether
     it is a test file, `suppressions` the kind of each lint suppression, `todos` the line number of each TODO comment."""
 
     rel: str
@@ -69,11 +70,13 @@ def from_tree(facts: Facts, tree: Optional[Tree]) -> Facts:
     return facts
 
 
-def scan(rel: str, lang: str, text: str, tree: Optional[Tree] = None) -> Facts:
+def scan(rel: str, lang: str, text: str, tree: Optional[Tree] = None, lines: Optional[int] = None) -> Facts:
     """The facts of one file, from its `text`. A Python file is read from its tree here, a Swift file by its compiler,
-    and a file of another language from `tree`, which ast-grep read for many files at once (treefacts.sg_trees)."""
-    rows = text.splitlines()
-    facts = Facts(rel, lang, bool(TEST_FILE.search(rel)), sum(1 for row in rows if row.strip()))
+    and a file of another language from `tree`, which ast-grep read for many files at once (treefacts.sg_trees).
+    `lines` is how many code lines it holds, counted here when the caller hasn't (codelines, as a length counts)."""
+    if lines is None:
+        lines = len(code_lines({rel: text}, [])[rel])
+    facts = Facts(rel, lang, bool(TEST_FILE.search(rel)), lines)
     if lang in TREE_LANGS:
         return from_tree(facts, python_tree(text, facts) if lang == "py" else tree)
     if lang == "swift":

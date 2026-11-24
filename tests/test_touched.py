@@ -60,7 +60,7 @@ class AcceptedInAWorktreeTest(TouchedCase):
 
     def test_a_finding_of_the_main_checkout_keeps_the_key_it_had(self) -> None:
         r = self.repo({"a.py": py_function("legacy", 60)})
-        issue = Issue("smells", r, r / "a.py", 1, 0, "function_lines", "legacy is 60 lines long (over 50)")
+        issue = Issue("smells", r, r / "a.py", 1, 0, "function_lines", "legacy is 60 code lines long (over 50)")
         old = short_hash(f"{issue.file}|{issue.tool}|{issue.rule}|{issue.msg}|{line_text(issue.file, issue.line)}")
         self.assertEqual(issue_key(issue), old, "so what was accepted before this version stays known")
 
@@ -72,7 +72,7 @@ class TouchedHintTest(TouchedCase):
         (r / "a.py").write_text(text.replace("x += 3\n", "x += 333\n"))
         found, _ = find_smells(r, [r / "a.py"], "HEAD")
         self.assertEqual([(s.line, s.level, s.text()) for s in found if s.metric == "function_lines"],
-                         [(1, "hint", f"touched_one is 60 lines long (over 50; was 60: {TOUCHED})")])
+                         [(1, "hint", f"touched_one is 60 code lines long (over 50; was 60: {TOUCHED})")])
         off = self.repo({"a.py": text}, {"smells_off": ["function_lines"]})  # the config is read once per repo
         (off / "a.py").write_text(text.replace("x += 3\n", "x += 333\n"))
         self.assertEqual(self.touched(off, "a.py"), [], "smells_off turns it off as before")
@@ -80,7 +80,7 @@ class TouchedHintTest(TouchedCase):
     def test_a_function_that_shrank_but_is_still_long_hints_too_and_one_that_grew_is_the_old_finding(self) -> None:
         r = self.repo({"a.py": py_function("legacy", 150)})
         (r / "a.py").write_text(py_function("legacy", 140))
-        self.assertEqual(self.touched(r, "a.py"), [f"legacy is 140 lines long (over 50; was 150: {TOUCHED})"])
+        self.assertEqual(self.touched(r, "a.py"), [f"legacy is 140 code lines long (over 50; was 150: {TOUCHED})"])
         (r / "a.py").write_text(py_function("legacy", 155))
         found, _ = find_smells(r, [r / "a.py"], "HEAD")
         self.assertEqual([(s.level, s.touched) for s in found], [("block", False)], "worse is a block, not a hint")
@@ -91,7 +91,7 @@ class TouchedHintTest(TouchedCase):
         (r / "a.py").write_text("import os\nfrom pathlib import (\n    Path,\n)\n" + code)
         self.assertEqual(self.touched(r, "a.py"), [], "only imports grew")
         (r / "a.py").write_text(code + "y = 1\n")
-        self.assertEqual(self.touched(r, "a.py"), [f"the file is 26 lines long (over 10; was 25: {TOUCHED})"])
+        self.assertEqual(self.touched(r, "a.py"), [f"the file is 26 code lines long (over 10; was 25: {TOUCHED})"])
 
     @unittest.skipUnless(HAS_PY, "ruff missing")
     def test_in_python_parameters_nesting_complexity_and_ternaries_hint_when_their_function_is_touched(self) -> None:
@@ -127,7 +127,7 @@ class TouchedHintTest(TouchedCase):
             found, notes = find_smells(r, [r / "a.ts"], "HEAD")
         self.assertEqual(notes, [])
         self.assertEqual([s.text() for s in found if s.touched],
-                         [f"longer is 60 lines long (over 50; was 60: {TOUCHED})"], "no parameter hint, though touched")
+                         [f"longer is 60 code lines long (over 50; was 60: {TOUCHED})"], "no parameter hint, though touched")
 
 
 class AcceptTest(TouchedCase):
@@ -143,7 +143,7 @@ class AcceptTest(TouchedCase):
         self.sh(r, "git", "add", "-A")
         reason = self.denied(self.commit(r, "git commit -m x"))
         self.assertTrue(self.block_line(reason, "legacy").endswith(
-            "legacy is 155 lines long (hard limit 100; was 150)  [can't be accepted: was 150, already past the hard limit]"))
+            "legacy is 155 code lines long (hard limit 100; was 150)  [can't be accepted: was 150, already past the hard limit]"))
         self.assertNotIn("can't be accepted", self.block_line(reason, "fresh"))
         self.assertNotIn("can't be accepted", self.block_line(reason, "crossing"), "it was 90, under the hard limit")
         self.assertIn("broom known --accept", reason, "the way out stays for the others")
@@ -160,7 +160,7 @@ class AcceptTest(TouchedCase):
         self.assertIn("1 can't be accepted", again.stderr)
         (r / "a.py").write_text(py_function("legacy", 140))  # back under its old size: a touched old smell, a hint
         self.sh(r, "git", "add", "a.py")
-        self.assertIn(f"legacy is 140 lines long (over 50; was 150: {TOUCHED})",
+        self.assertIn(f"legacy is 140 code lines long (over 50; was 150: {TOUCHED})",
                       self.denied(self.commit(r, "git commit -m x")), "a hint stops the commit too")
 
     def test_giving_up_ends_the_turn_with_the_grown_smell_open_and_the_next_commit_stops_on_it(self) -> None:
@@ -188,11 +188,11 @@ class HintFlowTest(TouchedCase):
         (r / "a.py").write_text(py_function("middling", 70).replace("x += 3\n", "x += 333\n"))
         self.sh(r, "git", "add", "a.py")
         denial = self.denied(self.commit(r, "git commit -m x"))
-        self.assertIn(f"a.py:1:0  function_lines  middling is 70 lines long (over 50; was 70: {TOUCHED})", denial)
+        self.assertIn(f"a.py:1:0  function_lines  middling is 70 code lines long (over 50; was 70: {TOUCHED})", denial)
         self.assertIn("  function_lines: Extract", denial, "its usual fix line, like any block")
         self.edit(r, "a.py")
         reason = self.stop(r)["reason"]
-        self.assertIn(f"middling is 70 lines long (over 50; was 70: {TOUCHED})", reason)
+        self.assertIn(f"middling is 70 code lines long (over 50; was 70: {TOUCHED})", reason)
         self.assertNotIn("can't be accepted", reason)
         self.assertEqual(self.cli(r, "known", "--accept", "old and fine").returncode, 0)
         self.assertEqual(self.stop(r)["systemMessage"],

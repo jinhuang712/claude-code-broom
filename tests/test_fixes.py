@@ -111,7 +111,7 @@ class RealBlockTest(BroomCase):
         text = self.denied(self.commit(r, "git commit -m x"))
         self.assertEqual(text.splitlines()[0], "[broom] Commit blocked: 1 issue(s) in the files being committed. "
                                                "Fix them and commit again.")
-        self.assertIn("huge is 120 lines long (hard limit 100; new)", text)
+        self.assertIn("huge is 120 code lines long (hard limit 100; new)", text)
         self.assertIn(f"How to fix:\n  function_lines: {fixes()['function_lines']}\n{NOT_A_FIX}\n", text)
         self.assertTrue(text.index("How to fix:") < text.index(WAY_OUT))
 

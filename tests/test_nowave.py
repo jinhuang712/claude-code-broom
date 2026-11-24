@@ -55,11 +55,11 @@ class CommitTest(NoWaveCase):
         self.staged(r, MEDIUM)
         reason = self.denied(self.commit(r, "git commit -m x"))
         self.assertTrue(reason.startswith("[broom] Commit blocked: 1 issue(s) in the files being committed."), reason)
-        self.assertIn("medium is 60 lines long (over 50; new)", reason)
+        self.assertIn("medium is 60 code lines long (over 50; new)", reason)
         self.assertIn("Trying again passes nothing: only a fix does, or accepting with a reason.", reason)
         self.assertIn('run `broom known --accept "<why>"`, then commit again.', reason)
         for _ in range(3):
-            self.assertIn("medium is 60 lines long", self.denied(self.commit(r, "git commit -m x")), "no retry passes")
+            self.assertIn("medium is 60 code lines long", self.denied(self.commit(r, "git commit -m x")), "no retry passes")
         self.assertEqual(passes(), [])
         self.staged(r, py_function("small", 20))
         self.assertEqual(self.commit(r, "git commit -m x"), {})
@@ -77,8 +77,8 @@ class CommitTest(NoWaveCase):
         self.staged(r, MEDIUM + "\n\n" + py_function("huge", 120).replace("+=", "-="))
         reason = self.denied(self.commit(r, "git commit -m x"))
         self.assertIn("Commit blocked: 2 issue(s)", reason)
-        self.assertIn("medium is 60 lines long (over 50; new)", reason)
-        self.assertIn("huge is 120 lines long (hard limit 100; new)", reason)
+        self.assertIn("medium is 60 code lines long (over 50; new)", reason)
+        self.assertIn("huge is 120 code lines long (hard limit 100; new)", reason)
 
     def test_a_commit_whose_only_finding_is_a_nit_passes_with_the_nit_in_its_context(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
@@ -105,7 +105,7 @@ class CommitTest(NoWaveCase):
         self.staged(r, MEDIUM)
         out = subprocess.run(["git", "commit", "-qm", "x"], cwd=r, env=self.env, capture_output=True, text=True)
         self.assertEqual(out.returncode, 1, out.stderr)
-        self.assertIn("medium is 60 lines long (over 50; new)", out.stderr)
+        self.assertIn("medium is 60 code lines long (over 50; new)", out.stderr)
         self.assertIn("Trying again passes nothing", out.stderr)
         self.assertEqual(self.cli(r, "known", "--accept", "a long one by design").returncode, 0)
         out = subprocess.run(["git", "commit", "-qm", "x"], cwd=r, env=self.env, capture_output=True, text=True)
@@ -119,7 +119,7 @@ class TurnEndTest(NoWaveCase):
         for n in (1, 2, 3):
             out = self.stop(r)
             self.assertEqual(out.get("decision"), "block", f"stop {n}")
-            self.assertIn("medium is 60 lines long (over 50; new)", out["reason"], f"stop {n}")
+            self.assertIn("medium is 60 code lines long (over 50; new)", out["reason"], f"stop {n}")
             self.assertIn("Trying again passes nothing", out["reason"], f"stop {n}")
             self.assertTrue(out["reason"].endswith("After 3 blocks the turn ends, and the user is told what is still "
                                                    "open."), f"stop {n}")

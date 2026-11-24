@@ -15,7 +15,7 @@ LONG = py_function("huge", 120)  # one smell past the hard limit
 BUSY = py_function("busy", 60).replace("+=", "-=")  # one hint
 TS_BIG = "".join(f"export const v{i} = {i};\n" for i in range(450))  # a file over 400 lines: one hint
 HEADINGS = ["Summary", "Smells by kind", "Smells by language", "Hotspots by churn", "The worst smells", "Check-up",
-            "Duplicate tests", "Dependencies", "Size (non-blank lines)", "Tests", "Rot"]
+            "Duplicate tests", "Dependencies", "Size (code lines)", "Tests", "Rot"]
 
 
 class DiagnoseTest(GitWork):
@@ -73,7 +73,7 @@ class DiagnoseTest(GitWork):
     def test_the_tools_that_were_missing_are_named_in_the_data_and_the_report(self) -> None:
         r = self.smelly_repo()
         d = self.diagnose(r)
-        self.assertEqual(sorted(t.split(" ")[0] for t in d["missing_tools"]), ["jscpd", "oxlint", "ruff"])
+        self.assertEqual(sorted(t.split(" ")[0] for t in d["missing_tools"]), ["ast-grep", "jscpd", "oxlint", "ruff"])
         text = self.cli(r, "diagnose", env=self.bare).stdout
         self.assertIn("these tools were missing", text)
         self.assertIn("ruff (brew install ruff)", text)

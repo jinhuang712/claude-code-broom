@@ -115,7 +115,7 @@ class SmellTest(BroomCase):
         self.assertIn("1 past the hard limit", out.stdout)
         data = json.loads(self.cli(r, "smells", "--json").stdout)
         self.assertEqual(data["hotspots"][0]["file"], "a.py")
-        self.assertEqual(data["smells"][0]["text"], "huge is 120 lines long (hard limit 100)", "a scan has no 'new'")
+        self.assertEqual(data["smells"][0]["text"], "huge is 120 code lines long (hard limit 100)", "a scan has no 'new'")
         self.assertEqual(json.loads(self.cli(r, "smells", "--json", str(r / "b.py")).stdout)["severe"], 0)
         first = self.cli(r, "smells", env=self.fake_path()).stdout.splitlines()[0]
         self.assertIn("Not all measured, missing: ", first, "missing tools go in the first line")
@@ -183,12 +183,12 @@ class SmellTest(BroomCase):
         (r / "a.py").write_text(py_function("long_one", 120))
         self.sh(r, "git", "add", "a.py")
         reason = self.denied(self.commit(r, "git commit -m x"))
-        self.assertIn("long_one is 120 lines long (hard limit 100; new)", reason)
+        self.assertIn("long_one is 120 code lines long (hard limit 100; new)", reason)
         self.assertIn("broom known --accept", reason, "a severe smell doesn't pass on a retry")
         (r / "a.py").write_text(py_function("long_one", 60))
         self.sh(r, "git", "add", "a.py")
         reason = self.denied(self.commit(r, "git commit -m x"))
-        self.assertIn("long_one is 60 lines long (over 50; new)", reason)
+        self.assertIn("long_one is 60 code lines long (over 50; new)", reason)
         self.assertIn("broom known --accept", reason, "a hint doesn't pass on a retry either")
 
     @unittest.skipUnless(HAS_PY, "ruff missing")
@@ -198,18 +198,18 @@ class SmellTest(BroomCase):
         self.sh(r, "git", "add", "a.py")
         reason = self.denied(self.commit(r, "git commit -m same-size"))
         self.assertNotIn("hard limit", reason, "a legacy function of the same size is no block")
-        self.assertIn("legacy is 150 lines long (over 50; was 150: you touched it", reason, "but it is a hint, which stops")
+        self.assertIn("legacy is 150 code lines long (over 50; was 150: you touched it", reason, "but it is a hint, which stops")
         (r / "a.py").write_text(py_function("legacy", 155))
         self.sh(r, "git", "add", "a.py")
         reason = self.denied(self.commit(r, "git commit -m x"))
-        self.assertIn("legacy is 155 lines long (hard limit 100; was 150)", reason)
+        self.assertIn("legacy is 155 code lines long (hard limit 100; was 150)", reason)
 
     @unittest.skipUnless(HAS_PY, "ruff missing")
     def test_repo_limits_move_the_bar_and_off_turns_smells_off(self) -> None:
         r = self.repo({"a.py": "x = 1\n", ".broom.json": '{"limits": {"file_lines": [10, 20]}}'})
         (r / "a.py").write_text("".join(f"x{i} = {i}\n" for i in range(25)))
         self.sh(r, "git", "add", "a.py")
-        self.assertIn("the file is 25 lines long (hard limit 20; new)", self.denied(self.commit(r, "git commit -m x")))
+        self.assertIn("the file is 25 code lines long (hard limit 20; new)", self.denied(self.commit(r, "git commit -m x")))
         (r / ".broom.json").write_text('{"smells": "off", "limits": {"file_lines": [10, 20]}}')
         self.assertEqual(self.denied(self.commit(r, "git commit -m x")), "")
         item = next(i for i in self.doctor(r, self.fake_path())["items"] if i["tool"] == ".broom.json")
@@ -221,11 +221,11 @@ class SmellTest(BroomCase):
         (r / "a.py").write_text(py_function("medium", 60))
         out = self.stop_turn(r, r / "a.py", "s3")
         self.assertEqual(out.get("decision"), "block")
-        self.assertIn("medium is 60 lines long (over 50; new)", out["reason"])
+        self.assertIn("medium is 60 code lines long (over 50; new)", out["reason"])
         again = self.hook("stop", {"session_id": "s3", "cwd": str(r)})
         self.assertEqual(again.get("decision"), "block", "stopping again passes nothing")
         (r / "a.py").write_text(py_function("huge", 120))
-        self.assertIn("huge is 120 lines long", self.stop_turn(r, r / "a.py", "s4")["reason"])
+        self.assertIn("huge is 120 code lines long", self.stop_turn(r, r / "a.py", "s4")["reason"])
         self.hook("stop", {"session_id": "s4", "cwd": str(r)})
         self.sh(r, "git", "add", "a.py")
         self.assertIn("huge is 120", self.denied(self.commit(r, "git commit -m x")), "stopping twice doesn't excuse it")
@@ -236,7 +236,7 @@ class SmellTest(BroomCase):
         out = self.cli(r, "sweep", "--all", "--check")
         self.assertEqual(out.returncode, 1)
         self.assertIn("code smell(s) in the repo", out.stdout)
-        self.assertIn("old_and_long is 120 lines long", out.stdout)  # and, nothing calling it, dead code
+        self.assertIn("old_and_long is 120 code lines long", out.stdout)  # and, nothing calling it, dead code
         self.assertEqual(self.cli(r, "sweep", "--check").returncode, 0, "nothing changed, nothing made worse")
 
     def test_smells_in_ts_go_and_swift(self) -> None:
