@@ -25,3 +25,5 @@ Tests grow long by listing cases, not by doing more. One repo with file limits o
 ## Consequences
 
 Long test functions still count.
+
+Since [040: A test file may be twice as long as a code file](040-test-file-length.md) a test file's length starts at twice the code's, and `test_limits` moves it from there.

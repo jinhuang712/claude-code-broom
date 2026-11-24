@@ -59,7 +59,7 @@ Globs mark code on its way out. New code that repeats it isn't a duplicate, as d
 
 ### F7.2.3: limits and test_limits
 
-`limits` moves a smell's soft and hard limit, such as `{"file_lines": [300, 500]}`. `test_limits` moves them again for test files.
+`limits` moves a smell's soft and hard limit, such as `{"file_lines": [300, 500]}`. `test_limits` moves them again for test files. A test file's `file_lines` starts at twice the code's, so with those limits it is 600 and 1000 until `test_limits` sets it.
 
 ---
 

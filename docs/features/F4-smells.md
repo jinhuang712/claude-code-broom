@@ -65,10 +65,11 @@ A sized smell counts when the change pushed it past a limit, or grew it while pa
 | `type_lines` | 250 | — | `ast` | `broom/class-lines` | read by broom | `type_body_length` |
 | `duplicate_lines` | 10 | 30 | jscpd | jscpd | jscpd | jscpd |
 
-12 notes on the table:
+13 notes on the table:
 
 - `file_lines` and `duplicate_lines` count in Rust and CSS too.
-- A function's or a type's length runs from its first line through its last. Go's function starts at its `func` line and ends at its closing brace.
+- A test file's `file_lines` limits are twice these: 800 and 2000.
+- A function's or a type's length runs from its first line through its last. Go's function starts at its `func` line and ends at its closing brace. Without ast-grep it goes unmeasured, with a note.
 - Swift's function and type lengths and Rust's function length are the code lines of the body alone, as SwiftLint and clippy count them.
 - `duplicate_lines` is no length: jscpd counts the lines of a repeated block its own way, comments among them.
 - Go has no ternary operator, so it has no `nested_ternary`.
@@ -247,15 +248,21 @@ Tracked directories skipped by name are listed in a note.
 
 ## F4.7: Tests
 
-In tests, complexity and magic numbers don't count. Neither do the length or complexity of `describe`, `it` and `test` callbacks. Long test functions still count. `test_limits` in `.broom.json` moves the limits for test files.
+In tests, complexity and magic numbers don't count. Neither do the length or complexity of `describe`, `it` and `test` callbacks. Long test functions still count.
 
-- **Why**: [012: Tests take limits of their own](../specs/decisions/012-test-limits.md)
+A test file may be twice as long as a code file: its `file_lines` limits are 800 and 2000. It is long by the cases it lists, and the code it tests can be within its own limit. A file of helper code among the tests gets the same limits, since a test file is told by its path.
+
+`test_limits` in `.broom.json` moves the limits for test files.
+
+- **Why**:
+  - [012: Tests take limits of their own](../specs/decisions/012-test-limits.md)
+  - [040: A test file may be twice as long as a code file](../specs/decisions/040-test-file-length.md)
 
 ---
 
 ## F4.8: Limits told before the work
 
-At the start of a session in a repo with code, Claude is told the bar in a few lines: how long a function and a file may be, how many parameters, how deep the nesting and how high the complexity, each with the size past which a change is blocked. It says that a length counts code lines, so comment lines and blank lines are free. It also names what blocks for being added, how a blocked finding passes and which broom command answers a question about the repo.
+At the start of a session in a repo with code, Claude is told the bar in a few lines: how long a function and a file may be, how many parameters, how deep the nesting and how high the complexity, each with the size past which a change is blocked. A limit that differs for test files is named beside the code's, such as how long a test file may be. It says that a length counts code lines, so comment lines and blank lines are free. It also names what blocks for being added, how a blocked finding passes and which broom command answers a question about the repo.
 
 The numbers are the repo's own, so limits moved in `.broom.json` show, and a smell the repo turned off is left out. A repo with no code, or with `smells` off, gets no card. It is told once per session.
 

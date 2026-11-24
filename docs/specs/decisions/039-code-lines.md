@@ -37,7 +37,7 @@ Every length reads smaller than before. broom's own `lib/` holds 9,227 code line
 
 A finding reads `is 60 code lines long`. A length accepted before is asked once more, since its message holds the new number.
 
-Go's function length is read by broom from the syntax tree, and funlen no longer runs. It counts from the `func` line through the closing brace, where funlen counted the body alone.
+Go's function length is read by broom from the syntax tree, and funlen no longer runs. It counts from the `func` line through the closing brace, where funlen counted the body alone. It needs ast-grep: a repo with golangci-lint alone gets no length for a Go function, with a note.
 
 A function or a type keeps the lines it takes beside its length, since the two now differ. SwiftLint and clippy give a length and no span, so a touched Swift or Rust function is found over fewer lines than it takes.
 

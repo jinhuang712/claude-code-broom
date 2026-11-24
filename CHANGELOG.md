@@ -13,10 +13,12 @@
 - A Python docstring is a comment, and so is a doc comment in every language.
 - The limits stay where they were, so every length reads smaller than before. A length you accepted before is asked once more, since its number changed.
 - A finding reads `is 60 code lines long`. Before, it read `is 60 lines long`.
-- Go's function length is read by broom from the syntax tree, and funlen no longer runs. It counts from the `func` line through the closing brace.
+- Go's function length is read by broom from the syntax tree, and funlen no longer runs. It counts from the `func` line through the closing brace. It needs ast-grep: without it a Go function's length goes unmeasured, with a note.
 - Without ast-grep, or without SourceKit for Swift, comments can't be told from code in that language. Every line that isn't blank then counts, and a note says so.
 - The note at a session's start says that comment lines and blank lines are free.
 - A new file counts as `untested_file` from 30 code lines on.
+- A test file may be twice as long as a code file: 800 and 2000 code lines where a code file's limits are 400 and 1000. Before, the tests of a code file within its limit were stopped for the cases they list. `test_limits` still moves it, and `{"file_lines": [400, 1000]}` there brings the old bar back.
+- The note at a session's start names a limit that differs for test files beside the code's.
 
 ---
 

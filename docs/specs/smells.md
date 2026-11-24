@@ -157,7 +157,11 @@ Two smells are read from the files' syntax trees with no linter. A skipped test 
 
 A new code file counts as untested when no test file anywhere in the repo is named for it. A Rust file also counts as tested when it holds its own tests. The names of all files come from one `git ls-files`, and it runs only when the change adds a code file of 30 code lines or more.
 
+A test file's limits are the code's with `file_lines` doubled, and then what `test_limits` sets. The tools measure against the lower soft limit of the two sets, and each row takes its level from the limits of its own file.
+
 - [009: An occurrence counts when the change raises the count](decisions/009-occurrence-by-count.md)
+- [012: Tests take limits of their own](decisions/012-test-limits.md)
+- [040: A test file may be twice as long as a code file](decisions/040-test-file-length.md)
 
 ---
 
@@ -166,4 +170,3 @@ A new code file counts as untested when no test file anywhere in the repo is nam
 Paths are judged by directory name before any file is read. Dependencies, environments, build output, generated code, fixtures, minified files and `.d.ts` are skipped. `build`, `out`, `release` and `target` are skipped only where git doesn't track the files. Tracked directories skipped by name are listed in a note.
 
 - [008: Build-output names skip only untracked files](decisions/008-tracked-build-names.md)
-- [012: Tests take limits of their own](decisions/012-test-limits.md)

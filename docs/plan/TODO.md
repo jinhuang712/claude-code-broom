@@ -26,11 +26,44 @@
   - Since 2026-11-24 a length leaves out comment lines and blank lines, and the limits stayed at 50 and 100 for a function and 400 and 1000 for a file.
   - Every length reads smaller, so the bar is looser by as much as a file holds comments and blank lines. broom's own `lib/` holds 9,227 code lines in 13,950 lines.
   - The user set that day that the limits are a decision of their own.
+  - A test file's limits are twice the code's since that day, so they move with whatever is decided here.
 - created: 2026-11-24
 - status: OPEN
 - found: the user's change of 2026-11-24
 - related: [039: A length counts code lines](../specs/decisions/039-code-lines.md)
 - next: decide with the user, with the ledger's numbers for the length smells
+
+---
+
+### [P2][IDEA] A test file's length that leaves its cases out
+
+- description:
+  - A test file may be twice as long as a code file, whatever it holds. A file of helper code among the tests gets that too, though helper code is code.
+  - A test file's length could count only the code lines outside its test functions. The cases would then be free, and the helpers held to the code's limit.
+  - broom already reads each language's test forms for the skipped tests and the test cases of `broom stats`.
+- created: 2026-11-24
+- found: the look at one repo's long test files
+- related: [040: A test file may be twice as long as a code file](../specs/decisions/040-test-file-length.md)
+
+---
+
+### [P2][IDEA] A test class as a list of cases
+
+- description: A test class lists cases as a test file does, and `type_lines` holds it to the code's 250. broom's own test classes stay within it, and no other repo was measured for it, so the limit stayed.
+- created: 2026-11-24
+- found: the change to a test file's limits
+- related: [F4.7: Tests](../features/F4-smells.md#f47-tests)
+
+---
+
+### [P2][IDEA] A test file's length beside its code file's
+
+- description:
+  - The factor of 2 came from two throwaway scripts: one counted the test files past each limit, the other set each long test file beside the code file it is named for.
+  - `broom stats` pairs code with tests by name already. Its test section could give each long test file's code lines, the share inside test functions and the code file's length.
+- created: 2026-11-24
+- found: the change to a test file's limits
+- related: [F10.4: Numbers on request](../features/F10-diagnosis.md#f104-numbers-on-request)
 
 ---
 
