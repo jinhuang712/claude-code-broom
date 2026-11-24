@@ -19,6 +19,9 @@ SIZED = (("function_lines", "functions", " lines"), ("file_lines", "files", ""),
 ADDED = (("suppression", "a lint suppression without a reason"), ("swallowed_error", "a swallowed error"),
          ("commented_code", "commented-out code"))
 LEAD = "broom's bar in this repo, for the code you write or touch: {}."
+# What a length counts (decision 039), said where a length is named, so nobody saves lines by leaving comments out.
+LENGTHS = ("function_lines", "file_lines")
+CODE_LINES = "A length counts code lines: comment lines and blank lines are free."
 ACCEPT = ('A commit and a turn\'s end stop on code past the first number, as on most smells a change adds, until it '
           'is fixed or accepted with `broom known --accept "<why>"`: trying again passes nothing. If the user must '
           'decide, `broom known --ask "<question>"` and stop. Code already past its hard limit can\'t grow.')
@@ -61,4 +64,5 @@ def limits_card(repo: Path, diagnosis: dict) -> Optional[str]:
     sizes = size_clauses(RepoLimits(repo).code, off)
     added = [what for name, what in ADDED if name not in off]
     blocked = f"A change is {'also ' if sizes else ''}blocked when it adds {listed(added)}." if added else ""
-    return " ".join(x for x in (LEAD.format(", ".join(sizes)) if sizes else "", blocked, ACCEPT, TESTS, ASK) if x)
+    free = "" if set(LENGTHS) <= set(off) else CODE_LINES
+    return " ".join(x for x in (LEAD.format(", ".join(sizes)) if sizes else "", free, blocked, ACCEPT, TESTS, ASK) if x)

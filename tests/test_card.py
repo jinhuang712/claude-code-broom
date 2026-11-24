@@ -9,7 +9,8 @@ from support import CARD, BroomCase
 
 BAR = (
     "broom's bar in this repo, for the code you write or touch: functions up to 50 lines (hard limit 100), files up "
-    "to 400 (1000), parameters up to 5 (8), nesting up to 4 (6), complexity up to 10 (20). A change is also blocked "
+    "to 400 (1000), parameters up to 5 (8), nesting up to 4 (6), complexity up to 10 (20). A length counts code "
+    "lines: comment lines and blank lines are free. A change is also blocked "
     "when it adds a lint suppression without a reason, a swallowed error or commented-out code. A commit and a "
     "turn's end stop on code past the first number, as on most smells a change adds, until it is fixed or accepted "
     'with `broom known --accept "<why>"`: trying again passes nothing. If the user must decide, `broom known --ask '
@@ -68,8 +69,11 @@ class LimitsCardTest(BroomCase):
         self.assertNotIn("complexity", card)
         self.assertIn("adds a lint suppression without a reason or a swallowed error.", card)
         self.assertNotIn("commented-out", card)
+        self.assertIn("A length counts code lines", card, "a file's length is still named")
         r = self.py_repo({"smells_off": ["suppression", "swallowed_error", "commented_code"]})
         self.assertNotIn("A change is also blocked", self.card(r))
+        r = self.py_repo({"smells_off": ["function_lines", "file_lines"]})
+        self.assertNotIn("A length counts", self.card(r), "no length is named, so what one counts isn't said")
 
     def test_no_card_without_a_language_or_with_smells_off(self) -> None:
         env = self.fake_path()
