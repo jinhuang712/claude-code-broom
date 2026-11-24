@@ -6,6 +6,10 @@
 
 ---
 
+## 0.28.2 — 2026-11-24
+
+---
+
 ### Smells
 
 - A length counts code lines: the lines that hold code. Comment lines and blank lines no longer count toward the length of a function, a type or a file, in any language. Before, a change that added only a doc comment to a long file was blocked for growing it. After, it grows nothing.
