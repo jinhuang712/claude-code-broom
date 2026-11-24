@@ -65,6 +65,18 @@ class ScopeTest(BroomCase):
         found, _ = find_smells(r, [r / "b.py"], "HEAD")
         self.assertEqual([s.text() for s in found if s.metric == "duplicate_lines"], [], "b.py replaces old/a.py")
 
+    def test_a_test_file_may_be_twice_as_long_as_a_code_file(self) -> None:
+        rows = [f"x{i} = {i}\n" for i in range(45)]
+        files = {"a.py": "".join(rows[:25]), "tests/test_a.py": "".join(rows[:25]), "tests/test_b.py": "".join(rows)}
+        r = self.repo({**files, ".broom.json": '{"limits": {"file_lines": [20, 40]}}'})
+        found, _ = find_smells(r, [r / name for name in files], None)
+        said = {str(s.file.relative_to(r)): s.text() for s in found if s.metric == "file_lines"}
+        self.assertEqual(sorted(said), ["a.py", "tests/test_b.py"], "25 code lines pass in a test file, and 45 don't")
+        self.assertIn("45 code lines long (over 40", said["tests/test_b.py"], "its soft limit is twice the code's 20")
+        (r / "tests/test_b.py").write_text("".join(rows) + "".join(f"y{i} = {i}\n" for i in range(40)))
+        found, _ = find_smells(r, [r / "tests/test_b.py"], None)
+        self.assertEqual([s.level for s in found if s.metric == "file_lines"], ["block"], "85, past twice the hard 40")
+
     def test_test_files_get_their_own_limits(self) -> None:
         lines = "".join(f"x{i} = {i}\n" for i in range(25))
         both = {"a.py": lines, "tests/test_a.py": lines}

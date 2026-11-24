@@ -35,6 +35,9 @@ SMELL_LIMITS = {
     "type_lines": (250, 1_000_000),  # a hint only: whether to split a type is a design call
     "duplicate_lines": (10, 30),  # a block of code repeated elsewhere
 }
+# A test file may be this many times as long as a code file (decision 040): it lists the cases of the code it tests,
+# and a code file within its limit has more cases than fit in the same length. `test_limits` moves it per repo.
+TEST_FILE_FACTOR = 2
 # Code nothing uses, found across the repo (JS/TS/Python): a note only, as dynamic loading looks unused too.
 DEAD_CODE = "dead_code"
 # The check-up (see checkup) is no smell, but `smells_off` turns it off by this name.

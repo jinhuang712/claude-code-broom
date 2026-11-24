@@ -16,7 +16,7 @@ from . import ledger
 from .config import REPO_FILE, SMELL_LIMITS
 from .gitcmd import GitOp, parse_commit
 from .gitutil import ChangedLines, git, git_root
-from .smells import moved
+from .smells import for_tests, moved
 from .state import parse_jsonc, read_jsonc, short_hash
 from .treefacts import comment_trees
 
@@ -87,13 +87,13 @@ def listed(value: object) -> list:
 
 def raised_limits(old: dict, new: dict) -> List[str]:
     """The limits `new` (a .broom.json) sets higher than `old`'s do, as notes: `limits function_lines 50/100 ->
-    80/150`. `test_limits` count against the test limits `old` had, which start from its `limits`."""
+    80/150`. `test_limits` count against the test limits `old` had, which start from its `limits` (`for_tests`)."""
     before = moved(SMELL_LIMITS, old.get("limits"))
     after = moved(SMELL_LIMITS, new.get("limits"))
     notes = [f"limits {k} {before[k][0]}/{before[k][1]} -> {after[k][0]}/{after[k][1]}"
              for k in after if after[k] > before[k] and (after[k][0] > before[k][0] or after[k][1] > before[k][1])]
-    was = moved(before, old.get("test_limits"))
-    now = moved(after, new.get("test_limits"))
+    was = moved(for_tests(before), old.get("test_limits"))
+    now = moved(for_tests(after), new.get("test_limits"))
     notes += [f"test_limits {k} {was[k][0]}/{was[k][1]} -> {now[k][0]}/{now[k][1]}"
               for k in now if k in (new.get("test_limits") or {}) and now[k] != was[k]
               and (now[k][0] > was[k][0] or now[k][1] > was[k][1])]

@@ -128,7 +128,7 @@ class ConfigTest(LedgerCase):
             ({}, {"legacy": ["old/*"]}, ["legacy +old/*"]),
             ({}, {"limits": {"function_lines": [80, 150]}}, ["limits function_lines 50/100 -> 80/150"]),
             ({"limits": {"params": [5, 8]}}, {"limits": {"params": [5, 9]}}, ["limits params 5/8 -> 5/9"]),
-            ({}, {"test_limits": {"file_lines": [800, 2000]}}, ["test_limits file_lines 400/1000 -> 800/2000"]),
+            ({}, {"test_limits": {"file_lines": [900, 2000]}}, ["test_limits file_lines 800/2000 -> 900/2000"]),
             ({}, {"check_on": "off"}, ["check_on off"]),
             ({"smells": "on"}, {"smells": "off"}, ["smells off"]),
         ]
@@ -143,16 +143,18 @@ class ConfigTest(LedgerCase):
             ({"check_on": "off"}, {"check_on": "stop"}),
             ({"check_on": "off"}, {"check_on": "off"}),
             ({}, {"limits": {"function_lines": [50, 100]}}),
+            ({}, {"test_limits": {"file_lines": [800, 2000]}}),  # what a test file gets with nothing set
+            ({}, {"test_limits": {"file_lines": [400, 1000]}}),
             ({}, {"format_on": "off", "format_scope": "file"}),
         ]
         for before, after in tight:
             self.assertEqual(waivers.loosened(before, after), [], after)
 
     def test_a_test_limit_is_compared_with_the_limit_the_tests_had(self) -> None:
-        before = {"limits": {"file_lines": [800, 2000]}}
-        self.assertEqual(waivers.loosened(before, {**before, "test_limits": {"file_lines": [800, 2000]}}), [])
-        self.assertEqual(waivers.loosened(before, {**before, "test_limits": {"file_lines": [800, 2500]}}),
-                         ["test_limits file_lines 800/2000 -> 800/2500"])
+        before = {"limits": {"file_lines": [300, 800]}}  # so a test file may hold 600, and 1600 at most
+        self.assertEqual(waivers.loosened(before, {**before, "test_limits": {"file_lines": [600, 1600]}}), [])
+        self.assertEqual(waivers.loosened(before, {**before, "test_limits": {"file_lines": [600, 2500]}}),
+                         ["test_limits file_lines 600/1600 -> 600/2500"])
 
     @unittest.skipUnless(HAS_PY, "ruff missing")
     def test_a_commit_that_loosens_the_config_says_so_and_one_that_tightens_it_doesnt(self) -> None:

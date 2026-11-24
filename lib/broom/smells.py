@@ -22,7 +22,9 @@ from .fixes import fix_lines
 from .change import Change
 from .clones import Clone, Unused, find_clones, find_unused
 from .codelines import CodeLines, code_lines
-from .config import DEAD_CODE, LIMIT_PAIR, NIT, NOTED, SMELL_LIMITS, SMELL_PRESENCE, repo_config, setting
+from .config import (
+    DEAD_CODE, LIMIT_PAIR, NIT, NOTED, SMELL_LIMITS, SMELL_PRESENCE, TEST_FILE_FACTOR, repo_config, setting,
+)
 from .gate import issue_key
 from .gitutil import ChangedLines, renamed, run_bytes
 from .maintained import Maintained, generated, generated_among
@@ -50,14 +52,20 @@ def moved(base: Limits, pairs: object) -> Limits:
     return out
 
 
+def for_tests(code: Limits) -> Limits:
+    """The limits a test file starts from: the code's `code`, with a file `TEST_FILE_FACTOR` times as long."""
+    soft, hard = code["file_lines"]
+    return {**code, "file_lines": (soft * TEST_FILE_FACTOR, hard * TEST_FILE_FACTOR)}
+
+
 class RepoLimits:
-    """broom's limits as the repo's .broom.json moves them: `limits` for all code, then `test_limits` on top of
-    those for test files, which grow long by listing cases rather than by doing more."""
+    """broom's limits as the repo's .broom.json moves them: `limits` for all code, then for test files a file twice
+    as long and `test_limits` on top, since tests grow long by listing cases rather than by doing more."""
 
     def __init__(self, repo: Path) -> None:
         config = repo_config(repo)
         self.code = moved(SMELL_LIMITS, config.get("limits"))
-        self.test = moved(self.code, config.get("test_limits"))
+        self.test = moved(for_tests(self.code), config.get("test_limits"))
         # The tools report what is past the soft limit they get: the lower of the two, so neither set misses one.
         self.measured = {k: (min(self.code[k][0], self.test[k][0]), self.code[k][1]) for k in self.code}
 

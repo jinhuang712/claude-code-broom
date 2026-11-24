@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import List, Optional
 
 from .config import repo_config, setting
-from .measure import Limits
 from .smells import RepoLimits
 
 # The sized smells the card names: the smell, what it limits, and the unit when it isn't obvious.
@@ -40,14 +39,15 @@ def smells_off(repo: Path) -> List[str]:
     return [str(x) for x in off] if isinstance(off, list) else []
 
 
-def size_clauses(code: Limits, off: List[str]) -> List[str]:
+def size_clauses(lim: RepoLimits, off: List[str]) -> List[str]:
     """`functions up to 50 lines (hard limit 100)`, `files up to 400 (1000)` and so on for the sized smells not turned
-    off: the first says what the number in brackets is."""
+    off: the first says what the number in brackets is. A limit that differs for test files follows the code's, as
+    `test files up to 800 (2000)`."""
     out: List[str] = []
     for name, noun, unit in SIZED:
-        if name not in off:
-            soft, hard = code[name]
-            out.append(f"{noun} up to {soft}{unit} ({'' if out else 'hard limit '}{hard})")
+        for kind, pair in (("", lim.code[name]), ("test ", lim.test[name])):
+            if name not in off and (not kind or pair != lim.code[name]):
+                out.append(f"{kind}{noun} up to {pair[0]}{unit} ({'' if out else 'hard limit '}{pair[1]})")
     return out
 
 
@@ -61,7 +61,7 @@ def limits_card(repo: Path, diagnosis: dict) -> Optional[str]:
     if not diagnosis.get("languages") or setting("smells", repo) == "off":
         return None
     off = smells_off(repo)
-    sizes = size_clauses(RepoLimits(repo).code, off)
+    sizes = size_clauses(RepoLimits(repo), off)
     added = [what for name, what in ADDED if name not in off]
     blocked = f"A change is {'also ' if sizes else ''}blocked when it adds {listed(added)}." if added else ""
     free = "" if set(LENGTHS) <= set(off) else CODE_LINES
