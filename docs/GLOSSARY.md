@@ -12,6 +12,8 @@ Each term has its meaning, the words that lost to it and its name in the code wh
 | Smell | code that works and is hard to change, such as a 300-line function | — | `Smell` |
 | Sized smell | a smell with a number and two limits | — | `SMELL_LIMITS` |
 | Occurrence smell | a smell that counts each time it appears | presence smell | `SMELL_PRESENCE` |
+| Code line | a line that holds something besides space outside a comment | line of code · non-blank line | `code_lines` |
+| Length | the code lines of a file, a function or a type | — | `file_lines`, `function_lines`, `type_lines` |
 | Soft limit | the size past which a sized smell is a hint | — | `limits[0]` |
 | Hard limit | the size past which a sized smell blocks | — | `limits[1]` |
 | Hint | a smell below its hard limit that stops a commit and a turn's end until it is fixed or accepted | — | `level == "hint"` |

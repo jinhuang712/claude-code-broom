@@ -23,11 +23,33 @@ What the measurers found in a file is kept by its content for a day, so the base
 
 ---
 
+## Code lines
+
+A length is a count of code lines: a file's, a function's or a type's. A code line holds something besides space outside a comment. Each measurement reads the code lines of its files once, and every length is counted from that set.
+
+The comments come from the file's syntax tree. Python's are the comment tokens of `tokenize` and the docstrings `ast` names: the string a module, a class or a function opens with. Swift's are SourceKit's comment tokens. Go's, TS/JS's, Rust's and CSS's are the comment nodes that ast-grep's rules in `all-comments.yml` match. The bytes of each comment are blanked, and a line with something left on it is a code line.
+
+Past a point Python's tokenizer can't read, every line that isn't blank counts. Without ast-grep, or without SourceKit for Swift, the same holds for the whole file, with the tool's note.
+
+5 sources give the lines a function or a type takes:
+
+- **Python**: `ast` gives a function's and a class's first and last line.
+- **TS/JS**: oxlint's length rule leaves comments and blank lines out and labels the function. broom's own rule labels a class. broom counts the code lines under each label.
+- **Go**: ast-grep gives each function and method declaration, and each type with its methods. No linter measures a Go length.
+- **Rust**: ast-grep gives each type with its `impl` blocks. clippy counts a function's body itself.
+- **Swift**: SwiftLint counts a function's and a type's body itself.
+
+A row keeps the lines its function or type takes beside its length. clippy and SwiftLint give a length and no span.
+
+- [039: A length counts code lines](decisions/039-code-lines.md)
+
+---
+
 ## Made worse
 
 A sized smell counts when the change pushed it past a limit, or grew it while past the hard one. Growth between the limits is left alone.
 
-A file git sees as renamed is read at its old path, and its changed lines come from a rename-aware diff. A long file whose lines besides imports didn't grow isn't longer for the change.
+A file git sees as renamed is read at its old path, and its changed lines come from a rename-aware diff. A long file whose code lines besides imports didn't grow isn't longer for the change.
 
 An occurrence smell counts when the change raises the count in a file. Lines match the base by text: a moved line stays old, and an edited line that keeps its occurrence adds nothing. A line counts once per smell.
 
@@ -37,7 +59,7 @@ Where a smell is found by a guess and not a parse, it is a nit even when the sam
 
 ## Touched
 
-A sized smell that was already past its soft limit at the base, and that the change didn't make worse, is a hint when a changed line lies in its unit. A function or a type runs from the row's line through its length. A file counts when it gained lines besides imports. In Python `ast` gives each function's range, so parameters, nesting, complexity and a nested ternary are told too. The other languages' tools give no range for those four, so there they stay untold. A Go type's methods lie apart in its file, so its first line and its size give no range, and it stays untold as well. No tool runs for this: it reuses the rows of both versions.
+A sized smell that was already past its soft limit at the base, and that the change didn't make worse, is a hint when a changed code line lies in its unit. A comment line or a blank line that the change added or edited touches nothing. A function or a type runs from the row's line through the lines it takes. Where its tool gives no span, it runs through its length, which is shorter. A file counts when it gained code lines besides imports. In Python `ast` gives each function's range, so parameters, nesting, complexity and a nested ternary are told too. The other languages' tools give no range for those four, so there they stay untold. A Go type's methods lie apart in its file, so its first line and its size give no range, and it stays untold as well. No tool runs for this: it reuses the rows of both versions.
 
 A sized smell that was past the hard limit at the base and grew carries the size it had. That mark travels with the blocked result, and accepting leaves such a finding out.
 
@@ -133,7 +155,7 @@ Dead code comes from the same tool in TS/JS and Python, with tests and entry poi
 
 Two smells are read from the files' syntax trees with no linter. A skipped test is found by each language's own form in a test file's tree, and it counts like any occurrence: when the change raises the count. A skip whose name states a condition, that sits behind an `if`, a `case` or a `catch`, or that Rust puts under `cfg_attr`, is how a suite fits its machine, so it is left out.
 
-A new code file counts as untested when no test file anywhere in the repo is named for it. A Rust file also counts as tested when it holds its own tests. The names of all files come from one `git ls-files`, and it runs only when the change adds a code file of 30 lines or more.
+A new code file counts as untested when no test file anywhere in the repo is named for it. A Rust file also counts as tested when it holds its own tests. The names of all files come from one `git ls-files`, and it runs only when the change adds a code file of 30 code lines or more.
 
 - [009: An occurrence counts when the change raises the count](decisions/009-occurrence-by-count.md)
 

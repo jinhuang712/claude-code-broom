@@ -6,6 +6,26 @@
 
 ---
 
+### Smells
+
+- A length counts code lines: the lines that hold code. Comment lines and blank lines no longer count toward the length of a function, a type or a file, in any language. Before, a change that added only a doc comment to a long file was blocked for growing it. After, it grows nothing.
+- A comment line or a blank line that a change adds or edits no longer counts as touching an old smell.
+- A Python docstring is a comment, and so is a doc comment in every language.
+- The limits stay where they were, so every length reads smaller than before. A length you accepted before is asked once more, since its number changed.
+- A finding reads `is 60 code lines long`. Before, it read `is 60 lines long`.
+- Go's function length is read by broom from the syntax tree, and funlen no longer runs. It counts from the `func` line through the closing brace.
+- Without ast-grep, or without SourceKit for Swift, comments can't be told from code in that language. Every line that isn't blank then counts, and a note says so.
+- The note at a session's start says that comment lines and blank lines are free.
+- A new file counts as `untested_file` from 30 code lines on.
+
+---
+
+### Stats
+
+- `broom stats` and `broom diagnose` give a size in the same code lines. Before, they counted every line that wasn't blank. The heading reads `Size (code lines)`.
+
+---
+
 ### Docs
 
 - The README shows how broom works in two pictures: the six moments that start it, and what becomes of a finding at a gate. The list of what it does is folded under them.

@@ -264,7 +264,7 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 **Fails**: exit 1 outside a repo.
 
-**Example**: `broom stats lib --top 3` prints the lines by language and the three longest files under `lib`, then the other sections.
+**Example**: `broom stats lib --top 3` prints the code lines by language and the three longest files under `lib`, then the other sections.
 
 ---
 

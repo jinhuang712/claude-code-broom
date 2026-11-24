@@ -35,11 +35,28 @@ A smell has 1 of 3 levels. A hint and a block both stop a commit and a turn's en
 
 A sized smell counts when the change pushed it past a limit, or grew it while past the hard one. Growth between the limits is left alone.
 
+3 of them are lengths: `function_lines`, `type_lines` and `file_lines`. A length counts code lines. A code line holds something besides space outside a comment, so a comment line and a blank line never count, and a change that adds only those grows nothing. A line with code and a comment beside it is a code line.
+
+| Language | A comment is | Read with |
+|---|---|---|
+| Python | a `#` comment · the docstring of a module, a class or a function | `tokenize` and `ast` |
+| TS/JS | a `//` or a `/* */` comment, JSDoc among them | ast-grep |
+| Go | a `//` or a `/* */` comment, doc comments among them | ast-grep |
+| Rust | a `//` or a `/* */` comment, `///` and `//!` among them | ast-grep |
+| Swift | a `//` or a `/* */` comment, `///` among them | SourceKit |
+| CSS, SCSS and Less | a `/* */` comment · a `//` comment in SCSS and Less | ast-grep |
+
+3 things still count:
+
+- A string over several lines counts on each of its lines that isn't blank, a Python string that is no docstring among them.
+- An attribute that documents, such as Rust's `#[doc = "…"]`, is code.
+- Without ast-grep, or without SourceKit for Swift, comments can't be told from code in that language. Every line that isn't blank then counts, and a note says so.
+
 `read by broom` in the tables means broom reads the smell from the file's syntax tree: Python's with its own parser, Swift's with its compiler and SourceKit, and the others' with ast-grep. A string or a comment that looks like code is never taken for it.
 
 | Smell | Soft | Hard | Python | TS/JS | Go | Swift |
 |---|---|---|---|---|---|---|
-| `function_lines` | 50 | 100 | `ast` | `max-lines-per-function` | `funlen` | `function_body_length` |
+| `function_lines` | 50 | 100 | `ast` | `max-lines-per-function` | read by broom | `function_body_length` |
 | `file_lines` | 400 | 1000 | counted | counted | counted | counted |
 | `params` | 5 | 8 | `PLR0913` | `max-params` | `revive` `argument-limit` | `function_parameter_count` |
 | `nesting` | 4 | 6 | `PLR1702` | `max-depth` | `nestif` | read by broom |
@@ -48,9 +65,12 @@ A sized smell counts when the change pushed it past a limit, or grew it while pa
 | `type_lines` | 250 | — | `ast` | `broom/class-lines` | read by broom | `type_body_length` |
 | `duplicate_lines` | 10 | 30 | jscpd | jscpd | jscpd | jscpd |
 
-9 notes on the table:
+12 notes on the table:
 
 - `file_lines` and `duplicate_lines` count in Rust and CSS too.
+- A function's or a type's length runs from its first line through its last. Go's function starts at its `func` line and ends at its closing brace.
+- Swift's function and type lengths and Rust's function length are the code lines of the body alone, as SwiftLint and clippy count them.
+- `duplicate_lines` is no length: jscpd counts the lines of a repeated block its own way, comments among them.
 - Go has no ternary operator, so it has no `nested_ternary`.
 - Go's `type_lines` is a type's declaration plus its methods in the same file.
 - Rust gets 4 of them from clippy: `function_lines` from `too_many_lines` · `params` from `too_many_arguments` · `complexity` from `cognitive_complexity` · `nesting` from `excessive_nesting`.
@@ -60,11 +80,12 @@ A sized smell counts when the change pushed it past a limit, or grew it while pa
 - Swift's `nesting` counts the blocks of control flow inside a function, since SwiftLint's own rule counts nested types.
 - Swift's `nested_ternary` is a ternary inside another, wherever its lines break.
 
-A file git sees as renamed is measured against its old path. A file whose lines besides imports didn't grow isn't longer for the change.
+A file git sees as renamed is measured against its old path. A file whose code lines besides imports didn't grow isn't longer for the change.
 
 - **Why**:
   - [006: A smell counts when the change pushed it past a limit](../specs/decisions/006-made-worse.md)
   - [007: A renamed file is measured against its old path](../specs/decisions/007-renames-and-imports.md)
+  - [039: A length counts code lines](../specs/decisions/039-code-lines.md)
 
 ---
 
@@ -144,7 +165,7 @@ It covers Python, TS/JS, Go, Rust and Swift, and broom reads it from the test fi
 
 `untested_file` is a code file a change adds with no test file named for it anywhere in the repo, such as `foo.py` with no `test_foo.py`. A change that adds one gets a nit. It needs no tool.
 
-A file of fewer than 30 non-blank lines is left alone. So are `__init__.py` and `conftest.py`.
+A file of fewer than 30 code lines is left alone. So are `__init__.py` and `conftest.py`.
 
 A Rust file is tested when it holds a `#[test]` or a `#[cfg(test)]`, or when a file such as `tests/<name>.rs` is named for it. `main.rs`, `lib.rs`, `mod.rs` and `build.rs` are left alone.
 
@@ -234,7 +255,7 @@ In tests, complexity and magic numbers don't count. Neither do the length or com
 
 ## F4.8: Limits told before the work
 
-At the start of a session in a repo with code, Claude is told the bar in a few lines: how long a function and a file may be, how many parameters, how deep the nesting and how high the complexity, each with the size past which a change is blocked. It also names what blocks for being added, how a blocked finding passes and which broom command answers a question about the repo.
+At the start of a session in a repo with code, Claude is told the bar in a few lines: how long a function and a file may be, how many parameters, how deep the nesting and how high the complexity, each with the size past which a change is blocked. It says that a length counts code lines, so comment lines and blank lines are free. It also names what blocks for being added, how a blocked finding passes and which broom command answers a question about the repo.
 
 The numbers are the repo's own, so limits moved in `.broom.json` show, and a smell the repo turned off is left out. A repo with no code, or with `smells` off, gets no card. It is told once per session.
 
@@ -246,14 +267,15 @@ The numbers are the repo's own, so limits moved in `.broom.json` show, and a sme
 
 When a change touches a function, a type or a file that already holds a sized smell, Claude is told to clean it in the same change. The finding says `you touched it, clean it up in this change`, so it reads apart from a smell the change made worse. It is a hint: it stops a commit and a turn's end, and passes with a reason.
 
-A function or a type is touched when a changed line lies inside it. A file is touched when it gained code lines besides imports. Code the change doesn't touch stays quiet, and so does a file that was only renamed.
+A function or a type is touched when a changed code line lies inside it. A file is touched when it gained code lines besides imports. A comment line or a blank line that a change adds or edits touches nothing. Code the change doesn't touch stays quiet, and so does a file that was only renamed.
 
 A function, a type or a file that was already past the hard limit and that the change grew can't be accepted. The block marks that line, and `broom known --accept` leaves it out and says what size to bring it back to. A smell that is newly past the hard limit can be accepted as before.
 
-2 gaps:
+3 gaps:
 
 - Outside Python a touched function is told its length only, since the tools give no range for the other sized smells.
 - A touched Go type isn't told, since its methods lie apart in the file.
+- A touched Swift or Rust function is found over as many lines as its length, which is fewer than it takes, so a change near its end can be missed.
 
 In Rust a touched function that is too long is told.
 

@@ -20,6 +20,47 @@
 
 ---
 
+### [P2][DISCUSSION] Whether the limits come down now that a length counts code lines
+
+- description:
+  - Since 2026-11-24 a length leaves out comment lines and blank lines, and the limits stayed at 50 and 100 for a function and 400 and 1000 for a file.
+  - Every length reads smaller, so the bar is looser by as much as a file holds comments and blank lines. broom's own `lib/` holds 9,227 code lines in 13,950 lines.
+  - The user set that day that the limits are a decision of their own.
+- created: 2026-11-24
+- status: OPEN
+- found: the user's change of 2026-11-24
+- related: [039: A length counts code lines](../specs/decisions/039-code-lines.md)
+- next: decide with the user, with the ledger's numbers for the length smells
+
+---
+
+### [P2][IDEA] A repeated block counted in code lines
+
+- description: `duplicate_lines` is the one sized smell that still counts comment lines and blank lines, since jscpd counts a clone's lines its own way. The lines of each clone could be counted in code lines, as a length is.
+- created: 2026-11-24
+- found: the change to code lines
+- related: [F4.3: Duplicate code](../features/F4-smells.md#f43-duplicate-code)
+
+---
+
+### [P2][IDEA] The doctor offers ast-grep in a CSS repo
+
+- description: CSS's comments are read by ast-grep, for its file length and its counters. `broom doctor` offers ast-grep only in a repo with Go, Rust or TS/JS, so a repo of CSS alone gets the note that it is missing and no offer.
+- created: 2026-11-24
+- found: the change to code lines
+- related: [F1.1: Doctor](../features/F1-setup.md#f11-doctor)
+
+---
+
+### [P2][IDEA] The lines a Swift or a Rust function takes
+
+- description: SwiftLint and clippy give a function's length and not where it ends. A touched function is then found over as many lines as its length, so a change near its end is missed. Swift's tree and ast-grep's Rust rules could give the span.
+- created: 2026-11-24
+- found: the change to code lines
+- related: [F4.9: Old smells in touched code](../features/F4-smells.md#f49-old-smells-in-touched-code)
+
+---
+
 ### [P2][IDEA] INSTALL says what to do when an install fails
 
 - description:

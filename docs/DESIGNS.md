@@ -73,6 +73,7 @@ A legacy repo holds more old warnings than any change adds, and noise teaches Cl
   - [007: A renamed file is measured against its old path](specs/decisions/007-renames-and-imports.md)
   - [009: An occurrence counts when the change raises the count](specs/decisions/009-occurrence-by-count.md)
   - [013: Dead code counts on added lines](specs/decisions/013-dead-code-added-lines.md)
+  - [039: A length counts code lines](specs/decisions/039-code-lines.md)
 - **How it works**:
   - [What counts](specs/what-counts.md)
   - [Smells](specs/smells.md)

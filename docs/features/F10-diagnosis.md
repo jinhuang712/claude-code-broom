@@ -64,7 +64,7 @@ The base is measured in a temporary checkout, which is removed afterwards. A too
 
 4 kinds of question:
 
-- **Size**: lines of code by language and by folder with tests counted apart · the longest files.
+- **Size**: code lines by language and by folder with tests counted apart · the longest files. A code line is what a smell's length counts, so comment lines and blank lines are left out.
 - **Tests**: the number of test files and test cases · the skipped ones · the code files with no test file by name · what the project's coverage report says.
 - **Rot**: the lint suppressions by kind · the TODO comments with how many are older than 180 days · the oldest TODO comments with the day each was written · the skipped tests.
 - **History**: the files that changed most in the last 90 days · the pairs of files that changed together.

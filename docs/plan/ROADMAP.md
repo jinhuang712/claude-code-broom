@@ -382,10 +382,11 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 **Status**: ⬜
 
-**Delivers** (2):
+**Delivers** (3):
 
 - [F9.4: Tiers by fix rate](../features/F9-record.md#f94-tiers-by-fix-rate)
 - A finding accepted in a linked worktree stays known once the work lands on the main checkout, done on 2026-11-20.
+- A length counts code lines, so a comment line and a blank line stop no change, done on 2026-11-24.
 
 **Exit criteria** (1):
 
