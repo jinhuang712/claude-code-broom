@@ -152,6 +152,14 @@ class RustSmellTest(BroomCase):
                          [("hint", "function_lines", "long_soft", True)], "long_hard, beside it, isn't touched")
         self.assertIn("you touched it, clean it up in this change", found[0].text())
 
+    def test_a_change_near_the_end_of_a_long_function_with_comments_in_it_touches_it(self) -> None:
+        body = "".join(f"    x += {i};\n    // note {i}\n" for i in range(11))  # 13 code lines in 24 lines
+        text = CLEAN + f"\npub fn commented(mut x: i32) -> i32 {{\n{body}    x\n}}\n"
+        r = self.crate(text)
+        (r / "src/lib.rs").write_text(text.replace("x += 10;", "x += 99;"))  # the line before the last note
+        found = self.smells(r)
+        self.assertEqual([(s.metric, s.key, s.touched, s.span) for s in found], [("function_lines", "commented", True, 25)])
+
     def test_tests_are_left_out_of_every_new_lint_and_the_rest_of_the_file_still_counts(self) -> None:
         r = self.crate(CLEAN)
         (r / "src/lib.rs").write_text(CLEAN + TESTS)

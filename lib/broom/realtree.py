@@ -23,7 +23,7 @@ from .jsmeasure import OXLINT_CATEGORIES
 from .langlint import golangci_cache
 from .pycycles import import_cycles
 from .rustcycles import rust_folder_cycles, rust_import_cycles
-from .rustlint import RUST_LINTS, RUST_FLAGS, config_text, read as rust_read, thresholds
+from .rustlint import RUST_LINTS, RUST_FLAGS, config_text, fn_span, read as rust_read, thresholds
 from .rustmeasure import FN_RULES, rust_tree
 from .state import DATA_ROOT, keep_newest, short_hash
 from .swiftcheck import swift_deprecated
@@ -59,6 +59,7 @@ class Found:
     tool: str
     key: str = ""  # what a dead-code finding names; a sized smell's function
     value: int = 1  # a sized smell's size
+    span: int = 0  # the lines a function takes from `line` on, where its syntax tree says; 0 where it doesn't
 
 
 # The linters that need types, by what they find. They run with broom's own config, never the project's.
@@ -270,7 +271,9 @@ def message_found(repo: Path, crate: Path, message: dict, soft: Dict[str, int],
             continue
         read = rust_read(metric, message, span, trees.get(rel, []), soft)
         if read:
-            yield Found(rel, int(span["line_start"]), metric, "clippy", *read)
+            at = int(span["line_start"])
+            taken = fn_span(trees.get(rel, []), at) if metric == "function_lines" else 0
+            yield Found(rel, at, metric, "clippy", *read, span=taken)
 
 
 def rust_messages(repo: Path, crate: Path, out: str, soft: Dict[str, int]) -> List[Found]:

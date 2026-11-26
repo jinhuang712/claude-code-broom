@@ -23,6 +23,7 @@ from .toolchain import SWIFT_EXTS
 
 FUNCTIONS = {"func_decl", "constructor_decl", "destructor_decl", "accessor_decl"}
 STORAGE = {"var_decl", "subscript_decl"}  # what an accessor belongs to
+BODIES = FUNCTIONS | {"subscript_decl"}  # what SwiftLint measures the length of, with the accessors it never does
 # What nests control flow. `guard … else` is left out, as it is how Swift keeps code flat; an `else if` stands where
 # its `if` stood, and a `catch` where its `do` did.
 CONTROL = {"if_stmt", "for_each_stmt", "while_stmt", "repeat_while_stmt", "switch_stmt", "do_stmt", "do_catch_stmt"}
@@ -177,6 +178,20 @@ def globals_in(tree: Tree) -> Iterator[int]:
             yield (tree.lines(item) or (0, 0))[0]
 
 
+def function_spans(tree: Tree) -> List[Tuple[int, int]]:
+    """The first and last line of every function, initializer, deinitializer, accessor and subscript the tree gives a
+    range."""
+    return [span for item in tree.items for node in walk(item) if kind(node) in BODIES
+            for span in [tree.lines(node)] if span]
+
+
+def span_from(spans: List[Tuple[int, int]], line: int) -> int:
+    """How many lines the innermost of `spans` that holds `line` takes from `line` on, where SwiftLint puts a
+    function's row; 0 when none holds it."""
+    inside = [last for first, last in spans if first <= line <= last]
+    return min(inside) - line + 1 if inside else 0
+
+
 def tree_smells(r: Reader, tree: Tree, lim: Limits, source: Optional[SwiftFile]) -> None:
     """Add the rows read from one file's tree, with SourceKit's tokens of it (`source`) to place an expression."""
     for (line, name), depth in nesting(tree).items():
@@ -187,9 +202,10 @@ def tree_smells(r: Reader, tree: Tree, lim: Limits, source: Optional[SwiftFile])
             r.add(tree.rel, line, metric, 1)
 
 
-def swift_text(r: Reader, rels: List[str], lim: Limits) -> None:
+def swift_text(r: Reader, rels: List[str], lim: Limits) -> Dict[str, List[Tuple[int, int]]]:
     """Add the rows read from the trees of the Swift files `rels`: from swiftc's, the nesting, catches, ternaries and
-    globals; from SourceKit's, the calls, parameters and comments. Code swiftc can't parse gives none."""
+    globals; from SourceKit's, the calls, parameters and comments. Code swiftc can't parse gives none. Give each
+    file's function spans, which SwiftLint's rows of a function's length are given theirs from."""
     trees = parse(r.root, rels, r.notes)
     sources = {rel: open_text((r.root / rel).read_text(errors="replace")) for rel in rels}
     unread = [rel for rel, source in sources.items() if source is None]
@@ -207,6 +223,7 @@ def swift_text(r: Reader, rels: List[str], lim: Limits) -> None:
     for rel, line in commented_code(r.root, rels):
         r.add(rel, line, "commented_code", 1)
     r.rows[kept:] = [row for row in r.rows[kept:] if row.rel not in trees or not trees[row.rel].unread(row.line)]
+    return {rel: function_spans(tree) for rel, tree in trees.items()}
 
 
 def swift_unused(repo: Path, rels: List[str]) -> List[Tuple[str, int, str]]:

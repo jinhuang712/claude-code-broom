@@ -8,7 +8,7 @@ import shutil
 import unittest
 from pathlib import Path
 
-from support import HAS_PY, BroomCase, no_depcruise, py_function
+from support import HAS_PY, HAS_SWIFTLINT, BroomCase, no_depcruise, py_function
 
 from broom.findings import Issue
 from broom.gate import issue_key, line_text
@@ -128,6 +128,16 @@ class TouchedHintTest(TouchedCase):
         self.assertEqual(notes, [])
         self.assertEqual([s.text() for s in found if s.touched],
                          [f"longer is 60 code lines long (over 50; was 60: {TOUCHED})"], "no parameter hint, though touched")
+
+    @unittest.skipUnless(HAS_SWIFTLINT and shutil.which("swiftc"), "swiftlint or swiftc missing")
+    def test_in_swift_a_change_near_the_end_of_a_function_with_comments_in_it_touches_it(self) -> None:
+        body = "".join(f"    x += {i}\n    // note {i}\n" for i in range(55))  # 55 code lines in 110 lines
+        text = f"func commented(_ x: Int) -> Int {{\n    var x = x\n{body}    return x\n}}\n"
+        r = self.repo({"a.swift": text})
+        (r / "a.swift").write_text(text.replace("x += 54", "x += 99"))  # past line + length, inside the function
+        found, _ = find_smells(r, [r / "a.swift"], "HEAD")
+        self.assertEqual([(s.key, s.touched, s.span) for s in found if s.metric == "function_lines"],
+                         [("commented", True, 114)])
 
 
 class AcceptTest(TouchedCase):

@@ -60,14 +60,16 @@ class Reader:
             self.notes.append(f"{self.tool} failed measuring smells: {out.strip()[:120]}")
             return empty
 
-    def add(self, rel: str, line: int, metric: str, value: Optional[int], name: Optional[str] = None) -> None:
-        """Record one measurement as a Raw row, skipping a None value; `name` overrides the key from the line."""
+    def add(self, rel: str, line: int, metric: str, value: Optional[int], name: Optional[str] = None) -> Optional[Raw]:
+        """Record one measurement as a Raw row, skipping a None value (none is given then); `name` overrides the key
+        from the line."""
         if value is None:
-            return
+            return None
         rel = self.rel(rel)
         text = self.line_text(rel, line)
         key = name or match(r"\b(?:def|func|function|fn)\s+([A-Za-z_]\w*)", text) or text
         self.rows.append(Raw(rel, line, metric, key, value, self.tool))
+        return self.rows[-1]
 
     def rel(self, name: str) -> str:
         """`name` relative to the scratch tree's root when it lies under the root, else unchanged."""

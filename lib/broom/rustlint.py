@@ -79,6 +79,12 @@ def fn_name(tree: List[Match], line: int) -> str:
     return next((m.caught["NAME"] for m in tree if m.rule == "rust-fn-item" and m.line == line), "function")
 
 
+def fn_span(tree: List[Match], line: int) -> int:
+    """How many lines the function that starts on `line` of a file with the syntax-tree matches `tree` takes, from
+    its first line through its closing brace; 0 when the tree has none there."""
+    return next((m.lines for m in tree if m.rule == "rust-fn-item" and m.line == line), 0)
+
+
 def read(metric: str, message: dict, span: dict, tree: List[Match], soft: Dict[str, int]) -> Optional[Tuple[str, int]]:
     """What a message says of one of its primary spans, as the name of what has the smell and its size; None when
     the span isn't the smell (an unused variable that isn't a parameter, a setter's boolean). `tree` holds the span's file's matches."""

@@ -248,7 +248,8 @@ def touched_function(repo: Path, f: Found, lines: Set[int], lim: RepoLimits) -> 
     pair = lim.of(f.rel).get(f.metric) if f.metric == "function_lines" else None
     if not pair or not level(f.value, pair):
         return []
-    s = Smell(repo, repo / f.rel, f.line, f.metric, f.key, f.value, f.value, f.tool, "hint", pair[0], touched=True)
+    s = Smell(repo, repo / f.rel, f.line, f.metric, f.key, f.value, f.value, f.tool, "hint", pair[0], touched=True,
+              span=f.span)
     return [s] if touches(s, lines, "") else []
 
 

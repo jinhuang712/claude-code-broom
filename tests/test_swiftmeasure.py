@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from test_swifttree import SwiftTreeCase, text
 
-from broom.swiftmeasure import broad_catches, globals_in, nested_ternaries, nesting
+from broom.swiftmeasure import broad_catches, function_spans, globals_in, nested_ternaries, nesting, span_from
 from broom.swiftkit import open_text
 
 
@@ -30,6 +30,13 @@ class SwiftMeasureTest(SwiftTreeCase):
         tree = self.tree(text("struct S {", "    var x: Int { if a { return 1 }; return 2 }", "    init() {",
                               "        func inner() { while a { if b {} } }", "        if a {}", "    }", "}"))
         self.assertEqual(nesting(tree), {(2, "x"): 1, (3, "init"): 1, (4, "inner"): 2})
+
+    def test_a_function_takes_the_lines_from_its_row_through_its_closing_brace(self) -> None:
+        tree = self.tree(text("struct S {", "    func outer() {", "        func inner() {", "            work()", "        }",
+                              "        work()", "    }", "    init() {", "    }", "}"))
+        spans = function_spans(tree)
+        self.assertEqual([span_from(spans, line) for line in (2, 3, 8, 1)], [6, 3, 2, 0],
+                         "the innermost function that holds the row's line; none for a type")
 
     def test_a_catch_is_broad_when_its_body_ignores_the_error(self) -> None:
         tree = self.tree(text("func f() {", '    do { try g() } catch { log("x") }', "    do { try g() } catch { log(error) }",

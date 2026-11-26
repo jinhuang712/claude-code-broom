@@ -19,7 +19,7 @@ from .jsmeasure import measure_js
 from .reading import TOOL_TIMEOUT, Limits, Raw, Reader, match, number, quoted_name
 from .rustmeasure import rust_text
 from .setters import snake_setter
-from .swiftmeasure import swift_text
+from .swiftmeasure import span_from, swift_text
 from .syntax import inside
 from .toolchain import CSS_EXTS, GO_EXTS, JS_EXTS, PY_EXTS, RS_EXTS, SWIFT_EXTS
 
@@ -257,7 +257,7 @@ def swiftlint_config(lim: Limits) -> str:
 def measure_swift(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None:
     """Measure the Swift files: the smells read from the syntax tree, then the rest with swiftlint, under a config
     with the size rules; no swiftlint, a note."""
-    swift_text(r, rels, lim)
+    spans = swift_text(r, rels, lim)
     exe = shutil.which("swiftlint")
     if not exe:
         r.notes.append("missing:swiftlint (brew install swiftlint)")
@@ -271,7 +271,10 @@ def measure_swift(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None
         metric = SWIFTLINT_METRICS.get(rule)
         if metric:
             value = 1 if metric in SMELL_PRESENCE else number(r"(\d+)\D*$", d.get("reason", ""))
-            r.add(d.get("file", ""), int(d.get("line") or 0), metric, value)
+            rel, line = r.rel(d.get("file", "")), int(d.get("line") or 0)
+            row = r.add(rel, line, metric, value)
+            if row and metric == "function_lines":
+                row.span = span_from(spans.get(rel, []), line)
 
 
 def measure_rust(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None:
