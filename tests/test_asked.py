@@ -91,7 +91,7 @@ class AskTest(AskedCase):
         self.assertEqual((data["open"], data["open_asked"], data["fixed"], data["asked"], data["fix_rate"]),
                          (0, 0, 1, 1, 1.0), "asked, then fixed")
 
-    def test_the_finding_blocks_again_at_the_next_turns_end(self) -> None:
+    def test_the_finding_blocks_again_at_the_end_of_a_next_turn_that_edits_its_file(self) -> None:
         r = self.blocked_commit()
         self.assertEqual(self.ask(r).returncode, 0)
         self.assertEqual(self.stop(r), {"systemMessage": ASKED_LINE})
@@ -102,6 +102,24 @@ class AskTest(AskedCase):
         self.assertIn("Block 1 of 3.", out["reason"])
         self.assertEqual(self.ask(r, "and now?").returncode, 0, "asked about again")
         self.assertEqual(self.stop(r)["systemMessage"], ASKED_LINE.replace(QUESTION, "and now?"))
+
+    def test_a_next_turn_blocks_on_it_only_when_it_changes_its_file(self) -> None:
+        r = self.repo({"a.py": "x = 1\n", "b.py": "y = 1\n"})
+        self.touch(r, "a.py", SIX)
+        self.assertIn("a.py:1:0  params", self.stop(r)["reason"])
+        self.assertEqual(self.ask(r).returncode, 0)
+        self.assertEqual(self.stop(r), {"systemMessage": ASKED_LINE})
+        self.hook("prompt", {"session_id": "s1", "cwd": str(r)})
+        self.assertEqual(self.stop(r), {}, "a turn that changed nothing checks nothing")
+        self.hook("prompt", {"session_id": "s1", "cwd": str(r)})
+        self.touch(r, "b.py", "y = 2\n")
+        self.assertEqual(self.stop(r), {}, "a turn that changed another file doesn't check a.py")
+        self.hook("prompt", {"session_id": "s1", "cwd": str(r)})
+        self.touch(r, "a.py", SIX + "\n")
+        self.assertEqual(self.stop(r).get("decision"), "block", "a turn that changed a.py blocks on it")
+        self.sh(r, "git", "add", "a.py")
+        self.assertIn("stock takes 6 parameters", self.denied(self.commit(r, "git commit -m x")),
+                      "and a commit of a.py is denied all along: nothing passed")
 
     def test_a_finding_not_asked_about_still_blocks_beside_one_that_was(self) -> None:
         r = self.repo({"a.py": "x = 1\n", "b.py": "y = 1\n"})
