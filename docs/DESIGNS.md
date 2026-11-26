@@ -2,7 +2,7 @@
 
 Claude's edits, commits and turn ends go in. Formatted files, a block with a report or a short message come out. Between the two sit hooks that start, run the project's tools on what changed and exit. Beside the hooks sits the `broom` command, which Claude runs to measure a repo and which never blocks.
 
-broom is designed around 9 guidelines:
+broom is designed around 11 guidelines:
 
 1. **Only Claude Code's plugin parts and Python's standard library**: Nothing runs between hooks, and nothing is installed beyond the tools themselves.
 2. **An idle hook exits in milliseconds**: A hook with nothing to do costs a process start.
@@ -13,6 +13,8 @@ broom is designed around 9 guidelines:
 7. **Nothing is installed or set without a yes**: A hook tells Claude, and Claude asks the user.
 8. **A repo's config holds choices, never commands**: Honoring it in an untrusted repo is safe.
 9. **A smell is read from a syntax tree, never from a text pattern**: What no linter covers is read by a parser.
+10. **No rule turns on the clock**: What is held back waits for an event, and what is trimmed goes by size or count.
+11. **What is hidden still counts**: A folded finding leaves the lists and stays in every total.
 
 ---
 
@@ -153,3 +155,34 @@ A text pattern holds only for the code its author thought of, and code varies wi
   - [042: A Go rule flags what its message says](specs/decisions/042-go-rules-flag-their-message.md)
 - **How it works**:
   - [Smells](specs/smells.md)
+
+---
+
+## 10. No rule turns on the clock
+
+A rule by the clock brings a finding back with its code unchanged, or lets one go that nothing fixed, and nobody chose the time it waits. So what broom holds back waits for an event, and what it trims goes by size or count. The cost is a store that grows until its size bound, and history counted in commits, which a repo makes at its own pace.
+
+**Ask**: Would its outcome change if nothing happened but time passing?
+
+- **Stance**: [An event or a count, never the clock](PHILOSOPHY.md#what-brings-back-what-was-held-back)
+- **Decisions**:
+  - [046: A known issue never expires](specs/decisions/046-known-issues-never-expire.md)
+  - [048: No rule turns on the clock](specs/decisions/048-no-clock.md)
+- **How it works**:
+  - [What counts](specs/what-counts.md)
+  - [Record](specs/record.md)
+
+---
+
+## 11. What is hidden still counts
+
+A total that leaves out what Claude accepted reads cleaner than the code is. So a finding Claude hides is only folded: it leaves the lists, every total counts it, and a line says how many are folded. The cost is one more line wherever something is folded.
+
+**Ask**: Would a total drop when Claude hides something?
+
+- **Stance**: [It is folded, and it still counts](PHILOSOPHY.md#what-happens-to-what-claude-hides)
+- **Decisions**:
+  - [049: What Claude hides is folded and still counts](specs/decisions/049-folded-still-counts.md)
+- **How it works**:
+  - [What counts](specs/what-counts.md)
+  - [Cleanup](specs/cleanup.md)

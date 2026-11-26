@@ -71,6 +71,22 @@ Asking the user is no way out for a finding. It ends the turn with the question 
 
 ---
 
+## What brings back what was held back?
+
+**An event or a count, never the clock.**
+
+No rule of broom turns on how much time passed. Time passing changes no code, so it is no reason to raise a finding again or to stop raising one. What broom holds back, it holds until something happens: a commit, a prompt, a change to the code, a new version of broom. What it trims, it trims by size or by count. Only broom's own running time has a bound, since a hook that hangs holds Claude up, and the bound hides nothing: what a tool cut off would have found is said in a note.
+
+---
+
+## What happens to what Claude hides?
+
+**It is folded, and it still counts.**
+
+Claude may hide a finding: accept it with a reason, put it to the user, or quiet a note the user said not now to. That folds it out of the lists and nothing more. Every total still counts it, and a line says how many are folded, so a number never reads cleaner than the code is.
+
+---
+
 ## Who decides what is installed or changed?
 
 **Ask, don't assume.**

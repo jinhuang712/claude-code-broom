@@ -20,12 +20,12 @@
 
 ---
 
-### [P2][IDEA] The report split by repo and by day
+### [P2][IDEA] The report split by repo and by version
 
 - description:
   - `broom report --all` sums every repo over the whole period.
   - The look at the ledger on 2026-11-26 needed a script to split it by repo and by day, which found the one turn behind most of the questions put to the user.
-  - The report could list each repo's counts and each day's, since every line of the ledger holds its repo and its time.
+  - The report could list each repo's counts and each version's, since every line of the ledger holds its repo and, from 0.29.0, broom's version.
 - created: 2026-11-26
 - found: the look at the ledger on 2026-11-26
 - related: [F9.3: Report](../features/F9-record.md#f93-report)
@@ -247,7 +247,7 @@
 
 - description:
   - A type escape such as `any` or a forced cast is hinted when a change adds one, and nothing counts them across the repo.
-  - A counter would tell when typing got looser over a month.
+  - A counter would tell when typing got looser between two check-ups.
 - created: 2026-11-17
 - found: the look for missed rot at the end of CP5
 - related: [F11.1: Counters](../features/F11-checkup.md#f111-counters)
@@ -269,18 +269,6 @@
 - created: 2026-11-18
 - found: a fresh session's commit on a public Python project that configures both, where the commit check ran ruff alone
 - related: [F8.4: Python](../features/F8-languages.md#f84-python)
-
----
-
-### [P2][IDEA] A test suite that gets slower
-
-- description:
-  - A suite slows a little with each change, and no change is at fault, which is rot by broom's own definition.
-  - This repo's suite took about 40 seconds on 2026-11-17, 78 to 81 on 2026-11-19 and 113 to 150 on 2026-11-20, that day with other sessions busy on the machine.
-  - broom sees each test run's command at a turn's end, so it could keep how long a run took and tell when that grew.
-- created: 2026-11-19
-- found: the look for missed rot at the end of CP6
-- related: [F11.1: Counters](../features/F11-checkup.md#f111-counters)
 
 ---
 
