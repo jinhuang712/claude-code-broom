@@ -188,6 +188,27 @@ class GlobalsTest(GoTextCase):
             with self.subTest(rows=rows):
                 self.assertEqual(self.assigned(rows), [])
 
+    def test_a_variable_of_an_imported_package_counts_in_the_file_that_assigns_it_named_by_package_and_variable(
+            self) -> None:
+        head = ("package a", "", "import (", '\t"example.com/lib"', '\tother "example.com/more/v2"',
+                '\t"example.com/go-util.v1"', ")", "")
+        for row in ("\tlib.Default = nil", "\tlib.Count++", "\tother.Limit -= 1", "\tutil.Mode = 2"):
+            with self.subTest(row=row):
+                self.assertEqual(self.assigned(("func Set() {", row, "}"), head=head), [[10]])
+        found = self.changed("a.go", text(*head), text(*head, "func Set() {", "\tlib.Default = nil", "}"))
+        self.assertEqual([f[0] for f in found], ["globals"])
+
+    def test_a_local_values_field_a_field_of_a_package_variable_init_and_a_shadowed_package_are_quiet(self) -> None:
+        head = ("package a", "", 'import "example.com/lib"', "", "type conf struct{ Name string }", "")
+        for rows in (("func Set(cfg *conf) {", '\tcfg.Name = "x"', "}"),
+                     ("var cfg conf", "", "func Set() {", '\tcfg.Name = "x"', "}"),
+                     ("func Set() {", "\tlib.Default.Name = 1", "}"),
+                     ("func init() {", "\tlib.Default = nil", "}"),
+                     ("func Set() {", "\tlib := conf{}", '\tlib.Name = "x"', "}"),
+                     ("func Set() {", "\tmore.Default = nil", "}")):
+            with self.subTest(rows=rows):
+                self.assertEqual(self.assigned(rows, head=head), [])
+
     def test_an_old_assignment_stays_quiet_when_the_change_is_elsewhere(self) -> None:
         old = text(*STATE, "func Bump() {", "\tcount++", "}")
         self.assertEqual(self.changed("a.go", old, old + "\nvar y = 1\n"), [])

@@ -1,7 +1,8 @@
 # A package-level variable that a function assigns (gomeasure.py, decision 042), read in four parts: the variables a
 # package declares, the functions, the names a function assigns and the names a function declares itself, which hide
 # a package variable of the same name. An assignment is `x = …`, `x op= …`, `x++` or `x--`; a write to a field or an
-# element of `x` is none, as in Python and TS/JS. gomeasure.py joins the parts across the files of one package.
+# element of `x` is none, as in Python and TS/JS. gomeasure.py joins the parts across the files of one package. A
+# variable of another package, `pkg.Var = …`, is read from the file that assigns it and the packages it imports.
 id: go-state-var
 language: Go
 message: a package-level variable
@@ -61,6 +62,45 @@ rule:
           any: [kind: short_var_declaration, kind: range_clause, kind: receive_statement]
     - inside: {kind: expression_list, inside: {kind: type_switch_statement, field: alias}}
     - inside: {any: [kind: var_spec, kind: parameter_declaration, kind: variadic_parameter_declaration]}
+  inside:
+    stopBy: end
+    any: [kind: function_declaration, kind: method_declaration, kind: func_literal]
+---
+# A package the file imports, by the name it gives it (`go-state-import-as`) or by its path (`go-state-import`),
+# whose last part names it; gomeasure.py reads the name. `pkg.Var = v` assigns another package's variable only where
+# `pkg` is one of these.
+id: go-state-import
+language: Go
+message: a package the file imports
+metadata: {smell: imported}
+rule:
+  kind: import_spec
+  has: {field: path, pattern: $PATH}
+  not: {has: {field: name, any: [kind: package_identifier, kind: blank_identifier, kind: dot]}}
+---
+id: go-state-import-as
+language: Go
+message: a package the file imports under a name
+metadata: {smell: imported}
+rule:
+  kind: import_spec
+  has: {field: name, pattern: $NAME}
+---
+# `pkg.Var = …`, `pkg.Var op= …`, `pkg.Var++` or `pkg.Var--` in a function: a variable of the package `pkg` names, if
+# the file imports one under that name. A write to a field of it, `pkg.Var.Field = …`, is none.
+id: go-state-assign-other
+language: Go
+message: a selector a function assigns
+metadata: {smell: assigned}
+rule:
+  kind: selector_expression
+  all:
+    - has: {field: operand, kind: identifier, pattern: $PKG}
+    - has: {field: field, pattern: $NAME}
+  any:
+    - inside: {kind: expression_list, inside: {kind: assignment_statement, field: left}}
+    - inside: {kind: inc_statement}
+    - inside: {kind: dec_statement}
   inside:
     stopBy: end
     any: [kind: function_declaration, kind: method_declaration, kind: func_literal]

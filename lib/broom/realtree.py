@@ -142,15 +142,16 @@ def go_issues(repo: Path, module: Path, issues: List[dict]) -> List[Found]:
 
 
 def go_state(repo: Path, rels: List[str], notes: List[str], budget: Budget) -> List[Found]:
-    """A package variable that a function of the changed Go files assigns, read from the trees of their packages'
-    files, which only the real tree holds (decision 042)."""
+    """A package variable that a function of the changed Go files assigns, its own package's or another's, keyed by
+    the variable, read from the trees of their packages' files, which only the real tree holds (decision 042)."""
     if not any(Path(rel).suffix in GO_EXTS for rel in rels):
         return []
     timeout = budget.timeout()
     if not timeout:
         notes.append(OUT_OF_TIME.format(tool="ast-grep"))
         return []
-    return [Found(rel, line, "globals", "broom") for rel, line in assigned_globals(repo, rels, notes, timeout)]
+    return [Found(rel, line, "globals", "broom", name)
+            for rel, line, name in assigned_globals(repo, rels, notes, timeout)]
 
 
 def go_key(metric: str, text: str) -> str:

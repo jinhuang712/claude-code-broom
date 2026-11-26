@@ -95,32 +95,57 @@ def unit_of(m: Match, units: List[Match]) -> Optional[int]:
     return next((i for i, u in enumerate(units) if u.start <= m.start < u.stop), None)
 
 
-def first_assignments(ms: List[Match], names: Set[str]) -> List[int]:
-    """The lines of one file's matches `ms` where a function first assigns one of the package variables `names`.
-    `init` sets the package up, so what it assigns doesn't count; neither does a name the function declares."""
+def import_name(m: Match) -> str:
+    """The name a file's import `m` gives its package: the name it imports it under, or else the one goimports assumes
+    from its path, the last part (the one before a major version such as `v2`) without a leading `go-` and cut where a
+    character no identifier holds starts, as in `yaml.v3`. `_` and `.` give none."""
+    if m.rule == "go-state-import-as":
+        name = m.caught.get("NAME", "")
+        return "" if name in ("_", ".") else name
+    parts = m.caught.get("PATH", "").strip('"`').split("/")
+    if len(parts) > 1 and parts[-1][:1] == "v" and parts[-1][1:].isdigit():
+        parts.pop()
+    base = parts[-1].removeprefix("go-")
+    return base[:next((i for i, c in enumerate(base) if not (c.isalnum() or c == "_")), len(base))]
+
+
+def assigned_name(m: Match, names: Set[str], imported: Set[str]) -> str:
+    """The variable the assignment `m` assigns, as `Var` for one of its package's `names` or `pkg.Var` for one of a
+    package the file imports under a name among `imported`; empty for any other name or field."""
+    name, pkg = m.caught.get("NAME", ""), m.caught.get("PKG")
+    if pkg is None:
+        return name if name in names else ""
+    return f"{pkg}.{name}" if pkg in imported else ""
+
+
+def first_assignments(ms: List[Match], names: Set[str]) -> List[Tuple[int, str]]:
+    """The (line, variable) of one file's matches `ms` where a function first assigns one of the package variables
+    `names`, or a variable of a package the file imports. `init` sets the package up, so what it assigns doesn't
+    count; neither does a name the function declares, which hides a package variable or an imported package."""
     units = [m for m in ms if m.rule == "go-state-func"]
     local = {(unit_of(m, units), m.caught.get("NAME")) for m in ms if m.rule == "go-state-local"}
-    seen: Set[Tuple[Optional[int], Optional[str]]] = set()
-    lines = []
-    for m in sorted((m for m in ms if m.rule == "go-state-assign"), key=lambda m: m.start):
-        key = (unit_of(m, units), m.caught.get("NAME"))
-        if key[0] is None or key[1] not in names or key in local or key in seen:
+    imported = {import_name(m) for m in ms if m.smell == "imported"} - {""}
+    seen: Set[Tuple[Optional[int], str]] = set()
+    out = []
+    for m in sorted((m for m in ms if m.smell == "assigned"), key=lambda m: m.start):
+        unit, name = unit_of(m, units), assigned_name(m, names, imported)
+        if unit is None or not name or (unit, name.split(".")[0]) in local or (unit, name) in seen:
             continue
-        seen.add(key)
-        if units[key[0]].caught.get("NAME") != "init":
-            lines.append(m.line)
-    return lines
+        seen.add((unit, name))
+        if units[unit].caught.get("NAME") != "init":
+            out.append((m.line, name))
+    return out
 
 
-def assigned_globals(root: Path, rels: List[str], notes: List[str], timeout: float) -> List[Tuple[str, int]]:
-    """Each (file, line) among the Go files `rels` where a function first assigns a variable its package declares.
-    The package's other files in the folder are read too, for the variables they declare, and only a region of
-    `rels` the grammar can't read gets a note."""
+def assigned_globals(root: Path, rels: List[str], notes: List[str], timeout: float) -> List[Tuple[str, int, str]]:
+    """Each (file, line, variable) among the Go files `rels` where a function first assigns a variable its package
+    declares, or one of a package the file imports (`pkg.Var`). The package's other files in the folder are read too,
+    for the variables they declare, and only a region of `rels` the grammar can't read gets a note."""
     files, wanted = package_files(root, rels), set(rels)
     per_file = by_file(matches(root, files, notes, timeout, STATE_RULES), files)
     mine = parsed({rel: ms for rel, ms in per_file.items() if rel in wanted}, notes)
     per_file = {**parsed({rel: ms for rel, ms in per_file.items() if rel not in mine}, []), **mine}
     package = packages([m for ms in per_file.values() for m in ms])
     names = declared(per_file)
-    return [(rel, line) for rel, ms in mine.items()
-            for line in first_assignments(ms, names.get((str(Path(rel).parent), package.get(rel, "")), set()))]
+    return [(rel, line, name) for rel, ms in mine.items()
+            for line, name in first_assignments(ms, names.get((str(Path(rel).parent), package.get(rel, "")), set()))]
