@@ -24,6 +24,8 @@ PLUGIN_ROOT = Path(__file__).resolve().parents[2]
 DATA_ROOT = Path(os.environ.get("CLAUDE_PLUGIN_DATA") or Path.home() / ".claude" / "plugins" / "data" / "broom-claude-code-broom")
 DEFAULTS = PLUGIN_ROOT / "defaults"
 
+KEEP_SESSIONS = 50  # the session folders kept, the last touched first; older ones go
+
 HOOK_INPUT_SECONDS = 10  # how long a hook waits for what Claude Code sends it, whether or not it closes its end
 
 
@@ -176,20 +178,33 @@ def update_json(path: Path, default, change: Callable) -> None:
         save_json(path, data if result is None else result)
 
 
-def prune_dirs(root: Path, max_age_days: float) -> None:
-    """Remove the directories in `root` not modified for `max_age_days`."""
-    cutoff = time.time() - max_age_days * 86400
-    for d in root.glob("*") if root.is_dir() else []:
+def newest_first(root: Path) -> List[Path]:
+    """The entries of the directory `root`, the last modified first (the order they were touched in, not an age); none
+    when it is missing."""
+    stamped = []
+    for p in root.glob("*") if root.is_dir() else []:
         try:
-            if d.stat().st_mtime < cutoff:
-                shutil.rmtree(d, ignore_errors=True)
+            stamped.append((p.stat().st_mtime, p))
         except OSError:
             pass
+    return [p for _, p in sorted(stamped, key=lambda x: x[0], reverse=True)]
 
 
-def prune_sessions(max_age_days: float = 7) -> None:
-    """Delete the session directories not touched for `max_age_days` days (7 by default), under the data root."""
-    prune_dirs(DATA_ROOT / "sessions", max_age_days)
+def keep_newest(root: Path, keep: int) -> None:
+    """Remove the files and directories in `root` but the `keep` modified last."""
+    for p in newest_first(root)[keep:]:
+        if p.is_dir():
+            shutil.rmtree(p, ignore_errors=True)
+        else:
+            try:
+                p.unlink()
+            except OSError:
+                pass
+
+
+def prune_sessions(keep: int = KEEP_SESSIONS) -> None:
+    """Delete the session directories under the data root but the `keep` touched last (KEEP_SESSIONS by default)."""
+    keep_newest(DATA_ROOT / "sessions", keep)
 
 
 def short_hash(text: str) -> str:

@@ -32,11 +32,12 @@ from .githook import installed
 from .gitutil import ChangedLines, git, git_root
 from .passed import record, staged_blobs, unpassed, worktree_blobs
 from .smells import Smell, gate_smells, nits_text
-from .state import DATA_ROOT, emit, load_json, session_dir, warn
+from .state import DATA_ROOT, emit, keep_newest, load_json, session_dir, warn
 from .toolchain import lang_of
 
 
 ACCEPT_FLAG = '--accept "<why>"'  # how a block message writes the commands it offers
+KEEP_CLAIMS = 200  # tool-call claims kept, the last made first
 ASK_FLAG = '--ask "<what they must decide, and why>"'
 
 
@@ -47,13 +48,7 @@ def claim(tool_use_id: Optional[str]) -> bool:
         return True
     d = DATA_ROOT / "claims"
     d.mkdir(parents=True, exist_ok=True)
-    cutoff = time.time() - 86400
-    for old in d.iterdir():
-        try:
-            if old.stat().st_mtime < cutoff:
-                old.unlink()
-        except OSError:
-            pass
+    keep_newest(d, KEEP_CLAIMS)
     try:
         os.close(os.open(str(d / re.sub(r"[^\w.-]", "_", tool_use_id)), os.O_CREAT | os.O_EXCL | os.O_WRONLY))
         return True

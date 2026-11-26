@@ -25,7 +25,7 @@ from .pycycles import import_cycles
 from .rustcycles import rust_folder_cycles, rust_import_cycles
 from .rustlint import RUST_LINTS, RUST_FLAGS, config_text, read as rust_read, thresholds
 from .rustmeasure import FN_RULES, rust_tree
-from .state import DATA_ROOT, prune_dirs, short_hash
+from .state import DATA_ROOT, keep_newest, short_hash
 from .swiftcheck import swift_deprecated
 from .swiftmeasure import swift_unused
 from .syntax import Match
@@ -270,13 +270,14 @@ def rust_messages(repo: Path, crate: Path, out: str, soft: Dict[str, int]) -> Li
 
 
 CLIPPY_DIRS = DATA_ROOT / "clippy"
+CLIPPY_TARGETS = 10  # build outputs kept, one per crate, the last used first
 
 
 def clippy_dirs(crate: Path, soft: Dict[str, int]) -> Tuple[Path, Path]:
     """Where broom's clippy run keeps its config and its build output, the same each time. cargo counts a different
     CLIPPY_CONF_DIR (a fresh temporary directory per run was one) and different clippy arguments as a reason to check
     the crate again, so the project's own clippy run and this one would each throw away the other's work. With a
-    stable config path and a target directory of its own, both stay fresh. Unused for 7 days, they go."""
+    stable config path and a target directory of its own, both stay fresh. Only the CLIPPY_TARGETS used last are kept."""
     conf = CLIPPY_DIRS / "conf" / "-".join(str(n) for n in thresholds(soft).values())
     conf.mkdir(parents=True, exist_ok=True)
     text = config_text(soft)
@@ -285,7 +286,7 @@ def clippy_dirs(crate: Path, soft: Dict[str, int]) -> Tuple[Path, Path]:
     target = CLIPPY_DIRS / "target" / short_hash(str(crate))
     target.mkdir(parents=True, exist_ok=True)
     os.utime(target)
-    prune_dirs(CLIPPY_DIRS / "target", 7)
+    keep_newest(CLIPPY_DIRS / "target", CLIPPY_TARGETS)
     return conf, target
 
 

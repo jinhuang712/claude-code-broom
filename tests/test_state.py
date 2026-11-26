@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import time
@@ -12,9 +13,9 @@ from unittest import mock
 
 from support import ROOT, BroomCase
 
-from broom import gate
+from broom import commitgate, gate, state
 from broom.gate import save_commits
-from broom.state import load_json, update_json
+from broom.state import keep_newest, load_json, update_json
 
 WORKER = """
 import sys
@@ -77,6 +78,41 @@ class StateTests(BroomCase):
                                     "/c": {"pending": {"z": 1}}}))
         save_commits({"/a": {"pending": {"k": 2}}}, [Path("/a"), Path("/b")])
         self.assertEqual(load_json(path, None), {"/a": {"pending": {"k": 2}}, "/c": {"pending": {"z": 1}}})
+
+    def touched(self, root: Path, names: list) -> None:
+        """Make `names` in `root`, each modified after the one before; the first is the oldest."""
+        root.mkdir(parents=True, exist_ok=True)
+        for n, name in enumerate(names):
+            (root / name).mkdir() if name.startswith("d") else (root / name).write_text("")
+            os.utime(root / name, (1000 + n, 1000 + n))
+
+    def test_the_last_touched_few_are_kept_and_age_decides_nothing(self) -> None:
+        root = self.tmp / "keep"
+        self.touched(root, ["d1", "f2", "d3", "f4"])  # all of them decades old
+        keep_newest(root, 2)
+        self.assertEqual(sorted(p.name for p in root.iterdir()), ["d3", "f4"])
+        keep_newest(root, 2)
+        keep_newest(self.tmp / "missing", 2)
+        self.assertEqual(len(list(root.iterdir())), 2, "nothing over the count: nothing goes")
+
+    def test_session_folders_are_kept_by_count(self) -> None:
+        sessions = self.tmp / "data" / "sessions"
+        self.touched(sessions, [f"d{n}" for n in range(state.KEEP_SESSIONS + 3)])
+        with mock.patch.object(state, "DATA_ROOT", self.tmp / "data"):
+            state.prune_sessions()
+        left = sorted(int(p.name[1:]) for p in sessions.iterdir())
+        self.assertEqual(left, list(range(3, state.KEEP_SESSIONS + 3)), "the 3 least recently touched went")
+
+    def test_a_tool_call_is_claimed_once_and_the_claim_files_are_kept_by_count(self) -> None:
+        claims = self.tmp / "data" / "claims"
+        self.touched(claims, [f"old{n}" for n in range(commitgate.KEEP_CLAIMS + 5)])
+        with mock.patch.object(commitgate, "DATA_ROOT", self.tmp / "data"):
+            self.assertTrue(commitgate.claim("toolu_1"))
+            self.assertFalse(commitgate.claim("toolu_1"))
+        names = {p.name for p in claims.iterdir()}
+        self.assertEqual(len(names), commitgate.KEEP_CLAIMS, "the new claim and the newest of the old ones")
+        self.assertNotIn("old0", names)
+        self.assertIn("toolu_1", names)
 
 
 if __name__ == "__main__":

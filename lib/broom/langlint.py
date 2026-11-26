@@ -12,7 +12,7 @@ from typing import List, Optional, Tuple
 
 from .findings import Findings, Issue, failure, resolve_in, targets
 from .gitutil import run
-from .state import DATA_ROOT, DEFAULTS, prune_dirs, short_hash
+from .state import DATA_ROOT, DEFAULTS, keep_newest, short_hash
 from .toolchain import GOLANGCI_CFG, find_up
 
 
@@ -20,17 +20,18 @@ from .toolchain import GOLANGCI_CFG, find_up
 
 VET_TYPE_ERROR = re.compile(r"^vet: (?P<file>[^:]+\.go):(?P<line>\d+):(?P<col>\d+): (?P<msg>.+)$")
 GOLANGCI_CACHES = DATA_ROOT / "golangci"
+GOLANGCI_KEEP = 20  # results caches kept, one per module path, the last used first
 
 
 def golangci_cache(module: Path) -> Path:
     """A golangci-lint results cache for this module's path alone. The shared one matches packages by content and
     replays the paths it stored, so a worktree, or a copy since deleted, hands broom another directory's files
-    and every issue is dropped as not in the commit. Caches unused for 7 days go: each worktree of an agent has a
-    path of its own, so they pile up."""
+    and every issue is dropped as not in the commit. Only the GOLANGCI_KEEP caches used last are kept: each worktree of an
+    agent has a path of its own, so they pile up."""
     d = GOLANGCI_CACHES / short_hash(str(module))
     d.mkdir(parents=True, exist_ok=True)
     os.utime(d)
-    prune_dirs(GOLANGCI_CACHES, 7)
+    keep_newest(GOLANGCI_CACHES, GOLANGCI_KEEP)
     return d
 
 
