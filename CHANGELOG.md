@@ -6,6 +6,10 @@
 
 ---
 
+## 0.30.0 — 2026-11-27
+
+---
+
 ### Open findings come back
 
 - A finding that stopped a commit or a turn's end and that no fix or accept has ended is told to Claude again: at the prompt that holds the user's answer to a question about it, and at a session's start in its repo. Before, it left Claude's sight once the turns moved to other files.

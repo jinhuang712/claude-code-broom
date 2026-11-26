@@ -569,7 +569,7 @@ The user set this on 2026-11-20: a check rests on a mechanism and not on a text 
 
 **Status**: ✅
 
-The user set this on 2026-11-26: the core want is that no problem is hidden, and that Claude is reminded of one until it is dealt with. A finding put to the user, or left in another session, left Claude's sight. It started once [CP14: No clock](#cp14-no-clock) had shipped, and ended on 2026-11-27, to ship in 0.30.0. It didn't wait for CP8's numbers, which `broom report --since` splits at that version.
+The user set this on 2026-11-26: the core want is that no problem is hidden, and that Claude is reminded of one until it is dealt with. A finding put to the user, or left in another session, left Claude's sight. It started once [CP14: No clock](#cp14-no-clock) had shipped, and ended on 2026-11-27 with 0.30.0. It didn't wait for CP8's numbers, which `broom report --since` splits at that version.
 
 **Delivers** (1):
 
