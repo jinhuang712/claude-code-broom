@@ -12,7 +12,7 @@ from .checkup import section as checkup_section
 from .dependencies import section as dependencies_section
 from .doctor import scan
 from .gate import note_text
-from .hotspots import CHURN_DAYS, churn_order, drop_known, rank, repo_files, smell_counts, smell_row
+from .hotspots import CHURN_DAYS, churn_order, counts, drop_known, rank, repo_files, smell_counts, smell_row
 from .smell import Scan, Smell
 from .smells import find_smells
 from .stats import collect, report as stats_report
@@ -55,14 +55,14 @@ def diagnose(repo: Path, paths: List[Path], top: int, days: int = CHURN_DAYS, *,
     started = time.monotonic()
     churn, order, history_notes = churn_order(repo, "churn", days)
     found, notes = measure(repo, paths)
-    kept, known = drop_known(found)
+    kept, hidden = drop_known(found)
     ordered, files = rank(kept, churn, order)
     facts = collect(repo, paths)  # read once, for the stats sections and the check-up's counters
     stats = stats_report(repo, paths, top, days, facts)
-    severe = sum(s.level == "block" for s in kept)
-    lines = stats["size"]["total"]
-    summary = {"files": stats["files"], "lines": lines["lines"] + lines["test_lines"], "smells": len(kept),
-               "severe": severe, "hints": len(kept) - severe, "known": known, "seconds": round(time.monotonic() - started, 1)}
+    lines, tally = stats["size"]["total"], counts(kept, hidden)
+    summary = {"files": stats["files"], "lines": lines["lines"] + lines["test_lines"], "smells": tally["total"],
+               "severe": tally["severe"], "hints": tally["hints"], "known": tally["known"], "open": tally["open"],
+               "seconds": round(time.monotonic() - started, 1)}
     return {"repo": str(repo), "paths": stats["paths"], "summary": summary, "by_smell": by_smell(repo, ordered),
             "by_language": by_language(kept), "by": order, "hotspots": files[:top],
             "smells": [smell_row(repo, s) for s in ordered], "duplicate_tests": duplicate_rows(found.duplicate_tests),

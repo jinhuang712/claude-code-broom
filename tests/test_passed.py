@@ -36,7 +36,7 @@ class PassedTests(BroomCase):
 
         with mock.patch.object(commitgate, "run_checks", run_checks), \
                 mock.patch.object(commitgate, "select", lambda issues, *_a: list(issues)), \
-                mock.patch.object(commitgate, "gate_smells", lambda _repo, _group, *_a: ([], list(hints), list(notes))):
+                mock.patch.object(commitgate, "gate_smells", lambda _repo, _group, *_a: ([], list(hints), list(notes), 0)):
             commitgate.checked(list(self.files))
         return asked
 

@@ -1,8 +1,9 @@
 """The repo's code smells as a whole, ranked worst first for whoever cleans up: Claude by its clean skill, or a
 person running `broom smells`. And the session note that tells Claude, once per session, when the repo has
 smells past the hard limit, so it raises them with the user at a natural point. The user's "not now"
-(`broom smells --dismiss`) keeps the note quiet until that count grows. The scan behind the note runs in the
-background: on a 2,376-file repo it took 13 to 36 seconds, and Claude's first reply waits for session-start hooks.
+(`broom smells --dismiss`) cuts the note to one line with the count until that count grows. The scan behind the
+note runs in the background: on a 2,376-file repo it took 13 to 36 seconds, and Claude's first reply waits for
+session-start hooks.
 """
 
 from __future__ import annotations
@@ -116,24 +117,33 @@ def standing_issue(s: Smell, line: int) -> Issue:
     return Issue("smells", s.repo, s.file, line, 0, s.metric, msg)
 
 
-def drop_known(found: List[Smell], known: Optional[Set[str]] = None) -> Tuple[List[Smell], int]:
-    """`found` less what the known-issue store holds (`known`, read from disk when None), and how many smells that
-    left out: an occurrence smell loses its known lines, and goes when none is left."""
+def drop_known(found: List[Smell], known: Optional[Set[str]] = None) -> Tuple[List[Smell], List[Smell]]:
+    """`found` split by the known-issue store (`known`, read from disk when None): the open smells, and the known ones,
+    collapsed but still counted. An occurrence smell loses its known lines, and goes when none is left; each known
+    line is a known smell of its own, as each was accepted on its own."""
     known = baseline_keys() if known is None else known
     if not known:
-        return list(found), 0
-    kept, hidden = [], 0
+        return list(found), []
+    kept: List[Smell] = []
+    hidden: List[Smell] = []
     for s in found:
         lines = lines_of(s)
         left = [n for n in lines if issue_key(standing_issue(s, n)) not in known]
-        hidden += len(lines) - len(left)
-        if left and len(left) < len(lines):
-            s = replace(s, line=left[0], added=left, value=s.value - (len(lines) - len(left)))
+        gone = [n for n in lines if n not in left]
+        hidden += [replace(s, line=n, added=[n], value=1) if s.metric in SMELL_PRESENCE else s for n in gone]
+        if left and gone:
+            s = replace(s, line=left[0], added=left, value=s.value - len(gone))
         if left:
             kept.append(s)
     return kept, hidden
 
 
+def counts(kept: List[Smell], hidden: List[Smell]) -> Dict[str, int]:
+    """The counts every report gives: `total`, `severe` and `hints` count the known smells too, `known` says how many
+    of them are known (collapsed, not listed) and `open` how many are not."""
+    severe = sum(s.level == "block" for s in kept + hidden)
+    total = len(kept) + len(hidden)
+    return {"total": total, "severe": severe, "hints": total - severe, "known": len(hidden), "open": len(kept)}
 
 
 class Ask(NamedTuple):
@@ -155,11 +165,10 @@ def report(repo: Path, paths: List[Path], ask: Ask) -> dict:
     churn, order, history_notes = churn_order(repo, ask.by)
     files = repo_files(repo, paths, ask.base)
     found, notes = find_smells(repo, files, ask.base)
-    kept, known = drop_known([s for s in found if not ask.only or s.metric in ask.only])
+    kept, hidden = drop_known([s for s in found if not ask.only or s.metric in ask.only])
     ordered, hotspots = rank(kept, churn, order)
-    severe = sum(s.level == "block" for s in kept)
-    data = {"repo": str(repo), "base": ask.base, "only": list(ask.only), "total": len(kept), "severe": severe,
-            "hints": len(kept) - severe, "known": known, "by": order, "hotspots": hotspots[:ask.top],
+    data = {"repo": str(repo), "base": ask.base, "only": list(ask.only), **counts(kept, hidden), "by": order,
+            "hotspots": hotspots[:ask.top],
             "smells": [smell_row(repo, s, ask.base) for s in ordered[:ask.top]], "notes": notes + history_notes}
     if len(ask.only) == 1 and ask.only[0] in SIZED and not ask.base:
         data["sizes"], more = size_rows(repo, files, ask.only[0], ask.top - len(data["smells"]))
@@ -186,8 +195,9 @@ def worst_rows(data: dict) -> List[str]:
         return []
     rows = ["", f"Hotspots, {order_text(data['by'])}:"] + [hotspot_line(f) for f in data["hotspots"]]
     rows += ["", "Worst smells:"] + [f"  {s['file']}:{s['line']}  {s['smell']}  {s['text']}" for s in data["smells"]]
-    if data["total"] > len(data["smells"]):
-        rows.append(f"  ... and {data['total'] - len(data['smells'])} more; `--top {data['total']}` lists them all")
+    listed = data.get("open", data["total"])
+    if listed > len(data["smells"]):
+        rows.append(f"  ... and {listed - len(data['smells'])} more; `--top {listed}` lists them all")
     return rows
 
 
@@ -206,14 +216,15 @@ def render(data: dict) -> str:
     missing = [note_text(n) for n in data["notes"] if n.startswith("missing:")]
     kinds = f" of {', '.join(data['only'])}" if data.get("only") else ""
     first = (f"[broom] {data['total']} code smell(s){kinds} {where}: {data['severe']} past the hard limit, "
-             f"{data['hints']} hints." + (f" Not all measured, missing: {'; '.join(missing)}." if missing else ""))
-    rows = [first] + worst_rows(data) + size_lines(data) + known_line(data.get("known") or 0)
+             f"{data['hints']} hints{known_part(data.get('known') or 0)}."
+             + (f" Not all measured, missing: {'; '.join(missing)}." if missing else ""))
+    rows = [first] + worst_rows(data) + size_lines(data)
     return "\n".join(rows + [f"note: {note_text(n)}" for n in data["notes"] if not n.startswith("missing:")])
 
 
-def known_line(hidden: int) -> List[str]:
-    """The line that says how many smells the known-issue store left out of a report, as `broom sweep` says it."""
-    return ["", f"{hidden} smell(s) accepted as known hidden: `broom known` lists them"] if hidden else []
+def known_part(known: int) -> str:
+    """How many of a count are accepted as known, as the count's line ends: they count, but no list shows them."""
+    return f"; {known} accepted as known, collapsed" if known else ""
 
 
 def smell_counts(repo: Path, found: List[Smell], notes: List[str]) -> Dict[str, Optional[Dict[str, int]]]:
@@ -261,10 +272,11 @@ def summary(repo: Path) -> Optional[dict]:
         return None
     churn, order, _ = churn_order(repo)  # first: a scan that uses the hook's time up leaves none for git
     found, notes = find_smells(repo, files, None, budget=SCAN_SECONDS)
-    kept, _ = drop_known(found)
+    kept, hidden = drop_known(found)
     _, hot = rank(kept, churn, order)
-    data = {"head": head, "total": len(kept), "severe": sum(s.level == "block" for s in kept),
-            "hotspots": [f["file"] for f in hot[:FILES_IN_NOTE]],
+    tally = counts(kept, hidden)
+    data = {"head": head, "total": tally["total"], "severe": tally["severe"], "known": tally["known"],
+            "open_severe": sum(s.level == "block" for s in kept), "hotspots": [f["file"] for f in hot[:FILES_IN_NOTE]],
             "partial": any(n.startswith("timeout:") for n in notes),  # the time ran out: the counts are a floor
             "counts": smell_counts(repo, found, notes)}
     save_json(CACHE / f"{short_hash(str(repo))}.json", data)
@@ -272,22 +284,28 @@ def summary(repo: Path) -> Optional[dict]:
 
 
 def session_note(repo: Path, data: Optional[dict]) -> Optional[str]:
-    """The note that asks Claude to offer a cleanup, from a summary: none when smells are off, there are no severe
-    ones, or the user dismissed this many."""
-    if setting("smells", repo) == "off":
-        return None
-    if not data or not data["severe"] or data["severe"] <= load_json(DISMISSED, {}).get(str(repo), -1):
+    """The note on the repo's smells, from a summary: none when smells are off or none is past the hard limit. It asks
+    Claude to offer a cleanup while an open one is past the hard limit and the user hasn't dismissed this many; else it
+    only gives the count, in one line, so what was dismissed or accepted is never out of sight."""
+    if setting("smells", repo) == "off" or not data or not data["severe"]:
         return None
     floor = "at least " if data.get("partial") else ""  # a scan that ran out of time counted only what it reached
-    return (f"broom found {floor}{data['severe']} code smell(s) past the hard limit in this repo ({data['total']} in all; "
-            f"worst files: {', '.join(data['hotspots'])}). Don't interrupt the user's task for this: at a natural "
-            "point, tell them and offer to clean up worst first. Don't clean up without their go-ahead: once they "
-            "agree, load broom's clean skill, which is no command for them to type. If they say not now, run "
-            "`broom smells --dismiss`: broom then stays quiet until the count grows.")
+    known = known_part(data.get("known") or 0)
+    dismissed = data["severe"] <= load_json(DISMISSED, {}).get(str(repo), -1)
+    if dismissed or not data.get("open_severe", data["severe"]):
+        return (f"broom: {floor}{data['severe']} code smell(s) past the hard limit in this repo "
+                f"({data['total']} in all{known}). Don't raise a cleanup for them.")
+    return (f"broom found {floor}{data['severe']} code smell(s) past the hard limit in this repo ({data['total']} in all"
+            f"{known}; worst files: {', '.join(data['hotspots'])}). Don't interrupt the user's task for this: at a "
+            "natural point, tell them and offer to clean up worst first. Don't clean up without their go-ahead: once "
+            "they agree, load broom's clean skill, which is no command for them to type. If they say not now, run "
+            "`broom smells --dismiss`: broom then only gives the count until it grows.")
 
 
 def dismiss(repo: Path) -> str:
-    """Mute the session note for this repo until it has more smells than now; returns the message to show."""
+    """Stop the session note asking for a cleanup in this repo until it has more severe smells than now; it still
+    gives the count. Returns the message to show."""
     data = summary(repo) or {"severe": 0}
     update_json(DISMISSED, {}, lambda seen: seen.update({str(repo): data["severe"]}))
-    return f"broom: the session note stays quiet until this repo has more than {data['severe']} severe smell(s)"
+    return (f"broom: the session note only gives the count, and asks for no cleanup, until this repo has more than "
+            f"{data['severe']} severe smell(s)")

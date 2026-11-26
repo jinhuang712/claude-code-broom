@@ -91,12 +91,11 @@ def cmd_sweep(args: argparse.Namespace) -> int:
     found = [i for i in every if issue_key(i) not in known]
     hidden = len(every) - len(found)
     scope = "in the repo" if args.all else "in the changed lines"
-    if found or notes:
-        say(render(f"[broom] {len(found)} issue(s) {scope}.", found, notes, set() if args.all else set(code)))
+    collapsed = f"; {hidden} accepted as known, collapsed (`--include-known` lists them)" if hidden else ""
+    if every or notes:  # a known issue counts in the total, and only an open one fails the sweep
+        say(render(f"[broom] {len(every)} issue(s) {scope}{collapsed}.", found, notes, set() if args.all else set(code)))
     else:
         say(f"broom: clean ({len(code)} file(s))")
-    if hidden:
-        say(f"\n{hidden} known issue(s) hidden: `broom known` lists them, `--include-known` shows them here")
     smells = sweep_smells(root, code, args) if root else 0
     return 1 if found or smells else 0
 
@@ -376,7 +375,7 @@ def add_issue_parsers(sub: argparse._SubParsersAction) -> None:
     m.add_argument("--only", metavar="SMELL", action="append", choices=sorted([*SMELL_LIMITS, *SMELL_PRESENCE, DEAD_CODE]),
                    help="only this kind of smell, e.g. function_lines for the longest functions; may repeat")
     m.add_argument("--json", action="store_true", help="the same as JSON")
-    m.add_argument("--dismiss", action="store_true", help="quiet the session note until severe smells grow")
+    m.add_argument("--dismiss", action="store_true", help="cut the session note to its count until severe smells grow")
     m.set_defaults(fn=cmd_smells)
     ih = sub.add_parser("install-hook", help="add a git pre-commit hook for commits Claude Code's hook doesn't see")
     ih.set_defaults(fn=cmd_install_hook)

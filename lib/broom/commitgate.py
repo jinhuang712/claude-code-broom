@@ -16,7 +16,7 @@ import re
 import shlex
 import time
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, NamedTuple, Optional, Tuple
 
 from . import ledger, waivers
 from .checks import SLOW_PATH, run_checks
@@ -71,31 +71,54 @@ def by_repo(files: List[Path]) -> Dict[Path, List[Path]]:
     return groups
 
 
-def checked(files: List[Path], base: str = "HEAD", turn: Optional[Path] = None
-            ) -> Tuple[List[Issue], List[Smell], List[str]]:
-    """What stops (lint and type issues not yet known, smells past a limit: blocks and hints), the smell notes that
-    are only told, and the tool notes, for what changed since `base`. Content that passed before isn't checked
+class Checked(NamedTuple):
+    """What a check found: what stops (lint and type issues not yet known, smells past a limit: blocks and hints), the
+    smell notes that are only told, the tool notes, and how many known issues it collapsed: they never stop, and a
+    check that has something to say says how many there were."""
+
+    blocking: List[Issue]
+    told: List[Smell]
+    notes: List[str]
+    known: int = 0
+
+
+def checked(files: List[Path], base: str = "HEAD", turn: Optional[Path] = None) -> Checked:
+    """What a check finds (see Checked) in what changed since `base`. Content that passed before isn't checked
     again; content that passes now is recorded. What the change loosens (a suppression it adds, a looser
     .broom.json) is noted for `turn`, the directory of the turn it belongs to. A check that ran leaves its seconds in
     the ledger."""
     start = time.monotonic()
     files = [f for repo, group in by_repo(files).items() for f in unpassed(repo, group, worktree_blobs(repo, group))]
     if not files:
-        return [], [], []
+        return Checked([], [], [])
     issues, notes = run_checks(files, SLOW_PATH)
     known = baseline_keys()
     changed, groups = ChangedLines(base), by_repo(files)
-    blocking = select(issues, set(files), known, changed)
+    every = select(issues, set(files), set(), changed)
+    blocking = [i for i in every if issue_key(i) not in known]
+    collapsed = len(every) - len(blocking)
     told: List[Smell] = []
     for repo, group in groups.items():
-        smell_stops, smell_told, smell_notes = gate_smells(repo, group, known, base)
+        smell_stops, smell_told, smell_notes, smell_known = gate_smells(repo, group, known, base)
         blocking += smell_stops
         told += smell_told
         notes += smell_notes
+        collapsed += smell_known
     ledger.waived(waivers.detect(groups, changed, base), turn)
     record_passed(files, blocking, told, notes)
     ledger.ran(groups, time.monotonic() - start)
-    return blocking, told, notes
+    return Checked(blocking, told, notes, collapsed)
+
+
+def collapsed_text(known: int) -> str:
+    """How many known issues a check collapsed, in words; empty when there were none."""
+    return f"{known} issue(s) accepted as known in the checked files, collapsed" if known else ""
+
+
+def collapsed_line(known: int) -> List[str]:
+    """The line a check that has something to say adds about the known issues it collapsed; none when there were
+    none."""
+    return [f"broom: {collapsed_text(known)}"] if known else []
 
 
 def record_passed(files: List[Path], blocking: List[Issue], told: List[Smell], notes: List[str]) -> None:
@@ -172,7 +195,7 @@ def gate_files(repo: Path, files: List[Path], sd: Path, cwd: Path, state: dict) 
     hook and which turn saw it. What an earlier commit blocked in files this one didn't take stays in it, for the
     commit that does."""
     files = sorted(f for f in files if lang_of(f))
-    blocking, told, notes = checked(files, turn=sd)
+    blocking, told, notes, collapsed = checked(files, turn=sd)
     context = [nits_text(told)] if told else []
     ledger.hinted(entries_of(s.issue() for s in told))
     key, found, known = str(repo), entries_of(blocking), baseline_keys()
@@ -183,11 +206,12 @@ def gate_files(repo: Path, files: List[Path], sd: Path, cwd: Path, state: dict) 
         state[key] = last_block(found, kept, sd)
     else:
         state.pop(key, None)
-    if not blocking:
-        return None, context + skip_context(sd, notes, repo)
+    if not blocking:  # a check with nothing to say stays silent, the known issues it collapsed included
+        return None, context + (collapsed_line(collapsed) if told else []) + skip_context(sd, notes, repo)
     ledger.blocked(found)
-    return render(block_head(len(blocking)), blocking, new_notes(sd / "notes.json", notes, repo), set(files),
-                  way_out([repo], cwd, "commit again")), context
+    denial = render(block_head(len(blocking)), blocking, new_notes(sd / "notes.json", notes, repo), set(files),
+                    way_out([repo], cwd, "commit again"))
+    return "\n".join([denial] + collapsed_line(collapsed)), context
 
 
 def hook_pre_commit() -> int:

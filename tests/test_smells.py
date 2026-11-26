@@ -169,8 +169,11 @@ class SmellTest(BroomCase):
         self.assertEqual(self.session(r, "s5", self.env, "session-scan"), {}, "once per session")
         self.assertIn("clean skill", str(self.session(r, "s6", self.env)), "a cached scan is said at once")
         self.assertEqual(self.session(r, "s6", self.env, "session-scan"), {}, "and not again")
-        self.assertIn("stays quiet", self.cli(r, "smells", "--dismiss").stdout)
-        self.assertNotIn("clean skill", str(self.session(r, "s7", self.env)))
+        self.assertIn("only gives the count", self.cli(r, "smells", "--dismiss").stdout)
+        quiet = self.noted(self.session(r, "s7", self.env))
+        self.assertNotIn("clean skill", quiet)
+        self.assertRegex(quiet, r"1 code smell\(s\) past the hard limit in this repo \(\d+ in all\)\. Don't raise",
+                         "dismissed, the count is still given")
         (r / "b.py").write_text(py_function("bigger", 130).replace("+=", "-="))  # not a copy of a.py
         self.sh(r, "git", "add", "b.py")
         self.sh(r, "git", "commit", "-qm", "more")

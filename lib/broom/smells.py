@@ -344,16 +344,18 @@ def find_smells(repo: Path, files: List[Path], base: Optional[str],
 
 
 def gate_smells(repo: Path, files: List[Path], known: set, base: str = "HEAD"
-                ) -> Tuple[List[Issue], List[Smell], List[str]]:
-    """For the hooks: the smells that stop (as issues: the blocks and the hints), the notes, and tool notes. Known
-    ones are left out."""
+                ) -> Tuple[List[Issue], List[Smell], List[str], int]:
+    """For the hooks: the smells that stop (as issues: the blocks and the hints), the notes, tool notes, and how many
+    known ones were collapsed: left out of the first two, and still counted."""
     if setting("smells", repo) == "off":
-        return [], [], []
+        return [], [], [], 0
     found, notes = find_smells(repo, files, base)
-    stops = [s.issue() for s in found if s.level != NIT]
+    every = [s.issue() for s in found if s.level != NIT]
     told = [s for s in found if s.level == NIT and issue_key(s.issue()) not in known]
     # A smell that grew past the hard limit stays a block whatever was accepted: accepting it is refused.
-    return [i for i in stops if i.grown_from is not None or issue_key(i) not in known], told, notes
+    stops = [i for i in every if i.grown_from is not None or issue_key(i) not in known]
+    nits = sum(s.level == NIT for s in found)
+    return stops, told, notes, len(every) - len(stops) + nits - len(told)
 
 
 def nits_text(told: List[Smell]) -> str:

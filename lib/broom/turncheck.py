@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, NamedTuple, Optional
 
 from . import asked, ledger
-from .commitgate import checked, entries_of, issues_by_repo, way_out
+from .commitgate import checked, collapsed_line, collapsed_text, entries_of, issues_by_repo, way_out
 from .findings import Issue
 from .gate import (
     COMMITS, STOPS, baseline_keys, issue_key, kept_blocks, last_block, new_notes, note_text, rel, render, save_commits,
@@ -118,16 +118,17 @@ class Turn(NamedTuple):
     cwd: Path  # where the hook runs
 
 
-def end_tail(d: Path, notes: List[str], files: List[Path], told: List[Smell]) -> str:
+def end_tail(d: Path, notes: List[str], files: List[Path], told: List[Smell], collapsed: int = 0) -> str:
     """What a turn's end adds to the user's line besides what was let through: the checks that didn't run, which are
-    told once a session, and the nits (slight smells), which the turn's end tells once since it ends the turn."""
+    told once a session, the nits (slight smells), which the turn's end tells once since it ends the turn, and how
+    many known issues the check `collapsed`, which the caller passes only when the check has something else to say."""
     skipped = new_notes(d / "notes.json", notes, files[0])
     parts = []
     if skipped:
         parts.append("; ".join(note_text(n) for n in skipped) + (" (run /broom:setup)" if setup_hint(skipped) else ""))
     if told:
         parts.append(f"{len(told)} nit(s) told: {names([s.issue() for s in told])}")
-    return "; ".join(parts)
+    return "; ".join(parts + ([collapsed_text(collapsed)] if collapsed else []))
 
 
 def give_up(turn: Turn, blocking: List[Issue], tail: str, waiting: List[dict]) -> None:
@@ -157,20 +158,21 @@ def check_turn(turn: Turn, files: List[Path]) -> None:
     question put to the user passes, and the question only for this turn."""
     d = turn.d
     gate = load_json(d / "gate.json", {})
-    blocking, told, notes = checked(files, turn_base(d, turn.root), d)
+    blocking, told, notes, collapsed = checked(files, turn_base(d, turn.root), d)
     blocking += test_findings(d, turn.root, files)  # a main session's turn only
     waiting = settle_asks(d, gate, blocking, files, notes)
     asked_keys = {r["key"] for r in waiting}
     blocking = [i for i in blocking if issue_key(i) not in asked_keys]
     if not blocking:
         forget_turn_blocks(d, asked_keys)
-        finish(d, turn.root, end_tail(d, notes, files, told), lead=asked.lead(waiting))
+        finish(d, turn.root, end_tail(d, notes, files, told, collapsed if told else 0), lead=asked.lead(waiting))
         return
     blocks = int(gate.get("blocks", 0)) + 1
     if blocks > MAX_BLOCKS:
-        give_up(turn, blocking, end_tail(d, notes, files, told), waiting)
+        give_up(turn, blocking, end_tail(d, notes, files, told, collapsed), waiting)
         return
     groups = issues_by_repo(blocking)
     reason = render(turn_head(len(blocking)), blocking, new_notes(d / "notes.json", notes, files[0]), set(files),
                     turn_way_out(list(groups), turn.cwd, blocks))
+    reason = "\n".join([reason] + collapsed_line(collapsed))
     block_turn(d, blocking, {"blocks": blocks}, reason, waiting)

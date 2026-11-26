@@ -75,7 +75,8 @@ class SweepTest(BroomCase):
         self.assertIn("no-floating-promises", listed)
         self.assertIn("(demo code)", listed)
         self.assertIn("main.ts:5", listed)
-        self.assertIn("known issue(s) hidden", self.cli(r, "sweep", "--check").stdout)
+        swept = self.cli(r, "sweep", "--check").stdout
+        self.assertIn("2 issue(s) in the changed lines; 2 accepted as known, collapsed", swept)
         self.assertIn("cleared 2", self.cli(r, "known", "--clear").stdout)
         self.assertTrue(self.denied(self.commit(r, "git commit -m x")), "cleared issues block again")
 
