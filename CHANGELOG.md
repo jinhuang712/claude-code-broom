@@ -6,6 +6,10 @@
 
 ---
 
+## 0.30.1 — 2026-11-27
+
+---
+
 ### Sharper rules
 
 - A setter's boolean is no flag in Python, Rust, TS/JS and Swift either: `set_enabled(self, enabled: bool)`, `setEnabled(enabled)` and a `set x(v)` accessor. Before, only Go's setters were left out of `bool_params`.
