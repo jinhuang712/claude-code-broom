@@ -29,6 +29,7 @@ def summary_lines(data: dict) -> List[str]:
     s = data["summary"]
     rows = [("files read", s["files"]), ("code lines", s["lines"]), ("smells", s["smells"]),
             ("past the hard limit", s["severe"]), ("hints", s["hints"])]
+    rows += [("accepted as known, hidden", s["known"])] if s.get("known") else []
     width = max(len(name) for name, _ in rows)
     out = [f"  {name.ljust(width)}  {value}" for name, value in rows]
     if data["missing_tools"]:

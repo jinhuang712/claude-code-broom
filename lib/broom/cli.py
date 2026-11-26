@@ -243,6 +243,12 @@ def cmd_known(args: argparse.Namespace) -> int:
     roots = [Path(p).resolve() for p in args.paths] or [repo_or_exit()]
     if args.agreed and args.accept is None:
         raise SystemExit("broom: --agreed goes with --accept, to say the user agreed to leave the issues")
+    if args.smell:
+        from .standing import known_standing
+
+        if args.accept is None:
+            raise SystemExit("broom: --smell goes with --accept and --agreed, to accept a smell that stands")
+        return known_standing(args)
     if args.accept is not None:
         return known_accept(args, roots)
     if args.ask is not None:
@@ -259,7 +265,7 @@ def cmd_known(args: argparse.Namespace) -> int:
     for e in sorted(entries.values(), key=lambda v: (str(v.get("file")), v.get("line", 0))):
         when = time.strftime("%Y-%m-%d", time.localtime(e.get("t", 0)))
         where = f"{display(Path(str(e.get('file', '?'))))}:{e.get('line', '?')}"
-        why = f"  ({e['why']})" if e.get("why") else ""
+        why = f"  ({e['why']}{'; the user agreed' if e.get('agreed') else ''})" if e.get("why") else ""
         msg = e.get("msg", "(recorded by broom 0.2)")
         say(f"  {where}  {e.get('tool', '?')} {e.get('rule', '')}  {msg}  [{when}]{why}")
     return 0
@@ -355,6 +361,9 @@ def add_issue_parsers(sub: argparse._SubParsersAction) -> None:
                      help="put a question to the user about those issues: they stay blocked and unaccepted, and "
                           "the turn's end tells the user instead of blocking; then stop")
     k.add_argument("--agreed", action="store_true", help="with --accept: the user agreed to leave them")
+    k.add_argument("--smell", metavar="KIND", choices=sorted([*SMELL_LIMITS, *SMELL_PRESENCE, DEAD_CODE]),
+                   help="with --accept and --agreed: accept the smells of this kind that stand at the paths, each "
+                        "FILE or FILE:LINE, as `broom smells` lists them")
     k.add_argument("--clear", action="store_true")
     k.add_argument("paths", nargs="*", help="limit to these files or directories (default: the repo)")
     k.set_defaults(fn=cmd_known)

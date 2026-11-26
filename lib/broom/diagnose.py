@@ -12,7 +12,7 @@ from .checkup import section as checkup_section
 from .dependencies import section as dependencies_section
 from .doctor import scan
 from .gate import note_text
-from .hotspots import CHURN_DAYS, churn_order, rank, repo_files, smell_counts, smell_row
+from .hotspots import CHURN_DAYS, churn_order, drop_known, rank, repo_files, smell_counts, smell_row
 from .smell import Scan, Smell
 from .smells import find_smells
 from .stats import collect, report as stats_report
@@ -55,15 +55,16 @@ def diagnose(repo: Path, paths: List[Path], top: int, days: int = CHURN_DAYS, *,
     started = time.monotonic()
     churn, order, history_notes = churn_order(repo, "churn", days)
     found, notes = measure(repo, paths)
-    ordered, files = rank(found, churn, order)
+    kept, known = drop_known(found)
+    ordered, files = rank(kept, churn, order)
     facts = collect(repo, paths)  # read once, for the stats sections and the check-up's counters
     stats = stats_report(repo, paths, top, days, facts)
-    severe = sum(s.level == "block" for s in found)
+    severe = sum(s.level == "block" for s in kept)
     lines = stats["size"]["total"]
-    summary = {"files": stats["files"], "lines": lines["lines"] + lines["test_lines"], "smells": len(found),
-               "severe": severe, "hints": len(found) - severe, "seconds": round(time.monotonic() - started, 1)}
+    summary = {"files": stats["files"], "lines": lines["lines"] + lines["test_lines"], "smells": len(kept),
+               "severe": severe, "hints": len(kept) - severe, "known": known, "seconds": round(time.monotonic() - started, 1)}
     return {"repo": str(repo), "paths": stats["paths"], "summary": summary, "by_smell": by_smell(repo, ordered),
-            "by_language": by_language(found), "by": order, "hotspots": files[:top],
+            "by_language": by_language(kept), "by": order, "hotspots": files[:top],
             "smells": [smell_row(repo, s) for s in ordered], "duplicate_tests": duplicate_rows(found.duplicate_tests),
             "missing_tools": [note_text(n) for n in notes if n.startswith("missing:")],
             "notes": [note_text(n) for n in notes if not n.startswith("missing:")] + history_notes, "stats": stats,

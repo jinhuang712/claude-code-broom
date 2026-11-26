@@ -7,14 +7,16 @@ background: on a 2,376-file repo it took 13 to 36 seconds, and Claude's first re
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
-from typing import Dict, List, NamedTuple, Optional, Tuple
+from typing import Dict, List, NamedTuple, Optional, Set, Tuple
 
-from .config import DEAD_CODE, drop_excluded, repo_config, setting
-from .gate import display, note_text
+from .config import DEAD_CODE, SMELL_PRESENCE, drop_excluded, repo_config, setting
+from .findings import Issue
+from .gate import baseline_keys, display, issue_key, note_text
 from .gitutil import changed_since, git
 from .sizes import SIZED, find_sizes
-from .smell import DESCRIBE
+from .smell import DESCRIBE, LABELS
 from .smells import Smell, find_smells
 from .state import DATA_ROOT, load_json, save_json, short_hash, update_json
 from .statsgit import commits_per_file
@@ -102,6 +104,38 @@ def smell_row(repo: Path, s: Smell, base: Optional[str] = None) -> dict:
             "text": s.text(), "was": s.was if base else None}
 
 
+def lines_of(s: Smell) -> List[int]:
+    """The lines the smell `s` stands on: each occurrence of an occurrence smell, else its first line."""
+    return list(s.added) if s.metric in SMELL_PRESENCE else [s.line]
+
+
+def standing_issue(s: Smell, line: int) -> Issue:
+    """The smell `s` at `line` as the known-issue store keys it: an occurrence by its kind alone, so the key follows
+    the text of its line; a sized smell by its message as a whole-repo scan words it, so the key follows its size."""
+    msg = LABELS[s.metric] if s.metric in SMELL_PRESENCE else replace(s, compared=False, touched=False).text()
+    return Issue("smells", s.repo, s.file, line, 0, s.metric, msg)
+
+
+def drop_known(found: List[Smell], known: Optional[Set[str]] = None) -> Tuple[List[Smell], int]:
+    """`found` less what the known-issue store holds (`known`, read from disk when None), and how many smells that
+    left out: an occurrence smell loses its known lines, and goes when none is left."""
+    known = baseline_keys() if known is None else known
+    if not known:
+        return list(found), 0
+    kept, hidden = [], 0
+    for s in found:
+        lines = lines_of(s)
+        left = [n for n in lines if issue_key(standing_issue(s, n)) not in known]
+        hidden += len(lines) - len(left)
+        if left and len(left) < len(lines):
+            s = replace(s, line=left[0], added=left, value=s.value - (len(lines) - len(left)))
+        if left:
+            kept.append(s)
+    return kept, hidden
+
+
+
+
 class Ask(NamedTuple):
     """What `broom smells` was asked for: how many rows, the revision to compare with, the order of the hotspots
     ("churn" or "smells"), and the kinds of smell to keep (all when empty)."""
@@ -121,11 +155,11 @@ def report(repo: Path, paths: List[Path], ask: Ask) -> dict:
     churn, order, history_notes = churn_order(repo, ask.by)
     files = repo_files(repo, paths, ask.base)
     found, notes = find_smells(repo, files, ask.base)
-    kept = [s for s in found if not ask.only or s.metric in ask.only]
+    kept, known = drop_known([s for s in found if not ask.only or s.metric in ask.only])
     ordered, hotspots = rank(kept, churn, order)
     severe = sum(s.level == "block" for s in kept)
     data = {"repo": str(repo), "base": ask.base, "only": list(ask.only), "total": len(kept), "severe": severe,
-            "hints": len(kept) - severe, "by": order, "hotspots": hotspots[:ask.top],
+            "hints": len(kept) - severe, "known": known, "by": order, "hotspots": hotspots[:ask.top],
             "smells": [smell_row(repo, s, ask.base) for s in ordered[:ask.top]], "notes": notes + history_notes}
     if len(ask.only) == 1 and ask.only[0] in SIZED and not ask.base:
         data["sizes"], more = size_rows(repo, files, ask.only[0], ask.top - len(data["smells"]))
@@ -173,8 +207,13 @@ def render(data: dict) -> str:
     kinds = f" of {', '.join(data['only'])}" if data.get("only") else ""
     first = (f"[broom] {data['total']} code smell(s){kinds} {where}: {data['severe']} past the hard limit, "
              f"{data['hints']} hints." + (f" Not all measured, missing: {'; '.join(missing)}." if missing else ""))
-    rows = [first] + worst_rows(data) + size_lines(data)
+    rows = [first] + worst_rows(data) + size_lines(data) + known_line(data.get("known") or 0)
     return "\n".join(rows + [f"note: {note_text(n)}" for n in data["notes"] if not n.startswith("missing:")])
+
+
+def known_line(hidden: int) -> List[str]:
+    """The line that says how many smells the known-issue store left out of a report, as `broom sweep` says it."""
+    return ["", f"{hidden} smell(s) accepted as known hidden: `broom known` lists them"] if hidden else []
 
 
 def smell_counts(repo: Path, found: List[Smell], notes: List[str]) -> Dict[str, Optional[Dict[str, int]]]:
@@ -222,8 +261,9 @@ def summary(repo: Path) -> Optional[dict]:
         return None
     churn, order, _ = churn_order(repo)  # first: a scan that uses the hook's time up leaves none for git
     found, notes = find_smells(repo, files, None, budget=SCAN_SECONDS)
-    _, hot = rank(found, churn, order)
-    data = {"head": head, "total": len(found), "severe": sum(s.level == "block" for s in found),
+    kept, _ = drop_known(found)
+    _, hot = rank(kept, churn, order)
+    data = {"head": head, "total": len(kept), "severe": sum(s.level == "block" for s in kept),
             "hotspots": [f["file"] for f in hot[:FILES_IN_NOTE]],
             "partial": any(n.startswith("timeout:") for n in notes),  # the time ran out: the counts are a floor
             "counts": smell_counts(repo, found, notes)}
