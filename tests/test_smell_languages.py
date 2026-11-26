@@ -61,7 +61,11 @@ class SmellLanguageTest(BroomCase):
             "c.swift": ("swiftlint", "func f(a: Int) -> Int {\n    return a > 1 ? (a > 2 ? 1 : 2) : 3\n}\n",
                         ("block", "nested_ternary")),
             "d.swift": ("swiftlint", "var counter = 0\n", ("hint", "globals")),
-            "g.swift": ("swiftlint", "func setEnabled(_ enabled: Bool) {}\n", ("hint", "bool_params")),
+            "g.swift": ("swiftlint", "func settle(_ enabled: Bool) {}\n", ("hint", "bool_params")),
+            "c.py": ("ruff", "class A:\n    def settle(self, on: bool) -> None:\n        self.on = on\n",
+                     ("hint", "bool_params")),
+            "h.ts": ("oxlint", "export class A {\n  settle(on: boolean): void {\n    this.on = on;\n  }\n  on = false;\n}\n",
+                     ("hint", "bool_params")),
         }
         r = self.repo({"README.md": "x\n"})
         for rel, (tool, text, expected) in samples.items():
@@ -94,7 +98,14 @@ class SmellLanguageTest(BroomCase):
                         "    let t = a?.signum() ?? 0\n    return a != nil ? t : s.count\n}\n", "nested_ternary"),
             "f.swift": ("swiftlint", "struct S {\n    var x = 0\n}\n", "globals"),
             "main.swift": ("swiftlint", "var counter = 0\nprint(counter)\n", "globals"),
-            "g.swift": ("swiftlint", "func setEnabled(enabled: Bool, _ delay: Int) {}\n", "bool_params"),
+            "g.swift": ("swiftlint", "func settle(enabled: Bool, _ delay: Int) {}\n", "bool_params"),
+            "h.swift": ("swiftlint", "func setEnabled(_ enabled: Bool) {}\nfunc set(_ on: Bool) {}\n", "bool_params"),
+            "c.py": ("ruff", "class A:\n    def set_enabled(self, enabled: bool) -> None:\n        self.on = enabled\n\n"
+                     "    def set(self, on: bool) -> None:\n        self.on = on\n", "bool_params"),
+            "f.ts": ("oxlint", "export class A {\n  on = false;\n  setEnabled(on: boolean): void {\n    this.on = on;\n  }\n"
+                     "  set active(v: boolean) {\n    this.on = v;\n  }\n}\n"
+                     "export function set(on: boolean): boolean {\n  return on;\n}\n"
+                     "export const setVisible = (on: boolean): boolean => on;\n", "bool_params"),
         }
         r = self.repo({"README.md": "x\n"})
         for rel, (tool, text, metric) in samples.items():

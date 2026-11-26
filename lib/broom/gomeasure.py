@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from .reading import TOOL_TIMEOUT, Limits, Reader
+from .setters import camel_setter
 from .syntax import Match, Rules, Span, by_file, matches, parsed
 from .testrot import TEST_FILE
 
@@ -49,13 +50,6 @@ def counted_print(m: Match, package: Dict[str, str]) -> bool:
     return m.rule == "go-print" or m.file.endswith("_test.go") or package.get(m.file) != "main"
 
 
-def setter(name: str) -> bool:
-    """Whether `name` is a setter's, `Set` or `set` alone or before a capital, as `SetKeepAlivesEnabled`: the name
-    says what its boolean sets, so the call doesn't read `f(x, true)`."""
-    rest = next((name[len(prefix):] for prefix in ("Set", "set") if name.startswith(prefix)), None)
-    return rest is not None and (not rest or rest[0].isupper())
-
-
 def go_text(r: Reader, rels: List[str], lim: Limits) -> Dict[str, List[Span]]:
     """Add the rows read from the trees of the Go files `rels`: a function and a type past its length limit, a
     dropped `recover()`, a debug print and, in a test file, an assertion that any error passes. Give the lines each
@@ -70,7 +64,7 @@ def go_text(r: Reader, rels: List[str], lim: Limits) -> Dict[str, List[Span]]:
     for m in found:
         if m.smell == FUNCTION_LINES:
             r.add_length(m.file, (m.line, m.end), FUNCTION_LINES, lim[FUNCTION_LINES][0], m.caught.get("NAME"))
-            if setter(m.caught.get("NAME", "")):
+            if camel_setter(m.caught.get("NAME", "")):
                 setters.setdefault(m.file, []).append((m.line, m.end))
         elif (m.smell == "broad_catch" or (m.smell == "broad_test_asserts" and TEST_FILE.search(m.file))
               or (m.smell == "debug_output" and counted_print(m, package))):

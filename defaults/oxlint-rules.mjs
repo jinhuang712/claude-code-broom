@@ -20,11 +20,26 @@ function isCallback(node) {
   return node.type !== "FunctionDeclaration" && node.parent?.type === "CallExpression";
 }
 
+// The name a function is declared or bound with: `function f`, a method or property `f() {}`, `f = () => ...`.
+function boundName(node) {
+  if (node.id?.name) return node.id.name;
+  const key = node.parent?.key ?? node.parent?.id;
+  return key?.type === "Identifier" ? key.name : null;
+}
+
+// A setter's boolean is no flag, since its name says what it sets (decision 042): a class's or an object's `set x(v)`
+// accessor, and a function named `set` alone or before a capital, as `setEnabled`, never `settle`.
+function isSetter(node) {
+  if (node.parent?.kind === "set") return true;
+  const name = boundName(node);
+  return name?.startsWith("set") === true && (name.length === 3 || (name[3] >= "A" && name[3] <= "Z"));
+}
+
 const boolParams = {
   meta: { type: "suggestion", schema: [] },
   create(context) {
     const check = (node) => {
-      if (isCallback(node)) return;
+      if (isCallback(node) || isSetter(node)) return;
       for (const param of node.params) {
         if (!isBooleanFlag(param)) continue;
         const target = param.type === "AssignmentPattern" ? param.left : param;

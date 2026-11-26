@@ -9,6 +9,7 @@ import re
 from typing import Dict, List, Optional, Tuple
 
 from .config import DEAD_CODE
+from .setters import snake_setter
 from .syntax import Match
 
 # The lints, by the smell they find. clippy's are asked for with -W; rustc's warn on their own, so a crate that allows
@@ -80,7 +81,7 @@ def fn_name(tree: List[Match], line: int) -> str:
 
 def read(metric: str, message: dict, span: dict, tree: List[Match], soft: Dict[str, int]) -> Optional[Tuple[str, int]]:
     """What a message says of one of its primary spans, as the name of what has the smell and its size; None when
-    the span isn't the smell (an unused variable that isn't a parameter). `tree` holds the span's file's matches."""
+    the span isn't the smell (an unused variable that isn't a parameter, a setter's boolean). `tree` holds the span's file's matches."""
     line = int(span["line_start"])
     if metric == DEAD_CODE:
         return highlighted(span), 1
@@ -88,6 +89,8 @@ def read(metric: str, message: dict, span: dict, tree: List[Match], soft: Dict[s
         return message.get("message", ""), 1
     if metric == "unused_params" and not in_parameters(tree, line, highlighted(span)):
         return None
+    if metric == "bool_params" and snake_setter(fn_name(tree, line)):
+        return None  # a setter's boolean is no flag (decision 042): `set` or `set_…`, its name from the tree
     if metric == "nesting":  # the message names no depth, and clippy lints only the outermost block past it
         return "function", thresholds(soft)["nesting"]
     size = SIZE.search(message.get("message", ""))

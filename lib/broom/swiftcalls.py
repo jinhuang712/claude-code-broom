@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Iterator, List, Optional, Tuple
 
+from .setters import camel_setter
 from .swiftkit import Node, SwiftFile
 
 DEBUG_CALLS = {"print", "debugPrint", "NSLog", "dump"}  # the free functions; `printer.print(` is a method
@@ -49,9 +50,10 @@ def debug_calls(f: SwiftFile) -> Iterator[int]:
 
 
 def bool_params(f: SwiftFile) -> Iterator[int]:
-    """The lines of a function's parameters typed `Bool` with no argument label: `f(true)` says nothing at the call."""
+    """The lines of a function's parameters typed `Bool` with no argument label: `f(true)` says nothing at the call.
+    A setter's (`set` or `set` before a capital, as `setEnabled(_:)`) is no flag: its name says what it sets."""
     for n in f.root.walk():
-        if not n.kind.startswith("decl.function"):
+        if not n.kind.startswith("decl.function") or camel_setter(n.name.partition("(")[0]):
             continue
         params = [c for c in n.children if c.kind == "decl.var.parameter"]
         for label, param in zip(labels(n), params):

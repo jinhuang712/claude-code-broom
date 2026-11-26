@@ -18,6 +18,7 @@ from .gomeasure import go_text
 from .jsmeasure import measure_js
 from .reading import TOOL_TIMEOUT, Limits, Raw, Reader, match, number, quoted_name
 from .rustmeasure import rust_text
+from .setters import snake_setter
 from .swiftmeasure import swift_text
 from .syntax import inside
 from .toolchain import CSS_EXTS, GO_EXTS, JS_EXTS, PY_EXTS, RS_EXTS, SWIFT_EXTS
@@ -45,13 +46,24 @@ def nested_ternaries(r: Reader, rel: str, tree: ast.AST) -> None:
                     r.add(rel, part.lineno, "nested_ternary", 1)
 
 
-def python_sizes(r: Reader, rel: str, lim: Limits) -> None:
+Spot = Tuple[int, int]  # a line and a column, both 1-based, as ruff places a finding
+
+
+def setter_params(tree: ast.AST) -> Set[Spot]:
+    """Where each parameter of a setter starts (`set` or `set_…`, decision 042): its boolean is no flag."""
+    return {(a.lineno, a.col_offset + 1) for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and snake_setter(node.name)
+            for a in (*node.args.posonlyargs, *node.args.args)}
+
+
+def python_sizes(r: Reader, rel: str, lim: Limits) -> Set[Spot]:
     """Function and class lengths from Python's own parser, which ruff doesn't measure in lines, each the code lines
-    from its `def` or `class` line through its last; and its nested conditional expressions."""
+    from its `def` or `class` line through its last; and its nested conditional expressions. Give where each
+    setter's parameter starts; none when the file doesn't parse."""
     try:
         tree = ast.parse((r.root / rel).read_text(errors="replace"))
     except (SyntaxError, ValueError):
-        return
+        return set()
     def walk(node: ast.AST, prefix: str) -> None:
         for child in ast.iter_child_nodes(node):
             if not isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
@@ -64,6 +76,7 @@ def python_sizes(r: Reader, rel: str, lim: Limits) -> None:
 
     walk(tree, "")
     nested_ternaries(r, rel, tree)
+    return setter_params(tree)
 
 
 RUFF_METRICS = {
@@ -115,9 +128,9 @@ def ruff_name(metric: str, msg: str) -> Optional[str]:
 
 
 def measure_python(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None:
-    """Measure the Python files with ruff, for its complexity, argument and nesting findings; no ruff gives a note."""
-    for rel in rels:
-        python_sizes(r, rel, lim)
+    """Measure the Python files with ruff, for its complexity, argument and nesting findings; no ruff gives a note.
+    A setter's boolean parameter is no flag (decision 042)."""
+    setters = {(rel, *spot) for rel in rels for spot in python_sizes(r, rel, lim)}
     ruff = shutil.which("ruff")
     if not ruff:
         r.notes.append("missing:ruff (brew install ruff)")
@@ -131,7 +144,8 @@ def measure_python(r: Reader, rels: List[str], lim: Limits, _start: Path) -> Non
     for d in r.json(rc, out, []):
         metric = RUFF_METRICS.get(d.get("code") or "")
         msg = d.get("message", "")
-        if metric and not typing_alias(r, d):
+        spot = (r.rel(d.get("filename", "")), int(d["location"]["row"]), int(d["location"].get("column") or 0))
+        if metric and not typing_alias(r, d) and not (metric == "bool_params" and spot in setters):
             name = ruff_name(metric, msg)
             value = 1 if metric in SMELL_PRESENCE else number(r"\((\d+) > \d+\)", msg)
             r.add(d.get("filename", ""), int(d["location"]["row"]), metric, value, name)

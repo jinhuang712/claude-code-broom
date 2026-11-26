@@ -73,6 +73,15 @@ class RustMessageTest(BroomCase):
         self.assertEqual(self.found(source, *rows), [("unused_params", 3, "function", 1)])
 
     @unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
+    def test_a_setters_boolean_is_no_flag(self) -> None:
+        source = ("pub struct S {\n    on: bool,\n}\nimpl S {\n    pub fn set_on(&mut self, on: bool) {\n"
+                  "        self.on = on;\n    }\n    pub fn set(&mut self, on: bool) {\n        self.on = on;\n    }\n"
+                  "    pub fn settle(&mut self, on: bool) {\n        self.on = on;\n    }\n}\n")
+        rows = [message("clippy::fn_params_excessive_bools", "more than 0 bools in function parameters", source,
+                        (line, name)) for line, name in ((5, "set_on"), (8, "set"), (11, "settle"))]
+        self.assertEqual(self.found(source, *rows), [("bool_params", 11, "settle", 1)])
+
+    @unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
     def test_the_place_of_a_parameter_is_told_from_the_body_and_from_a_closure(self) -> None:
         (self.tmp / "a.rs").write_text("pub fn apply<F: Fn(i32) -> i32>(f: F, (x, _): (i32, u8)) -> i32 {\n"
                                        "    let y = |x: i32| f(x);\n    y(1)\n}\n"
