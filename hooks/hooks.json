@@ -32,6 +32,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/prompt.sh\"",
+            "timeout": 30
+          },
+          {
+            "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/broom",
             "args": [
               "hook",

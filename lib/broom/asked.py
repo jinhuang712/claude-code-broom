@@ -6,8 +6,8 @@ as waiting for the user's answer for this turn only (a row each in the turn's `a
 blocks on them and opens the line the user sees with `lead`, and a ledger line `ask` says it was asked. The findings stay
 blocked, open in the record and unknown: a commit of that content is still denied, and a later turn's end blocks on
 them again once that turn changes their file, unless they were fixed, accepted or asked about again. A turn that changes
-nothing, or only other files, ends without them. This module loads nothing heavy: a turn's end reads it for every
-turn.
+nothing, or only other files, ends without them. The session's next prompt, which holds the user's answer, tells Claude
+the findings again (DUE, see comeback). This module loads nothing heavy: a turn's end reads it for every turn.
 """
 
 from __future__ import annotations
@@ -20,6 +20,8 @@ from . import ledger
 from .state import load_json, session_dir
 
 SHOWN = 5  # the findings the user's line names before "and N more"
+DUE = "answer-due.jsonl"  # in a session's directory: the findings asked about, for the next prompt to tell (comeback)
+TOLD = "answer-told.jsonl"  # in a session's directory: what that prompt told, for its async hook to check again
 
 
 def place(entry: dict, repo: Path) -> str:
@@ -54,9 +56,16 @@ def ask_blocked(repo: Path, question: str) -> int:
                   for k, e in pending.items()])
     turn = turn_of(prior)
     if turn is not None:
-        ledger.note_turn(turn, ledger.ASKED, [{"key": k, "why": question, "repo": str(repo), "at": place(e, repo),
-                                               "entry": e} for k, e in pending.items()])
+        asked = [{"key": k, "why": question, "repo": str(repo), "at": place(e, repo), "entry": e}
+                 for k, e in pending.items()]
+        ledger.note_turn(turn, ledger.ASKED, asked)
+        ledger.note_turn(session_of(turn), DUE, asked)
     return len(pending)
+
+
+def session_of(turn: Path) -> Path:
+    """The session directory a turn's directory belongs to: itself, or for a subagent's the session's above it."""
+    return turn.parents[1] if turn.parent.name == "agents" else turn
 
 
 def rows(turn: Path) -> List[dict]:

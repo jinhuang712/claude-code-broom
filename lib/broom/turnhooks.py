@@ -1,6 +1,7 @@
 """The hooks at a turn's two ends, when check_on=stop, the default.
 
-- prompt (UserPromptSubmit): note the working tree, so the turn's end also checks what Bash changed or committed.
+- prompt (UserPromptSubmit): note the working tree, so the turn's end also checks what Bash changed or committed; and
+  after a question to the user, check the findings asked about again (comeback).
 - stop (Stop, and SubagentStop for a subagent): lint and type-check what the turn changed. It catches what Claude
   writes even when the user commits by hand, which the commit hook never sees. A turn that ends while background
   work runs waits for a later one.
@@ -82,13 +83,23 @@ def hook_stop(data: dict) -> None:
 
 
 def hook_prompt(data: dict) -> None:
-    """A new prompt starts a turn: note the working tree, so the turn's end sees what Bash changed or committed.
-    Not while a gate is blocked or waits for background work: those changes still belong to the turn before, and the
-    next turn's end that is checked checks them. It runs as an async hook (0.2 s on a 2,376-file repo, which no
+    """A new prompt starts a turn: note the working tree (`note_prompt`), then, after a question to the user, check the
+    files of the findings asked about again (comeback). It runs as an async hook (0.2 s on a 2,376-file repo, which no
     prompt should wait for); Claude's first tool call comes seconds later."""
     cwd = Path(data.get("cwd") or os.getcwd()).resolve()
-    root = git_root(cwd)
     d = turn_dir(data)
+    note_prompt(d, cwd)
+    if (d / asked.TOLD).exists() or (d / asked.DUE).exists():
+        from .comeback import recheck_answered  # the checks load only after a question
+
+        recheck_answered(d)
+
+
+def note_prompt(d: Path, cwd: Path) -> None:
+    """Note the working tree, so the turn's end sees what Bash changed or committed. Not while a gate is blocked or
+    waits for background work: those changes still belong to the turn before, and the next turn's end that is checked
+    checks them."""
+    root = git_root(cwd)
     if waiting(d) or (d / "gate.json").exists():
         return
     ledger.forget_through(d)  # what the turn before let through or waived was never shown: no stop hook ended it
