@@ -6,6 +6,10 @@
 
 ---
 
+## 0.28.5 — 2026-11-27
+
+---
+
 ### Smells
 
 - A Go file in a folder whose name ends in `test`, such as `httptest`, is test code: a test-helper package. Its file may be twice as long, and its complexity, magic numbers and missing doc comments don't count, as in a `_test.go` file. Before, it was measured as library code.
