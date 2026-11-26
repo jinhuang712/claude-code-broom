@@ -111,6 +111,18 @@
 
 ---
 
+### [P2][IDEA] Test helpers in the other languages
+
+- description:
+  - Since 2026-11-27 a Go test-helper package, a folder whose name ends in `test`, and pytest's `conftest.py` are test code.
+  - The other languages keep helpers by habit and not by a rule: TS/JS's `test-utils` or `setupTests`, Swift's `TestSupport` targets, Rust's helper crates.
+  - A Go package of fakes that only tests import, such as `fakeclock`, is code too. Telling it needs the module's import graph.
+- created: 2026-11-27
+- found: the change to Go's test-helper packages
+- related: [045: A Go test-helper package is test code](../specs/decisions/045-test-helper-packages.md)
+
+---
+
 ### [P2][IDEA] A Go variable that another package assigns
 
 - description:

@@ -160,11 +160,12 @@ Two smells are read from the files' syntax trees with no linter. A skipped test 
 
 A new code file counts as untested when no test file anywhere in the repo is named for it. A Rust file also counts as tested when it holds its own tests. The names of all files come from one `git ls-files`, and it runs only when the change adds a code file of 30 code lines or more.
 
-A test file's limits are the code's with `file_lines` doubled, and then what `test_limits` sets. The tools measure against the lower soft limit of the two sets, and each row takes its level from the limits of its own file.
+A test file is told by its path: a name a test runner collects, such as `test_a.py`, `a_test.go`, `a.test.ts` or a file under `tests/`, a Go file directly in a folder whose name ends in `test`, such as `httptest`, and pytest's `conftest.py`. Go names a package after its folder, so the folder's name is the package's. A test file's limits are the code's with `file_lines` doubled, and then what `test_limits` sets. The tools measure against the lower soft limit of the two sets, and each row takes its level from the limits of its own file.
 
 - [009: An occurrence counts when the change raises the count](decisions/009-occurrence-by-count.md)
 - [012: Tests take limits of their own](decisions/012-test-limits.md)
 - [040: A test file may be twice as long as a code file](decisions/040-test-file-length.md)
+- [045: A Go test-helper package is test code](decisions/045-test-helper-packages.md)
 
 ---
 

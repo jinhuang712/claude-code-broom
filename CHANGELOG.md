@@ -6,6 +6,14 @@
 
 ---
 
+### Smells
+
+- A Go file in a folder whose name ends in `test`, such as `httptest`, is test code: a test-helper package. Its file may be twice as long, and its complexity, magic numbers and missing doc comments don't count, as in a `_test.go` file. Before, it was measured as library code.
+- pytest's `conftest.py` is test code wherever it lies, where before only one under `tests/` was.
+- Go's `broad_test_asserts` counts in every test file, a helper package and a file under `tests/` among them, where it counted in `_test.go` files alone.
+
+---
+
 ### Record
 
 - A finding put to the user with `--ask` that no later check found gone, and that wasn't accepted, counts against its rule's fix rate. Before, it counted against no rule, so a rule that was mostly noise read as fixed every time.

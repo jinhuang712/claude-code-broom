@@ -128,7 +128,7 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 - Go's `debug_output` is a call of `print` or `println`, or of `fmt.Print`, `fmt.Printf` or `fmt.Println` outside a `package main` program's own files. A print in a test file counts, and one in an `Example…` function doesn't.
 - Go's `type_escape` is a type assertion with one result, `x.(T)`, which panics on the wrong type. The comma-ok form checks it, `v, _ := x.(T)` among them. `any` doesn't count, since Go checks it at each use.
 - A Go function named `Set` or `set`, alone or before a capital, takes a boolean for what its name says, so it doesn't count for `bool_params`.
-- Go's `broad_test_asserts` is a testify `Error` or `Panics`, which any error passes.
+- Go's `broad_test_asserts` is a testify `Error` or `Panics` in a test file, which any error passes.
 - Swift's `broad_test_asserts` is an `XCTAssertThrowsError` with no handler, or an `#expect` or `#require` that any `Error` passes.
 - Swift's `deprecated_api` comes from type-checking the changed files of a SwiftPM package, so an Xcode project is left out.
 
@@ -260,9 +260,19 @@ A test file may be twice as long as a code file: its `file_lines` limits are 800
 
 `test_limits` in `.broom.json` moves the limits for test files.
 
+A test file is told by its path. Besides the names a test runner collects, 2 helpers are test code:
+
+- **A Go test-helper package**: a Go file directly in a folder whose name ends in `test`, such as `httptest` or `cachetest`. Go names a package after its folder, and the name says it serves tests.
+- **pytest's `conftest.py`**: pytest loads it only for tests.
+
+1 gap:
+
+- A Go folder named `latest`, `attest` or `contest` reads as test code.
+
 - **Why**:
   - [012: Tests take limits of their own](../specs/decisions/012-test-limits.md)
   - [040: A test file may be twice as long as a code file](../specs/decisions/040-test-file-length.md)
+  - [045: A Go test-helper package is test code](../specs/decisions/045-test-helper-packages.md)
 
 ---
 

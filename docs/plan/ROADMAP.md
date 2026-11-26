@@ -384,7 +384,7 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 **Status**: ⬜
 
-**Delivers** (7):
+**Delivers** (8):
 
 - [F9.4: Tiers by fix rate](../features/F9-record.md#f94-tiers-by-fix-rate)
 - A finding accepted in a linked worktree stays known once the work lands on the main checkout, done on 2026-11-20.
@@ -393,6 +393,7 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 - A commit the turn brought in by a pull or a reset is not the turn's change, done on 2026-11-26.
 - A wait for background work that never woke a turn ends at the next prompt after half an hour, done on 2026-11-26.
 - Go's rules flag what their messages say, so a lookup table, a program's output, a checked type assertion and a setter stop no change, done on 2026-11-26.
+- A Go test-helper package and `conftest.py` are test code, so a fixture's numbers stop no change, done on 2026-11-27.
 
 **Exit criteria** (1):
 
