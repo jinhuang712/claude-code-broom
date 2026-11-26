@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import json
 import subprocess
-import time
 from pathlib import Path
 
 from support import BroomCase, py_function
@@ -31,10 +29,18 @@ class TurnTest(BroomCase):
         self.edit(r, r / "b.py", "w2")
         reason = self.stop(r, "w2", background_tasks=done)["reason"]
         self.assertIn("other is 120", reason, "finished work isn't a pause")
-        self.edit(r, r / "b.py", "w3")
-        deferred = self.tmp / "data/sessions/w3/deferred.json"
-        deferred.write_text(json.dumps({"t": time.time() - 3600}))
-        self.assertIn("other is 120", self.stop(r, "w3", background_tasks=RUNNING)["reason"], "half an hour at most")
+
+    def test_work_waited_for_once_is_not_waited_for_again(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        self.hook("prompt", {"session_id": "w4", "cwd": str(r)})
+        self.assertEqual(self.stop(r, "w4", background_tasks=RUNNING), {}, "the first sight of the work: a pause")
+        self.hook("prompt", {"session_id": "w4", "cwd": str(r)})
+        (r / "a.py").write_text(py_function("huge", 120))
+        self.edit(r, r / "a.py", "w4")
+        reason = self.stop(r, "w4", background_tasks=RUNNING)["reason"]
+        self.assertIn("huge is 120", reason, "the same work still running at the next turn's end: checked")
+        other = [*RUNNING, {"id": "b2", "type": "local_bash", "status": "running", "description": "a build"}]
+        self.assertEqual(self.stop(r, "w4", background_tasks=other), {}, "new work beside it: a pause again")
 
     def test_the_turn_end_sees_what_bash_changed_and_committed(self) -> None:
         r = self.repo({"a.py": "x = 1\n", "b.py": "y = 1\n"})
@@ -68,18 +74,19 @@ class TurnTest(BroomCase):
         self.assertNotIn("theirs is 120", reason, "measured from what the pull brought, not from the prompt's HEAD")
         self.assertNotIn("elsewhere", reason, "a file only the pull changed is not the turn's")
 
-    def test_a_wait_given_up_lets_the_next_prompt_start_a_turn(self) -> None:
+    def test_the_next_prompt_ends_a_wait(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
         self.hook("prompt", {"session_id": "g1", "cwd": str(r)})
+        (r / "a.py").write_text(py_function("mine", 120))
+        self.edit(r, r / "a.py", "g1")
         self.assertEqual(self.stop(r, "g1", background_tasks=RUNNING), {}, "a pause")
-        deferred = self.tmp / "data/sessions/g1/deferred.json"
-        deferred.write_text(json.dumps({"t": time.time() - 3600}))  # the work never woke a turn
-        (r / "b.py").write_text(py_function("theirs", 120))
+        (r / "b.py").write_text(py_function("theirs", 120).replace("+=", "-="))
         self.sh(r, "git", "add", "b.py")
         self.sh(r, "git", "commit", "-qm", "another session landed its work")
-        self.hook("prompt", {"session_id": "g1", "cwd": str(r)})
-        self.assertFalse(deferred.exists(), "the wait is given up")
-        self.assertNotIn("theirs", self.stop(r, "g1").get("reason", ""), "the new prompt noted the tree")
+        self.hook("prompt", {"session_id": "g1", "cwd": str(r)})  # the work never woke a turn
+        reason = self.stop(r, "g1").get("reason", "")
+        self.assertNotIn("theirs", reason, "the new prompt noted the tree")
+        self.assertIn("mine is 120", reason, "the waiting turn's edits are checked at the new turn's end")
 
     def test_a_subagents_edits_wait_for_its_own_end(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})

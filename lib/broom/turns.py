@@ -7,8 +7,9 @@ see: the prompt hook notes the working tree's changed code files and HEAD, and t
 or was committed since.
 
 A turn that ends while background work runs (a test run, a build, a subagent) is a pause, not the end: the gate
-waits for a turn the work wakes, up to half an hour, so a server left running in the background doesn't keep it
-waiting forever.
+waits for a turn the work wakes. It waits once for each piece of work, told apart by its task id: work an earlier
+turn's end already waited for and still running at a later one is not waited for again, so a server left running in
+the background doesn't keep every turn's end unchecked. The next prompt ends any wait.
 """
 
 from __future__ import annotations
@@ -25,8 +26,7 @@ from .state import load_json, save_json, session_dir
 from .toolchain import lang_of
 
 SNAPSHOT = "snapshot.json"  # {repo: {"head": sha, "files": {path: [mtime_ns, size]}, "t": second it was noted}}
-DEFERRED = "deferred.json"  # {"t": when the gate first waited for background work}
-WAIT_SECONDS = 1800
+WAITED = "waited.json"  # {"ids": [the background tasks a turn's end has waited for, still running when last seen]}
 FINISHED = {"completed", "failed", "killed", "stopped", "cancelled", "canceled", "done", "error", "timeout"}
 
 
@@ -115,20 +115,20 @@ def note_config(path: Path, sd: Path) -> None:
         ledger.waived(waivers.config_waivers(root, turn_base(sd, root)), sd)
 
 
-def waiting(d: Path) -> bool:
-    """Whether the gate is waiting for background work, from an earlier turn's end, for half an hour at most."""
-    first = load_json(d / DEFERRED, {}).get("t")
-    return first is not None and time.time() - first < WAIT_SECONDS
+def task_id(task: dict) -> str:
+    """What tells a background task apart from the others: its id, or its description when it has none."""
+    return str(task.get("id") or task.get("description") or "")
 
 
 def paused(data: dict, d: Path) -> bool:
-    """Whether this turn ended while background work runs, so the gate waits; for half an hour at most."""
-    live = [t for t in data.get("background_tasks") or []
+    """Whether this turn ended while background work runs that no earlier turn's end waited for, so the gate waits.
+    Work already waited for once, still running, is not waited for again: this turn's end is checked."""
+    live = [task_id(t) for t in data.get("background_tasks") or []
             if isinstance(t, dict) and str(t.get("status", "")).lower() not in FINISHED]
     if not live:
+        (d / WAITED).unlink(missing_ok=True)
         return False
-    first = load_json(d / DEFERRED, {}).get("t")
-    if first is None:
-        save_json(d / DEFERRED, {"t": time.time()})
-        return True
-    return time.time() - first < WAIT_SECONDS
+    waited = set(load_json(d / WAITED, {}).get("ids") or [])
+    new = [i for i in live if i not in waited]
+    save_json(d / WAITED, {"ids": sorted(waited & set(live) | set(new))})
+    return bool(new)
