@@ -16,12 +16,9 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
-from .gitutil import git
-
 PLACES = ("coverage.xml", "cobertura.xml", "coverage/coverage.xml", "coverage/cobertura-coverage.xml", "lcov.info",
           "coverage/lcov.info", "coverage.lcov", "coverage.out", "cover.out", "coverage.json")
 MAX_BYTES = 32 * 1024 * 1024  # a larger report is left unread: a hook must not spend its seconds on one file
-SLACK = 60  # a commit made within a minute after the report is the one the tests ran for: the report isn't behind it
 GO_BLOCK = re.compile(r"^(.+):(\d+\.\d+,\d+\.\d+) (\d+) (\d+)$")
 # How each language's usual test run writes a report broom reads.
 HOW = {"py": "coverage run -m pytest && coverage xml", "go": "go test -coverprofile=coverage.out ./...",
@@ -159,9 +156,21 @@ def how_to(langs: Iterable[str]) -> List[str]:
     return [HOW[lang] for lang in sorted(set(langs)) if lang in HOW]
 
 
+def behind(repo: Path, written: float, covered: Iterable[str]) -> bool:
+    """Whether a file of `covered` (paths from the repo root) was written after the report, at the time `written`: the
+    tests then ran on code that has since changed. A commit changes no file, so it never makes a report behind."""
+    for rel in covered:
+        try:
+            if (repo / rel).stat().st_mtime > written:
+                return True
+        except OSError:
+            continue
+    return False
+
+
 def section(repo: Path, code: Dict[str, str], top: int) -> dict:
     """What `broom stats` says of coverage for the files of `code` (path to language, tests left out): the report, whether
-    it was written before the last commit, the lines reached of all, how many files no test reaches at
+    a code file it covers was written after it (all of `code`, when the report names none), the lines reached of all, how many files no test reaches at
     all, and the `top` files with most lines not reached. Without a report, `how`: the commands that write one."""
     report = report_path(repo)
     if report is None:
@@ -172,11 +181,10 @@ def section(repo: Path, code: Dict[str, str], top: int) -> dict:
         return {"report": name, "unread": True}
     mine = {rel: counts for rel, counts in lines.items() if rel in code}
     written = report.stat().st_mtime
-    last = git(["log", "-1", "--format=%ct"], repo) or ""
     worst = sorted(mine.items(), key=lambda kv: (kv[1][0] - kv[1][1], kv[0]))[:top]
     reached, total = sum(r for r, _ in mine.values()), sum(t for _, t in mine.values())
-    return {"report": name, "unread": False, "behind": last.strip().isdigit() and written < int(last) - SLACK, "lines": total, "reached": reached,
-            "percent": percent(reached, total), "files": len(mine),
+    return {"report": name, "unread": False, "behind": behind(repo, written, mine or code), "lines": total,
+            "reached": reached, "percent": percent(reached, total), "files": len(mine),
             "unreached_files": sum(1 for r, t in mine.values() if t and not r),
             "least": [{"file": rel, "lines": t, "missed": t - r, "percent": percent(r, t)}
                       for rel, (r, t) in worst if t > r]}

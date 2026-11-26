@@ -104,20 +104,24 @@ class StatsCoverageTest(GitWork):
         self.assertRegex(text, r"\n  least reached\s+lines\s+not reached\s+reached\n  a\.py\s+8\s+6\s+25%\n")
         self.assertNotIn("tests/test_a.py  ", text.split("coverage:")[1].split("\nRot")[0], "tests are left out")
 
-    def test_a_report_written_just_before_the_commit_is_not_behind_it(self) -> None:
+    def test_a_commit_after_the_report_does_not_make_it_behind(self) -> None:
         r = self.repo({"a.py": CODE, "lcov.info": lcov("a.py", 1, 1)})
-        before = time.time() - 5  # as when the tests ran, and the commit came seconds later
-        os.utime(r / "lcov.info", (before, before))
-        self.assertFalse(self.coverage_of(r)["behind"])
+        later = time.time() + 5
+        os.utime(r / "lcov.info", (later, later))
+        self.sh(r, "git", "commit", "-q", "--allow-empty", "-m", "later")
+        self.assertFalse(self.coverage_of(r)["behind"], "no code file was written after the report")
 
-    def test_a_report_older_than_the_last_commit_is_said_to_be(self) -> None:
-        r = self.repo({"a.py": CODE, "lcov.info": lcov("a.py", 1, 1)})
-        old = time.time() - 3 * 86400 - 60
+    def test_a_report_written_before_a_code_file_it_covers_is_said_to_be_behind(self) -> None:
+        r = self.repo({"a.py": CODE, "b.py": CODE, "lcov.info": lcov("a.py", 1, 1)})
+        old = time.time() - 60
         os.utime(r / "lcov.info", (old, old))
+        os.utime(r / "a.py", (old - 60, old - 60))  # b.py, which the report doesn't name, is newer than the report
+        self.assertFalse(self.coverage_of(r)["behind"], "only a.py is covered, and it is older than the report")
+        os.utime(r / "lcov.info", (old - 120, old - 120))
         c = self.coverage_of(r)
         self.assertTrue(c["behind"])
-        self.assertNotIn("age_days", c)
-        self.assertIn("by lcov.info (written before the last commit);", self.cli(r, "stats").stdout)
+        self.assertIn("by lcov.info (written before the last change to the code it covers);",
+                      self.cli(r, "stats").stdout)
 
     def test_without_a_report_stats_says_how_a_test_run_writes_one_for_the_languages_of_the_repo(self) -> None:
         r = self.repo({"a.py": CODE, "pkg/a.go": "package pkg\n"})

@@ -72,7 +72,7 @@ def coverage_lines(c: dict) -> List[str]:
                 *captioned("A test run writes one with:", [f"    {how}" for how in c["how"]])]
     if c["unread"]:
         return [f"  coverage: {c['report']} could not be read"]
-    behind = " (written before the last commit)" if c["behind"] else ""
+    behind = " (written before the last change to the code it covers)" if c["behind"] else ""
     head = (f"  coverage: {c['percent']}% of {c['lines']} lines reached, by {c['report']}{behind}; "
             f"{c['unreached_files']} of {c['files']} files not reached at all")
     return [head, *table(["least reached", "lines", "not reached", "reached"],
