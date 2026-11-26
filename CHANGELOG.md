@@ -6,6 +6,10 @@
 
 ---
 
+## 0.29.0 — 2026-11-27
+
+---
+
 ### No clock
 
 - No rule of broom turns on the clock any more. Only broom's own running time keeps a bound. A test lists every reading of the clock and what it is for.

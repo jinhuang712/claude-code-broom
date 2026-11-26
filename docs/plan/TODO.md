@@ -111,6 +111,18 @@
 
 ---
 
+### [P2][IDEA] A known issue whose code changed leaves the store
+
+- description:
+  - Since a known issue never expires, an entry whose line changed hides nothing and stays in `baseline.json`, listed by `broom known`, until `--clear`.
+  - The store grows with every accept. An entry accepted in a linked worktree names the main checkout's file before the work lands there, so dropping an entry whose line isn't found would lose it.
+  - `broom known` could mark an entry that no file of its repo or of its worktrees holds any more.
+- created: 2026-11-27
+- found: the look for missed rot at the end of CP14
+- related: [046: A known issue never expires](../specs/decisions/046-known-issues-never-expire.md)
+
+---
+
 ### [P2][IDEA] Test helpers in the other languages
 
 - description:

@@ -47,6 +47,8 @@ Every line of the ledger holds the version of broom that wrote it, from 0.29.0.
 - **A stamp on a record**: when an issue was accepted or a line written, shown or used to order records.
 - **The order of two events**: a commit made after the prompt, as [041](041-turn-own-commits.md) reads it, or a file written after a report.
 
+The user confirmed that day that ordering two events is no rule by the clock, since it reads which came first and not how long between them.
+
 `tests/test_no_clock.py` lists every reading of the clock in `lib/broom` with what it is for, and fails on a new one.
 
 ---
