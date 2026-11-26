@@ -113,6 +113,29 @@
 
 ---
 
+### [P2][IDEA] A setter's boolean in the other languages
+
+- description:
+  - Since 2026-11-26 a Go function named `Set` or `set`, alone or before a capital, takes a boolean for what its name says, and `bool_params` leaves it out.
+  - Python, TS/JS, Swift and Rust still count a setter's boolean, such as `set_enabled(self, enabled: bool)`.
+  - Each language would need the setter's naming of its own: `set_` in Python and Rust, `set` before a capital in TS/JS and Swift.
+- created: 2026-11-26
+- found: the change to Go's rules
+- related: [042: A Go rule flags what its message says](../specs/decisions/042-go-rules-flag-their-message.md)
+
+---
+
+### [P2][IDEA] A Go variable that another package assigns
+
+- description:
+  - Go's `globals` reads the assignments of a package's own functions. A test or a program that sets another package's variable, as in `pkg.Default = v`, isn't read.
+  - The name before the dot is a package when the file imports one under it, which the import specs of its tree say.
+- created: 2026-11-26
+- found: the change to Go's rules
+- related: [042: A Go rule flags what its message says](../specs/decisions/042-go-rules-flag-their-message.md)
+
+---
+
 ### [P2][IDEA] The doctor offers ast-grep in a CSS repo
 
 - description: CSS's comments are read by ast-grep, for its file length and its counters. `broom doctor` offers ast-grep only in a repo with Go, Rust or TS/JS, so a repo of CSS alone gets the note that it is missing and no offer.

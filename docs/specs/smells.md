@@ -72,7 +72,7 @@ A sized smell that was past the hard limit at the base and grew carries the size
 
 ## The real tree
 
-A typed linter or a module graph can't work on the scratch copy, whose imports don't resolve. Those tools run in the project's own checkout: Go's typed linters, TS/JS import cycles, dependency-cruiser and clippy. With no copy of the base to compare with, a finding counts when it is on a line the change added, a new file included. git takes a line that only moved for an added one, so an occurrence on an added line whose text the file already held at the base stays old, as often as the base held it.
+A typed linter or a module graph can't work on the scratch copy, whose imports don't resolve. Those tools run in the project's own checkout: Go's typed linters, TS/JS import cycles, dependency-cruiser and clippy. Go's package variables are read there too, since a package declares them in files a change may not touch. With no copy of the base to compare with, a finding counts when it is on a line the change added, a new file included. git takes a line that only moved for an added one, so an occurrence on an added line whose text the file already held at the base stays old, as often as the base held it.
 
 Go's scratch copy runs only linters that read syntax alone, so Go's repeated literals stay unmeasured. One linter that needs types makes golangci-lint skip every linter in the run.
 
@@ -135,7 +135,10 @@ Commented-out code is decided by the language's own parser: a comment, or a run 
 
 A Go type's length is its declaration plus every method on it in the same file, matched by the receiver's type, in a `type ( ... )` group too. A Rust type's length is its item plus its `impl` blocks in the same file. Rust's test code is a file under `tests/`, a file named for tests, or an item under `#[cfg(test)]` or marked as a test.
 
+A Go package variable that a function assigns is read from every file in the folder of a changed Go file, grouped by the name in each file's package clause. The package's variables come from all of them, and the assignments from the changed files, one row per function and variable at its first assignment. An assignment in `init`, or to a name the function declares itself, is left out. A Go print in a `package main` file that is no test is the program's output, so only the print builtins count there.
+
 - [038: Smells are read from a syntax tree](decisions/038-syntax-trees.md)
+- [042: A Go rule flags what its message says](decisions/042-go-rules-flag-their-message.md)
 
 ---
 

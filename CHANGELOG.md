@@ -6,6 +6,17 @@
 
 ---
 
+### Smells
+
+- Go's `globals` counts a package variable that a function assigns, as its message says. Before, every package variable counted, a lookup table and a table of test cases among them. What `init` assigns, a write to a field or an element and a method call such as an atomic counter's `Add` stay quiet. The variables come from every file of the package, so a test that assigns a variable of another file of its package counts.
+- Go's `debug_output` leaves out `fmt.Print`, `fmt.Printf` and `fmt.Println` in a `package main` program, where printing is the program's output, and in an `Example…` function. The `print` and `println` builtins still count everywhere, and so does a print in a library or a test file.
+- Go's `type_escape` leaves out the comma-ok assertion `v, _ := x.(T)`, which checks the type and can't panic. The single-value `x.(T)` still counts.
+- Go's `bool_params` leaves out a setter: a function named `Set` or `set`, alone or before a capital, such as `SetKeepAlivesEnabled(v bool)`.
+- Go's `globals` and `debug_output` are read from the syntax tree with ast-grep, and golangci-lint no longer runs gochecknoglobals or forbidigo. Without ast-grep both go unmeasured, with a note.
+- An edited line that keeps its Go print adds nothing, as for every other occurrence smell.
+
+---
+
 ## 0.28.3 — 2026-11-26
 
 ---

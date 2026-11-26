@@ -147,5 +147,6 @@ A text pattern holds only for the code its author thought of, and code varies wi
 - **Stance**: [Say what happened](PHILOSOPHY.md#what-happens-to-what-was-skipped)
 - **Decisions**:
   - [038: Smells are read from a syntax tree](specs/decisions/038-syntax-trees.md)
+  - [042: A Go rule flags what its message says](specs/decisions/042-go-rules-flag-their-message.md)
 - **How it works**:
   - [Smells](specs/smells.md)

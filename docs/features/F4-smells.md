@@ -101,10 +101,10 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 | `commented_code` | block | `ERA001` | `broom/commented-code` | `gocritic` `commentedOutCode` | read by broom |
 | `unused_params` | hint | `ARG` | `no-unused-vars` | `revive` `unused-parameter` | `unused_parameter` |
 | `magic_numbers` | nit | `PLR2004` | `no-magic-numbers` | `mnd` | `no_magic_numbers` |
-| `debug_output` | hint | `T201` `T203` | `no-console` | `forbidigo` | read by broom |
+| `debug_output` | hint | `T201` `T203` | `no-console` | read by broom | read by broom |
 | `todo` | nit | `FIX` | `no-warning-comments` | `godox` | `todo` |
 | `type_escape` | hint | `ANN401` | `no-explicit-any` `no-non-null-assertion` | `revive` `unchecked-type-assertion` | `force_cast` `force_unwrapping` `force_try` |
-| `globals` | hint | `PLW0603` | `broom/module-state` | `gochecknoglobals` | read by broom |
+| `globals` | hint | `PLW0603` | `broom/module-state` | read by broom | read by broom |
 | `bool_params` | hint | `FBT001` | `broom/bool-params` | `revive` `flag-parameter` | read by broom |
 | `broad_test_asserts` | hint | `PT011` | `jest/require-to-throw-message` | read by broom | read by broom |
 | `broad_catch` | hint | `BLE001` `E722` | `broom/broad-catch` | read by broom | read by broom |
@@ -113,7 +113,7 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 | `skipped_test` | hint | read by broom | read by broom | read by broom | read by broom |
 | `untested_file` | nit | read by broom | read by broom | read by broom | read by broom |
 
-12 notes on the table:
+16 notes on the table:
 
 - `commented_code` is a nit in TS/JS, Go, Swift and Rust, whose detectors guess.
 - Go's `commented_code` is found inside a function and missed at the top level of a file.
@@ -124,6 +124,10 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 - Swift's `bool_params` rule finds an unlabeled `_ flag: Bool`.
 - A function handed to a call is the callee's choice and doesn't count for `bool_params`.
 - `module-state` is a `let` or `var` at module level that a function assigns.
+- Go's `globals` is a package variable that a function assigns with `=`, an operator such as `+=`, `++` or `--`. A variable no function assigns is a table or a setting, and stays quiet. So do what `init` assigns, a write to a field or an element, and a method call such as an atomic counter's `Add`. The variables come from every file of the package in the folder, and the finding marks each function's first assignment.
+- Go's `debug_output` is a call of `print` or `println`, or of `fmt.Print`, `fmt.Printf` or `fmt.Println` outside a `package main` program's own files. A print in a test file counts, and one in an `Example…` function doesn't.
+- Go's `type_escape` is a type assertion with one result, `x.(T)`, which panics on the wrong type. The comma-ok form checks it, `v, _ := x.(T)` among them. `any` doesn't count, since Go checks it at each use.
+- A Go function named `Set` or `set`, alone or before a capital, takes a boolean for what its name says, so it doesn't count for `bool_params`.
 - Go's `broad_test_asserts` is a testify `Error` or `Panics`, which any error passes.
 - Swift's `broad_test_asserts` is an `XCTAssertThrowsError` with no handler, or an `#expect` or `#require` that any `Error` passes.
 - Swift's `deprecated_api` comes from type-checking the changed files of a SwiftPM package, so an Xcode project is left out.
@@ -132,7 +136,9 @@ Rust gets 9 of these from clippy and rustc: `suppression` · `swallowed_error` �
 
 The five `broom/` rules need Node. Without it only these smells go unmeasured, and a note says so.
 
-- **Why**: [009: An occurrence counts when the change raises the count](../specs/decisions/009-occurrence-by-count.md)
+- **Why**:
+  - [009: An occurrence counts when the change raises the count](../specs/decisions/009-occurrence-by-count.md)
+  - [042: A Go rule flags what its message says](../specs/decisions/042-go-rules-flag-their-message.md)
 
 ---
 
@@ -150,7 +156,7 @@ It has 1 form per language:
 | Swift | a `catch` that never reads its error | a `catch` of a named error type · a handler that throws · `try?` |
 | Rust | an `Err(_) =>` arm · a `.map_err(\|_\| …)` · a dropped `catch_unwind` | an arm that binds the error |
 
-TS/JS can't catch by type, so there a handler has to look at what it caught. An empty `catch` is a `swallowed_error`. Swift's `try?` drops every error too, and it is left out, since it is the language's common way to say an error doesn't matter.
+TS/JS can't catch by type, so there a handler has to look at what it caught. An empty `catch` is a `swallowed_error`. Swift's `try?` drops every error too, and it is left out, since it is the language's common way to say an error doesn't matter. Go's deliberate `_ = recover()` under a comment that says why is the same tree as a careless one, so it passes accepted with a reason.
 
 ---
 
