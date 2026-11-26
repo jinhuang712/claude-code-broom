@@ -190,6 +190,15 @@ def main_worktree(root: Path) -> Path:
     return _main_roots[root]
 
 
+def worktrees(root: Path) -> List[Path]:
+    """The main checkout of the repo whose worktree is `root` and its linked worktrees still on disk, the main one
+    first; the main checkout alone when git doesn't say."""
+    main = main_worktree(root)
+    out = git(["worktree", "list", "--porcelain"], main) or ""
+    found = [Path(line[len("worktree "):]).resolve() for line in out.splitlines() if line.startswith("worktree ")]
+    return [main, *(w for w in found if w != main and w.is_dir())]
+
+
 # What comes before the path in an entry of `git status --porcelain=v2`, by the entry's first field: a changed
 # file (1), an unmerged one (u), an untracked one (?). A rename (2) is never listed: the call turns renames off.
 STATUS_FIELDS = {"1": 7, "u": 9, "?": 0}

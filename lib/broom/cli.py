@@ -17,7 +17,8 @@ from .checks import run_checks
 from .config import DEAD_CODE, SETTINGS, SMELL_LIMITS, SMELL_PRESENCE, excluded, setting, setting_source
 from .fmt import format_files
 from .gate import (
-    accept_allowed, accept_blocked, baseline_keys, baseline_remove, baseline_under, display, issue_key, render, select,
+    accept_allowed, accept_blocked, baseline_keys, baseline_remove, baseline_under, changed_code, display, issue_key,
+    render, select,
 )
 from .gitcmd import staged
 from .hookmain import EVENTS, run_hook
@@ -260,13 +261,16 @@ def cmd_known(args: argparse.Namespace) -> int:
     if not entries:
         say("broom: no known issues here")
         return 0
-    say(f"broom: {len(entries)} known issue(s), not raised again:")
-    for e in sorted(entries.values(), key=lambda v: (str(v.get("file")), v.get("line", 0))):
+    spent = changed_code(entries)
+    shown = f", {len(spent)} of them with their code changed" if spent else ""
+    say(f"broom: {len(entries)} known issue(s){shown}, not raised again:")
+    for k, e in sorted(entries.items(), key=lambda kv: (str(kv[1].get("file")), kv[1].get("line", 0))):
         when = time.strftime("%Y-%m-%d", time.localtime(e.get("t", 0)))
         where = f"{display(Path(str(e.get('file', '?'))))}:{e.get('line', '?')}"
         why = f"  ({e['why']}{'; the user agreed' if e.get('agreed') else ''})" if e.get("why") else ""
         msg = e.get("msg", "(recorded by broom 0.2)")
-        say(f"  {where}  {e.get('tool', '?')} {e.get('rule', '')}  {msg}  [{when}]{why}")
+        changed = "  (its code changed: no longer matches)" if k in spent else ""
+        say(f"  {where}  {e.get('tool', '?')} {e.get('rule', '')}  {msg}  [{when}]{why}{changed}")
     return 0
 
 

@@ -18,7 +18,7 @@ from . import ledger
 from .findings import Issue
 from .config import OPTIONAL_NOTE, TESTS_TOOL, excluded
 from .fixes import how_to_fix
-from .gitutil import ChangedLines, git_root, main_worktree
+from .gitutil import ChangedLines, git_root, main_worktree, worktrees
 from .state import DATA_ROOT, load_json, say, short_hash, update_json
 
 BASELINE = DATA_ROOT / "baseline.json"
@@ -59,7 +59,12 @@ def issue_key(i: Issue) -> str:
     """A short id for a finding: its file, tool, rule and message plus the text of its line, not its number."""
     # Keyed on the line's text, not its number, so a known issue stays known when lines above it move. And on the file
     # as the main checkout names it, so what was accepted in a linked worktree stays known once the work lands.
-    return short_hash(f"{checkout_path(i.file)}|{i.tool}|{i.rule}|{i.msg}|{line_text(i.file, i.line)}")
+    return key_of(checkout_path(i.file), i.tool, i.rule, i.msg, line_text(i.file, i.line))
+
+
+def key_of(file: Path, tool: str, rule: str, msg: str, text: str) -> str:
+    """The id of a finding from its parts: `file` as the main checkout names it, and `text`, its line stripped."""
+    return short_hash(f"{file}|{tool}|{rule}|{msg}|{text}")
 
 
 def issue_entry(i: Issue) -> Dict[str, object]:
@@ -210,6 +215,36 @@ def baseline_under(roots: List[Path]) -> Dict[str, dict]:
         if any(f == r or r in f.parents for r in roots):
             out[k] = v
     return out
+
+
+def line_texts(places: Iterable[Path]) -> Set[str]:
+    """The stripped text of every line of every readable file in `places`."""
+    out: Set[str] = set()
+    for f in places:
+        try:
+            out |= {row.strip() for row in f.read_text(errors="replace").splitlines()}
+        except OSError:
+            pass
+    return out
+
+
+def changed_code(entries: Dict[str, dict]) -> Set[str]:
+    """The keys of `entries` (known issues) that no line of their file gives any more, in the main checkout or in a
+    linked worktree of it: the code changed, so the entry hides nothing. A known issue never expires, so only this
+    tells it is spent. An entry from before broom stored a file is left out: nothing says where to look."""
+    gone: Set[str] = set()
+    for key, e in entries.items():
+        if not e.get("file"):
+            continue
+        f = checkout_path(Path(str(e["file"])))
+        here = next((p for p in (f.parent, *f.parents) if p.is_dir()), None)
+        root = git_root(here) if here else None
+        places = [f] + [w / f.resolve().relative_to(root) for w in worktrees(root)] if root else [f]
+        texts = line_texts(places) | (set() if e.get("line") else {""})  # a finding of the whole file has no line
+        parts = (f, str(e.get("tool", "")), str(e.get("rule", "")), str(e.get("msg", "")))
+        if key not in {key_of(*parts, t) for t in texts}:
+            gone.add(key)
+    return gone
 
 
 def baseline_remove(keys: List[str]) -> None:

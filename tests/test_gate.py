@@ -188,3 +188,39 @@ class GateTest(BroomCase):
         in_work = self.hinted_commit(work, "staged", git)
         self.assertIn("grown is 60 code lines long", in_plain)
         self.assertEqual(self.smell_lines(in_work), self.smell_lines(in_plain))
+
+    def accepted_repo(self) -> Path:
+        """A repo whose one known issue is a 120-line function, accepted at the commit it blocked."""
+        r = self.repo({"a.py": "x = 1\n"})
+        (r / "a.py").write_text(py_function("huge", 120))
+        self.sh(r, "git", "add", "a.py")
+        self.assertTrue(self.denied(self.commit(r, "git commit -m x")))
+        self.assertEqual(self.cli(r, "known", "--accept", "legacy code").returncode, 0)
+        self.assertEqual(self.denied(self.commit(r, "git commit -m x")), "")
+        return r
+
+    def test_known_marks_an_issue_whose_code_changed_and_drops_none(self) -> None:
+        r = self.accepted_repo()
+        first = self.cli(r, "known").stdout
+        self.assertIn("1 known issue(s), not raised again:", first)
+        self.assertNotIn("no longer matches", first)
+        (r / "a.py").write_text(py_function("huge", 120).replace("def huge", "def renamed"))
+        out = self.cli(r, "known").stdout
+        self.assertIn("1 known issue(s), 1 of them with their code changed, not raised again:", out)
+        self.assertIn("(its code changed: no longer matches)", out)
+        (r / "a.py").write_text("\n" + py_function("huge", 120))
+        self.assertNotIn("no longer matches", self.cli(r, "known").stdout, "a line that moved still matches")
+        (r / "a.py").write_text("x = 1\n")
+        again = self.cli(r, "known").stdout
+        self.assertIn("no longer matches", again)
+        self.assertIn("1 known issue(s)", again, "nothing was dropped")
+
+    def test_known_looks_for_the_line_in_a_linked_worktree_too(self) -> None:
+        r = self.accepted_repo()
+        self.sh(r, "git", "commit", "-qam", "land")
+        linked = self.tmp / "side"
+        self.sh(r, "git", "worktree", "add", "-q", str(linked), "-b", "side")
+        (r / "a.py").write_text("x = 1\n")  # the main checkout has changed the code, the worktree still has it
+        self.assertNotIn("no longer matches", self.cli(r, "known").stdout)
+        (linked / "a.py").write_text("x = 1\n")
+        self.assertIn("no longer matches", self.cli(r, "known").stdout)
