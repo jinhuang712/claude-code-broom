@@ -13,7 +13,7 @@ from broom.hotspots import render
 from broom.jsmeasure import drop_test_callbacks
 from broom.measure import Raw
 from broom.reading import Reader
-from broom.smells import compare_occurrences, find_smells, made_worse, noise
+from broom.smells import RepoLimits, compare_occurrences, find_smells, made_worse, noise
 
 
 def todo(line: int, text: str = "# TODO: x") -> Raw:
@@ -75,6 +75,26 @@ class SmellTest(BroomCase):
         self.assertTrue(noise(Raw("pkg/a_test.go", 1, "complexity", "TestX", 30, "go")))
         self.assertFalse(noise(Raw("pkg/a.go", 1, "complexity", "Run", 30, "go")))
         self.assertFalse(noise(Raw("pkg/a_test.go", 1, "function_lines", "TestX", 120, "go")), "long tests count")
+
+    def test_a_go_test_helper_package_and_conftest_are_test_code(self) -> None:
+        for rel in ("cache/cachetest/fixtures.go", "net/http/httptest/server.go", "conftest.py", "pkg/conftest.py"):
+            with self.subTest(rel=rel):
+                self.assertTrue(noise(Raw(rel, 1, "magic_numbers", "magic_numbers", 1, "go")))
+                self.assertEqual(RepoLimits(self.repo({"a.py": "x = 1\n"})).of(rel)["file_lines"], (800, 2000))
+        for rel in ("cache/cache.go", "cache/cachetest/internal/x.go", "cachetest.go", "pkg/cachetest/a.py"):
+            with self.subTest(rel=rel):
+                self.assertFalse(noise(Raw(rel, 1, "magic_numbers", "magic_numbers", 1, "go")), "code")
+
+    @unittest.skipUnless(shutil.which("golangci-lint"), "golangci-lint missing")
+    def test_a_fixture_number_in_a_go_test_helper_package_is_no_smell(self) -> None:
+        body = "package {0}\n\nfunc Fixture(x int) int {{\n\treturn x * 86400\n}}\n"
+        r = self.repo({"go.mod": "module example.com/m\n\ngo 1.22\n", "cache/cache.go": "package cache\n",
+                       "cache/cachetest/a.go": "package cachetest\n", ".broom.json": '{"smells_off": ["dead_code"]}'})
+        (r / "cache/cache.go").write_text(body.format("cache"))
+        (r / "cache/cachetest/a.go").write_text(body.format("cachetest"))
+        found, _ = find_smells(r, [r / "cache/cache.go", r / "cache/cachetest/a.go"], "HEAD")
+        self.assertEqual([(s.file.name, s.metric) for s in found if s.metric == "magic_numbers"],
+                         [("cache.go", "magic_numbers")])
 
     @unittest.skipUnless(shutil.which("jscpd"), "jscpd missing")
     def test_a_new_copy_is_flagged_and_old_or_test_copies_are_not(self) -> None:

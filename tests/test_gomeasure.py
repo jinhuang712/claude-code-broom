@@ -116,6 +116,7 @@ class AnyErrorTest(GoTextCase):
         for row in (ERR, "\trequire.Panics(t, f)", "\ts.Require().Error(err)"):
             with self.subTest(row=row):
                 self.assertEqual([f[2] for f in self.asserted("a_test.go", row)], [[5]])
+        self.assertEqual([f[2] for f in self.asserted("cache/cachetest/a.go", ERR)], [[5]], "a test-helper package")
 
     def test_an_assertion_that_says_which_error_a_plain_report_a_non_test_file_and_a_string_are_quiet(self) -> None:
         for rel, row in (("a_test.go", "\tassert.ErrorIs(t, err, e)"), ("a_test.go", '\tt.Error("no")'), ("a.go", ERR),

@@ -16,6 +16,7 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from .reading import TOOL_TIMEOUT, Limits, Reader
 from .syntax import Match, Rules, Span, by_file, matches, parsed
+from .testrot import TEST_FILE
 
 TYPE_LINES = "type_lines"
 FUNCTION_LINES = "function_lines"
@@ -71,7 +72,7 @@ def go_text(r: Reader, rels: List[str], lim: Limits) -> Dict[str, List[Span]]:
             r.add_length(m.file, (m.line, m.end), FUNCTION_LINES, lim[FUNCTION_LINES][0], m.caught.get("NAME"))
             if setter(m.caught.get("NAME", "")):
                 setters.setdefault(m.file, []).append((m.line, m.end))
-        elif (m.smell == "broad_catch" or (m.smell == "broad_test_asserts" and m.file.endswith("_test.go"))
+        elif (m.smell == "broad_catch" or (m.smell == "broad_test_asserts" and TEST_FILE.search(m.file))
               or (m.smell == "debug_output" and counted_print(m, package))):
             r.add(m.file, m.line, m.smell, 1)
     return setters
