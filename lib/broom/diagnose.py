@@ -12,10 +12,11 @@ from .checkup import section as checkup_section
 from .dependencies import section as dependencies_section
 from .doctor import scan
 from .gate import note_text
-from .hotspots import CHURN_DAYS, churn_order, counts, drop_known, rank, repo_files, smell_counts, smell_row
+from .hotspots import churn_order, counts, drop_known, rank, repo_files, smell_counts, smell_row
 from .smell import Scan, Smell
 from .smells import find_smells
 from .stats import collect, report as stats_report
+from .statsgit import CHURN_COMMITS
 from .testrot import duplicate_rows
 from .toolchain import lang_of
 from .vulnerabilities import section as vulnerabilities_section
@@ -48,17 +49,17 @@ def by_language(found: List[Smell]) -> List[dict]:
     return sorted(rows, key=lambda r: (-r["severe"], -r["count"], r["language"]))
 
 
-def diagnose(repo: Path, paths: List[Path], top: int, days: int = CHURN_DAYS, *, vulnerabilities: bool = False) -> dict:
+def diagnose(repo: Path, paths: List[Path], top: int, last: int = CHURN_COMMITS, *, vulnerabilities: bool = False) -> dict:
     """The diagnosis of the repo, or of `paths`: the smells by kind and by language, the `top` hotspots by churn
-    over the last `days` days, every smell, the tools that were missing, the four `stats` sections and the check-up's
+    over the last `last` commits, every smell, the tools that were missing, the four `stats` sections and the check-up's
     counters. `by` is the order the hotspots really have: by churn needs history."""
     started = time.monotonic()
-    churn, order, history_notes = churn_order(repo, "churn", days)
+    churn, order, history_notes = churn_order(repo, "churn", last)
     found, notes = measure(repo, paths)
     kept, hidden = drop_known(found)
     ordered, files = rank(kept, churn, order)
     facts = collect(repo, paths)  # read once, for the stats sections and the check-up's counters
-    stats = stats_report(repo, paths, top, days, facts)
+    stats = stats_report(repo, paths, top, last, facts)
     lines, tally = stats["size"]["total"], counts(kept, hidden)
     summary = {"files": stats["files"], "lines": lines["lines"] + lines["test_lines"], "smells": tally["total"],
                "severe": tally["severe"], "hints": tally["hints"], "known": tally["known"], "open": tally["open"],

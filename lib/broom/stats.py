@@ -1,12 +1,10 @@
 """`broom stats`: the counts a session would otherwise write a throwaway script for, in four sections: size, tests, rot
 and history. It needs git and nothing else. The files are those every broom command reads (`hotspots.repo_files`, less
-dependencies, build output and generated code), read once (statscan); history is one `git log` and the TODOs' age a
-bounded `git blame` (statsgit). A question it can't answer comes back with a `note` saying what is missing."""
+dependencies, build output and generated code), read once (statscan); history is one `git log` (statsgit). A question it can't answer comes back with a `note` saying what is missing."""
 
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-import time
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -16,7 +14,7 @@ from .hotspots import repo_files
 from .maintained import Maintained, generated_among
 from .statscan import Facts, scan
 from .syntax import MISSING
-from .statsgit import DAY, OLD_DAYS, blame, history, top_counts
+from .statsgit import history, top_counts
 from .testrot import needs_test, stem_of, tested
 from .toolchain import lang_of
 from .treefacts import SG_LANGS, sg_trees
@@ -122,20 +120,10 @@ def tests_section(repo: Path, facts: List[Facts], top: int, note: Optional[str])
 # ---------------------------------------------------------------- rot
 
 
-def todo_part(repo: Path, facts: List[Facts], top: int) -> dict:
-    """TODO, FIXME, HACK and XXX comments: the total, how many of the lines git blame was asked about are past `OLD_DAYS`
-    days, the `top` oldest of those with the day each was written, and the `top` files holding most. The files with
-    most go to blame first, as the cap may cut the rest."""
-    found = {f.rel: f.todos for f in facts if f.todos}
-    counts = {rel: len(lines) for rel, lines in found.items()}
-    blamed = blame(repo, [(rel, found[rel]) for rel, _ in top_counts(counts, len(found))])
-    now = time.time()
-    ages = sorted((when, rel, line) for rel, line, when in blamed.written)
-    oldest = [{"file": rel, "line": line, "written": time.strftime("%Y-%m-%d", time.localtime(when)),
-               "days": int((now - when) // DAY)} for when, rel, line in ages[:top]]
-    return {"total": sum(counts.values()), "blamed": len(ages), "older_than_days": OLD_DAYS,
-            "older": sum(now - when > OLD_DAYS * DAY for when, _, _ in ages), "oldest": oldest,
-            "capped": blamed.capped, "files": ranked(counts, top)}
+def todo_part(facts: List[Facts], top: int) -> dict:
+    """TODO, FIXME, HACK and XXX comments: the total and the `top` files holding most."""
+    counts = {f.rel: len(f.todos) for f in facts if f.todos}
+    return {"total": sum(counts.values()), "files": ranked(counts, top)}
 
 
 def unread_note(facts: List[Facts]) -> Optional[str]:
@@ -144,13 +132,13 @@ def unread_note(facts: List[Facts]) -> Optional[str]:
     return f"{unread} Go or TS/JS files unread: {MISSING}" if unread else None
 
 
-def rot_section(repo: Path, facts: List[Facts], top: int, note: Optional[str]) -> dict:
+def rot_section(facts: List[Facts], top: int, note: Optional[str]) -> dict:
     """Lint suppressions by kind, with the `top` files holding most; the TODO comments; skipped tests as one number."""
     kinds = Counter(k for f in facts for k in f.suppressions)
     suppressed = {f.rel: len(f.suppressions) for f in facts if f.suppressions}
     return {"suppressions": {"total": sum(kinds.values()), "kinds": dict(kinds.most_common()),
                              "files": ranked(suppressed, top)},
-            "todos": todo_part(repo, facts, top), "skipped_tests": sum(f.skipped for f in facts),
+            "todos": todo_part(facts, top), "skipped_tests": sum(f.skipped for f in facts),
             "note": note or unread_note(facts)}
 
 
@@ -165,15 +153,15 @@ def relative(repo: Path, path: Path) -> str:
         return str(path)
 
 
-def report(repo: Path, paths: List[Path], top: int, days: int, facts: Optional[List[Facts]] = None) -> dict:
+def report(repo: Path, paths: List[Path], top: int, last: int, facts: Optional[List[Facts]] = None) -> dict:
     """The four sections for the code files within `paths` (the repo when empty): `size`, `tests`, `rot` and `history`
-    over the last `days` days, with `files`, the number of files read. `facts` are those files read already, when a
+    over the last `last` commits, with `files`, the number of files read. `facts` are those files read already, when a
     caller that needs them too has read them."""
     facts = collect(repo, paths) if facts is None else facts
     shown = [relative(repo, p) for p in paths]
     note = None if facts else "no code files " + (f"under {', '.join(shown)}" if shown else "in the repo")
-    return {"repo": str(repo), "paths": shown, "files": len(facts), "days": days,
+    return {"repo": str(repo), "paths": shown, "files": len(facts), "last_commits": last,
             "size": size_section(facts, top, note or unread_note(facts)),
             "tests": tests_section(repo, facts, top, note or unread_note(facts)),
-            "rot": rot_section(repo, facts, top, note),
-            "history": history(repo, {f.rel for f in facts}, days, top, note)}
+            "rot": rot_section(facts, top, note),
+            "history": history(repo, {f.rel for f in facts}, last, top, note)}

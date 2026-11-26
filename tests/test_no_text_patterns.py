@@ -70,7 +70,6 @@ ALLOWED: Dict[Tuple[str, str], Tuple[str, str]] = {
     ("state", "parse_jsonc"): (SETTING, "a JSONC settings file"),
     ("state", "session_dir"): (IDENTITY, "a session id made safe as a file name"),
     ("statscan", "TODO_MARK"): (TOKEN, "a comment a tree isolated"),
-    ("statsgit", "BLAME_ROW"): (TOOL, "git blame --porcelain"),
     ("swiftcheck", "SWIFT_WARNING"): (TOOL, "a swift build line"),
     ("swiftcheck", "targets"): (TOOL, "a target name swift package describe gives"),
     ("swifttree", "ERROR"): (TOOL, "a swiftc diagnostic"),

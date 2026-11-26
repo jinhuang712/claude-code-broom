@@ -11,7 +11,7 @@ from datetime import date
 from pathlib import Path
 from unittest import mock
 
-from gitwork import GitWork, days_ago
+from gitwork import GitWork
 from support import HAS_PY, py_function
 
 from broom import checkup
@@ -61,7 +61,7 @@ class TellingTest(CheckupCase):
         r = self.repo({"a.py": suppressed(1), "b.ts": "export {};\n"})
         with mock.patch.object(shutil, "which", return_value=None):
             now = checkup.counters(r, collect(r, []), None)
-        self.assertEqual((now["suppressions"], now["skipped_tests"], now["old_todos"]), (None, None, None))
+        self.assertEqual((now["suppressions"], now["skipped_tests"], now["todos"]), (None, None, None))
 
     def test_the_first_numbers_are_the_baseline_and_nothing_is_said(self) -> None:
         r = self.repo({"a.py": suppressed(2), "tests/test_a.py": skipped(1)})
@@ -69,7 +69,7 @@ class TellingTest(CheckupCase):
         counters = self.record(r)
         self.assertEqual(counters["suppressions"], {"a.py": 2})
         self.assertEqual(counters["skipped_tests"], {"tests/test_a.py": 1})
-        self.assertEqual(sorted(counters), ["old_todos", "skipped_tests", "suppressions"],
+        self.assertEqual(sorted(counters), ["skipped_tests", "suppressions", "todos"],
                          "a counter whose tool is missing has no number to keep")
 
     def test_a_counter_that_grew_is_told_once_with_its_files_and_the_new_numbers_become_the_baseline(self) -> None:
@@ -125,13 +125,24 @@ class TellingTest(CheckupCase):
         self.commit_all(r, {"a.py": suppressed(2), "b.py": suppressed(3)})
         self.assertIn("lint suppressions 1 -> 5 (b.py, a.py)", self.scan(r, "s2"))
 
-    def test_a_todo_counts_once_it_is_older_than_180_days(self) -> None:
-        r = self.history_repo([(400, {"a.py": "x = 1\n"})])
+    def test_a_new_todo_comment_is_told_whatever_its_age(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
         self.scan(r, "s1")
-        self.commit_all(r, {"c.py": "# TODO: recent\n"}, days_ago(1))
-        self.assertEqual(self.scan(r, "s2"), "", "a TODO of yesterday is not old")
-        self.commit_all(r, {"b.py": "# TODO: old\n"}, days_ago(300))
-        self.assertIn("TODO comments older than 180 days 0 -> 1 (b.py)", self.scan(r, "s3"))
+        self.commit_all(r, {"b.py": "# TODO: new\n"})
+        self.assertIn("TODO comments 0 -> 1 (b.py)", self.scan(r, "s2"))
+
+    def test_the_old_todo_counter_of_an_earlier_record_is_no_baseline_for_the_new_one(self) -> None:
+        r = self.repo({"a.py": "# TODO: one\n"})
+        self.scan(r, "s1")
+        path = checkup.record_path(r)
+        record = json.loads(path.read_text())
+        record["counters"] = {**record["counters"], "old_todos": {"a.py": 0}}
+        del record["counters"]["todos"]
+        path.write_text(json.dumps(record))
+        self.commit_all(r, {"b.py": "# TODO: two\n# TODO: three\n"})
+        self.assertEqual(self.scan(r, "s2"), "", "the count the new counter starts from is not a jump")
+        self.commit_all(r, {"c.py": "# TODO: four\n"})
+        self.assertIn("TODO comments 3 -> 4 (c.py)", self.scan(r, "s3"))
 
     def test_a_worktree_and_its_main_checkout_share_one_record(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
@@ -178,7 +189,7 @@ class DiagnoseTest(CheckupCase):
         d = self.diagnose(r)
         self.assertEqual((d["off"], d["narrowed"], d["last"]), (False, False, date.today().isoformat()))
         rows = {c["counter"]: c for c in d["counters"]}
-        self.assertEqual(list(rows), ["suppressions", "skipped_tests", "old_todos", "dead_code", "missing_docs",
+        self.assertEqual(list(rows), ["suppressions", "skipped_tests", "todos", "dead_code", "missing_docs",
                                       "deprecated_api", "duplicate_tests", "uncovered_lines"])
         self.assertEqual(rows["suppressions"], {"counter": "suppressions", "label": "lint suppressions", "now": 3,
                                                 "was": 1, "grew": True, "files": ["b.py"]})

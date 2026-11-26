@@ -12,7 +12,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
@@ -22,7 +21,6 @@ from .gitutil import git
 PLACES = ("coverage.xml", "cobertura.xml", "coverage/coverage.xml", "coverage/cobertura-coverage.xml", "lcov.info",
           "coverage/lcov.info", "coverage.lcov", "coverage.out", "cover.out", "coverage.json")
 MAX_BYTES = 32 * 1024 * 1024  # a larger report is left unread: a hook must not spend its seconds on one file
-DAY = 86400
 SLACK = 60  # a commit made within a minute after the report is the one the tests ran for: the report isn't behind it
 GO_BLOCK = re.compile(r"^(.+):(\d+\.\d+,\d+\.\d+) (\d+) (\d+)$")
 # How each language's usual test run writes a report broom reads.
@@ -162,8 +160,8 @@ def how_to(langs: Iterable[str]) -> List[str]:
 
 
 def section(repo: Path, code: Dict[str, str], top: int) -> dict:
-    """What `broom stats` says of coverage for the files of `code` (path to language, tests left out): the report, its
-    age and whether it is older than the last commit, the lines reached of all, how many files no test reaches at
+    """What `broom stats` says of coverage for the files of `code` (path to language, tests left out): the report, whether
+    it was written before the last commit, the lines reached of all, how many files no test reaches at
     all, and the `top` files with most lines not reached. Without a report, `how`: the commands that write one."""
     report = report_path(repo)
     if report is None:
@@ -177,8 +175,7 @@ def section(repo: Path, code: Dict[str, str], top: int) -> dict:
     last = git(["log", "-1", "--format=%ct"], repo) or ""
     worst = sorted(mine.items(), key=lambda kv: (kv[1][0] - kv[1][1], kv[0]))[:top]
     reached, total = sum(r for r, _ in mine.values()), sum(t for _, t in mine.values())
-    return {"report": name, "unread": False, "age_days": int((time.time() - written) // DAY),
-            "behind": last.strip().isdigit() and written < int(last) - SLACK, "lines": total, "reached": reached,
+    return {"report": name, "unread": False, "behind": last.strip().isdigit() and written < int(last) - SLACK, "lines": total, "reached": reached,
             "percent": percent(reached, total), "files": len(mine),
             "unreached_files": sum(1 for r, t in mine.values() if t and not r),
             "least": [{"file": rel, "lines": t, "missed": t - r, "percent": percent(r, t)}

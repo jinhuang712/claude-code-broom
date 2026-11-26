@@ -24,8 +24,8 @@ class DiagnoseTest(GitWork):
         self.bare = self.fake_path()
 
     def smelly_repo(self) -> Path:
-        return self.history_repo([(2000, {"a.py": LONG, "src/big.ts": TS_BIG}), (12, {"b.py": BUSY}),
-                                  (8, {"b.py": BUSY + "\n\nB = 1\n"}), (5, {"b.py": BUSY + "\n\nB = 2\n"})])
+        return self.history_repo([(2000, {"a.py": LONG, "src/big.ts": TS_BIG}), (12, {"b.py": BUSY})]
+                                 + [(10 - i, {"b.py": BUSY + f"\n\nB = {i}\n"}) for i in range(6)])
 
     def diagnose(self, r: Path, *args: str) -> dict:
         done = self.cli(r, "diagnose", "--json", *args, env=self.bare)
@@ -44,7 +44,7 @@ class DiagnoseTest(GitWork):
         self.assertEqual(len(d["smells"]), 3, "every smell, whatever --top says")
         self.assertEqual(len(d["hotspots"]), 1, "the lists that --top cuts")
         self.assertEqual(d["stats"]["files"], 3)
-        self.assertEqual(set(d["stats"]), {"repo", "paths", "files", "days", "size", "tests", "rot", "history"})
+        self.assertEqual(set(d["stats"]), {"repo", "paths", "files", "last_commits", "size", "tests", "rot", "history"})
 
     def test_smells_by_kind_and_by_language_with_the_worst_of_each(self) -> None:
         d = self.diagnose(self.smelly_repo())
@@ -61,14 +61,15 @@ class DiagnoseTest(GitWork):
         d = self.diagnose(self.smelly_repo())
         self.assertEqual(d["by"], "churn")
         busy = next(f for f in d["hotspots"] if f["file"] == "b.py")
-        self.assertEqual((busy["changes"], busy["score"]), (3, (3 * busy["severe"] + busy["hints"]) * 4))
-        self.assertEqual(d["hotspots"][0]["file"], "b.py", "a hint changed three times outranks an untouched severe smell")
+        self.assertEqual((busy["changes"], busy["score"]), (7, (3 * busy["severe"] + busy["hints"]) * 8))
+        self.assertEqual(d["hotspots"][0]["file"], "b.py", "a hint changed seven times outranks a severe smell changed once")
         self.assertEqual({s["was"] for s in d["smells"]}, {None})
 
-    def test_days_moves_the_churn_window_and_the_history(self) -> None:
-        d = self.diagnose(self.smelly_repo(), "--days", "7")
-        self.assertEqual(d["stats"]["history"]["days"], 7)
-        self.assertEqual({f["file"]: f["changes"] for f in d["hotspots"]}["b.py"], 1, "only the commit 5 days ago")
+    def test_commits_moves_the_churn_window_and_the_history(self) -> None:
+        d = self.diagnose(self.smelly_repo(), "--commits", "2")
+        self.assertEqual((d["stats"]["last_commits"], d["stats"]["history"]["last_commits"]), (2, 2))
+        self.assertEqual({f["file"]: f["changes"] for f in d["hotspots"]}["b.py"], 2, "only the last two commits")
+        self.assertEqual(self.diagnose(self.smelly_repo())["stats"]["last_commits"], 500)
 
     def test_the_tools_that_were_missing_are_named_in_the_data_and_the_report(self) -> None:
         r = self.smelly_repo()
@@ -85,7 +86,7 @@ class DiagnoseTest(GitWork):
         lines = done.stdout.splitlines()
         self.assertTrue(lines[0].startswith("# broom diagnose: "), lines[0])
         titles = [line[3:] for line in lines if line.startswith("## ")]
-        self.assertEqual([re.sub(r"\(last .*", "", t).strip() if t.startswith("History") else t for t in titles],
+        self.assertEqual([re.sub(r"\(\d+ of the last .*", "", t).strip() if t.startswith("History") else t for t in titles],
                          [*HEADINGS, "History"])
         self.assertRegex(lines[-1], r"^broom diagnose took \d+(\.\d)? s$")
         self.assertIn("... and 1 more; `broom smells --top 3` lists them all, `--only KIND` one kind", done.stdout,

@@ -56,7 +56,7 @@ def hotspot_lines(data: dict) -> List[str]:
     """The hotspot files with their smells, changes and score, under the line that says how they are ordered."""
     rows = [[f["file"], f["severe"], f["hints"], f["changes"], f["score"]] for f in data["hotspots"]]
     shown = table(["file", "past the hard limit", "hints", "changes", "score"], rows)
-    return [f"  Ordered {order_text(data['by'], data['stats']['days'])}.", *shown] if shown else []
+    return [f"  Ordered {order_text(data['by'], data['stats']['last_commits'])}.", *shown] if shown else []
 
 
 def worst_lines(data: dict, top: int) -> List[str]:
@@ -137,7 +137,7 @@ def render(data: dict, top: int) -> str:
 def run(repo: Path, args: argparse.Namespace) -> int:
     """Diagnose `repo`, narrowed to `args.paths`, as text or as JSON with `--json`: printed, or written to `--out`
     with one line saying where."""
-    data = diagnose(repo, [Path(p).resolve() for p in args.paths], args.top, args.days,
+    data = diagnose(repo, [Path(p).resolve() for p in args.paths], args.top, args.commits,
                     vulnerabilities=args.vulnerabilities)
     text = json.dumps(data, indent=1) if args.json else render(data, args.top)
     if not args.out:

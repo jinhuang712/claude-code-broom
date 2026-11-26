@@ -1,17 +1,16 @@
 """The check-up: a look at the whole repo for rot, which gets worse without any one change being at fault. It keeps
-the counters of `LABELS` (lint suppressions, skipped tests, TODO comments older than `OLD_DAYS` days, dead-code
-findings, public code with no doc comment, calls to deprecated APIs, duplicate test blocks, lines no test reaches)
+the counters of `LABELS` (lint suppressions, skipped tests, TODO comments, dead-code findings, public code with no doc
+comment, calls to deprecated APIs, duplicate test blocks, lines no test reaches)
 per file, and the numbers of the last check-up per repo, in broom's data directory. The session scan runs it in the
 background after the smell scan, and tells Claude, once, of each counter that is higher than at the last check-up,
 with the files that added to it. It never blocks and takes only what is cheap: the one pass over the files `broom
-stats` makes, a bounded `git blame`, the coverage report a test run left, and the counts the smell scan already has.
+stats` makes, the coverage report a test run left, and the counts the smell scan already has.
 
 `broom diagnose` lists every counter, grown or not (`section`); it never changes the record."""
 
 from __future__ import annotations
 
 import time
-from collections import Counter
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -21,7 +20,6 @@ from .gitutil import CLOCK, main_worktree
 from .state import DATA_ROOT, load_json, short_hash, update_json
 from .stats import collect
 from .statscan import Facts
-from .statsgit import DAY, OLD_DAYS, blame
 from .testrot import DUPLICATE_TESTS
 
 RECORDS = DATA_ROOT / "checkup"
@@ -29,7 +27,7 @@ UNCOVERED = "uncovered_lines"
 FILES_NAMED = 3  # how many files a line of the note names
 MIN_SECONDS = 6  # a hook with less time left than this leaves the check-up to the next session
 LABELS = {"suppressions": "lint suppressions", "skipped_tests": "skipped tests",
-          "old_todos": f"TODO comments older than {OLD_DAYS} days", DEAD_CODE: "dead-code findings",
+          "todos": "TODO comments", DEAD_CODE: "dead-code findings",
           "missing_docs": "public code with no doc comment", "deprecated_api": "calls to deprecated APIs",
           DUPLICATE_TESTS: "duplicate test blocks", UNCOVERED: "lines no test reaches, by the coverage report"}
 # Counted by the smell scan, not by the pass over the files.
@@ -52,16 +50,6 @@ def is_off(repo: Path) -> bool:
     return setting("smells", repo) == "off" or (isinstance(off, list) and CHECKUP in off)
 
 
-def old_todos(repo: Path, facts: List[Facts]) -> Optional[Counts]:
-    """Per file, the TODO comments git blame dates more than `OLD_DAYS` days back: at most `BLAME_LINES` lines are
-    asked, the files with most first. None when the hook's time ran out, as the blame then answered nothing."""
-    order = sorted((f for f in facts if f.todos), key=lambda f: (-len(f.todos), f.rel))
-    cutoff = time.time() - OLD_DAYS * DAY
-    written = blame(repo, [(f.rel, f.todos) for f in order]).written
-    old: Counts = dict(Counter(rel for rel, _, when in written if when < cutoff))
-    return None if CLOCK.left() == 0 else old
-
-
 def counters(repo: Path, facts: List[Facts], from_smells: Optional[Counted]) -> Counted:
     """Every counter, per file, as the repo is now. `from_smells` holds those the smell scan counted (hotspots.
     smell_counts); a counter is None when it couldn't be counted: it is then neither compared nor recorded. The three
@@ -70,7 +58,7 @@ def counters(repo: Path, facts: List[Facts], from_smells: Optional[Counted]) -> 
     now: Counted = {
         "suppressions": {f.rel: len(f.suppressions) for f in facts if f.suppressions} if whole else None,
         "skipped_tests": {f.rel: f.skipped for f in facts if f.skipped} if whole else None,
-        "old_todos": old_todos(repo, facts) if whole else None,
+        "todos": {f.rel: len(f.todos) for f in facts if f.todos} if whole else None,
         UNCOVERED: coverage.missed(repo, {f.rel for f in facts if not f.test})}
     return {**now, **{name: (from_smells or {}).get(name) for name in SMELL_COUNTERS}}
 

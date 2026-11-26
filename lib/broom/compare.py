@@ -17,7 +17,7 @@ from typing import Dict, Iterator, List, Optional, Set, Tuple
 
 from .diagnose import measure
 from .gitutil import git, renamed, run
-from .hotspots import CHURN_DAYS, churn_order, rank, score, severity
+from .hotspots import churn_order, rank, score, severity
 from .rowcache import forget
 from .smells import Smell
 
@@ -56,11 +56,10 @@ def checkout(repo: Path, sha: str) -> Iterator[Path]:
 
 def measure_at(repo: Path, sha: str) -> Tuple[List[Smell], List[str], Dict[str, int]]:
     """Every smell of the repo as it was at `sha`, the notes of that measuring, and the commits per file in the
-    90 days up to `sha`, from a temporary checkout. A note that names the checkout names the repo instead."""
-    when = (git(["show", "-s", "--format=%ct", sha], repo) or "").strip()
+    last commits up to `sha`, from a temporary checkout. A note that names the checkout names the repo instead."""
     with checkout(repo, sha) as tree:
         found, notes = measure(tree, [])
-        churn, _, _ = churn_order(tree, "churn", CHURN_DAYS, int(when) if when.isdigit() else None)
+        churn, _, _ = churn_order(tree, "churn")
     return found, [n.replace(str(tree), str(repo)) for n in notes], churn
 
 

@@ -93,13 +93,13 @@ class StatsCoverageTest(GitWork):
         report = lcov("a.py", 2, 6) + lcov("b.py", 9, 1) + lcov("c.py", 0, 3) + lcov("tests/test_a.py", 0, 9)
         r = self.repo({"a.py": CODE, "b.py": CODE, "c.py": CODE, "tests/test_a.py": CODE, "lcov.info": report})
         c = self.coverage_of(r)
-        self.assertEqual((c["report"], c["unread"], c["age_days"], c["behind"]), ("lcov.info", False, 0, False))
+        self.assertEqual((c["report"], c["unread"], c["behind"]), ("lcov.info", False, False))
         self.assertEqual((c["lines"], c["reached"], c["percent"], c["files"], c["unreached_files"]), (21, 11, 52, 3, 1))
         self.assertEqual(c["least"], [{"file": "a.py", "lines": 8, "missed": 6, "percent": 25},
                                       {"file": "c.py", "lines": 3, "missed": 3, "percent": 0},
                                       {"file": "b.py", "lines": 10, "missed": 1, "percent": 90}])
         text = self.cli(r, "stats").stdout
-        self.assertIn("  coverage: 52% of 21 lines reached, by lcov.info (0 days old); 1 of 3 files not reached at all",
+        self.assertIn("  coverage: 52% of 21 lines reached, by lcov.info; 1 of 3 files not reached at all",
                       text)
         self.assertRegex(text, r"\n  least reached\s+lines\s+not reached\s+reached\n  a\.py\s+8\s+6\s+25%\n")
         self.assertNotIn("tests/test_a.py  ", text.split("coverage:")[1].split("\nRot")[0], "tests are left out")
@@ -115,8 +115,9 @@ class StatsCoverageTest(GitWork):
         old = time.time() - 3 * 86400 - 60
         os.utime(r / "lcov.info", (old, old))
         c = self.coverage_of(r)
-        self.assertEqual((c["age_days"], c["behind"]), (3, True))
-        self.assertIn("(3 days old, older than the last commit)", self.cli(r, "stats").stdout)
+        self.assertTrue(c["behind"])
+        self.assertNotIn("age_days", c)
+        self.assertIn("by lcov.info (written before the last commit);", self.cli(r, "stats").stdout)
 
     def test_without_a_report_stats_says_how_a_test_run_writes_one_for_the_languages_of_the_repo(self) -> None:
         r = self.repo({"a.py": CODE, "pkg/a.go": "package pkg\n"})

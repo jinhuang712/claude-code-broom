@@ -53,6 +53,11 @@ class CompareTest(GitWork):
     def names(self, rows: list) -> list:
         return sorted(re.sub(r" is \d+ code lines.*", "", x["text"]) for x in rows)
 
+    def test_the_churn_of_a_base_counts_the_commits_up_to_it(self) -> None:
+        r = self.history_repo([(30, {"a.py": "x = 1\n"}), (20, {"a.py": "x = 2\n"}), (10, {"a.py": "x = 3\n"})])
+        base = self.sh(r, "git", "rev-parse", "HEAD~1").strip()
+        self.assertEqual(compare.measure_at(r, base)[2], {"a.py": 2}, "the newest commit is after the base")
+
     def test_the_counts_by_kind_and_the_line_to_quote(self) -> None:
         d = self.compare(self.worked_repo())
         self.assertEqual(d["summary"]["smells"], {"before": 5, "after": 4, "change": -1})

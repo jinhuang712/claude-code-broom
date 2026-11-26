@@ -20,7 +20,7 @@ from .sizes import SIZED, find_sizes
 from .smell import DESCRIBE, LABELS
 from .smells import Smell, find_smells
 from .state import DATA_ROOT, load_json, save_json, short_hash, update_json
-from .statsgit import commits_per_file
+from .statsgit import CHURN_COMMITS, commits_per_file
 from .testrot import DUPLICATE_TESTS, duplicate_counter
 
 CACHE = DATA_ROOT / "hotspots"
@@ -28,14 +28,13 @@ DISMISSED = DATA_ROOT / "smells-dismissed.json"
 FILES_IN_NOTE = 3
 NOTE_MAX_FILES = 5000  # past this, a session start doesn't scan: `broom smells` still does
 SCAN_SECONDS = 20  # what the tools that run in the real tree have between them in that scan
-CHURN_DAYS = 90  # how far back a file's changes are counted
 SEVERE_WEIGHT = 3  # a smell past the hard limit weighs this much against a hint in a file's score
 ORDERS = {"churn": lambda f: (f["score"], f["severe"], f["hints"]), "smells": lambda f: (f["severe"], f["hints"])}
 # The tools whose findings make up each of the check-up's smell counters: a note that names one of them means the
 # count is short of what the code holds.
 COUNTED_BY = {DEAD_CODE: ("jscpd",), "missing_docs": ("ruff", "golangci-lint", "swiftlint", "oxlint", "node is missing"),
               "deprecated_api": ("ruff", "golangci-lint", "clippy", "oxlint", "tsgolint")}
-NO_HISTORY = "no commits in the last {days} days, or git log failed: the hotspots are ordered by their smells"
+NO_HISTORY = "no commits, or git log failed: the hotspots are ordered by their smells"
 
 
 def repo_files(repo: Path, paths: List[Path], base: Optional[str] = None) -> List[Path]:
@@ -63,21 +62,19 @@ def score(severe: int, hints: int, changes: int) -> int:
     return (SEVERE_WEIGHT * severe + hints) * (1 + changes)
 
 
-def order_text(by: str, days: int = CHURN_DAYS) -> str:
+def order_text(by: str, last: int = CHURN_COMMITS) -> str:
     """How hotspots are ordered, in words: `by` is "churn" or "smells"."""
     if by == "churn":
-        return f"by score = ({SEVERE_WEIGHT} x severe + hints) x (1 + changes in the last {days} days)"
+        return f"by score = ({SEVERE_WEIGHT} x severe + hints) x (1 + changes in the last {last} commits)"
     return "most severe first"
 
 
-def churn_order(repo: Path, by: str = "churn", days: int = CHURN_DAYS,
-                at: Optional[int] = None) -> Tuple[Dict[str, int], str, List[str]]:
-    """The commits per file of the last `days` days (before the Unix time `at`, when given), the order the hotspots
-    can have and a note when it isn't the one asked for: `by` is "churn" or "smells", and ranking by churn needs
-    history."""
-    churn = dict(commits_per_file(repo, days, at) or {})
+def churn_order(repo: Path, by: str = "churn", last: int = CHURN_COMMITS) -> Tuple[Dict[str, int], str, List[str]]:
+    """The commits per file of the last `last` commits up to HEAD, the order the hotspots can have and a note when it
+    isn't the one asked for: `by` is "churn" or "smells", and ranking by churn needs history."""
+    churn = dict(commits_per_file(repo, last) or {})
     if by == "churn" and not churn:
-        return churn, "smells", [NO_HISTORY.format(days=days)]
+        return churn, "smells", [NO_HISTORY]
     return churn, by, []
 
 

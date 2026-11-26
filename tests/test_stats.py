@@ -18,7 +18,6 @@ from broom import statscan, stats, statsview
 # Written in two pieces: this file would otherwise hold suppressions itself.
 NOQA = "# no" + "qa: E501"
 TYPE_IGNORE = "# type" + ": ignore[assignment]"
-OLD = "2020-01-01T00:00:00"
 
 
 def text(*rows: str) -> str:
@@ -27,8 +26,8 @@ def text(*rows: str) -> str:
 
 
 class StatsCase(BroomCase):
-    def report(self, r: Path, *paths: str, top: int = 10, days: int = 90) -> dict:
-        return stats.report(r, [r / p for p in paths], top, days)
+    def report(self, r: Path, *paths: str, top: int = 10, last: int = 500) -> dict:
+        return stats.report(r, [r / p for p in paths], top, last)
 
     def json(self, r: Path, *args: str) -> dict:
         done = self.cli(r, "stats", "--json", *args)
@@ -44,12 +43,6 @@ class StatsCase(BroomCase):
         dates = {"GIT_AUTHOR_DATE": date, "GIT_COMMITTER_DATE": date} if date else {}
         done = subprocess.run(["git", "commit", "-qm", "c"], cwd=r, env={**self.env, **dates}, capture_output=True)
         self.assertEqual(done.returncode, 0, done.stderr)
-
-    def backdate(self, r: Path) -> None:
-        """Make the last commit as old as OLD."""
-        dates = {"GIT_AUTHOR_DATE": OLD, "GIT_COMMITTER_DATE": OLD}
-        subprocess.run(["git", "commit", "-q", "--amend", "--no-edit", f"--date={OLD}"], cwd=r, env={**self.env, **dates},
-                       check=True)
 
 
 class SizeTest(StatsCase):
@@ -155,7 +148,6 @@ class RotTest(StatsCase):
             "u.ts": text("const a = 1; // TODO: a", "/*", " * FIXME in a block", " */",
                          'const b = "// TODO not a comment";', "const c = `TODO template`;"),
         })
-        self.backdate(r)
         return r
 
     def test_suppressions_by_kind_and_a_marker_in_a_string_is_none(self) -> None:
@@ -177,32 +169,14 @@ class RotTest(StatsCase):
         t = self.report(r)["rot"]["todos"]
         self.assertEqual([(f["file"], f["count"]) for f in t["files"]], [("a.py", 4), ("b.ts", 1)])
 
-    def test_git_blame_tells_the_old_ones_and_skips_files_git_doesnt_know(self) -> None:
-        r = self.old_repo()
-        self.commit_all(r, {"t.py": (r / "t.py").read_text() + "# TODO newest\n"})
-        (r / "v.py").write_text("# TODO untracked\n")
-        t = self.report(r)["rot"]["todos"]
-        self.assertEqual((t["total"], t["blamed"], t["older"], t["older_than_days"]), (7, 6, 5, 180))
-        self.assertFalse(t["capped"])
-        old = {(o["file"], o["line"]) for o in t["oldest"] if o["days"] > t["older_than_days"]}
-        self.assertEqual(old, {("t.py", 1), ("t.py", 3), ("t.py", 7), ("u.ts", 1), ("u.ts", 3)}, "the five that are old")
-
-    def test_the_oldest_todos_are_listed_with_the_day_each_was_written(self) -> None:
-        r = self.old_repo()
-        self.commit_all(r, {"t.py": (r / "t.py").read_text() + "# TODO newest\n"})
-        d = self.report(r, top=6)
-        newest = d["rot"]["todos"]["oldest"][-1]
-        self.assertEqual((newest["file"], newest["line"], newest["days"]), ("t.py", 9, 0), "the oldest come first")
-        self.assertRegex(statsview.render(d), r"(?m)^  oldest +written +days\n  [tu]\.\w+:\d +\d{4}-\d\d-\d\d +\d+$")
-
-    def test_blame_stops_at_its_cap_and_says_so(self) -> None:
-        r = self.old_repo()
-        self.commit_all(r, {"t.py": (r / "t.py").read_text() + "# TODO newest\n"})
-        with mock.patch("broom.statsgit.BLAME_LINES", 4):
-            d = self.report(r)
+    def test_todos_are_counted_without_an_age(self) -> None:
+        d = self.report(self.old_repo(), top=6)
         t = d["rot"]["todos"]
-        self.assertEqual((t["total"], t["blamed"], t["older"], t["capped"]), (6, 4, 3, True))
-        self.assertIn("blame stops at 4 lines", statsview.render(d))
+        self.assertEqual(set(t), {"total", "files"})
+        self.assertEqual(t["total"], 5)
+        text = statsview.render(d)
+        self.assertIn("\n  5 TODO, FIXME, HACK or XXX comments\n", text)
+        self.assertNotIn("blame", text)
 
 
 class HistoryTest(StatsCase):
@@ -215,7 +189,7 @@ class HistoryTest(StatsCase):
 
     def test_commits_per_file_and_the_files_that_changed_together(self) -> None:
         h = self.report(self.busy_repo())["history"]
-        self.assertEqual((h["commits"], h["days"], h["note"]), (4, 90, None))
+        self.assertEqual((h["commits"], h["last_commits"], h["note"]), (4, 500, None))
         self.assertEqual(h["files"], [{"file": "a.py", "commits": 4}, {"file": "b.py", "commits": 3},
                                       {"file": "c.py", "commits": 1}])
         self.assertEqual(h["pairs"], [{"files": ["a.py", "b.py"], "commits": 2},
@@ -229,14 +203,13 @@ class HistoryTest(StatsCase):
         self.assertEqual(h["files"], [{"file": "x/a.py", "commits": 1}])
         self.assertEqual(h["pairs"], [{"files": ["x/a.py", "x/b.py"], "commits": 1}])
 
-    def test_commits_older_than_the_days_are_left_out_and_it_says_so(self) -> None:
+    def test_only_the_last_commits_are_counted_and_none_says_so(self) -> None:
         r = self.repo({"a.py": "1\n", "b.py": "1\n"})
-        self.backdate(r)
-        h = self.report(r)["history"]
-        self.assertEqual((h["commits"], h["files"], h["note"]), (0, [], "no commits in the last 90 days"))
         self.commit_all(r, {"a.py": "2\n"})
-        self.assertEqual(self.report(r)["history"]["commits"], 1)
-        self.assertEqual(self.report(r, days=5000)["history"]["commits"], 2)
+        h = self.report(r, last=1)["history"]
+        self.assertEqual((h["commits"], h["files"], h["last_commits"]), (1, [{"file": "a.py", "commits": 1}], 1))
+        self.assertEqual(self.report(r)["history"]["commits"], 2)
+        self.assertEqual(self.report(r, last=0)["history"]["note"], "no commits to count")
 
     def test_a_repo_without_a_commit_has_no_history_to_count(self) -> None:
         r = self.tmp / "fresh"
@@ -293,16 +266,16 @@ class CommandTest(StatsCase):
         "tests": {"files", "with_cases", "cases", "skipped", "languages", "skipped_files", "untested", "coverage",
                   "note"},
         "rot": {"suppressions", "todos", "skipped_tests", "note"},
-        "history": {"days", "commits", "files", "pairs", "note"},
+        "history": {"last_commits", "commits", "files", "pairs", "note"},
     }
 
     def test_json_is_one_object_with_four_sections(self) -> None:
         r = self.repo({"src/a.py": "x = 1\n", "src/b.py": "y = 2\n"})
         d = self.json(r)
-        self.assertEqual(set(d), {"repo", "paths", "files", "days", "size", "tests", "rot", "history"})
+        self.assertEqual(set(d), {"repo", "paths", "files", "last_commits", "size", "tests", "rot", "history"})
         self.assertEqual({k: set(d[k]) for k in self.SECTIONS}, self.SECTIONS)
-        self.assertEqual((d["repo"], d["paths"], d["files"], d["days"]), (str(r), [], 2, 90))
-        self.assertEqual(self.json(r, "--days", "7", "--top", "1")["days"], 7)
+        self.assertEqual((d["repo"], d["paths"], d["files"], d["last_commits"]), (str(r), [], 2, 500))
+        self.assertEqual(self.json(r, "--commits", "7", "--top", "1")["last_commits"], 7)
 
     def test_text_has_a_short_heading_per_section(self) -> None:
         r = self.repo({"src/a.py": "x = 1\n", "tests/test_a.py": "def test_a():\n    pass\n"})

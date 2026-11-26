@@ -6,6 +6,8 @@ import json
 import sys
 from pathlib import Path
 
+from .statsgit import CHURN_COMMITS
+
 
 def cmd_fixes(args: argparse.Namespace) -> int:
     """Print the usual fix of each smell named (all without names), as JSON with `--json`; exit 1 on an unknown name."""
@@ -68,7 +70,8 @@ def add_diagnosis_parsers(sub: argparse._SubParsersAction) -> None:
     d = sub.add_parser("diagnose", help="the whole repo measured: smells, hotspots by churn and stats, as a report")
     d.add_argument("paths", nargs="*", help="limit to these files or directories (default: the repo)")
     d.add_argument("--top", type=int, default=10, help="how long each list is (default: 10)")
-    d.add_argument("--days", type=int, default=90, help="how far back changes are counted (default: 90)")
+    d.add_argument("--commits", type=int, default=CHURN_COMMITS,
+                   help=f"how many of the last commits changes are counted over (default: {CHURN_COMMITS})")
     d.add_argument("--json", action="store_true", help="the same as JSON, with every smell")
     d.add_argument("--out", metavar="FILE", help="write the report (or the JSON) to FILE and say where")
     d.add_argument("--vulnerabilities", action="store_true",
@@ -99,7 +102,8 @@ def add_ask_parsers(sub: argparse._SubParsersAction) -> None:
     s = sub.add_parser("stats", help="size, tests, rot and history of the repo or some paths, as counts")
     s.add_argument("paths", nargs="*", help="limit to these files or directories (default: the repo)")
     s.add_argument("--top", type=int, default=10, help="how long each list is (default: 10)")
-    s.add_argument("--days", type=int, default=90, help="how far back history looks (default: 90)")
+    s.add_argument("--commits", type=int, default=CHURN_COMMITS,
+                   help=f"how many of the last commits history looks at (default: {CHURN_COMMITS})")
     s.add_argument("--json", action="store_true", help="the same as JSON")
     s.set_defaults(fn=cmd_stats)
     add_diagnosis_parsers(sub)

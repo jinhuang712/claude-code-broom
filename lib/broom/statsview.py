@@ -72,9 +72,9 @@ def coverage_lines(c: dict) -> List[str]:
                 *captioned("A test run writes one with:", [f"    {how}" for how in c["how"]])]
     if c["unread"]:
         return [f"  coverage: {c['report']} could not be read"]
-    behind = ", older than the last commit" if c["behind"] else ""
-    head = (f"  coverage: {c['percent']}% of {c['lines']} lines reached, by {c['report']} ({c['age_days']} days old"
-            f"{behind}); {c['unreached_files']} of {c['files']} files not reached at all")
+    behind = " (written before the last commit)" if c["behind"] else ""
+    head = (f"  coverage: {c['percent']}% of {c['lines']} lines reached, by {c['report']}{behind}; "
+            f"{c['unreached_files']} of {c['files']} files not reached at all")
     return [head, *table(["least reached", "lines", "not reached", "reached"],
                          [[r["file"], r["lines"], r["missed"], f"{r['percent']}%"] for r in c["least"]])]
 
@@ -94,24 +94,19 @@ def tests_lines(d: dict) -> List[str]:
 
 
 def todo_text(t: dict) -> str:
-    """The TODO line of the rot section: the count, and how many of the blamed lines are old; the cap said when it cut."""
+    """The TODO line of the rot section: the count."""
     if not t["total"]:
         return "  no TODO, FIXME, HACK or XXX comments"
-    age = (f"{t['older']} of {t['blamed']} blamed are older than {t['older_than_days']} days by git blame"
-           if t["blamed"] else "none blamed: not committed yet")
-    cap = f" (blame stops at {t['blamed']} lines, in the files with most)" if t["capped"] else ""
-    return f"  {t['total']} TODO, FIXME, HACK or XXX comments, {age}{cap}"
+    return f"  {t['total']} TODO, FIXME, HACK or XXX comments"
 
 
 def rot_lines(d: dict) -> List[str]:
-    """The rot section: lint suppressions, TODO comments with their age and the oldest of them, skipped tests."""
+    """The rot section: lint suppressions, TODO comments, skipped tests."""
     s, t = d["suppressions"], d["todos"]
     kinds = ", ".join(f"{k} {n}" for k, n in s["kinds"].items())
     suppressed = [f"  {s['total']} lint suppressions" + (f" ({kinds})" if kinds else "")]
     suppressed += table(["files with most", "count"], [[r["file"], r["count"]] for r in s["files"]])
-    todos = [todo_text(t), *table(["files with most", "count"], [[r["file"], r["count"]] for r in t["files"]]),
-             *table(["oldest", "written", "days"],
-                    [[f"{r['file']}:{r['line']}", r["written"], r["days"]] for r in t["oldest"]])]
+    todos = [todo_text(t), *table(["files with most", "count"], [[r["file"], r["count"]] for r in t["files"]])]
     return section("Rot", d["note"], [suppressed, todos, [f"  {d['skipped_tests']} skipped tests"]])
 
 
@@ -120,7 +115,7 @@ def history_lines(d: dict) -> List[str]:
     files = table(["most changed files", "commits"], [[r["file"], r["commits"]] for r in d["files"]])
     pairs = captioned("changed in one commit together (commits of over 30 files left out):",
                       table(["pair", "commits"], [[" + ".join(r["files"]), r["commits"]] for r in d["pairs"]]))
-    return section(f"History (last {d['days']} days, {d['commits']} commits)", d["note"], [files, pairs])
+    return section(f"History ({d['commits']} of the last {d['last_commits']} commits)", d["note"], [files, pairs])
 
 
 def render(data: dict) -> str:
@@ -135,6 +130,6 @@ def render(data: dict) -> str:
 
 def run(repo: Path, args: argparse.Namespace) -> int:
     """Print the stats of `repo`, narrowed to `args.paths`, as text or as JSON with `--json`."""
-    data = report(repo, [Path(p).resolve() for p in args.paths], args.top, args.days)
+    data = report(repo, [Path(p).resolve() for p in args.paths], args.top, args.commits)
     sys.stdout.write((json.dumps(data, indent=1) if args.json else render(data)) + "\n")
     return 0
