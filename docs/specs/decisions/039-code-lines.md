@@ -44,3 +44,5 @@ A function or a type keeps the lines it takes beside its length, since the two n
 Without ast-grep, or without SourceKit for Swift, comments can't be told from code in that language. Every line that isn't blank then counts, and a note says so.
 
 `duplicate_lines` is no length. jscpd counts the lines of a repeated block its own way, comments among them.
+
+Since 2026-11-27 a repeated block counts code lines too: a clone's size is the code lines of the side measured.

@@ -53,3 +53,5 @@ Go's `broad_test_asserts` now counts in every test file, a file under `tests/` a
 
 - A Go folder named `latest`, `attest` or `contest` reads as test code.
 - A package of fakes that only tests import, such as `fakeclock`, is still code.
+
+Since 2026-11-27 Jest's and Vitest's helpers are test code too: a file under `__mocks__/`, and the setup files `setupTests.*`, `jest.setup.*` and `vitest.setup.*`, which the runners name.

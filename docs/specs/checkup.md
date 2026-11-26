@@ -14,18 +14,21 @@ session start ─▶ the smell scan of HEAD (async, cached) ─┐
 
 ## The counters
 
-8 counters, per repo:
+11 counters, per repo:
 
 - Lint suppressions.
 - Skipped tests.
 - TODO comments.
+- Unsafe code.
+- Broken Markdown links.
 - Dead-code findings in the whole repo.
 - Public code with no doc comment.
 - Calls to deprecated APIs.
+- Type escapes.
 - Duplicate test blocks.
 - Lines no test reaches.
 
-The first three come from the one pass over the files' syntax trees that `broom stats` makes, where ast-grep reads Go, Rust, TS/JS and CSS. The next four come from the smell scan's own results. The last comes from the coverage report a test run left, and it is left out when there is none. No linter runs for the check-up.
+The first five come from the one pass over the files' syntax trees that `broom stats` makes, where ast-grep reads Go, Rust, TS/JS, CSS, YAML, shell and HTML. A Markdown link is read by broom's own reader of Markdown's link syntax, which leaves code blocks and comments out. The next five come from the smell scan's own results. The last comes from the coverage report a test run left, and it is left out when there is none. No linter runs for the check-up.
 
 The smell scan's jscpd run already finds the clones between two test files. The checks on a change drop them, and the scan keeps them apart for this counter. Each block is counted once, on the side that was written last, since the copy is likelier there.
 

@@ -15,7 +15,7 @@ stop   ─▶ background work running? ─ yes ─▶ wait for the turn it wakes
 
 ## What the turn changed
 
-Edit and Write are recorded as they happen. A Bash command can rewrite files too, and a wrapper can commit them. An async prompt hook notes the changed code files by modification time and size, HEAD and the second it looked. The turn's end adds what changed since and the files of the commits made since, and measures it all against that HEAD. A commit made during the turn still shows as the turn's change. A turn that changed no code ends after that one look at the tree.
+Edit and Write are recorded as they happen. A Bash command can rewrite files too, and a wrapper can commit them. An async prompt hook notes the changed code files by modification time and size, HEAD and the second it looked. The turn's end adds what changed since and the files of the commits made since, and measures it all against that HEAD. A commit made during the turn still shows as the turn's change. A turn that changed no code ends after that one look at the tree. An edited file git ignores is left out, by one `git check-ignore` per repo.
 
 A commit made before that second is not the turn's, though the turn may bring it in by a pull, a reset or a landing of earlier work. Its files are left out, and the turn's change is measured from the newest such commit on HEAD's first-parent line. A merge counts only the files it resolved.
 

@@ -46,16 +46,21 @@ The list grows: each checkpoint's end looks for kinds broom still misses.
 
 ## F11.1: Counters
 
-8 counters, none of which needs a tool installed beyond the ones the smells already use:
+11 counters, none of which needs a tool installed beyond the ones the smells already use:
 
-- Lint suppressions in the repo.
+- Lint suppressions in the repo, those in YAML, shell and HTML comments among them.
 - Skipped tests in the repo.
 - TODO comments.
 - Dead-code findings in the whole repo.
 - Public code with no doc comment.
 - Calls to deprecated APIs.
+- Type escapes.
 - Duplicate test blocks.
+- Unsafe code: Rust's `unsafe` blocks, functions and impls, Go files that import `unsafe`, Swift's `withUnsafe…` calls and `Unsafe…Pointer` types.
+- Broken Markdown links: a link in a tracked `.md` file to a relative path the repo doesn't hold.
 - Lines no test reaches, by the project's own coverage report.
+
+- **Why**: [050: More rot is counted, each from what parses it](../specs/decisions/050-rot-read-from-trees.md)
 
 The first check-up of a repo takes its numbers silently, and so does the first after an update of broom. After that Claude is told once when a counter grew, with the old and the new value and up to three files that added to it, such as `broom check-up: lint suppressions 6 -> 9 (a.py, b.py)`. A counter that fell says nothing.
 

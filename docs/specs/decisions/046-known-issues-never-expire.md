@@ -34,3 +34,5 @@ Its key already holds the text of its line, the tool, the rule and the message. 
 An entry whose code changed hides nothing and stays in the store, listed by `broom known`, until `broom known --clear` removes it.
 
 The store grows with every accept and shrinks only by `--clear`.
+
+Since 2026-11-27 `broom known` marks an entry that no line of its file gives any more, in the main checkout or in a linked worktree, and still drops none.

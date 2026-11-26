@@ -32,17 +32,6 @@
 
 ---
 
-### [P2][IDEA] An edit to a file git ignores is checked at the turn's end
-
-- description:
-  - An edit record names any file, and the turn's end checks it even when git ignores it, such as a local script in a folder `.git/info/exclude` names.
-  - Only `.broom.json`'s `exclude` keeps a file out today.
-- created: 2026-11-26
-- found: a turn's end on 2026-11-26 that blocked on a local script under `report/`
-- related: [F2.2: Turn-end check](../features/F2-sweep.md#f22-turn-end-check)
-
----
-
 ### [P2][DISCUSSION] Whether the limits come down now that a length counts code lines
 
 - description:
@@ -90,59 +79,15 @@
 
 ---
 
-### [P2][IDEA] A repeated block counted in code lines
-
-- description: `duplicate_lines` is the one sized smell that still counts comment lines and blank lines, since jscpd counts a clone's lines its own way. The lines of each clone could be counted in code lines, as a length is.
-- created: 2026-11-24
-- found: the change to code lines
-- related: [F4.3: Duplicate code](../features/F4-smells.md#f43-duplicate-code)
-
----
-
-### [P2][IDEA] A setter's boolean in the other languages
-
-- description:
-  - Since 2026-11-26 a Go function named `Set` or `set`, alone or before a capital, takes a boolean for what its name says, and `bool_params` leaves it out.
-  - Python, TS/JS, Swift and Rust still count a setter's boolean, such as `set_enabled(self, enabled: bool)`.
-  - Each language would need the setter's naming of its own: `set_` in Python and Rust, `set` before a capital in TS/JS and Swift.
-- created: 2026-11-26
-- found: the change to Go's rules
-- related: [042: A Go rule flags what its message says](../specs/decisions/042-go-rules-flag-their-message.md)
-
----
-
-### [P2][IDEA] A known issue whose code changed leaves the store
-
-- description:
-  - Since a known issue never expires, an entry whose line changed hides nothing and stays in `baseline.json`, listed by `broom known`, until `--clear`.
-  - The store grows with every accept. An entry accepted in a linked worktree names the main checkout's file before the work lands there, so dropping an entry whose line isn't found would lose it.
-  - `broom known` could mark an entry that no file of its repo or of its worktrees holds any more.
-- created: 2026-11-27
-- found: the look for missed rot at the end of CP14
-- related: [046: A known issue never expires](../specs/decisions/046-known-issues-never-expire.md)
-
----
-
 ### [P2][IDEA] Test helpers in the other languages
 
 - description:
   - Since 2026-11-27 a Go test-helper package, a folder whose name ends in `test`, and pytest's `conftest.py` are test code.
-  - The other languages keep helpers by habit and not by a rule: TS/JS's `test-utils` or `setupTests`, Swift's `TestSupport` targets, Rust's helper crates.
+  - Since that day TS/JS's `__mocks__/` and setup files are test code too. The others keep helpers by habit and not by a rule: TS/JS's `test-utils`, Swift's `TestSupport` targets, Rust's helper crates.
   - A Go package of fakes that only tests import, such as `fakeclock`, is code too. Telling it needs the module's import graph.
 - created: 2026-11-27
 - found: the change to Go's test-helper packages
 - related: [045: A Go test-helper package is test code](../specs/decisions/045-test-helper-packages.md)
-
----
-
-### [P2][IDEA] A Go variable that another package assigns
-
-- description:
-  - Go's `globals` reads the assignments of a package's own functions. A test or a program that sets another package's variable, as in `pkg.Default = v`, isn't read.
-  - The name before the dot is a package when the file imports one under it, which the import specs of its tree say.
-- created: 2026-11-26
-- found: the change to Go's rules
-- related: [042: A Go rule flags what its message says](../specs/decisions/042-go-rules-flag-their-message.md)
 
 ---
 
@@ -152,15 +97,6 @@
 - created: 2026-11-24
 - found: the change to code lines
 - related: [F1.1: Doctor](../features/F1-setup.md#f11-doctor)
-
----
-
-### [P2][IDEA] The lines a Swift or a Rust function takes
-
-- description: SwiftLint and clippy give a function's length and not where it ends. A touched function is then found over as many lines as its length, so a change near its end is missed. Swift's tree and ast-grep's Rust rules could give the span.
-- created: 2026-11-24
-- found: the change to code lines
-- related: [F4.9: Old smells in touched code](../features/F4-smells.md#f49-old-smells-in-touched-code)
 
 ---
 
@@ -211,13 +147,6 @@
 
 ---
 
-### [P2][IDEA] Broken links in docs
-
-- description: A link checker such as lychee could tell when a doc points at a file that is gone.
-- created: 2026-11-17
-
----
-
 ### [P2][IDEA] Dependencies that fell far behind
 
 - description:
@@ -246,26 +175,6 @@
 
 ---
 
-### [P2][IDEA] The largest tracked files
-
-- description: A binary or a data file committed by mistake stays in the repo for good. `broom stats` could list the largest tracked files beside the longest code files.
-- created: 2026-11-17
-- found: the look for missed rot at the end of CP5
-- related: [F10.4: Numbers on request](../features/F10-diagnosis.md#f104-numbers-on-request)
-
----
-
-### [P2][IDEA] Type escapes as a counter
-
-- description:
-  - A type escape such as `any` or a forced cast is hinted when a change adds one, and nothing counts them across the repo.
-  - A counter would tell when typing got looser between two check-ups.
-- created: 2026-11-17
-- found: the look for missed rot at the end of CP5
-- related: [F11.1: Counters](../features/F11-checkup.md#f111-counters)
-
----
-
 ### [P2][IDEA] Doc comments that say nothing
 
 - description: A doc comment copied onto many functions meets the rule and tells the reader nothing. A fresh session found one sentence on six functions of a test repo, where broom counted no missing comment. The same text on several functions of a repo could be counted.
@@ -284,18 +193,6 @@
 
 ---
 
-### [P2][IDEA] A Go error dropped with the blank name
-
-- description:
-  - Go's `swallowed_error` finds an empty block. An error assigned to `_` is the commoner way to drop one, and nothing counts it.
-  - errcheck finds it with `check-blank`. It needs types, so it would run in the real tree.
-  - Rust's nearest form, a `Result` dropped with `let _ =`, is already a nit.
-- created: 2026-11-19
-- found: the look for missed rot at the end of CP10.1
-- related: [F4.2: Occurrence smells](../features/F4-smells.md#f42-occurrence-smells)
-
----
-
 ### [P2][IDEA] broom says which smells a repo's languages lack
 
 - description:
@@ -304,18 +201,6 @@
 - created: 2026-11-19
 - found: the user's question
 - related: [F1.5: Protection list](../features/F1-setup.md#f15-protection-list)
-
----
-
-### [P2][IDEA] Unsafe code as a counter
-
-- description:
-  - Rust's `unsafe` blocks, Go's `unsafe` package and Swift's unsafe pointers each step outside what the compiler checks.
-  - A change that adds one is no smell broom knows, and nothing counts them across the repo, so a codebase can lean on them more each month with no change at fault.
-  - The syntax trees of 0.26.0 make the count cheap and exact: an `unsafe_block` node in Rust, an import of `unsafe` in Go, a call to `withUnsafe…` in Swift.
-- created: 2026-11-20
-- found: the look for missed rot at the end of CP10
-- related: [F11.1: Counters](../features/F11-checkup.md#f111-counters)
 
 ---
 
@@ -328,18 +213,6 @@
 - created: 2026-11-20
 - found: the look for missed rot at the end of CP10
 - related: [F4.2.3: Untested file](../features/F4-smells.md#f423-untested-file)
-
----
-
-### [P2][IDEA] Suppressions in files broom reads no tree for
-
-- description:
-  - Since 0.27.0 a lint suppression is found only in a comment a syntax tree isolated, in Python, Swift, Go, Rust, TS/JS and CSS.
-  - A `.vue` or `.svelte` file, a shell script or a YAML config can loosen a linter too, and no self-waiver tells it any more.
-  - ast-grep bundles grammars for HTML, Bash and YAML, so their comments could be read the same way.
-- created: 2026-11-20
-- found: the look for missed rot at the end of CP11
-- related: [F2.8: Self-waivers shown](../features/F2-sweep.md#f28-self-waivers-shown)
 
 ---
 

@@ -6,6 +6,27 @@
 
 ---
 
+### Sharper rules
+
+- A setter's boolean is no flag in Python, Rust, TS/JS and Swift either: `set_enabled(self, enabled: bool)`, `setEnabled(enabled)` and a `set x(v)` accessor. Before, only Go's setters were left out of `bool_params`.
+- Jest's and Vitest's helpers are test code: a file under `__mocks__/`, and `setupTests.*`, `jest.setup.*` and `vitest.setup.*`.
+- A Go function that assigns another package's variable, as in `pkg.Default = v`, counts for `globals`.
+- A file Claude edited that git ignores is left out of the turn's end, where before it could block it.
+- `broom known` marks an entry whose code changed, as `(its code changed: no longer matches)`, and drops none.
+- A Swift and a Rust function carry the lines they take, so an old long function touched near its end is told.
+- A repeated block's size counts code lines, so a block of comments and blank lines is no clone.
+
+---
+
+### More rot
+
+- A Go error dropped with `_`, as in `_ = f()`, is a `swallowed_error` nit, found by golangci-lint's `errcheck`.
+- The check-up counts unsafe code, type escapes and broken Markdown links, and `broom stats` shows the unsafe code and the broken links.
+- A lint suppression in a YAML, shell or HTML comment counts in the suppressions and as a self-waiver.
+- `broom stats` lists the largest tracked files of any kind.
+
+---
+
 ## 0.30.0 — 2026-11-27
 
 ---

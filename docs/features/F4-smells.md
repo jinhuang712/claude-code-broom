@@ -71,7 +71,7 @@ A sized smell counts when the change pushed it past a limit, or grew it while pa
 - A test file's `file_lines` limits are twice these: 800 and 2000.
 - A function's or a type's length runs from its first line through its last. Go's function starts at its `func` line and ends at its closing brace. Without ast-grep it goes unmeasured, with a note.
 - Swift's function and type lengths and Rust's function length are the code lines of the body alone, as SwiftLint and clippy count them.
-- `duplicate_lines` is no length: jscpd counts the lines of a repeated block its own way, comments among them.
+- `duplicate_lines` counts the code lines of the repeated block on the side measured, so a block of comments and blank lines is no clone.
 - Go has no ternary operator, so it has no `nested_ternary`.
 - Go's `type_lines` is a type's declaration plus its methods in the same file.
 - Rust gets 4 of them from clippy: `function_lines` from `too_many_lines` · `params` from `too_many_arguments` · `complexity` from `cognitive_complexity` · `nesting` from `excessive_nesting`.
@@ -127,7 +127,9 @@ A change that adds an occurrence gets the smell's level. An occurrence counts wh
 - Go's `globals` is a package variable that a function assigns with `=`, an operator such as `+=`, `++` or `--`. A variable no function assigns is a table or a setting, and stays quiet. So do what `init` assigns, a write to a field or an element, and a method call such as an atomic counter's `Add`. The variables come from every file of the package in the folder, and the finding marks each function's first assignment.
 - Go's `debug_output` is a call of `print` or `println`, or of `fmt.Print`, `fmt.Printf` or `fmt.Println` outside a `package main` program's own files. A print in a test file counts, and one in an `Example…` function doesn't.
 - Go's `type_escape` is a type assertion with one result, `x.(T)`, which panics on the wrong type. The comma-ok form checks it, `v, _ := x.(T)` among them. `any` doesn't count, since Go checks it at each use.
-- A Go function named `Set` or `set`, alone or before a capital, takes a boolean for what its name says, so it doesn't count for `bool_params`.
+- A setter takes a boolean for what its name says, so it doesn't count for `bool_params`: `set` or `set_…` in Python and Rust, `set` alone or before a capital in Go, TS/JS and Swift, and a TS/JS `set x(v)` accessor. Each name is read from the language's tree.
+- A Go function that assigns a variable of an imported package, as in `pkg.Default = v`, counts for `globals` in its own file. A local value's field and a field of the package's variable don't.
+- A Go error dropped with the blank name, as in `_ = f()` or `v, _ := f()`, is a `swallowed_error` nit, found by golangci-lint's `errcheck` in the project's checkout, since `_ = conn.Close()` is often meant.
 - Go's `broad_test_asserts` is a testify `Error` or `Panics` in a test file, which any error passes.
 - Swift's `broad_test_asserts` is an `XCTAssertThrowsError` with no handler, or an `#expect` or `#require` that any `Error` passes.
 - Swift's `deprecated_api` comes from type-checking the changed files of a SwiftPM package, so an Xcode project is left out.
@@ -260,10 +262,11 @@ A test file may be twice as long as a code file: its `file_lines` limits are 800
 
 `test_limits` in `.broom.json` moves the limits for test files.
 
-A test file is told by its path. Besides the names a test runner collects, 2 helpers are test code:
+A test file is told by its path. Besides the names a test runner collects, the helpers a runner names are test code:
 
 - **A Go test-helper package**: a Go file directly in a folder whose name ends in `test`, such as `httptest` or `cachetest`. Go names a package after its folder, and the name says it serves tests.
 - **pytest's `conftest.py`**: pytest loads it only for tests.
+- **Jest's and Vitest's helpers**: a file under `__mocks__/`, and the setup files `setupTests.*`, `jest.setup.*` and `vitest.setup.*`.
 
 1 gap:
 
@@ -294,11 +297,10 @@ A function or a type is touched when a changed code line lies inside it. A file 
 
 A function, a type or a file that was already past the hard limit and that the change grew can't be accepted. The block marks that line, and `broom known --accept` leaves it out and says what size to bring it back to. A smell that is newly past the hard limit can be accepted as before.
 
-3 gaps:
+2 gaps:
 
 - Outside Python a touched function is told its length only, since the tools give no range for the other sized smells.
 - A touched Go type isn't told, since its methods lie apart in the file.
-- A touched Swift or Rust function is found over as many lines as its length, which is fewer than it takes, so a change near its end can be missed.
 
 In Rust a touched function that is too long is told.
 

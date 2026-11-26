@@ -153,6 +153,7 @@ A text pattern holds only for the code its author thought of, and code varies wi
 - **Decisions**:
   - [038: Smells are read from a syntax tree](specs/decisions/038-syntax-trees.md)
   - [042: A Go rule flags what its message says](specs/decisions/042-go-rules-flag-their-message.md)
+  - [050: More rot is counted, each from what parses it](specs/decisions/050-rot-read-from-trees.md)
 - **How it works**:
   - [Smells](specs/smells.md)
 

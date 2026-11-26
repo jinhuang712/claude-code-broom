@@ -214,7 +214,7 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 **Called by**: a person, the `/broom:status` skill, Claude when a block message offers `--accept`, and the clean skill once the user agreed that a smell stays.
 
-**Prints**: stdout gets one line per known issue with its location, tool, rule, message, date and reason. Accept prints `broom: accepted N issue(s) as known (WHY); commit again`, or `stop again` after a turn-end block. With `--smell` it prints `broom: accepted N standing KIND smell(s) in <repo> as known (WHY)`. An accept the user agreed to is listed with `the user agreed` beside its reason. Ask prints `broom: N issue(s) wait for the user's answer (QUESTION)` and that nothing is accepted. stderr gets the refusals.
+**Prints**: stdout gets one line per known issue with its location, tool, rule, message, date and reason. Accept prints `broom: accepted N issue(s) as known (WHY); commit again`, or `stop again` after a turn-end block. With `--smell` it prints `broom: accepted N standing KIND smell(s) in <repo> as known (WHY)`. An accept the user agreed to is listed with `the user agreed` beside its reason, and an entry no line of its file matches any more with `(its code changed: no longer matches)`, counted in the first line. Ask prints `broom: N issue(s) wait for the user's answer (QUESTION)` and that nothing is accepted. stderr gets the refusals.
 
 **Fails**: exit 1 when there is no blocked commit or turn end to accept or to ask about, when every finding is one that can't be accepted, when WHY or QUESTION is empty, when `BROOM_NO_ACCEPT` is set for an accept and outside a repo. Exit 1 for `--agreed` without `--accept`, and for `--smell` without `--accept`, without `--agreed`, without paths, or with no smell of KIND there that isn't known already. Exit 2 for `--accept` with `--ask`, and for an unknown KIND.
 
@@ -260,7 +260,7 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 **Called by**: a person and Claude.
 
-**Prints**: stdout gets four sections of aligned tables: `Size`, `Tests`, `Rot` and `History`. `Tests` ends with the coverage by the project's own report, or with the command that writes one. stderr gets `broom: not inside a git repository`.
+**Prints**: stdout gets four sections of aligned tables: `Size`, with the longest code files and the largest files of any kind, `Tests`, `Rot`, with the unsafe code and the broken Markdown links, and `History`. `Tests` ends with the coverage by the project's own report, or with the command that writes one. stderr gets `broom: not inside a git repository`.
 
 **Fails**: exit 1 outside a repo.
 

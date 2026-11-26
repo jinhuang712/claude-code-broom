@@ -60,8 +60,9 @@ golangci-lint's typed run lost forbidigo and gochecknoglobals. Without ast-grep,
 
 A print is counted in the copy of the changed files now, as the other occurrence smells are. An edited line that keeps its print adds nothing, where before it counted as added.
 
-3 gaps:
+Since 2026-11-27 a setter's boolean is left out in every language, and a variable another package assigns, as in `pkg.Default = v`, counts in the file that assigns it.
 
-- A variable another package assigns, as in `pkg.Default = v`, isn't read.
+2 gaps:
+
 - A name a function declares in one block hides the package's variable in its other blocks too, so an assignment before the declaration is missed.
 - A `print` function of a package's own and an `fmt` imported under another name are read as Go's.

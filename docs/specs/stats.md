@@ -20,11 +20,13 @@ It needs git and nothing else. No linter runs.
 
 ## One pass over each file
 
-Each file is read from its syntax tree: Python's with the standard library's `tokenize` and `ast`, Swift's with its compiler and SourceKit, and the rest with ast-grep's rules, one run for many files. For each file it gives the code lines, the test cases and skipped tests, the lint suppressions and the TODO comments. The code lines are those a length counts, read the same way ([Smells](smells.md#code-lines)). A marker counts only in a comment the tree isolated, so one inside a string never counts. A Rust suppression is an `allow` attribute. Without ast-grep a Go, Rust, TS/JS or CSS file is left unread, and the output says so. Its size then counts every line that isn't blank.
+Each file is read from its syntax tree: Python's with the standard library's `tokenize` and `ast`, Swift's with its compiler and SourceKit, and the rest with ast-grep's rules, one run for many files. For each file it gives the code lines, the test cases and skipped tests, the lint suppressions, the TODO comments and the unsafe code. YAML, shell and HTML files give their lint suppressions alone. Each tracked Markdown file gives its links to relative paths that the repo doesn't hold. The code lines are those a length counts, read the same way ([Smells](smells.md#code-lines)). A marker counts only in a comment the tree isolated, so one inside a string never counts. A Rust suppression is an `allow` attribute. Without ast-grep a Go, Rust, TS/JS or CSS file is left unread, and the output says so. Its size then counts every line that isn't blank.
 
 Test cases and skipped tests are read in test files only, except in Rust, where tests sit beside the code. A conditional skip, such as a test that skips when a tool is missing, counts as skipped. A file under a test folder is a test file whatever its name, so a helper there counts as one, and the output says how many of them hold test cases. The cases are counted from the tree, so the number can differ from what a test runner collects.
 
 A TODO counts when the word marks the comment: it opens the comment, or a colon or a bracket follows it. The word in a comment's prose is left out, and so is a file's name such as `TODO.md`.
+
+The largest tracked files of any kind are listed by their bytes beside the longest code files.
 
 A code file is paired with a test file by name, anywhere in the repo. Rust and CSS take no part in the pairing.
 

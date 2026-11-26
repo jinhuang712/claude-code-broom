@@ -39,7 +39,7 @@ Past a point Python's tokenizer can't read, every line that isn't blank counts. 
 - **Rust**: ast-grep gives each type with its `impl` blocks. clippy counts a function's body itself.
 - **Swift**: SwiftLint counts a function's and a type's body itself.
 
-A row keeps the lines its function or type takes beside its length. clippy and SwiftLint give a length and no span.
+A row keeps the lines its function or type takes beside its length. clippy and SwiftLint give a length and no span, so a Rust function's span comes from ast-grep's tree and a Swift function's from the compiler's.
 
 - [039: A length counts code lines](decisions/039-code-lines.md)
 
@@ -144,7 +144,7 @@ A Go package variable that a function assigns is read from every file in the fol
 
 ## Duplicate and dead code
 
-jscpd 5 scans every code file in the repo. Given the base ref it scans that tree too and marks the clones the base lacked. A clone counts when it is new and has a side in the change's files. jscpd gets a baseline only from a base git can resolve.
+jscpd 5 scans every code file in the repo, and a clone's size is the code lines of the side measured. Given the base ref it scans that tree too and marks the clones the base lacked. A clone counts when it is new and has a side in the change's files. jscpd gets a baseline only from a base git can resolve.
 
 Dead code comes from the same tool in TS/JS and Python, with tests and entry points left out, from golangci-lint's `unused` in Go, from rustc in Rust and from Swift's tree, where a `private` or `fileprivate` declaration no other token of its file names is dead. A finding counts on a line the change added, or in a new file. Generated code still counts as using code.
 
@@ -160,7 +160,7 @@ Two smells are read from the files' syntax trees with no linter. A skipped test 
 
 A new code file counts as untested when no test file anywhere in the repo is named for it. A Rust file also counts as tested when it holds its own tests. The names of all files come from one `git ls-files`, and it runs only when the change adds a code file of 30 code lines or more.
 
-A test file is told by its path: a name a test runner collects, such as `test_a.py`, `a_test.go`, `a.test.ts` or a file under `tests/`, a Go file directly in a folder whose name ends in `test`, such as `httptest`, and pytest's `conftest.py`. Go names a package after its folder, so the folder's name is the package's. A test file's limits are the code's with `file_lines` doubled, and then what `test_limits` sets. The tools measure against the lower soft limit of the two sets, and each row takes its level from the limits of its own file.
+A test file is told by its path: a name a test runner collects, such as `test_a.py`, `a_test.go`, `a.test.ts` or a file under `tests/`, a Go file directly in a folder whose name ends in `test`, such as `httptest`, pytest's `conftest.py`, and Jest's and Vitest's helpers: a file under `__mocks__/` and the setup files `setupTests.*`, `jest.setup.*` and `vitest.setup.*`. Go names a package after its folder, so the folder's name is the package's. A test file's limits are the code's with `file_lines` doubled, and then what `test_limits` sets. The tools measure against the lower soft limit of the two sets, and each row takes its level from the limits of its own file.
 
 - [009: An occurrence counts when the change raises the count](decisions/009-occurrence-by-count.md)
 - [012: Tests take limits of their own](decisions/012-test-limits.md)

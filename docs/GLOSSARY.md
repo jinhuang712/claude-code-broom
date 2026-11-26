@@ -10,7 +10,7 @@ Each term has its meaning, the words that lost to it and its name in the code wh
 | Finding | one thing a tool reports at a file and line | issue | `Issue` |
 | Type error | a compile or type error, which counts anywhere | hard error | `Issue.hard` |
 | Smell | code that works and is hard to change, such as a 300-line function | — | `Smell` |
-| Test file | a file measured by the rules of tests, told by its path: a name a test runner collects, a Go test-helper package's folder or `conftest.py` | test code | `TEST_FILE` |
+| Test file | a file measured by the rules of tests, told by its path: a name a test runner collects, or a helper a runner names: a Go test-helper package's folder, `conftest.py`, `__mocks__/` or a setup file | test code | `TEST_FILE` |
 | Sized smell | a smell with a number and two limits | — | `SMELL_LIMITS` |
 | Occurrence smell | a smell that counts each time it appears | presence smell | `SMELL_PRESENCE` |
 | Code line | a line that holds something besides space outside a comment | line of code · non-blank line | `code_lines` |

@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP15: Sharper rules and more rot](#cp15-sharper-rules-and-more-rot), picked by the user on 2026-11-27. [CP14: No clock](#cp14-no-clock) and [CP13: Nothing is forgotten](#cp13-nothing-is-forgotten) ended that day, in that order at the user's word. [CP8: Lighter](#cp8-lighter) waits for the ledger's numbers from 0.29.0: 100 checks that ran a tool for the check time and 100 findings that ended for the fix rate. The user set on 2026-11-20 that no feature is added until then, and lifted that for CP13, CP14 and CP15. What follows them is open in [What it takes for a second user to install broom and stay](TODO.md#p1discussion-what-it-takes-for-a-second-user-to-install-broom-and-stay). [CP9: Ready for a public release](#cp9-ready-for-a-public-release) ended on 2026-11-20 with 0.28.0, once the README got its hero. CP10 ended on 2026-11-20 with 0.26.0, and [CP11: Read from a syntax tree](#cp11-read-from-a-syntax-tree) with 0.27.0 that day. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
+**Current checkpoint**: [CP8: Lighter](#cp8-lighter). [CP15: Sharper rules and more rot](#cp15-sharper-rules-and-more-rot) shipped its 13 items on 2026-11-27 and waits for the fix rate it is judged by. [CP14: No clock](#cp14-no-clock) and [CP13: Nothing is forgotten](#cp13-nothing-is-forgotten) ended that day, in that order at the user's word. [CP8: Lighter](#cp8-lighter) waits for the ledger's numbers from 0.29.0: 100 checks that ran a tool for the check time and 100 findings that ended for the fix rate. The user set on 2026-11-20 that no feature is added until then, and lifted that for CP13, CP14 and CP15. What follows them is open in [What it takes for a second user to install broom and stay](TODO.md#p1discussion-what-it-takes-for-a-second-user-to-install-broom-and-stay). [CP9: Ready for a public release](#cp9-ready-for-a-public-release) ended on 2026-11-20 with 0.28.0, once the README got its hero. CP10 ended on 2026-11-20 with 0.26.0, and [CP11: Read from a syntax tree](#cp11-read-from-a-syntax-tree) with 0.27.0 that day. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
 
 ---
 
@@ -37,7 +37,7 @@ Roadmap
 ├── ⬜ CP12: Waits for a need
 ├── ✅ CP13: Nothing is forgotten — an open finding comes back until it ends
 ├── ✅ CP14: No clock — events and counts, and what Claude hides still counts
-└── ⬜ CP15: Sharper rules and more rot — the user's pick from TODO
+└── 🟨 CP15: Sharper rules and more rot — shipped, the fix rate after it is open
 ```
 
 ---
@@ -610,13 +610,25 @@ The user set this on 2026-11-27: no rule of broom turns on the clock, and whatev
 
 ## CP15: Sharper rules and more rot
 
-**Status**: ⬜
+**Status**: 🟨
 
-The user picked this on 2026-11-27 among the directions of TODO: rules that find fewer false smells, by the ledger's numbers and by real repos, and more kinds of rot found, none of them by the clock. It follows CP13.
+The user picked this on 2026-11-27 among the directions of TODO: rules that find fewer false smells, by the ledger's numbers and by real repos, and more kinds of rot found, none of them by the clock. It followed CP13. Its 13 items shipped on 2026-11-27 with 0.30.1, and the fix rate after them comes with use.
 
-**Delivers** (1):
+**Delivers** (13):
 
-- The TODO ideas of both directions, picked with the user when CP13 ends.
+- A setter's boolean is no flag in Python, Rust, TS/JS and Swift, as in Go, done on 2026-11-27.
+- Jest's and Vitest's helpers, `__mocks__/` and the setup files, are test code, done on 2026-11-27.
+- A Go function that assigns another package's variable counts for `globals`, done on 2026-11-27.
+- An edited file git ignores is left out of the turn's end, done on 2026-11-27.
+- `broom known` marks an entry whose code changed, done on 2026-11-27.
+- A Swift and a Rust function carry the lines they take, so a change near a long function's end is told, done on 2026-11-27.
+- A repeated block counts code lines, done on 2026-11-27.
+- A Go error dropped with `_` is a `swallowed_error` nit, done on 2026-11-27.
+- Unsafe code is a counter, done on 2026-11-27.
+- Type escapes are a counter, done on 2026-11-27.
+- Broken Markdown links are a counter, done on 2026-11-27.
+- Lint suppressions in YAML, shell and HTML comments count, done on 2026-11-27.
+- `broom stats` lists the largest tracked files, done on 2026-11-27.
 
 **Exit criteria** (1):
 

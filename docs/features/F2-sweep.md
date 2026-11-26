@@ -50,7 +50,7 @@ A Bash call that isn't a commit costs about 13 ms, or about 60 ms when the comma
 
 When Claude stops, broom checks the files the turn changed: files Claude edited, files changed since the prompt by any means and files committed after it. It blocks the turn's end while a finding is left, and after three blocks it gives up and tells the user.
 
-A commit made before the prompt is not the turn's, so a pull or a reset to a remote branch brings in no finding.
+A commit made before the prompt is not the turn's, so a pull or a reset to a remote branch brings in no finding. A file Claude edited that git ignores is left out, as one `.broom.json` excludes is.
 
 It applies with `check_on` at `stop`, the default. It waits once for each piece of background work, told apart by its task id: work an earlier turn's end already waited for doesn't hold a later one. A prompt during a wait keeps the waiting turn's changes, which the next checked turn's end checks. A turn in plan mode is not checked. An idle turn end costs one Python start, 30 to 45 ms measured on macOS.
 
@@ -207,7 +207,7 @@ A change that loosens the bar is listed in the turn's summary and in the record.
 3 kinds:
 
 - A change to `.broom.json` that turns a smell off, raises a limit, excludes a path or names a new test command.
-- A new lint suppression, with a reason or without.
+- A new lint suppression, with a reason or without, in code or in a YAML, shell or HTML comment.
 - A commit made with `--no-verify`.
 
 A `.broom.json` loosened by a command, such as `sed`, is seen at the turn's end. With `check_on` at `commit` no turn's end looks, and such a change is missed when the content of every committed file had already passed.

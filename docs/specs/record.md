@@ -43,7 +43,7 @@ Older lines can hold four more: `retry`, `denials` and `stop-again` from before 
 A waiver has one of 3 kinds:
 
 - **config**: The repo's `.broom.json` is looser than at the base in 1 of 5 ways: a smell turned off · a glob added to `exclude` or `legacy` · a command added to `test_commands` · a limit raised · `check_on` or `smells` set to off.
-- **suppression**: A comment on a line the change added holds a lint suppression, with a reason or without, or a Rust `allow` attribute does. The comment comes from the file's syntax tree, so a marker inside a string is none.
+- **suppression**: A comment on a line the change added holds a lint suppression, with a reason or without, or a Rust `allow` attribute does. A YAML, shell or HTML comment counts too, such as `# shellcheck disable=…` or `<!-- prettier-ignore -->`. The comment comes from the file's syntax tree, so a marker inside a string is none.
 - **no-verify**: Claude ran `git commit --no-verify`.
 
 The same waiver seen again in one turn is written once. An edit of `.broom.json` is noted at once, since a `check_on` set to off would keep every later check from seeing it. The turn's snapshot holds the file too, so the turn's end notes one that a command changed or committed.
