@@ -10,6 +10,7 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from . import ledger
 from .findings import Findings, Issue
+from .gitutil import git
 from .langlint import check_go, check_python, check_rust, check_swift_build, check_swiftlint
 from .state import DATA_ROOT, load_json, update_json
 from .toolchain import boundary, css_linters, find_up, js_linters, lang_of, py_root, swift_linter
@@ -18,7 +19,6 @@ from .weblint import check_biome, check_eslint, check_oxlint, check_stylelint, c
 
 Check = Tuple[str, Callable[[], Findings]]  # (key, check); the key lets a check that timed out be skipped later
 SLOW_SECONDS = 10  # how long a check that timed out must have run to count as slow
-SLOW_KEEP = 1200  # how long one that did is skipped, in every session: a cold build gets another go after that
 SLOW_PATH = DATA_ROOT / "slow.json"
 
 
@@ -118,26 +118,33 @@ def timed(check: Callable[[], Findings]) -> Tuple[Findings, float]:
     return check(), time.monotonic() - start
 
 
-def slow_checks(path: Path) -> Dict[str, float]:
-    """The checks that ran out of time in the last SLOW_KEEP seconds, by when."""
+def head_of(key: str) -> Optional[str]:
+    """The commit HEAD is at in the repo of the directory (or file) a check's `key` names, or None without one."""
+    where = Path(key.partition(":")[2] or ".")
+    where = where if where.is_dir() else where.parent
+    out = git(["rev-parse", "HEAD"], where) if where.is_dir() else None
+    return out.strip() if out and out.strip() else None
+
+
+def slow_checks(path: Path) -> Dict[str, str]:
+    """The checks that ran out of time and whose repo's HEAD hasn't moved since, by the HEAD they ran out of time at."""
     raw = load_json(path, {})
-    now = time.time()
-    return {k: t for k, t in raw.items() if isinstance(t, (int, float)) and now - t < SLOW_KEEP} if isinstance(
-        raw, dict) else {}
+    kept = {k: head for k, head in raw.items() if isinstance(head, str)} if isinstance(raw, dict) else {}
+    return {k: head for k, head in kept.items() if head_of(k) == head}
 
 
 def run_checks(files: List[Path], slow_path: Optional[Path] = None, *, whole: bool = False) -> Findings:
     """Run every check in parallel. One that timed out after running for SLOW_SECONDS is recorded in `slow_path`,
-    for every session and agent, and skipped for SLOW_KEEP seconds with a note, so each one doesn't wait for it
-    again; one cut short because the hook's time ran out before it got far is only late, and runs again."""
+    for every session and agent, and skipped with a note while its repo's HEAD is the commit it ran out of time at,
+    so each one doesn't wait for it again and a new commit gives it another go. One cut short because the hook's time
+    ran out before it got far is only late, and runs again."""
     slow = slow_checks(slow_path) if slow_path else {}
     every = plan(files, whole=whole)
     todo = [(k, fn) for k, fn in every if k not in slow]
-    now = time.time()
-    notes: List[str] = [f"timeout:{k} skipped for now: it ran out of time {int((now - slow[k]) / 60)} min ago"
+    notes: List[str] = [f"timeout:{k} skipped until the next commit: it ran out of time at {slow[k][:8]}"
                         for k, _ in every if k in slow]
     issues: List[Issue] = []
-    ran_out: Dict[str, float] = {}
+    ran_out: Dict[str, str] = {}
     took: Dict[str, float] = {}
     with ThreadPoolExecutor(max_workers=4) as pool:
         for key, ((found, msgs), seconds) in zip([k for k, _ in todo], pool.map(lambda kv: timed(kv[1]), todo)):
@@ -145,7 +152,9 @@ def run_checks(files: List[Path], slow_path: Optional[Path] = None, *, whole: bo
             notes += msgs
             took[key] = seconds
             if seconds >= SLOW_SECONDS and any(m.startswith("timeout:") for m in msgs):
-                ran_out[key] = time.time()
+                head = head_of(key)
+                if head:
+                    ran_out[key] = head
     if slow_path and ran_out:
         update_json(slow_path, {}, lambda data: data.update(ran_out))
     if slow_path:  # for a hook: the ledger notes how long each check took
