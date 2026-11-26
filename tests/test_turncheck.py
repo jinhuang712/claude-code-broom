@@ -55,6 +55,20 @@ class TurnCheckTest(BroomCase):
         self.assertEqual((through["how"], through["where"]), ("gave-up", "stop"))
         self.assertEqual(self.hook("stop", stop), {}, "the turn is over")
 
+    def test_an_edited_file_git_ignores_is_left_out_of_the_turn_end_check(self) -> None:
+        r = self.repo({"a.py": "x = 1\n", "local/.keep": ""})
+        (r / ".git" / "info" / "exclude").write_text("local/\n")
+        (r / "local" / "b.py").write_text(py_function("huge", 120))
+        edit = {"session_id": "ig", "cwd": str(r), "tool_name": "Write", "tool_input": {"file_path": str(r / "local" / "b.py")}}
+        stop = {"session_id": "ig", "cwd": str(r), "permission_mode": "default"}
+        self.hook("edit", edit)
+        self.assertEqual(self.hook("stop", stop), {}, "an ignored file blocks nothing")
+        (r / "a.py").write_text(py_function("huge", 120))
+        self.hook("edit", {**edit, "tool_input": {"file_path": str(r / "a.py")}})
+        out = self.hook("stop", stop)
+        self.assertEqual(out.get("decision"), "block", "a file git doesn't ignore is still checked")
+        self.assertNotIn("local/b.py", out["reason"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -18,7 +18,7 @@ from typing import List, Optional
 
 from . import asked, ledger
 from .config import REPO_FILE, excluded, setting
-from .gitutil import git_changed_files, git_root
+from .gitutil import git_changed_files, git_root, ignored
 from .state import emit, prune_sessions, read_lines
 from .toolchain import lang_of
 from .turns import changed_since_snapshot, note_config, paused, snapshot, tree, turn_dir, waiting
@@ -50,13 +50,15 @@ def finish(d: Path, root: Optional[Path], tail: str = "", *, now: Optional[dict]
 
 def turn_files(d: Path, since: List[Path]) -> List[Path]:
     """The code files the turn changed: recorded edits, a whole repo after a many-file Serena edit, and `since`, what
-    changed or was committed since the prompt."""
+    changed or was committed since the prompt; without those `.broom.json`'s `exclude` or git's ignore files cover."""
     recorded = read_lines(d / "edits.txt")
     scans = read_lines(d / "scan.txt")
     files = [Path(p) for p in recorded]
     for repo in dict.fromkeys(scans):
         files += git_changed_files(Path(repo))
-    return [f for f in dict.fromkeys(files + since) if lang_of(f) and f.is_file() and not excluded(f)]
+    found = [f for f in dict.fromkeys(files + since) if lang_of(f) and f.is_file() and not excluded(f)]
+    left_out = ignored(found)  # a file git ignores (a local script in a folder .git/info/exclude names) is no turn's
+    return [f for f in found if f not in left_out]
 
 
 def hook_stop(data: dict) -> None:

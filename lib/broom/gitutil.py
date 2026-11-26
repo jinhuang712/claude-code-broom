@@ -215,6 +215,21 @@ def git_changed_files(root: Path) -> List[Path]:
     return tree_state(root)[1]
 
 
+def ignored(files: List[Path]) -> Set[Path]:
+    """The `files` git ignores (`.gitignore`, `.git/info/exclude`, the global ignore file), a tracked one never: one
+    `git check-ignore` for all the files of a repo. A file outside a repo, or a call that fails, ignores nothing."""
+    by_repo: Dict[Path, List[Path]] = {}
+    for f in files:
+        root = git_root(f.parent)
+        if root:
+            by_repo.setdefault(root, []).append(f)
+    out: Set[Path] = set()
+    for root, group in by_repo.items():
+        named = git(["check-ignore", "--", *map(str, group)], root) or ""  # None: none is ignored, or git failed
+        out |= {Path(n) for n in named.splitlines() if n}
+    return out
+
+
 def changed_since(root: Path, base: str) -> Optional[List[Path]]:
     """Files changed since `base`, a renamed one under its new name, plus untracked, non-ignored files; None for
     an unknown revision."""
