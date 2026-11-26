@@ -26,9 +26,10 @@ from .swiftkit import open_text
 from .toolchain import lang_of
 from .treefacts import TREE_LANGS, skip_trees
 
-# A test file is test code by its path. Besides the names test runners collect, 2 helpers count (decision 045): a Go
-# file in a folder named for a test-helper package, as `httptest` or `iotest` (Go names a package after its
-# folder), and pytest's `conftest.py`.
+# A test file is test code by its path. Besides the names test runners collect, the helpers a runner names count
+# (decision 045): a Go file in a folder named for a test-helper package, as `httptest` or `iotest` (Go names a package
+# after its folder), pytest's `conftest.py`, Jest's manual mocks under `__mocks__/`, and the setup files
+# `setupTests.*`, `jest.setup.*` and `vitest.setup.*`.
 TEST_FILE = re.compile(r"(^|/)(tests?|__tests__|__mocks__|Tests)/|_test\.(go|py)$|(^|/)test_[^/]*\.py$|"
                        r"\.(test|spec)\.[cm]?[jt]sx?$|Tests?\.swift$|(^|/)[^/]+test/[^/]+\.go$|(^|/)conftest\.py$|"
                        r"(^|/)(setupTests|jest\.setup|vitest\.setup)\.[cm]?[jt]sx?$")
