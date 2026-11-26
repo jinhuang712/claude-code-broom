@@ -6,7 +6,8 @@ have none), `repo` (the main worktree's root, so a repo and its linked worktrees
 (the hook: commit, pre-commit, stop, subagent-stop) and per event:
 
 - block: a finding stopped a commit or a turn's end. `key` is the finding's key from gate.issue_key, `tool`, `rule`
-  and `file` (relative to its own worktree's root) say which.
+  and `file` (relative to its own worktree's root) say which, `line` where it was, and `spot` (a hash of that line's
+  text) lets a later check of the file tell it again when its message changed (comeback). Older lines have neither.
 - fix: a block's finding is gone, and the check that found it ran over its file with its tool.
 - pass: a finding was let through, with `how`: accept (with `why`, and `agreed` when the user agreed to leave it) or
   gave-up. Older lines also hold retry, denials, stop-again and turn-ended, which no longer occur.
@@ -35,7 +36,7 @@ from typing import Dict, Iterable, Iterator, List, Optional, Set, Tuple
 
 from . import __version__
 from .gitutil import git_root, main_worktree
-from .state import DATA_ROOT, locked
+from .state import DATA_ROOT, locked, short_hash
 from .toolchain import lang_of
 
 LEDGER = DATA_ROOT / "ledger.jsonl"
@@ -103,13 +104,16 @@ def finding(event: str, key: str, entry: dict, **more: object) -> dict:
     return line(event, repo, key=key, tool=entry.get("tool"), rule=entry.get("rule"), file=rel, **more)
 
 
-def read(path: Path) -> Iterator[dict]:
-    """The lines of a JSON-lines file; one that doesn't parse, a torn write, is passed over."""
+def read(path: Path, needle: str = "") -> Iterator[dict]:
+    """The lines of a JSON-lines file; one that doesn't parse, a torn write, is passed over. With `needle`, only the
+    lines whose raw text holds it are parsed, which keeps a read of one repo's lines cheap."""
     try:
         text = path.read_text()
     except OSError:
         return
     for raw in text.splitlines():
+        if needle not in raw:
+            continue
         try:
             row = json.loads(raw)
         except ValueError:
@@ -162,7 +166,20 @@ def write(rows: List[dict]) -> None:
 
 def blocked(entries: Dict[str, dict]) -> None:
     """Log a `block` line for each finding in `entries` (key to entry): each one stopped a commit or a turn's end."""
-    write([finding("block", k, e) for k, e in entries.items()])
+    write([finding("block", k, e, line=e.get("line") or None, spot=spot(Path(str(e.get("file") or "")), e.get("line")))
+           for k, e in entries.items()])
+
+
+def spot(file: Path, number: object) -> Optional[str]:
+    """A short hash of the text of line `number` of `file`, stripped: where a finding is, whatever its line number or
+    its message. None without a line or a file."""
+    if not isinstance(number, int) or number < 1:
+        return None
+    try:
+        rows = file.read_text(errors="replace").splitlines()
+    except OSError:
+        return None
+    return short_hash(rows[number - 1].strip()) if number <= len(rows) else None
 
 
 def hinted(entries: Dict[str, dict]) -> None:
