@@ -74,19 +74,25 @@ class TurnTest(BroomCase):
         self.assertNotIn("theirs is 120", reason, "measured from what the pull brought, not from the prompt's HEAD")
         self.assertNotIn("elsewhere", reason, "a file only the pull changed is not the turn's")
 
-    def test_the_next_prompt_ends_a_wait(self) -> None:
+    def test_a_prompt_during_a_wait_keeps_the_waiting_turns_changes(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
         self.hook("prompt", {"session_id": "g1", "cwd": str(r)})
-        (r / "a.py").write_text(py_function("mine", 120))
-        self.edit(r, r / "a.py", "g1")
+        (r / "a.py").write_text(py_function("by_sed", 120))  # no Edit: only the snapshot sees it
         self.assertEqual(self.stop(r, "g1", background_tasks=RUNNING), {}, "a pause")
-        (r / "b.py").write_text(py_function("theirs", 120).replace("+=", "-="))
-        self.sh(r, "git", "add", "b.py")
-        self.sh(r, "git", "commit", "-qm", "another session landed its work")
         self.hook("prompt", {"session_id": "g1", "cwd": str(r)})  # the work never woke a turn
         reason = self.stop(r, "g1").get("reason", "")
-        self.assertNotIn("theirs", reason, "the new prompt noted the tree")
-        self.assertIn("mine is 120", reason, "the waiting turn's edits are checked at the new turn's end")
+        self.assertIn("by_sed is 120", reason, "the waiting turn's Bash change is checked at the next turn's end")
+
+    def test_a_prompt_after_a_wait_ended_starts_a_turn(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        self.hook("prompt", {"session_id": "g2", "cwd": str(r)})
+        self.assertEqual(self.stop(r, "g2", background_tasks=RUNNING), {}, "a pause")
+        self.assertEqual(self.stop(r, "g2", background_tasks=RUNNING), {}, "the same work again: checked, the wait ends")
+        (r / "b.py").write_text(py_function("theirs", 120))
+        self.sh(r, "git", "add", "b.py")
+        self.sh(r, "git", "commit", "-qm", "another session landed its work")
+        self.hook("prompt", {"session_id": "g2", "cwd": str(r)})
+        self.assertNotIn("theirs", self.stop(r, "g2").get("reason", ""), "the new prompt noted the tree")
 
     def test_a_subagents_edits_wait_for_its_own_end(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})

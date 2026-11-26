@@ -20,7 +20,7 @@ from .config import REPO_FILE, excluded, setting
 from .gitutil import git_changed_files, git_root
 from .state import emit, prune_sessions, read_lines
 from .toolchain import lang_of
-from .turns import changed_since_snapshot, note_config, paused, snapshot, tree, turn_dir
+from .turns import changed_since_snapshot, note_config, paused, snapshot, tree, turn_dir, waiting
 
 
 def end_turn(d: Path, root: Optional[Path], now: Optional[dict] = None) -> None:
@@ -83,14 +83,13 @@ def hook_stop(data: dict) -> None:
 
 def hook_prompt(data: dict) -> None:
     """A new prompt starts a turn: note the working tree, so the turn's end sees what Bash changed or committed.
-    Not while a gate is blocked: those changes still belong to the turn before. A prompt ends a wait for background
-    work, as the turn the wait was for never came; the edits the waiting turn recorded are checked at this one's end.
-    It runs as an async hook (0.2 s on a 2,376-file repo,
-    which no prompt should wait for); Claude's first tool call comes seconds later."""
+    Not while a gate is blocked or waits for background work: those changes still belong to the turn before, and the
+    next turn's end that is checked checks them. It runs as an async hook (0.2 s on a 2,376-file repo, which no
+    prompt should wait for); Claude's first tool call comes seconds later."""
     cwd = Path(data.get("cwd") or os.getcwd()).resolve()
     root = git_root(cwd)
     d = turn_dir(data)
-    if (d / "gate.json").exists():
+    if waiting(d) or (d / "gate.json").exists():
         return
     ledger.forget_through(d)  # what the turn before let through or waived was never shown: no stop hook ended it
     if root and setting("check_on", cwd) == "stop":

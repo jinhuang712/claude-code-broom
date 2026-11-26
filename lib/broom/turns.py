@@ -9,7 +9,8 @@ or was committed since.
 A turn that ends while background work runs (a test run, a build, a subagent) is a pause, not the end: the gate
 waits for a turn the work wakes. It waits once for each piece of work, told apart by its task id: work an earlier
 turn's end already waited for and still running at a later one is not waited for again, so a server left running in
-the background doesn't keep every turn's end unchecked. The next prompt ends any wait.
+the background doesn't keep every turn's end unchecked. A prompt during a wait starts no new turn: the wait ends at
+the next turn's end that is checked, and the waiting turn's changes, Bash's too, are checked there.
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ from .toolchain import lang_of
 
 SNAPSHOT = "snapshot.json"  # {repo: {"head": sha, "files": {path: [mtime_ns, size]}, "t": second it was noted}}
 WAITED = "waited.json"  # {"ids": [the background tasks a turn's end has waited for, still running when last seen]}
+PAUSED = "paused"  # there while the last turn's end paused for background work
 FINISHED = {"completed", "failed", "killed", "stopped", "cancelled", "canceled", "done", "error", "timeout"}
 
 
@@ -120,15 +122,25 @@ def task_id(task: dict) -> str:
     return str(task.get("id") or task.get("description") or "")
 
 
+def waiting(d: Path) -> bool:
+    """Whether the last turn's end paused for background work, so the turn it waits for has not ended yet."""
+    return (d / PAUSED).exists()
+
+
 def paused(data: dict, d: Path) -> bool:
     """Whether this turn ended while background work runs that no earlier turn's end waited for, so the gate waits.
-    Work already waited for once, still running, is not waited for again: this turn's end is checked."""
+    Work already waited for once, still running, is not waited for again: this turn's end is checked, which ends the
+    wait."""
     live = [task_id(t) for t in data.get("background_tasks") or []
             if isinstance(t, dict) and str(t.get("status", "")).lower() not in FINISHED]
-    if not live:
-        (d / WAITED).unlink(missing_ok=True)
-        return False
-    waited = set(load_json(d / WAITED, {}).get("ids") or [])
+    waited = set(load_json(d / WAITED, {}).get("ids") or []) if live else set()
     new = [i for i in live if i not in waited]
-    save_json(d / WAITED, {"ids": sorted(waited & set(live) | set(new))})
+    if live:
+        save_json(d / WAITED, {"ids": sorted(waited & set(live) | set(new))})
+    else:
+        (d / WAITED).unlink(missing_ok=True)
+    if new:
+        (d / PAUSED).touch()
+    else:
+        (d / PAUSED).unlink(missing_ok=True)
     return bool(new)
