@@ -17,7 +17,8 @@ F2: Sweep
 ├── F2.10: Check after an edit — format and what is judged in milliseconds
 ├── F2.11: Nothing is waved through — a finding ends fixed or accepted with a reason
 ├── F2.12: A pass is told to the user — Claude says what it left and why
-└── F2.13: A turn that changed code shows that tests ran — or that counts as left over
+├── F2.13: A turn that changed code shows that tests ran — or that counts as left over
+└── F2.14: Open findings come back — told again until they end
 ```
 
 A sweep formats, lints and type-checks Claude's changes and holds them back until they're clean. It uses the project's own tools and configs.
@@ -284,3 +285,21 @@ It applies where the repo tracks a test file, and at the main session's end only
 - **Stance**: [At three moments of Claude's flow](../PHILOSOPHY.md#when-may-a-check-interrupt)
 - **How it works**: [Turn end](../specs/turn-end.md)
 - **Why**: [034: A test run is known by the hook events of its command, and its accept holds for one turn](../specs/decisions/034-test-run-by-hook-events.md)
+
+---
+
+## F2.14: Open findings come back
+
+A finding that stopped a commit or a turn's end and that no check has ended is told to Claude again, until it is fixed or accepted. No problem leaves Claude's sight because the turns moved to other files or a new session began.
+
+It is told at 2 moments:
+
+- **The next prompt after a question**: the user's answer has come, so Claude is told the findings it asked about, to fix them or to accept them with `--agreed`.
+- **A session's start in the repo**: Claude is told the findings still open there, asked about or not.
+
+Before it tells, broom checks the files of those findings again with the rules of the day. A finding no longer there is recorded as fixed and is not told, so a rule changed since or a fix made by hand makes no noise.
+
+It tells and never blocks. The finding still blocks wherever a check covers its file.
+
+- **Stance**: [Fixed, or let through with a reason the user sees](../PHILOSOPHY.md#how-does-a-finding-end)
+- **Why**: [044: An open finding comes back until it ends](../specs/decisions/044-open-findings-come-back.md)

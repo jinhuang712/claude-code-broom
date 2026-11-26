@@ -102,6 +102,7 @@ A linter can be wrong, an issue can predate the change, and a refactor can belon
 - **Decisions**:
   - [003: Every finding passes fixed or accepted with a reason](specs/decisions/003-reason-for-every-pass.md)
   - [031: Trying again passes nothing, and three blocks end in a loud give-up](specs/decisions/031-no-pass-on-a-second-try.md)
+  - [044: An open finding comes back until it ends](specs/decisions/044-open-findings-come-back.md)
   - [016: A smell past the hard limit blocks like a type error](specs/decisions/016-severe-smells.md)
 - **How it works**:
   - [Commit check](specs/commit-check.md)

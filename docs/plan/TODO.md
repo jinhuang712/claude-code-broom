@@ -15,7 +15,7 @@
 - created: 2026-11-20
 - status: HALT
 - found: the user, in the session of 2026-11-20
-- blocks: the checkpoint that follows CP8
+- blocks: the checkpoint that follows CP13
 - next: settle the 3 points with the user once CP8 has its numbers
 
 ---

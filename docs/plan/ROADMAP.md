@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP8: Lighter](#cp8-lighter), which waits for a week of the ledger's numbers: 2026-11-27 for the check time and about 2026-12-03 for the fix rate, a week after 0.28.3. The user set on 2026-11-20 that no feature is added until then, and what follows CP8 is open in [What it takes for a second user to install broom and stay](TODO.md#p1discussion-what-it-takes-for-a-second-user-to-install-broom-and-stay). [CP9: Ready for a public release](#cp9-ready-for-a-public-release) ended on 2026-11-20 with 0.28.0, once the README got its hero. CP10 ended on 2026-11-20 with 0.26.0, and [CP11: Read from a syntax tree](#cp11-read-from-a-syntax-tree) with 0.27.0 that day. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
+**Current checkpoint**: [CP8: Lighter](#cp8-lighter), which waits for a week of the ledger's numbers: 2026-11-27 for the check time and about 2026-12-03 for the fix rate, a week after 0.28.3. The user set on 2026-11-20 that no feature is added until then. [CP13: Nothing is forgotten](#cp13-nothing-is-forgotten) follows CP8, set by the user on 2026-11-26, and what follows it is open in [What it takes for a second user to install broom and stay](TODO.md#p1discussion-what-it-takes-for-a-second-user-to-install-broom-and-stay). [CP9: Ready for a public release](#cp9-ready-for-a-public-release) ended on 2026-11-20 with 0.28.0, once the README got its hero. CP10 ended on 2026-11-20 with 0.26.0, and [CP11: Read from a syntax tree](#cp11-read-from-a-syntax-tree) with 0.27.0 that day. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
 
 ---
 
@@ -34,7 +34,8 @@ Roadmap
 │   ├── ✅ CP10.1: Python, TS/JS and Go
 │   └── ✅ CP10.2: Swift and Rust
 ├── ✅ CP11: Read from a syntax tree — what no linter covers, read by a parser
-└── ⬜ CP12: Waits for a need
+├── ⬜ CP12: Waits for a need
+└── ⬜ CP13: Nothing is forgotten — an open finding comes back until it ends
 ```
 
 ---
@@ -557,3 +558,20 @@ The user set this on 2026-11-20: a check rests on a mechanism and not on a text 
 **Delivers** (1):
 
 - [I3: The cause of the reported Stop hang is unconfirmed](ISSUES.md#i3-the-cause-of-the-reported-stop-hang-is-unconfirmed)
+
+---
+
+## CP13: Nothing is forgotten
+
+**Status**: ⬜
+
+The user set this on 2026-11-26: the core want is that no problem is hidden, and that Claude is reminded of one until it is dealt with. A finding put to the user, or left in another session, left Claude's sight. It starts once CP8 has its numbers, so that the fix rate of that week is measured without it.
+
+**Delivers** (1):
+
+- [F2.14: Open findings come back](../features/F2-sweep.md#f214-open-findings-come-back)
+
+**Exit criteria** (1):
+
+- **Objectives**
+  - [O11: No open finding is forgotten](GOALS.md#o11-no-open-finding-is-forgotten)
