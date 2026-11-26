@@ -86,6 +86,7 @@ ALLOWED: Dict[Tuple[str, str], Tuple[str, str]] = {
     ("turns", "turn_dir"): (IDENTITY, "a session id made safe as a file name"),
     ("vulnerabilities", "version_key"): (TOOL, "a version an audit tool reports"),
     ("waivers", "MARKERS"): (TOKEN, "a comment or Rust attribute a tree isolated"),
+    ("waivers", "MARKUP_MARKERS"): (TOKEN, "a comment of a YAML, shell or HTML file a tree isolated"),
     ("weblint", "TSC_ROW"): (TOOL, "a tsc line"),
     ("weblint", "TSC_GLOBAL"): (TOOL, "a tsc line"),
     ("weblint", "_stylelint_findings"): (TOOL, "a stylelint message"),

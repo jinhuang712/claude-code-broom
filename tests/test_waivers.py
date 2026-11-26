@@ -43,6 +43,32 @@ class SuppressionTest(LedgerCase):
         for comment in ("# a comment", "// plain", "/* ignore the rest */"):
             self.assertIsNone(waivers.MARKERS.search(comment), comment)
 
+    def test_what_counts_as_a_suppression_in_a_yaml_shell_or_html_comment(self) -> None:
+        yes = ["# yaml" + "lint disable-line rule:line-length", "# shell" + "check disable=SC2086",
+               "<!-- prettier" + "-ignore -->", "<!-- eslint" + "-disable -->"]
+        for comment in yes:
+            self.assertTrue(waivers.MARKUP_MARKERS.search(comment), comment)
+        for comment in ("# a no" + "lint rule of another tool", "# no" + "qa", "# a comment", "<!-- ignore me -->"):
+            self.assertIsNone(waivers.MARKUP_MARKERS.search(comment), comment)
+
+    @unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
+    def test_a_suppression_in_a_yaml_shell_or_html_file_is_a_comment_the_tree_isolated(self) -> None:
+        r = self.repo({})
+        files = {
+            "ci.yml": 'a: 1  # yaml' + 'lint disable-line rule:x\nb: "# yaml' + 'lint disable"\n',
+            "run.sh": '# shell' + 'check disable=SC2086\necho "# shell' + 'check disable=SC1"\n',
+            "page.html": '<!-- prettier' + '-ignore -->\n<p>text</p>\n<!-- plain -->\n',
+            "notes.yaml": '# a no' + 'lint marker in a config describes, and suppresses nothing\n',
+        }
+        for name, text in files.items():
+            (r / name).write_text(text)
+        found = waivers.suppression_waivers(r, [r / name for name in files], Added({}))
+        self.assertEqual(sorted((w["file"], w["note"]) for w in found),
+                         [("ci.yml", "yaml" + "lint disable"), ("page.html", "prettier" + "-ignore"),
+                          ("run.sh", "shell" + "check disable")])
+        added = waivers.suppression_waivers(r, [r / "ci.yml"], Added({r / "ci.yml": {2}}))
+        self.assertEqual(added, [], "line 2's marker is in a string, and line 1 is no change")
+
     @unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
     def test_a_suppression_is_a_comment_the_tree_isolated_never_a_string(self) -> None:
         r = self.repo({})

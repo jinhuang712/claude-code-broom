@@ -1,0 +1,25 @@
+# Unsafe code, for the check-up's counter (treefacts.py, statscan.py). Rust: an `unsafe` block, an `unsafe fn`, with
+# or without a body, and an `unsafe impl`; the `unsafe` keyword is a token of the node, not a node, so the rule reads
+# it as the token it is. Go: a file that imports `unsafe`, with or without an alias. The ids end in `unsafe`, which
+# the fact runs pick; the `rustfacts-` prefix keeps Rust's out of the smell rules that `^rust-` picks.
+id: rustfacts-unsafe
+language: Rust
+message: unsafe code
+metadata: {smell: unsafe_code}
+rule:
+  any:
+    - kind: unsafe_block
+    - all:
+        - any: [kind: function_item, kind: function_signature_item]
+        - has: {kind: function_modifiers, has: {regex: '^unsafe$'}}
+    - all:
+        - kind: impl_item
+        - has: {regex: '^unsafe$', stopBy: neighbor}
+---
+id: go-unsafe
+language: Go
+message: an import of unsafe
+metadata: {smell: unsafe_code}
+rule:
+  kind: import_spec
+  has: {field: path, kind: interpreted_string_literal, regex: '^"unsafe"$'}

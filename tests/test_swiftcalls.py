@@ -7,7 +7,7 @@ from __future__ import annotations
 from test_swiftkit import SourceKitCase, text
 
 from broom.statscan import scan
-from broom.swiftcalls import broad_asserts, file_smells, skips, test_cases, unused_private
+from broom.swiftcalls import broad_asserts, file_smells, skips, test_cases, unsafe_uses, unused_private
 from broom.testrot import skip_rows
 
 
@@ -47,6 +47,14 @@ class SwiftCallsTest(SourceKitCase):
                       'private let quoted = 1  // quoted', 'let s = "quoted"', "struct T {", "    private init() {}",
                       "    override private func viewDidLoad() {}", "}")
         self.assertEqual(unused_private(f), [(1, "func helper"), (7, "let lonely"), (11, "let quoted")])
+
+    def test_unsafe_code_is_a_call_of_a_with_unsafe_function_or_a_pointer_type_by_name(self) -> None:
+        rows = ("func f(d: Data, p: UnsafePointer<UInt8>) {", "    d.withUnsafeBytes { raw in _ = raw }",
+                "    withUnsafePointer(to: &x) { _ in }", "    let a = UnsafeMutablePointer<Int>.allocate(capacity: 1)",
+                '    let s = "withUnsafeBytes UnsafePointer"  // withUnsafeBytes UnsafeRawPointer',
+                "    let unsafeCount = 1", "    let c: [UnsafeRawBufferPointer] = []", "}")
+        self.assertEqual(unsafe_uses(self.read(*rows)), 5, "two calls and three types; no string, comment or name")
+        self.assertEqual(scan("A.swift", "swift", text(*rows)).unsafe, 5)
 
     def test_skip_rows_and_stats_read_swift_from_its_tree(self) -> None:
         src = text("import XCTest", "// TO" + "DO: later", 'let s = "TO' + 'DO: not a comment"',

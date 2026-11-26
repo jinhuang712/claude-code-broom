@@ -1,7 +1,7 @@
 """The check-up: a look at the whole repo for rot, which gets worse without any one change being at fault. It keeps
-the counters of `LABELS` (lint suppressions, skipped tests, TODO comments, dead-code findings, public code with no doc
-comment, calls to deprecated APIs, duplicate test blocks, lines no test reaches)
-per file, and the numbers of the last check-up per repo, in broom's data directory. The session scan runs it in the
+the counters of `LABELS` (lint suppressions, skipped tests, TODO comments, unsafe code, broken Markdown links,
+dead-code findings, public code with no doc comment, calls to deprecated APIs, type escapes, duplicate test blocks,
+lines no test reaches) per file, and the numbers of the last check-up per repo, in broom's data directory. The session scan runs it in the
 background after the smell scan, and tells Claude, once, of each counter that is higher than at the last check-up,
 with the files that added to it. It never blocks and takes only what is cheap: the one pass over the files `broom
 stats` makes, the coverage report a test run left, and the counts the smell scan already has.
@@ -24,14 +24,19 @@ from .testrot import DUPLICATE_TESTS
 
 RECORDS = DATA_ROOT / "checkup"
 UNCOVERED = "uncovered_lines"
+UNSAFE = "unsafe_code"
+BROKEN_LINKS = "broken_links"
+TYPE_ESCAPE = "type_escape"
 FILES_NAMED = 3  # how many files a line of the note names
 MIN_SECONDS = 6  # a hook with less time left than this leaves the check-up to the next session
 LABELS = {"suppressions": "lint suppressions", "skipped_tests": "skipped tests",
-          "todos": "TODO comments", DEAD_CODE: "dead-code findings",
+          "todos": "TODO comments", UNSAFE: "unsafe code", BROKEN_LINKS: "broken Markdown links",
+          DEAD_CODE: "dead-code findings",
           "missing_docs": "public code with no doc comment", "deprecated_api": "calls to deprecated APIs",
-          DUPLICATE_TESTS: "duplicate test blocks", UNCOVERED: "lines no test reaches, by the coverage report"}
+          TYPE_ESCAPE: "type escapes", DUPLICATE_TESTS: "duplicate test blocks",
+          UNCOVERED: "lines no test reaches, by the coverage report"}
 # Counted by the smell scan, not by the pass over the files.
-SMELL_COUNTERS = (DEAD_CODE, "missing_docs", "deprecated_api", DUPLICATE_TESTS)
+SMELL_COUNTERS = (DEAD_CODE, "missing_docs", "deprecated_api", TYPE_ESCAPE, DUPLICATE_TESTS)
 TELL = "At a natural point tell the user; don't interrupt their task. `broom diagnose` shows where each number sits."
 
 Counts = Dict[str, int]  # per file: the files that hold any, by path from the repo root
@@ -52,14 +57,17 @@ def is_off(repo: Path) -> bool:
 
 def counters(repo: Path, facts: List[Facts], from_smells: Optional[Counted]) -> Counted:
     """Every counter, per file, as the repo is now. `from_smells` holds those the smell scan counted (hotspots.
-    smell_counts); a counter is None when it couldn't be counted: it is then neither compared nor recorded. The three
-    read from the files are None when some file's tree couldn't be read, as a count without it would read as a fall."""
+    smell_counts); a counter is None when it couldn't be counted: it is then neither compared nor recorded. The four
+    read from the files' trees are None when some file's tree couldn't be read, as a count without it would read as a
+    fall. The Markdown links are read in process, so they are counted whatever tool is missing."""
     whole = all(f.read for f in facts)
     now: Counted = {
         "suppressions": {f.rel: len(f.suppressions) for f in facts if f.suppressions} if whole else None,
         "skipped_tests": {f.rel: f.skipped for f in facts if f.skipped} if whole else None,
         "todos": {f.rel: len(f.todos) for f in facts if f.todos} if whole else None,
-        UNCOVERED: coverage.missed(repo, {f.rel for f in facts if not f.test})}
+        UNSAFE: {f.rel: f.unsafe for f in facts if f.unsafe} if whole else None,
+        BROKEN_LINKS: {f.rel: len(f.broken_links) for f in facts if f.broken_links},
+        UNCOVERED: coverage.missed(repo, {f.rel for f in facts if f.code and not f.test})}
     return {**now, **{name: (from_smells or {}).get(name) for name in SMELL_COUNTERS}}
 
 

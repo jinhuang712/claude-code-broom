@@ -54,6 +54,17 @@ SWIFT_FORMAT_CFG = ".swift-format"  # swift-format, Apple's, in the toolchain si
 SWIFTFORMAT_CFG = ".swiftformat"  # SwiftFormat, Nick Lockwood's
 
 
+# Files broom reads no code smells in, but whose comments it reads for lint suppressions, by extension.
+MARKUP_EXTS = {".yml": "yaml", ".yaml": "yaml", ".sh": "shell", ".bash": "shell", ".zsh": "shell", ".html": "html",
+               ".htm": "html"}
+
+
+def markup_of(path: Path) -> Optional[str]:
+    """`yaml`, `shell` or `html` for a file whose comments broom reads for lint suppressions, from its extension; None
+    for any other."""
+    return MARKUP_EXTS.get(path.suffix.lower())
+
+
 def lang_of(path: Path) -> Optional[str]:
     """The language broom checks a file by, from its extension: go, js, rust, py, css or swift; None for any other."""
     ext = path.suffix.lower()

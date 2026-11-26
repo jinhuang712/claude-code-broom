@@ -1,7 +1,7 @@
 """Swift smells read from SourceKit's structure and tokens (swiftkit): a debug print, an unlabeled Bool parameter, a
-test that any error at all is thrown, a skipped test, a test case, and a private name nothing in its file uses. Each
-is a node of the parser's structure, a call, a parameter or a declaration, and a token's text is only ever compared
-whole, so a string or a comment that looks like one is never taken for it.
+test that any error at all is thrown, a skipped test, a test case, unsafe code, and a private name nothing in its file
+uses. Each is a node of the parser's structure, a call, a parameter or a declaration, and a token's text is only ever
+compared whole or by its ends, so a string or a comment that looks like one is never taken for it.
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ KEPT = {"objc", "objc.name", "nsmanaged", "override", "dynamic", "ibaction", "ib
 IMPLICIT = {"CodingKeys", "init", "deinit", "subscript"}  # named by the compiler, never by the code
 PRIVATE = {"private", "fileprivate"}
 REFERENCE = {"identifier", "typeidentifier"}  # the kinds of token that name something
+UNSAFE_CALL = "withUnsafe"  # the functions that hand out a raw pointer: withUnsafeBytes, withUnsafePointer ...
 
 
 def attributes(n: Node) -> List[str]:
@@ -110,6 +111,15 @@ def test_cases(f: SwiftFile) -> int:
                          for t in f.tokens if t.offset == int(a.get("key.offset", -1)) + 1)
             count += marked or n.name.startswith("test")
     return count
+
+
+def unsafe_uses(f: SwiftFile) -> int:
+    """How many times `f` calls a function whose name starts `withUnsafe`, or names a type that starts `Unsafe` and
+    ends `Pointer`, as a type or to make one: the tokens' texts compared by their ends, so a string, a comment or a
+    name such as `unsafeCount` is never taken for one."""
+    calls = sum(1 for n in f.root.walk() if n.kind == "expr.call" and n.name.rpartition(".")[2].startswith(UNSAFE_CALL))
+    names = sum(1 for t in f.tokens if t.kind in REFERENCE and t.text.startswith("Unsafe") and t.text.endswith("Pointer"))
+    return calls + names
 
 
 def what_is(f: SwiftFile, n: Node) -> str:

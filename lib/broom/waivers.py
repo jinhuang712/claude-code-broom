@@ -18,16 +18,23 @@ from .gitcmd import GitOp, parse_commit
 from .gitutil import ChangedLines, git, git_root
 from .smells import for_tests, moved
 from .state import parse_jsonc, read_jsonc, short_hash
+from .toolchain import markup_of
 from .treefacts import comment_trees
 
 # What a lint suppression looks like: the tool's own marker. It is tested only on a comment, or on a Rust `allow`
 # attribute, that a syntax tree isolated (treefacts.comment_trees), so a marker in a string never counts. Each is
 # on a line without a comment sign before it, or this file would hold suppressions itself.
-MARKERS = re.compile("|".join((
+CODE_MARKERS = (
     r"\bnoqa\b", r"type:\s*ignore", "eslint-disable", "oxlint-disable", "@ts-ignore", "@ts-expect-error",
-    r"\bnolint\b", "swiftlint:disable", "biome-ignore", "stylelint-disable",
+    r"\bnolint\b", "swiftlint:disable", "biome-ignore", "stylelint-disable", "prettier-ignore",
     r"[#]!?\[allow\(",
-)))
+)
+# The markers of the files with no code smells (YAML, shell, HTML): a comment there holds only the markers of the tools
+# that read such files, and a configuration that merely names another tool's marker suppresses nothing.
+MARKUP_ONLY = (r"yamllint\s+disable", r"shellcheck\s+disable")
+MARKUP_SHARED = ("prettier-ignore", "eslint-disable", "oxlint-disable", "stylelint-disable", "biome-ignore")
+MARKERS = re.compile("|".join(CODE_MARKERS))
+MARKUP_MARKERS = re.compile("|".join(MARKUP_ONLY + MARKUP_SHARED))
 MARKER_WORDS = ("noqa", "ignore", "disable", "nolint", "@ts-", "allow(")  # a word each marker holds
 NO_VERIFY_NOTE = "git commit --no-verify"
 
@@ -69,8 +76,9 @@ def suppression_waivers(root: Path, files: List[Path], changed: ChangedLines) ->
         f, added = lines[rel]
         repo, shown = ledger.locate(f)
         rows = texts[rel].splitlines()
+        markers = MARKUP_MARKERS if markup_of(Path(rel)) else MARKERS
         for n, comment in sorted(comments.items()):
-            marker = MARKERS.search(comment) if added is None or n in added else None
+            marker = markers.search(comment) if added is None or n in added else None
             if marker:  # the line's text only tells two waivers of one file apart: an identity, not a reading
                 line = rows[n - 1].strip() if n <= len(rows) else comment
                 out.append(waiver("suppression", repo, shown, marker.group(), line))

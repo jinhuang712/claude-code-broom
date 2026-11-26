@@ -1,0 +1,29 @@
+# The comments of YAML, shell and HTML files, which hold no code smells, for their lint suppressions and the header of
+# generated code (treefacts.py): the comment node, so a marker in a string, a scalar or a text node is never one. The
+# script and style of an HTML page are read as JavaScript and CSS, by those languages' own rules.
+id: yaml-comment
+language: Yaml
+message: a comment with a marker word
+metadata: {smell: marked_comment}
+rule:
+  kind: comment
+  pattern: $TEXT
+  regex: 'noqa|ignore|disable|nolint|DO NOT EDIT|@generated'
+---
+id: shell-comment
+language: Bash
+message: a comment with a marker word
+metadata: {smell: marked_comment}
+rule:
+  kind: comment
+  pattern: $TEXT
+  regex: 'noqa|ignore|disable|nolint|DO NOT EDIT|@generated'
+---
+id: html-comment
+language: Html
+message: a comment with a marker word
+metadata: {smell: marked_comment}
+rule:
+  kind: comment
+  pattern: $TEXT
+  regex: 'noqa|ignore|disable|nolint|DO NOT EDIT|@generated'

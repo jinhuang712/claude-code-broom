@@ -33,7 +33,8 @@ ORDERS = {"churn": lambda f: (f["score"], f["severe"], f["hints"]), "smells": la
 # The tools whose findings make up each of the check-up's smell counters: a note that names one of them means the
 # count is short of what the code holds.
 COUNTED_BY = {DEAD_CODE: ("jscpd",), "missing_docs": ("ruff", "golangci-lint", "swiftlint", "oxlint", "node is missing"),
-              "deprecated_api": ("ruff", "golangci-lint", "clippy", "oxlint", "tsgolint")}
+              "deprecated_api": ("ruff", "golangci-lint", "clippy", "oxlint", "tsgolint"),
+              "type_escape": ("ruff", "golangci-lint", "swiftlint", "clippy", "oxlint")}
 NO_HISTORY = "no commits, or git log failed: the hotspots are ordered by their smells"
 
 
@@ -226,7 +227,8 @@ def known_part(known: int) -> str:
 
 def smell_counts(repo: Path, found: List[Smell], notes: List[str]) -> Dict[str, Optional[Dict[str, int]]]:
     """The check-up's smell counters from a scan of the whole repo (`found` has no base): per file, how many dead-code
-    findings, public declarations with no doc comment, calls to deprecated APIs and duplicate test blocks it holds. A
+    findings, public declarations with no doc comment, calls to deprecated APIs, type escapes (`any`, force casts and
+    unwraps, non-null assertions) and duplicate test blocks it holds. A
     counter is None when the repo turned its smell off or a tool behind it was missing, failed or cut short: a count
     that low would read as a fall."""
     off = repo_config(repo).get("smells_off") or []

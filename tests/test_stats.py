@@ -179,6 +179,117 @@ class RotTest(StatsCase):
         self.assertNotIn("blame", text)
 
 
+AST_GREP = unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
+
+
+class LargestFilesTest(StatsCase):
+    FILES = {"big.bin": "x" * 500, "docs/notes.md": "y" * 300, "src/a.py": "x = 1\n", "old/huge.txt": "z" * 900,
+             ".broom.json": '{"exclude": ["old/*"]}'}
+
+    def make(self) -> Path:
+        r = self.repo(self.FILES)
+        (r / "untracked.dat").write_text("u" * 800)
+        return r
+
+    def test_the_tracked_files_of_most_bytes_whatever_their_kind(self) -> None:
+        r = self.make()
+        self.assertEqual(self.report(r, top=2)["size"]["largest_files"],
+                         [{"file": "big.bin", "bytes": 500}, {"file": "docs/notes.md", "bytes": 300}],
+                         "not the untracked file, not the excluded one, and the cut is the top")
+        self.assertEqual(self.report(r, "docs")["size"]["largest_files"], [{"file": "docs/notes.md", "bytes": 300}])
+
+    def test_the_text_lists_them_beside_the_longest_code_files(self) -> None:
+        out = self.cli(self.make(), "stats").stdout
+        self.assertRegex(out, r"\n  largest files, any kind\s+bytes\n  big\.bin\s+500\n  docs/notes\.md\s+300\n")
+        self.assertLess(out.index("longest files"), out.index("largest files, any kind"))
+        self.assertLess(out.index("largest files, any kind"), out.index("\nTests\n"))
+
+
+@AST_GREP
+class UnsafeTest(StatsCase):
+    FILES = {
+        "a.rs": text("unsafe fn f() {}", "pub unsafe fn g() { unsafe { x() } }", "struct S;", "unsafe impl Send for S {}",
+                     "trait T { unsafe fn h(&self); }", "impl S { fn safe(&self) {} }",
+                     'fn s() { let t = "unsafe { }"; } // unsafe { }'),
+        "b.go": text("package b", "", "import (", '	"fmt"', '	"unsafe"', ")", "", 'import _ "unsafe"'),
+        "c.go": text("package c", "", 'import "fmt"', '// import "unsafe"', 'var s = "unsafe"'),
+    }
+
+    def test_rust_blocks_functions_and_impls_and_the_go_files_that_import_unsafe(self) -> None:
+        facts = {f.rel: f.unsafe for f in stats.collect(self.repo(self.FILES), [])}
+        self.assertEqual(facts, {"a.rs": 5, "b.go": 1, "c.go": 0}, "a string and a comment are none")
+
+    def test_stats_gives_the_total_and_the_files_holding_most(self) -> None:
+        d = self.report(self.repo(self.FILES))
+        self.assertEqual(d["rot"]["unsafe_code"], {"total": 6, "files": [{"file": "a.rs", "count": 5},
+                                                                          {"file": "b.go", "count": 1}]})
+        self.assertIn("\n  6 unsafe constructs\n", statsview.render(d))
+
+
+class MarkupTest(StatsCase):
+    FILES = {
+        "ci.yml": text("a: 1  # yaml" + "lint disable-line rule:line-length", 'b: "# yaml' + 'lint disable"',
+                       "# a no" + "lint marker is another tool's", "# TO" + "DO: not counted in YAML"),
+        "run.sh": text("#!/bin/sh", "# shell" + "check disable=SC2086", 'echo "# shell' + 'check disable=SC1"',
+                       "cat <<EOF", "# shell" + "check disable=SC3", "EOF"),
+        "page.html": text("<!-- prettier" + "-ignore -->", "<p>text</p>", "<!-- an ordinary comment -->",
+                          "<!-- eslint" + "-disable -->"),
+        "a.py": text("x = 1"),
+    }
+
+    @AST_GREP
+    def test_a_suppression_in_a_yaml_shell_or_html_comment_counts_with_the_others(self) -> None:
+        d = self.report(self.repo(self.FILES))
+        s = d["rot"]["suppressions"]
+        self.assertEqual(s["kinds"], {"yamllint disable": 1, "shellcheck disable": 1, "prettier-ignore": 1,
+                                      "eslint-disable": 1})
+        self.assertEqual(sorted((f["file"], f["count"]) for f in s["files"]),
+                         [("ci.yml", 1), ("page.html", 2), ("run.sh", 1)])
+        self.assertEqual(d["rot"]["todos"]["total"], 0, "a TODO is counted in code only")
+        self.assertEqual((d["files"], [r["language"] for r in d["size"]["languages"]]), (1, ["py"]),
+                         "these files are no code files: no lines, no tests")
+
+    def test_without_ast_grep_they_are_unread_and_the_note_says_so(self) -> None:
+        r = self.repo(self.FILES)
+        with mock.patch.object(shutil, "which", return_value=None):
+            facts = {f.rel: f.read for f in stats.collect(r, [])}
+            d = self.report(r)
+        self.assertEqual(facts, {"ci.yml": False, "run.sh": False, "page.html": False, "a.py": True})
+        self.assertIn("3 files unread", d["rot"]["note"])
+        self.assertIsNone(d["size"]["note"], "the size of the code files is whole")
+
+
+class LinksTest(StatsCase):
+    FILES = {
+        "README.md": text("[ok](docs/a.md) [gone](docs/gone.md) [site](https://x.org/y.md) [here](#top)",
+                          "```", "[in code](nowhere.md)", "```", "[ignored](built/out.md) [draft](draft.md)"),
+        "docs/a.md": text("[up](../README.md) [bad](missing.md#x) ![pic](img/none.png)"),
+        "node_modules/p/README.md": text("[dependency](gone.md)"),
+        ".gitignore": "built/\n",
+    }
+
+    def make(self) -> Path:
+        r = self.repo(self.FILES)
+        (r / "built").mkdir()
+        (r / "built" / "out.md").write_text("x\n")  # on the disk, and git ignores it
+        (r / "draft.md").write_text("x\n")  # not tracked yet: it is in the repo all the same
+        return r
+
+    def test_a_link_to_a_relative_path_that_is_not_in_the_repo_is_broken(self) -> None:
+        d = self.report(self.make())
+        facts = {f.rel: f.broken_links for f in stats.collect(self.make(), []) if f.broken_links}
+        self.assertEqual(facts, {"README.md": [1, 5], "docs/a.md": [1, 1]}, "the fence, the URL and the anchor are none")
+        self.assertEqual(d["rot"]["broken_links"], {"total": 4, "files": [{"file": "README.md", "count": 2},
+                                                                          {"file": "docs/a.md", "count": 2}]})
+        self.assertIn("\n  4 Markdown links to paths that don't exist\n", statsview.render(d))
+
+    def test_a_path_narrows_the_files_but_not_what_a_link_may_point_at(self) -> None:
+        d = self.report(self.make(), "docs")
+        self.assertEqual(d["rot"]["broken_links"], {"total": 2, "files": [{"file": "docs/a.md", "count": 2}]},
+                         "../README.md is outside the path and is there")
+        self.assertEqual(d["files"], 0, "no code file")
+
+
 class HistoryTest(StatsCase):
     def busy_repo(self) -> Path:
         r = self.repo({"a.py": "1\n", "b.py": "1\n", "c.py": "1\n", "README.md": "x\n"})
@@ -262,10 +373,10 @@ class ScanTest(StatsCase):
 
 class CommandTest(StatsCase):
     SECTIONS = {
-        "size": {"total", "languages", "folders", "more_folders", "longest", "note"},
+        "size": {"total", "languages", "folders", "more_folders", "longest", "largest_files", "note"},
         "tests": {"files", "with_cases", "cases", "skipped", "languages", "skipped_files", "untested", "coverage",
                   "note"},
-        "rot": {"suppressions", "todos", "skipped_tests", "note"},
+        "rot": {"suppressions", "todos", "skipped_tests", "unsafe_code", "broken_links", "note"},
         "history": {"last_commits", "commits", "files", "pairs", "note"},
     }
 

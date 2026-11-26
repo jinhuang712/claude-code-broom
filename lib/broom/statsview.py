@@ -52,7 +52,7 @@ def counts(r: dict) -> List[object]:
 
 
 def size_lines(d: dict) -> List[str]:
-    """The size section: lines by language and by folder, and the longest files."""
+    """The size section: lines by language and by folder, the longest code files and the largest files of any kind."""
     head = ["files", "lines", "test files", "test lines"]
     total = [["total", *counts(d["total"])]]
     langs = table(["language", *head], [[language(r), *counts(r)] for r in d["languages"]] + total)
@@ -61,7 +61,8 @@ def size_lines(d: dict) -> List[str]:
         folders.append(f"  ... and {d['more_folders']} more folders; `--top N` lists more")
     longest = table(["longest files", "lines"], [[r["file"] + (" (test)" if r["test"] else ""), r["lines"]]
                                                  for r in d["longest"]])
-    return section("Size (code lines)", d["note"], [langs, folders, longest])
+    biggest = table(["largest files, any kind", "bytes"], [[r["file"], r["bytes"]] for r in d["largest_files"]])
+    return section("Size (code lines)", d["note"], [langs, folders, longest, biggest])
 
 
 def coverage_lines(c: dict) -> List[str]:
@@ -100,14 +101,22 @@ def todo_text(t: dict) -> str:
     return f"  {t['total']} TODO, FIXME, HACK or XXX comments"
 
 
+def counted_lines(part: dict, what: str) -> List[str]:
+    """A count of `what` with the files holding most, as the rot section shows it."""
+    return [f"  {part['total']} {what}",
+            *table(["files with most", "count"], [[r["file"], r["count"]] for r in part["files"]])]
+
+
 def rot_lines(d: dict) -> List[str]:
-    """The rot section: lint suppressions, TODO comments, skipped tests."""
+    """The rot section: lint suppressions, TODO comments, skipped tests, unsafe code, broken Markdown links."""
     s, t = d["suppressions"], d["todos"]
     kinds = ", ".join(f"{k} {n}" for k, n in s["kinds"].items())
     suppressed = [f"  {s['total']} lint suppressions" + (f" ({kinds})" if kinds else "")]
     suppressed += table(["files with most", "count"], [[r["file"], r["count"]] for r in s["files"]])
     todos = [todo_text(t), *table(["files with most", "count"], [[r["file"], r["count"]] for r in t["files"]])]
-    return section("Rot", d["note"], [suppressed, todos, [f"  {d['skipped_tests']} skipped tests"]])
+    return section("Rot", d["note"], [suppressed, todos, [f"  {d['skipped_tests']} skipped tests"],
+                                       counted_lines(d["unsafe_code"], "unsafe constructs"),
+                                       counted_lines(d["broken_links"], "Markdown links to paths that don't exist")])
 
 
 def history_lines(d: dict) -> List[str]:

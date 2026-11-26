@@ -1,9 +1,12 @@
 """`broom stats`: the counts a session would otherwise write a throwaway script for, in four sections: size, tests, rot
 and history. It needs git and nothing else. The files are those every broom command reads (`hotspots.repo_files`, less
-dependencies, build output and generated code), read once (statscan); history is one `git log` (statsgit). A question it can't answer comes back with a `note` saying what is missing."""
+dependencies, build output and generated code), read once (statscan); history is one `git log` (statsgit). Code files
+make up size and tests; the YAML, shell, HTML and Markdown files read beside them add to rot alone. A question it
+can't answer comes back with a `note` saying what is missing."""
 
 from __future__ import annotations
 
+import os
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
@@ -11,31 +14,50 @@ from typing import Callable, Dict, List, Optional, Tuple
 from .codelines import code_lines
 from .coverage import section as coverage_section
 from .hotspots import repo_files
+from .gitutil import git
 from .maintained import Maintained, generated_among
-from .statscan import Facts, scan
+from .mdlinks import known_paths
+from .statscan import MD_LANG, OTHER_LANGS, Facts, link_facts, scan
 from .syntax import MISSING
 from .statsgit import history, top_counts
 from .testrot import needs_test, stem_of, tested
-from .toolchain import lang_of
-from .treefacts import SG_LANGS, sg_trees
+from .toolchain import lang_of, markup_of
+from .treefacts import MARKUP_LANGS, SG_LANGS, sg_trees
 
 
 def collect(repo: Path, paths: List[Path]) -> List[Facts]:
     """The facts of every code file within `paths` (the repo when empty): the files `repo_files` gives, less what nobody
-    maintains here (dependencies, build output) and generated code, found by its header. ast-grep reads the trees of
-    the Go and TS/JS files among them in one run, and their comments in another, for the code lines."""
+    maintains here (dependencies, build output) and generated code, found by its header, and with them the YAML, shell,
+    HTML and Markdown files, read for their suppressions and links. ast-grep reads the trees of the Go, TS/JS, Rust,
+    CSS, YAML, shell and HTML files among them in one run, and the comments of the code files in another, for the code
+    lines."""
     read = texts(repo, paths)
-    trees = sg_trees(repo, [rel for rel, lang, _ in read if lang in SG_LANGS], [])
-    code = code_lines({rel: text for rel, _, text in read}, [], repo)
-    return [scan(rel, lang, text, trees.get(rel), len(code[rel])) for rel, lang, text in read]
+    trees = sg_trees(repo, [rel for rel, lang, _ in read if lang in SG_LANGS or lang in MARKUP_LANGS], [])
+    code = code_lines({rel: text for rel, lang, text in read if lang not in OTHER_LANGS}, [], repo)
+    known = known_paths(existing(repo)) if any(lang == MD_LANG for _, lang, _ in read) else set()
+    facts = [scan(rel, lang, text, trees.get(rel), len(code[rel]) if rel in code else 0) for rel, lang, text in read]
+    return [link_facts(f, text, known) if lang == MD_LANG else f for f, (_, lang, text) in zip(facts, read)]
+
+
+def existing(repo: Path) -> List[str]:
+    """The paths of the repo's files a link may point at: tracked or not yet, with those git ignores and those gone
+    from the disk left out. Not narrowed by `.broom.json`'s `exclude`: a file nobody checks can still be linked."""
+    listed = git(["ls-files", "--cached", "--others", "--exclude-standard"], repo) or ""
+    gone = set((git(["ls-files", "--deleted"], repo) or "").splitlines())
+    return [n for n in listed.splitlines() if n and n not in gone]
+
+
+def other_lang(path: Path) -> Optional[str]:
+    """`yaml`, `shell`, `html` or `md` for a file read only for its suppressions or its links; None for any other."""
+    return markup_of(path) or (MD_LANG if path.suffix.lower() == ".md" else None)
 
 
 def texts(repo: Path, paths: List[Path]) -> List[Tuple[str, str, str]]:
-    """(path from the root, language, text) of each code file `collect` reads."""
+    """(path from the root, language, text) of each file `collect` reads: code files, and those of `other_lang`."""
     keep = Maintained(repo)
     out = []
     for f in repo_files(repo, paths):
-        lang = lang_of(f)
+        lang = lang_of(f) or other_lang(f)
         try:
             rel = f.relative_to(repo).as_posix()
             text = f.read_text(errors="replace") if lang and keep(rel) else None
@@ -77,13 +99,31 @@ def breakdown(facts: List[Facts], key: Callable[[Facts], str], label: str) -> Li
     return sorted(rows, key=lambda r: (-(r["lines"] + r["test_lines"]), r[label]))
 
 
-def size_section(facts: List[Facts], top: int, note: Optional[str]) -> dict:
-    """Lines by language and by top-level folder (the `top` largest), and the `top` longest files."""
+def largest_files(repo: Path, paths: List[Path], top: int) -> List[dict]:
+    """The `top` tracked files within `paths` (the repo when empty) with the most bytes, any kind of file, as `{"file":
+    path, "bytes": size}`: the size on the disk, the file system's count. A file gone from the disk, or a link that
+    leads out of the repo, is left out."""
+    tracked = set((git(["ls-files"], repo) or "").splitlines())
+    sizes: Dict[str, int] = {}
+    for f in repo_files(repo, paths):
+        try:
+            rel = f.relative_to(repo).as_posix()
+            if rel in tracked and f.is_file():
+                sizes[rel] = os.stat(f).st_size
+        except (OSError, ValueError):
+            continue
+    return ranked(sizes, top, "bytes")
+
+
+def size_section(facts: List[Facts], top: int, note: Optional[str], largest: Optional[List[dict]] = None) -> dict:
+    """Lines by language and by top-level folder (the `top` largest), the `top` longest files, and `largest`, the
+    tracked files of most bytes (`largest_files`)."""
     folders = breakdown(facts, folder_of, "folder")
     longest = sorted(facts, key=lambda f: (-f.lines, f.rel))[:top]
     return {"total": totals(facts), "languages": breakdown(facts, lambda f: f.lang, "language"),
             "folders": folders[:top], "more_folders": max(0, len(folders) - top),
-            "longest": [{"file": f.rel, "lines": f.lines, "test": f.test} for f in longest], "note": note}
+            "longest": [{"file": f.rel, "lines": f.lines, "test": f.test} for f in longest],
+            "largest_files": largest or [], "note": note}
 
 
 # ---------------------------------------------------------------- tests
@@ -129,16 +169,24 @@ def todo_part(facts: List[Facts], top: int) -> dict:
 def unread_note(facts: List[Facts]) -> Optional[str]:
     """What a count leaves out when ast-grep couldn't read some files' trees; None when every file was read."""
     unread = sum(not f.read for f in facts)
-    return f"{unread} Go or TS/JS files unread: {MISSING}" if unread else None
+    return f"{unread} files unread: {MISSING}" if unread else None
+
+
+def counted_part(counts: Dict[str, int], top: int) -> dict:
+    """A count per file as the rot section shows it: the total and the `top` files holding most."""
+    return {"total": sum(counts.values()), "files": ranked(counts, top)}
 
 
 def rot_section(facts: List[Facts], top: int, note: Optional[str]) -> dict:
-    """Lint suppressions by kind, with the `top` files holding most; the TODO comments; skipped tests as one number."""
+    """Lint suppressions by kind, with the `top` files holding most; the TODO comments; skipped tests as one number;
+    unsafe code and Markdown links to paths that don't exist, each with the files holding most."""
     kinds = Counter(k for f in facts for k in f.suppressions)
     suppressed = {f.rel: len(f.suppressions) for f in facts if f.suppressions}
     return {"suppressions": {"total": sum(kinds.values()), "kinds": dict(kinds.most_common()),
                              "files": ranked(suppressed, top)},
             "todos": todo_part(facts, top), "skipped_tests": sum(f.skipped for f in facts),
+            "unsafe_code": counted_part({f.rel: f.unsafe for f in facts if f.unsafe}, top),
+            "broken_links": counted_part({f.rel: len(f.broken_links) for f in facts if f.broken_links}, top),
             "note": note or unread_note(facts)}
 
 
@@ -154,14 +202,15 @@ def relative(repo: Path, path: Path) -> str:
 
 
 def report(repo: Path, paths: List[Path], top: int, last: int, facts: Optional[List[Facts]] = None) -> dict:
-    """The four sections for the code files within `paths` (the repo when empty): `size`, `tests`, `rot` and `history`
-    over the last `last` commits, with `files`, the number of files read. `facts` are those files read already, when a
-    caller that needs them too has read them."""
+    """The four sections for the files within `paths` (the repo when empty): `size`, `tests`, `rot` and `history`
+    over the last `last` commits, with `files`, the number of code files read. `facts` are those files read already,
+    when a caller that needs them too has read them. Size, tests and history are of the code files; rot is of all."""
     facts = collect(repo, paths) if facts is None else facts
+    code = [f for f in facts if f.code]
     shown = [relative(repo, p) for p in paths]
-    note = None if facts else "no code files " + (f"under {', '.join(shown)}" if shown else "in the repo")
-    return {"repo": str(repo), "paths": shown, "files": len(facts), "last_commits": last,
-            "size": size_section(facts, top, note or unread_note(facts)),
-            "tests": tests_section(repo, facts, top, note or unread_note(facts)),
+    note = None if code else "no code files " + (f"under {', '.join(shown)}" if shown else "in the repo")
+    return {"repo": str(repo), "paths": shown, "files": len(code), "last_commits": last,
+            "size": size_section(code, top, note or unread_note(code), largest_files(repo, paths, top)),
+            "tests": tests_section(repo, code, top, note or unread_note(code)),
             "rot": rot_section(facts, top, note),
-            "history": history(repo, {f.rel for f in facts}, last, top, note)}
+            "history": history(repo, {f.rel for f in code}, last, top, note)}

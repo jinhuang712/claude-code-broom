@@ -16,6 +16,7 @@ from support import HAS_PY, py_function
 
 from broom import checkup
 from broom.gitutil import CLOCK
+from broom.hotspots import smell_counts
 from broom.stats import collect
 
 NOQA = "# no" + "qa: E501"
@@ -62,6 +63,7 @@ class TellingTest(CheckupCase):
         with mock.patch.object(shutil, "which", return_value=None):
             now = checkup.counters(r, collect(r, []), None)
         self.assertEqual((now["suppressions"], now["skipped_tests"], now["todos"]), (None, None, None))
+        self.assertEqual((now["unsafe_code"], now["broken_links"]), (None, {}), "Markdown is read in process")
 
     def test_the_first_numbers_are_the_baseline_and_nothing_is_said(self) -> None:
         r = self.repo({"a.py": suppressed(2), "tests/test_a.py": skipped(1)})
@@ -69,7 +71,7 @@ class TellingTest(CheckupCase):
         counters = self.record(r)
         self.assertEqual(counters["suppressions"], {"a.py": 2})
         self.assertEqual(counters["skipped_tests"], {"tests/test_a.py": 1})
-        self.assertEqual(sorted(counters), ["skipped_tests", "suppressions", "todos"],
+        self.assertEqual(sorted(counters), ["broken_links", "skipped_tests", "suppressions", "todos", "unsafe_code"],
                          "a counter whose tool is missing has no number to keep")
 
     def test_a_counter_that_grew_is_told_once_with_its_files_and_the_new_numbers_become_the_baseline(self) -> None:
@@ -189,8 +191,9 @@ class DiagnoseTest(CheckupCase):
         d = self.diagnose(r)
         self.assertEqual((d["off"], d["narrowed"], d["last"]), (False, False, date.today().isoformat()))
         rows = {c["counter"]: c for c in d["counters"]}
-        self.assertEqual(list(rows), ["suppressions", "skipped_tests", "todos", "dead_code", "missing_docs",
-                                      "deprecated_api", "duplicate_tests", "uncovered_lines"])
+        self.assertEqual(list(rows), ["suppressions", "skipped_tests", "todos", "unsafe_code", "broken_links",
+                                      "dead_code", "missing_docs", "deprecated_api", "type_escape", "duplicate_tests",
+                                      "uncovered_lines"])
         self.assertEqual(rows["suppressions"], {"counter": "suppressions", "label": "lint suppressions", "now": 3,
                                                 "was": 1, "grew": True, "files": ["b.py"]})
         self.assertEqual((rows["skipped_tests"]["now"], rows["skipped_tests"]["was"], rows["skipped_tests"]["grew"]),
@@ -232,6 +235,95 @@ class DiagnoseTest(CheckupCase):
         r = self.repo({"a.py": "x = 1\n", ".broom.json": '{"smells_off": ["checkup"]}'})
         out = self.cli(r, "diagnose", env=self.bare).stdout
         self.assertIn("## Check-up\n  off in this repo", out)
+
+
+def broken(*dests: str) -> str:
+    """A Markdown file that links to each of `dests`."""
+    return text(*(f"[link {i}]({dest})" for i, dest in enumerate(dests)))
+
+
+class NewCountersTest(CheckupCase):
+    def test_a_markdown_link_to_a_path_that_is_not_there_is_counted_and_told_when_it_grows(self) -> None:
+        r = self.repo({"a.py": "x = 1\n", "README.md": broken("a.py", "gone.md", "https://x.org/y", "#top")})
+        self.assertEqual(self.scan(r, "s1"), "")
+        self.assertEqual(self.record(r)["broken_links"], {"README.md": 1})
+        self.commit_all(r, {"docs/b.md": broken("../README.md", "missing/a.md", "c.md")})
+        self.assertIn("broken Markdown links 1 -> 3 (docs/b.md)", self.scan(r, "s2"))
+        self.commit_all(r, {"docs/c.md": text("fine")})
+        self.assertEqual(self.scan(r, "s3"), "", "a link that now has its file is no longer broken: it fell")
+
+    def test_a_link_whose_target_a_change_removes_is_a_new_break(self) -> None:
+        r = self.repo({"a.py": "x = 1\n", "b.py": "y = 1\n", "README.md": broken("a.py", "b.py")})
+        self.scan(r, "s1")
+        self.assertEqual(self.record(r)["broken_links"], {})
+        self.sh(r, "git", "rm", "-q", "b.py")
+        self.sh(r, "git", "commit", "-qm", "remove b")
+        self.assertIn("broken Markdown links 0 -> 1 (README.md)", self.scan(r, "s2"))
+
+    def test_a_counter_an_earlier_record_lacks_starts_silently_from_the_day_it_is_first_counted(self) -> None:
+        r = self.repo({"a.py": "x = 1\n", "README.md": broken("gone.md")})
+        self.scan(r, "s1")
+        path = checkup.record_path(r)
+        record = json.loads(path.read_text())
+        for name in ("unsafe_code", "broken_links", "type_escape"):
+            record["counters"].pop(name, None)  # what a broom without them took
+        path.write_text(json.dumps(record))
+        self.commit_all(r, {"docs/b.md": broken("gone.md", "gone2.md")})
+        self.assertEqual(self.scan(r, "s2"), "", "the first number of a counter is a baseline, not a jump")
+        self.assertEqual(self.record(r)["broken_links"], {"README.md": 1, "docs/b.md": 2})
+        self.commit_all(r, {"docs/c.md": broken("gone.md")})
+        self.assertIn("broken Markdown links 3 -> 4 (docs/c.md)", self.scan(r, "s3"))
+
+    def test_numbers_of_another_version_are_no_baseline_for_the_new_counters_either(self) -> None:
+        r = self.repo({"a.py": "x = 1\n", "README.md": broken("gone.md")})
+        self.scan(r, "s1")
+        path = checkup.record_path(r)
+        path.write_text(json.dumps({**json.loads(path.read_text()), "version": "0.0.1"}))
+        self.commit_all(r, {"docs/b.md": broken("gone.md", "gone2.md")})
+        self.assertEqual(self.scan(r, "s2"), "")
+        self.assertEqual(self.record(r)["broken_links"], {"README.md": 1, "docs/b.md": 2})
+
+    @unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
+    def test_unsafe_code_and_suppressions_in_yaml_shell_and_html_are_counted_and_told_when_they_grow(self) -> None:
+        env = self.fake_path(keep=("ast-grep",))
+        r = self.repo({"a.rs": "unsafe fn f() {}\nfn g() {}\n", "ci.yml": "a: 1  # yaml" + "lint disable-line rule:x\n"})
+        self.assertEqual(self.scan(r, "s1", env), "")
+        counters = self.record(r)
+        self.assertEqual((counters["unsafe_code"], counters["suppressions"]), ({"a.rs": 1}, {"ci.yml": 1}))
+        self.commit_all(r, {"b.rs": "fn h() { unsafe { x() } }\n", "run.sh": "# shell" + "check disable=SC2086\n"})
+        self.assertEqual(self.scan(r, "s2", env), "broom check-up: lint suppressions 1 -> 2 (run.sh); unsafe code 1 -> 2 "
+                         "(b.rs). " + TELL)
+
+    def test_a_repo_with_yaml_and_no_ast_grep_leaves_the_counters_from_trees_uncounted(self) -> None:
+        r = self.repo({"a.py": "x = 1\n", "ci.yml": "a: 1\n"})
+        self.assertEqual(self.scan(r, "s1"), "")
+        self.assertEqual(sorted(self.record(r)), ["broken_links"], "the tree of ci.yml went unread; Markdown didn't")
+
+
+@unittest.skipUnless(HAS_PY, "ruff missing")
+class TypeEscapeTest(CheckupCase):
+    ANY = text("from typing import Any", "", "", "def {name}(x: Any) -> int:", '    """Say."""', "    return 1")
+
+    def test_the_type_escapes_of_the_whole_repo_are_counted_and_told_when_they_grow(self) -> None:
+        env = self.fake_path(keep=("ruff",))
+        r = self.repo({"a.py": self.ANY.format(name="one"), "b.py": text("x = 1")})
+        self.assertEqual(self.scan(r, "s1", env), "")
+        self.assertEqual(self.record(r)["type_escape"], {"a.py": 1}, "an old one counts, though no change added it")
+        self.commit_all(r, {"b.py": self.ANY.format(name="two")})
+        self.assertIn("type escapes 1 -> 2 (b.py)", self.scan(r, "s2", env))
+        rows = {c["counter"]: c for c in self.diagnose(r, env=env)["counters"]}
+        self.assertEqual((rows["type_escape"]["now"], rows["type_escape"]["label"]), (2, "type escapes"))
+
+    def test_the_count_is_left_out_when_a_tool_behind_it_is_short_or_the_smell_is_off(self) -> None:
+        r = self.repo({"README.md": "x\n"})
+        for note in ("missing:ruff (brew install ruff)", "missing:swiftlint (brew install swiftlint)",
+                     "timeout:cargo clippy measuring smells in /r (cold build?)", "missing:oxlint (npm i -g oxlint)",
+                     "missing:golangci-lint (brew install golangci-lint)"):
+            with self.subTest(note):
+                self.assertIsNone(smell_counts(r, [], [note])["type_escape"])
+        self.assertEqual(smell_counts(r, [], [])["type_escape"], {})
+        off = self.repo({".broom.json": '{"smells_off": ["type_escape"]}'})
+        self.assertIsNone(smell_counts(off, [], [])["type_escape"])
 
 
 @unittest.skipUnless(HAS_PY and shutil.which("jscpd"), "ruff or jscpd missing")
