@@ -6,6 +6,18 @@
 
 ---
 
+## 0.28.3 — 2026-11-26
+
+---
+
+### Sweep
+
+- A commit made before the prompt is not the turn's change, even when the turn brings it in by a pull, a reset or a landing of earlier work. Before, a turn that pulled a remote's commits was blocked for every finding in them.
+- What the turn changed is measured from the newest such commit, so a file the turn edits after a pull is judged against what the pull brought.
+- A wait for background work that never woke a turn ends at the next prompt after half an hour. Before, that prompt noted nothing, and the next turn's end counted other sessions' commits from the days between as its own.
+
+---
+
 ## 0.28.2 — 2026-11-24
 
 ---
