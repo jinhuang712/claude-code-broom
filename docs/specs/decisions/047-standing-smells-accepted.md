@@ -36,7 +36,7 @@ Each occurrence is an entry of its own, so a file with 3 magic numbers keeps 2 a
 
 A duplicate block's message names the other side's line, so it also comes back when lines above the other side move.
 
-`broom smells` and `broom diagnose` leave a known smell out and say how many they left out. So does the session note's count of smells past the hard limit.
+`broom smells` and `broom diagnose` leave a known smell out of their lists. Since [049: What Claude hides is collapsed and still counts](049-collapsed-still-counts.md) their totals still count it, and the first line says how many are collapsed.
 
 ---
 

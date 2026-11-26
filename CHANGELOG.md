@@ -6,6 +6,28 @@
 
 ---
 
+### No clock
+
+- No rule of broom turns on the clock any more. Only broom's own running time keeps a bound. A test lists every reading of the clock and what it is for.
+- A check that ran out of time is skipped until the repo's HEAD moves. Before, it was skipped for 20 minutes.
+- The turn's end waits once for each piece of background work, by its task id, and a prompt during the wait keeps the waiting turn's changes, Bash's too. Before, the wait ended after half an hour.
+- Content that passed and what the measurers found are kept while the content, broom's version and the repo's `.broom.json` stay the same, the newest 20,000. Before, they were kept for a day.
+- Hotspots and `broom stats`' history count the last 500 commits, and `--days` of `broom diagnose` and `broom stats` is now `--commits`. Before, they counted 90 days.
+- The check-up counts TODO comments, and `broom stats` gives no TODO ages. Before, it counted those older than 180 days.
+- A coverage report is behind when a code file it covers was written after it. Before, it gave its age in days and compared it with the last commit.
+- `broom report` reads the whole record, and `--since` takes a version of broom such as `0.29.0`. `--days` is gone. Every ledger line holds the version that wrote it.
+- The ledger is trimmed by size alone, and the session folders, claims and the tools' caches by count.
+
+---
+
+### Collapsed
+
+- What Claude hides still counts. `broom smells`, `broom diagnose` and `broom sweep` count the findings accepted as known in their totals and say how many are collapsed, where before they left them out. `broom smells --json` gives `open` beside `known`.
+- After `broom smells --dismiss` the session note gives its count in one line and asks for no cleanup, where before it vanished.
+- A commit check or a turn's end that has something to say adds how many known issues in its files it collapsed.
+
+---
+
 ## 0.28.5 — 2026-11-27
 
 ---

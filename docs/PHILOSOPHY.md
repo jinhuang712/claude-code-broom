@@ -81,9 +81,9 @@ No rule of broom turns on how much time passed. Time passing changes no code, so
 
 ## What happens to what Claude hides?
 
-**It is folded, and it still counts.**
+**It is collapsed, and it still counts.**
 
-Claude may hide a finding: accept it with a reason, put it to the user, or quiet a note the user said not now to. That folds it out of the lists and nothing more. Every total still counts it, and a line says how many are folded, so a number never reads cleaner than the code is.
+Claude may hide a finding: accept it with a reason, put it to the user, or quiet a note the user said not now to. That collapses it out of the lists and nothing more. Every total still counts it, and a line says how many are collapsed, so a number never reads cleaner than the code is.
 
 ---
 

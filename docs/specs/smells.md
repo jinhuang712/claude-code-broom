@@ -17,7 +17,7 @@ Each tool runs alone in a scratch copy of the files under a config broom writes,
 
 Findings match across the two versions by file, metric and the function's name, else the text of the line.
 
-What the measurers found in a file is kept by its content for a day, so the base of a change and a file still blocked aren't measured twice. A tool that moved or went missing gets its files measured again. Only a measurement that finished whole is kept.
+What the measurers found in a file is kept by its content, the limits, the tools and broom's version, with no expiry, the newest 20,000 entries, so the base of a change and a file still blocked aren't measured twice. A tool that moved or went missing gets its files measured again. Only a measurement that finished whole is kept.
 
 - [005: Smells are measured by broom's limits in a scratch copy](decisions/005-own-bar-scratch-copy.md)
 

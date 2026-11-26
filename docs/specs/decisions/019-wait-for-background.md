@@ -24,4 +24,4 @@ The check waits while any background task runs and checks at the turn that work 
 
 ## Consequences
 
-The wait is given up after half an hour, as a server left running would keep it waiting forever.
+Each task is waited for once, by its id, since a server left running would keep the check waiting forever. Until 0.29.0 the wait was given up after half an hour; [048: No rule turns on the clock](048-no-clock.md) replaced that.

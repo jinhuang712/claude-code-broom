@@ -18,7 +18,7 @@ session start ─▶ the smell scan of HEAD (async, cached) ─┐
 
 - Lint suppressions.
 - Skipped tests.
-- TODO comments older than 180 days.
+- TODO comments.
 - Dead-code findings in the whole repo.
 - Public code with no doc comment.
 - Calls to deprecated APIs.
@@ -49,4 +49,4 @@ A hook with less than 6 seconds left skips the check-up until the next session. 
 
 `broom diagnose` lists every counter with its value now and at the last check-up, whether it grew or not. Narrowed to paths it counts only those and shows no last value. It never writes the record.
 
-The age of a TODO comes from `git blame` on at most 200 lines, so in a repo with more TODO lines that counter is a floor.
+A TODO is counted whatever its age: no rule turns on the clock. Numbers an earlier version recorded under another counter's name are no baseline for the new one.

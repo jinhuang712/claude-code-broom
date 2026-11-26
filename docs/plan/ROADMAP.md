@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP8: Lighter](#cp8-lighter), which waits for a week of the ledger's numbers: 2026-11-27 for the check time and about 2026-12-03 for the fix rate, a week after 0.28.3. The user set on 2026-11-20 that no feature is added until then, and lifted that for [CP13: Nothing is forgotten](#cp13-nothing-is-forgotten), which starts on 2026-11-27 once the check time has its week. The fix rate's week is split with `--since` at the day CP13 ships. CP13 follows CP8, set by the user on 2026-11-26, and what follows it is open in [What it takes for a second user to install broom and stay](TODO.md#p1discussion-what-it-takes-for-a-second-user-to-install-broom-and-stay). [CP9: Ready for a public release](#cp9-ready-for-a-public-release) ended on 2026-11-20 with 0.28.0, once the README got its hero. CP10 ended on 2026-11-20 with 0.26.0, and [CP11: Read from a syntax tree](#cp11-read-from-a-syntax-tree) with 0.27.0 that day. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
+**Current checkpoint**: [CP13: Nothing is forgotten](#cp13-nothing-is-forgotten), set by the user on 2026-11-26. [CP14: No clock](#cp14-no-clock) came before it at the user's word on 2026-11-27 and ended that day, and [CP15: Sharper rules and more rot](#cp15-sharper-rules-and-more-rot) follows CP13. [CP8: Lighter](#cp8-lighter) waits for the ledger's numbers from 0.29.0: 100 checks that ran a tool for the check time and 100 findings that ended for the fix rate. The user set on 2026-11-20 that no feature is added until then, and lifted that for CP13, CP14 and CP15. What follows them is open in [What it takes for a second user to install broom and stay](TODO.md#p1discussion-what-it-takes-for-a-second-user-to-install-broom-and-stay). [CP9: Ready for a public release](#cp9-ready-for-a-public-release) ended on 2026-11-20 with 0.28.0, once the README got its hero. CP10 ended on 2026-11-20 with 0.26.0, and [CP11: Read from a syntax tree](#cp11-read-from-a-syntax-tree) with 0.27.0 that day. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
 
 ---
 
@@ -35,7 +35,9 @@ Roadmap
 │   └── ✅ CP10.2: Swift and Rust
 ├── ✅ CP11: Read from a syntax tree — what no linter covers, read by a parser
 ├── ⬜ CP12: Waits for a need
-└── ⬜ CP13: Nothing is forgotten — an open finding comes back until it ends
+├── ⬜ CP13: Nothing is forgotten — an open finding comes back until it ends
+├── ✅ CP14: No clock — events and counts, and what Claude hides still counts
+└── ⬜ CP15: Sharper rules and more rot — the user's pick from TODO
 ```
 
 ---
@@ -80,7 +82,7 @@ broom keeps no record of what it stopped and what was fixed, so nobody can say w
 
 **Status**: 🟨
 
-The three features shipped in 0.18.2 on 2026-11-17. The measures get their first value after a week of sessions on the new version. The ledger holds a whole check's seconds since 0.25.10 on 2026-11-20, so the check time waits a week from then. Until 0.28.3 on 2026-11-26 a turn that pulled commits was blocked for the findings in them, so the fix rate waits a week from then.
+The three features shipped in 0.18.2 on 2026-11-17. The measures get their first value once the ledger holds 100 checks that ran a tool and 100 findings that ended, written by 0.29.0 or later: from that version every line holds broom's version, which `broom report --since` reads.
 
 **Delivers** (5):
 
@@ -567,7 +569,7 @@ The user set this on 2026-11-20: a check rests on a mechanism and not on a text 
 
 **Status**: ⬜
 
-The user set this on 2026-11-26: the core want is that no problem is hidden, and that Claude is reminded of one until it is dealt with. A finding put to the user, or left in another session, left Claude's sight. It starts on 2026-11-27, once CP8's check time has its week. It doesn't wait for the fix rate's week, which is split with `--since` at the day CP13 ships.
+The user set this on 2026-11-26: the core want is that no problem is hidden, and that Claude is reminded of one until it is dealt with. A finding put to the user, or left in another session, left Claude's sight. It starts once [CP14: No clock](#cp14-no-clock) has shipped. It doesn't wait for CP8's numbers, which `broom report --since` splits at the version CP13 ships in.
 
 **Delivers** (1):
 
@@ -577,3 +579,46 @@ The user set this on 2026-11-26: the core want is that no problem is hidden, and
 
 - **Objectives**
   - [O11: No open finding is forgotten](GOALS.md#o11-no-open-finding-is-forgotten)
+
+---
+
+## CP14: No clock
+
+**Status**: ✅
+
+The user set this on 2026-11-27: no rule of broom turns on the clock, and whatever Claude hides is only collapsed and still counts. Only broom's own running time keeps a bound. It ended that day, and ships in 0.29.0.
+
+**Delivers** (9):
+
+- A known issue never expires, done on 2026-11-27.
+- A check that ran out of time is skipped until the repo's HEAD moves, done on 2026-11-27.
+- Background work is waited for once per task, and a prompt during a wait keeps the waiting turn's changes, done on 2026-11-27.
+- Content that passed and what the measurers found are kept by content and broom's version, bounded by count, done on 2026-11-27.
+- Hotspots and history count the last 500 commits, with `--commits N`, done on 2026-11-27.
+- The check-up counts TODO comments with no age, and a coverage report is behind when a code file it covers was written after it, done on 2026-11-27.
+- `broom report` reads the whole record or from a version of broom, and every ledger line holds the version, done on 2026-11-27.
+- The ledger, the session folders, the claims and the tools' caches are trimmed by size or count, done on 2026-11-27.
+- What Claude hides is collapsed: every total counts it, and a line says how many, done on 2026-11-27.
+
+**Exit criteria** (2):
+
+- **Constraints**
+  - [R7: No rule turns on the clock](GOALS.md#r7-no-rule-turns-on-the-clock): ✅ 2026-11-27
+  - [R8: What is hidden still counts](GOALS.md#r8-what-is-hidden-still-counts): ✅ 2026-11-27
+
+---
+
+## CP15: Sharper rules and more rot
+
+**Status**: ⬜
+
+The user picked this on 2026-11-27 among the directions of TODO: rules that find fewer false smells, by the ledger's numbers and by real repos, and more kinds of rot found, none of them by the clock. It follows CP13.
+
+**Delivers** (1):
+
+- The TODO ideas of both directions, picked with the user when CP13 ends.
+
+**Exit criteria** (1):
+
+- **Measures**
+  - [M1: Fix rate](GOALS.md#m1-fix-rate) is recorded before and after.

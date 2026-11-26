@@ -48,7 +48,7 @@ A waiver has one of 3 kinds:
 
 The same waiver seen again in one turn is written once. An edit of `.broom.json` is noted at once, since a `check_on` set to off would keep every later check from seeing it. The turn's snapshot holds the file too, so the turn's end notes one that a command changed or committed.
 
-Writing is one append under a lock. It never raises into a hook. Over 2 MB the lines older than 90 days are dropped, then the oldest ones down to 1.5 MB.
+Writing is one append under a lock. It never raises into a hook. Over 2 MB the oldest lines are dropped down to 1.5 MB. From 0.29.0 every line holds the version of broom that wrote it, which `broom report --since` reads.
 
 ---
 

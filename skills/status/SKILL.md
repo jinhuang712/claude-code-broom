@@ -40,11 +40,11 @@ A plugin disabled here applies after `/reload-plugins`: tell the user so.
 
 ```bash
 broom doctor --checks
-broom report --days 7
+broom report
 broom known
 ```
 
-Use the days the user gave in place of 7. `broom report` says when nothing was recorded yet: a repo new to broom
+Add `--since <version>` when the user asks about the record since a version. `broom report` says when nothing was recorded yet: a repo new to broom
 has no history. `broom known` lists the findings that were accepted, each with its reason.
 
 ## 4. Sum up

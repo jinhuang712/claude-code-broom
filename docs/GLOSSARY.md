@@ -23,6 +23,7 @@ Each term has its meaning, the words that lost to it and its name in the code wh
 | Severe smell | a smell past its hard limit | — | `Issue.severe` |
 | Touched smell | an old sized smell in a function, a type or a file the change touches | — | `Smell.touched` |
 | Known issue | a finding accepted with a reason, which broom no longer raises until its code changes | baseline · accepted issue | `baseline.json` |
+| Collapsed | hidden by Claude's choice: left out of the lists and still counted in every total | hidden · folded | `known` |
 | Standing smell | a smell in code no change touches, which no block shows | old smell | `standing` |
 | Accept | to record a blocked result as known with a reason | — | `broom known --accept` |
 | Test run | a Bash command broom takes for a run of the project's tests, by its words | — | `testcmd` |
@@ -31,7 +32,7 @@ Each term has its meaning, the words that lost to it and its name in the code wh
 | Scratch copy | a temporary copy of the changed files where a tool runs under broom's config | scratch tree | `measure` |
 | Real tree | the project's own checkout, where imports resolve | — | `realtree` |
 | Hotspot | a file ranked by its smells and by how often it changes | — | `hotspots` |
-| Churn | the commits that touched a file in the last 90 days | — | `changes` |
+| Churn | the commits that touched a file in the last 500 commits | — | `changes` |
 | Check-up | the whole-repo look for rot at session start, which speaks when a counter grew | — | `checkup` |
 | Counter | one number of the check-up, such as the lint suppressions in a repo | — | `checkup` |
 | Turn | the work between one prompt and the moment Claude stops | — | `turns` |

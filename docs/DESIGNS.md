@@ -14,7 +14,7 @@ broom is designed around 11 guidelines:
 8. **A repo's config holds choices, never commands**: Honoring it in an untrusted repo is safe.
 9. **A smell is read from a syntax tree, never from a text pattern**: What no linter covers is read by a parser.
 10. **No rule turns on the clock**: What is held back waits for an event, and what is trimmed goes by size or count.
-11. **What is hidden still counts**: A folded finding leaves the lists and stays in every total.
+11. **What is hidden still counts**: A collapsed finding leaves the lists and stays in every total.
 
 ---
 
@@ -176,13 +176,13 @@ A rule by the clock brings a finding back with its code unchanged, or lets one g
 
 ## 11. What is hidden still counts
 
-A total that leaves out what Claude accepted reads cleaner than the code is. So a finding Claude hides is only folded: it leaves the lists, every total counts it, and a line says how many are folded. The cost is one more line wherever something is folded.
+A total that leaves out what Claude accepted reads cleaner than the code is. So a finding Claude hides is only collapsed: it leaves the lists, every total counts it, and a line says how many are collapsed. The cost is one more line wherever something is collapsed.
 
 **Ask**: Would a total drop when Claude hides something?
 
-- **Stance**: [It is folded, and it still counts](PHILOSOPHY.md#what-happens-to-what-claude-hides)
+- **Stance**: [It is collapsed, and it still counts](PHILOSOPHY.md#what-happens-to-what-claude-hides)
 - **Decisions**:
-  - [049: What Claude hides is folded and still counts](specs/decisions/049-folded-still-counts.md)
+  - [049: What Claude hides is collapsed and still counts](specs/decisions/049-collapsed-still-counts.md)
 - **How it works**:
   - [What counts](specs/what-counts.md)
   - [Cleanup](specs/cleanup.md)

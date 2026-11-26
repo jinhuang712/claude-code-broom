@@ -28,7 +28,7 @@ A many-file edit through Serena names no files, so the turn's end takes the repo
 
 ## Pauses
 
-A Stop hook fires whenever Claude finishes responding, not only when the work is done. The check waits while any background task runs and checks at the turn that work wakes. It gives up the wait after half an hour. A prompt after that starts a new turn, and the edits the waiting turn recorded are checked at its end.
+A Stop hook fires whenever Claude finishes responding, not only when the work is done. The check waits while background work runs and checks at the turn that work wakes. It waits once for each task, told apart by its id: a task an earlier turn's end already waited for, still running at a later one, holds nothing, so a server left running doesn't keep every turn's end unchecked. A prompt during a wait starts no new snapshot: the waiting turn's changes, Bash's too, are checked at the next turn's end that is checked, which ends the wait.
 
 A turn in plan mode is not checked.
 

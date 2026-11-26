@@ -52,7 +52,7 @@ When Claude stops, broom checks the files the turn changed: files Claude edited,
 
 A commit made before the prompt is not the turn's, so a pull or a reset to a remote branch brings in no finding.
 
-It applies with `check_on` at `stop`, the default. It waits while background work runs, up to half an hour. A turn in plan mode is not checked. An idle turn end costs one Python start, 30 to 45 ms measured on macOS.
+It applies with `check_on` at `stop`, the default. It waits once for each piece of background work, told apart by its task id: work an earlier turn's end already waited for doesn't hold a later one. A prompt during a wait keeps the waiting turn's changes, which the next checked turn's end checks. A turn in plan mode is not checked. An idle turn end costs one Python start, 30 to 45 ms measured on macOS.
 
 A hint stops the turn here as a block does.
 
@@ -141,7 +141,7 @@ broom known --accept "<why it stays>" --agreed --smell KIND FILE:LINE
 
 `--agreed` is required, so Claude accepts a standing smell only once the user agreed. A `FILE` or a folder without a line accepts every smell of that kind there. Each occurrence is accepted on its own: a file with 3 magic numbers keeps 2 after one is accepted.
 
-`broom smells`, `broom diagnose` and the session note leave it out and say how many they left out. It comes back when its line changes, or when a sized smell's size changes.
+`broom smells`, `broom diagnose` and the session note collapse it: no list shows it, every total still counts it, and the first line says how many are collapsed. It comes back when its line changes, or when a sized smell's size changes.
 
 2 gaps:
 
@@ -185,7 +185,7 @@ The report names the scope, groups the findings most severe first and names ever
 
 One run of any hook takes at most 30 seconds. A tool that runs out of time is cut off with everything it started. The check goes ahead without it and says so in a note.
 
-A commit or a stop that a tool kept from finishing is never blocked for it. A check that ran out of time is skipped for 20 minutes in every session, with a note. A cold `cargo clippy` or `swift build` can time out.
+A commit or a stop that a tool kept from finishing is never blocked for it. A check that ran out of time is skipped until the repo's HEAD moves, in every session, with a note. A cold `cargo clippy` or `swift build` can time out.
 
 A hook still running after 20 seconds writes `hook-trace.log` in broom's data directory.
 

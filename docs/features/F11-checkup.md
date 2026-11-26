@@ -50,7 +50,7 @@ The list grows: each checkpoint's end looks for kinds broom still misses.
 
 - Lint suppressions in the repo.
 - Skipped tests in the repo.
-- TODO comments older than 180 days.
+- TODO comments.
 - Dead-code findings in the whole repo.
 - Public code with no doc comment.
 - Calls to deprecated APIs.
@@ -79,7 +79,7 @@ It reads 4 forms of report, at the repo's root or in its `coverage` folder:
 
 It reports 2 things:
 
-- `broom stats` and `broom diagnose` give the share of lines a test reached and the files with most lines none did, worst first. They say how old the report is and whether it is older than the last commit.
+- `broom stats` and `broom diagnose` give the share of lines a test reached and the files with most lines none did, worst first. They say whether a code file the report covers was written after it.
 - The check-up counts the lines no test reaches, so Claude is told once when a newer report shows more of them.
 
 Without a report nothing is counted and nothing is told at session start. `broom stats` then names the command that writes one for each language of the repo. Test files are left out of the numbers.

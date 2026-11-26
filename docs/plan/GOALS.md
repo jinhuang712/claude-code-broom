@@ -35,7 +35,9 @@ Goals
     ├── ✅ R3: An old smell in untouched code never comes up
     ├── ✅ R4: Setup asks at most two questions
     ├── ✅ R5: Nothing is waved through
-    └── ✅ R6: No check reads code by a text pattern
+    ├── ✅ R6: No check reads code by a text pattern
+    ├── ✅ R7: No rule turns on the clock
+    └── ✅ R8: What is hidden still counts
 ```
 
 ---
@@ -233,7 +235,7 @@ How much of what broom blocks gets fixed. A low rate for one rule means the rule
 - [F9.3: Report](../features/F9-record.md#f93-report)
 - [F9.4: Tiers by fix rate](../features/F9-record.md#f94-tiers-by-fix-rate)
 
-**How**: The ledger of the author's machine over 30 days, read as the fix rate of `broom report --all`. A finding still open after a question to the user counts against its rule, and any other open finding counts against none. The report leaves out the throwaway repos in temporary folders. `--since` splits a rule's numbers at the day the rule changed.
+**How**: The ledger of the author's machine, read as the fix rate of `broom report --all --since 0.29.0`, once 100 findings have ended. A finding still open after a question to the user counts against its rule, and any other open finding counts against none. The report leaves out the throwaway repos in temporary folders. `--since` splits a rule's numbers at the version the rule changed in.
 
 **Formula**:
 
@@ -241,7 +243,7 @@ How much of what broom blocks gets fixed. A low rate for one rule means the rule
 M1 = fixed / (fixed + let through + open after a question)        per rule, and over all rules
 ```
 
-**Last value**: open. Until 0.28.3 on 2026-11-26 a turn that pulled commits was blocked for every finding in them, and the ledger holds one such turn, so the first value counts from 0.28.3.
+**Last value**: open. Until 0.28.3 on 2026-11-26 a turn that pulled commits was blocked for every finding in them, and the ledger holds one such turn, so the first value was to count from 0.28.3. Lines hold broom's version only from 0.29.0, so `--since` can't tell 0.28.3's lines apart, and the first value counts from 0.29.0.
 
 ---
 
@@ -253,7 +255,7 @@ The seconds a commit check takes when it has to run.
 
 **Checks**: [F2.7: Time limit](../features/F2-sweep.md#f27-time-limit)
 
-**How**: The ledger of the author's machine over 30 days, read from the `at a commit` line of `broom report --all`. The ledger holds a whole check's seconds since 0.25.10 on 2026-11-20, so the days count from then.
+**How**: The ledger of the author's machine, read from the `at a commit` line of `broom report --all --since 0.29.0`, once 100 checks have run a tool.
 
 **Formula**:
 
@@ -443,3 +445,30 @@ An edit must not be felt, since Claude makes many in a row.
 
 **Status**: ✅ 2026-11-20, by `tests/test_no_text_patterns.py`: 65 regular expressions, each listed with what it reads. 40 read a tool's output, 7 a command, 7 a path, 4 a row's identity key, 4 one token a tree isolated and 3 a setting.
 
+---
+
+#### R7: No rule turns on the clock
+
+**Want**: nothing passes silently.
+
+**Checks**: [10. No rule turns on the clock](../DESIGNS.md#10-no-rule-turns-on-the-clock)
+
+**Condition**: Nothing broom holds back or trims turns on how much time passed. Only broom's own running time has a bound, a record carries a stamp, and two events can be ordered.
+
+**How**: `tests/test_no_clock.py` lists each reading of the clock in `lib/broom` with what it is for, and fails on one the list doesn't hold.
+
+**Status**: ✅ 2026-11-27, by `tests/test_no_clock.py`: 36 readings, each listed. 14 bound broom's running time, 9 stamp a record, 11 order two events and 2 tell that a file changed.
+
+---
+
+#### R8: What is hidden still counts
+
+**Want**: nothing passes silently.
+
+**Checks**: [11. What is hidden still counts](../DESIGNS.md#11-what-is-hidden-still-counts)
+
+**Condition**: A finding Claude accepted, or a note it quieted, leaves the lists and stays in every total, with a line that says how many are collapsed.
+
+**How**: `tests/test_standing.py` accepts smells and issues and reads the totals of `broom smells`, `broom diagnose`, `broom sweep`, the session note, the commit check and the turn's end.
+
+**Status**: ✅ 2026-11-27, by `tests/test_standing.py`.

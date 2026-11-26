@@ -19,7 +19,7 @@ This part bounds what one hook run may take: time, cores and waiting. It exists 
 
 A commit or a stop that a tool kept from finishing is never blocked for it, and the content isn't recorded as passed. At 28 seconds the hook gives up for what no command's timeout reaches.
 
-A check that ran out of time after 10 seconds is skipped for 20 minutes in every session, with a note. A session scan that ran out of time keeps what it counted as a floor and runs again at the next session start.
+A check that ran out of time after 10 seconds is skipped until the repo's HEAD moves, in every session, with a note. A session scan that ran out of time keeps what it counted as a floor and runs again at the next session start.
 
 - [026: A hook run is cut at 30 seconds](decisions/026-thirty-second-hook.md)
 
@@ -57,7 +57,7 @@ git is asked once per repo for what is tracked and what differs, not once per fi
 
 A hook loads only what its event needs. The command line, the linters and the commit gate are loaded when there is code to check, so an edit or a turn's end with nothing to do costs little more than the start of Python.
 
-golangci-lint gets a results cache per module path. The shared cache matches packages by content and replays the file paths it stored, which hands a worktree another directory's findings. Caches of golangci-lint and clippy unused for 7 days are removed.
+golangci-lint gets a results cache per module path. The shared cache matches packages by content and replays the file paths it stored, which hands a worktree another directory's findings. The 20 golangci-lint caches and the 10 clippy target folders touched last are kept, and older ones are removed.
 
 A hook's own failure never blocks: a broken check lets the commit, the edit or the stop through.
 

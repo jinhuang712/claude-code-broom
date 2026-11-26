@@ -4,8 +4,7 @@ This part counts what a session would otherwise write a throwaway script to coun
 
 ```
 the repo's code files ──▶ one pass over each file's tree ──▶ size · tests · rot
-git log, once ───────────────────────────────────────────▶ history
-git blame, on the lines that hold a TODO ────────────────▶ the age of each TODO
+git log, once, over the last 500 commits ───────────────▶ history
 the coverage report of the project's own test run ───────▶ the lines a test reached
 ```
 
@@ -45,10 +44,4 @@ A report over 32 MB, or one that can't be read as any of the four forms, is name
 
 ## History
 
-One `git log` over the period gives the commits per file and the pairs of files that changed in the same commit. A commit of more than 30 files is left out of the pairs, since it says nothing about which two files belong together.
-
----
-
-## The age of a TODO
-
-`git blame` runs only on the files that hold a TODO comment, on 200 such lines at most, the files with most first. When the cap is hit, the output says so. An untracked file is not blamed. Each blamed line keeps the day it was written, and the oldest are listed with it.
+One `git log` over the last 500 commits, or `--commits N`, gives the commits per file and the pairs of files that changed in the same commit. A commit of more than 30 files is left out of the pairs, since it says nothing about which two files belong together.

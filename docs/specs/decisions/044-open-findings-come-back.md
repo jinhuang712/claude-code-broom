@@ -23,7 +23,7 @@ Before it tells, broom checks the files of those findings again with the rules o
 
 It tells and never blocks. The finding still blocks wherever a check covers its file, as before.
 
-It is built from 2026-11-27, once [CP8: Lighter](../../plan/ROADMAP.md#cp8-lighter) has the week of its check time. The user set that it doesn't wait for the fix rate's week, which is split with `--since` at the day it ships.
+It is built once [CP14: No clock](../../plan/ROADMAP.md#cp14-no-clock) has shipped. It doesn't wait for the numbers of [CP8: Lighter](../../plan/ROADMAP.md#cp8-lighter), which `broom report --since` splits at the version it ships in.
 
 ---
 

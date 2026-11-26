@@ -16,7 +16,7 @@ broom compare BASE ─▶ measure the repo now ───────────
 
 ## Hotspots by churn
 
-A hotspot's score is its smells times one more than the commits that touched it in the last 90 days, with a smell past the hard limit counted three times:
+A hotspot's score is its smells times one more than the commits that touched it in the last 500 commits, with a smell past the hard limit counted three times:
 
 ```
 score = (3 x past the hard limit + hints) x (1 + changes)

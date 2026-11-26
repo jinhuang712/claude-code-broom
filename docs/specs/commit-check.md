@@ -66,4 +66,4 @@ git hands its hook `GIT_DIR` in a linked worktree, and a `GIT_WORK_TREE` of `.` 
 
 ## Checked once
 
-Content that passed is recorded by git's blob id for a day. Claude's own commit isn't checked by both hooks, nor again at the turn's end. Only content that passed with no hint, no block and no timeout is recorded, file by file.
+Content that passed is recorded by git's blob id, broom's version and the repo's `.broom.json`, with no expiry, and the newest 20,000 records are kept. Claude's own commit isn't checked by both hooks, nor again at the turn's end. Only content that passed with no hint, no block and no timeout is recorded, file by file.

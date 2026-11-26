@@ -57,5 +57,5 @@ the work did to the smells, in numbers.
 Stop when the scope is clean, the user says so, or after the batches they agreed to. Report what is left with the
 counts from `broom smells`.
 
-If the user doesn't want a cleanup now, run `broom smells --dismiss`: the session note stays quiet until the
-repo's count of smells past the hard limit grows.
+If the user doesn't want a cleanup now, run `broom smells --dismiss`: the session note then gives only its count
+and asks for no cleanup, until the repo's count of smells past the hard limit grows.

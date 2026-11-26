@@ -36,8 +36,8 @@ A **change** scan lists what a change made worse, and the old smells in the code
 - The default branch is usually `main`; check with `git symbolic-ref refs/remotes/origin/HEAD` when unsure.
 - `broom diagnose` measures with no time cut. On a repo of thousands of files say that it takes a while before you
   start it.
-- Issues accepted earlier stay hidden, and the output says how many. Add `--include-known` when the user asks for
-  them too.
+- Issues accepted earlier are collapsed: they count in the totals, the output says how many, and no list shows
+  them. Add `--include-known` when the user asks to see them.
 
 ## 2. Report
 

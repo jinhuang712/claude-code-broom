@@ -34,7 +34,7 @@ It has no time cut and no limit on the number of files. A repo of 5,825 files to
 
 ## F10.2: Hotspots by churn
 
-Files are ranked by their smells and by how often they changed in the last 90 days. A bad file that changes every week costs more than a bad file nobody touches, so it comes first. Each row shows the file's smells past the hard limit, its hints, its changes and its score.
+Files are ranked by their smells and by how often they changed in the last 500 commits. A bad file that changes often costs more than a bad file nobody touches, so it comes first. Each row shows the file's smells past the hard limit, its hints, its changes and its score.
 
 `broom smells` and `broom diagnose` rank this way, and so do the worst files the session note names. `broom smells --by smells` gives the order by smells alone. With no history the order falls back to that one, and a note says so.
 
@@ -66,8 +66,8 @@ The base is measured in a temporary checkout, which is removed afterwards. A too
 
 - **Size**: code lines by language and by folder with tests counted apart · the longest files. A code line is what a smell's length counts, so comment lines and blank lines are left out.
 - **Tests**: the number of test files and test cases · the skipped ones · the code files with no test file by name · what the project's coverage report says.
-- **Rot**: the lint suppressions by kind · the TODO comments with how many are older than 180 days · the oldest TODO comments with the day each was written · the skipped tests.
-- **History**: the files that changed most in the last 90 days · the pairs of files that changed together.
+- **Rot**: the lint suppressions by kind · the TODO comments by file · the skipped tests.
+- **History**: the files that changed most in the last 500 commits · the pairs of files that changed together.
 
 Paths on the command line narrow all four to a file or a folder. A question it can't answer is said so, with what is missing.
 

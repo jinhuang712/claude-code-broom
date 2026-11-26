@@ -30,7 +30,7 @@ Status: ✅ built · ⬜ planned
 
 **Called by**: a person and the `/broom:scan` skill.
 
-**Prints**: stdout gets `formatted <file> (<tool>)` lines, `note:` lines, the report or `broom: clean (N file(s))`, the count of known issues hidden and the smell report. stderr gets only `broom: unknown revision '<REV>'`.
+**Prints**: stdout gets `formatted <file> (<tool>)` lines, `note:` lines, the report, whose first line counts the known issues too and says how many are collapsed, or `broom: clean (N file(s))`, and the smell report. stderr gets only `broom: unknown revision '<REV>'`.
 
 **Fails**: exit 1 when a finding counts or a smell is found, hints included. Exit 1 for an unknown `--base`.
 
@@ -115,13 +115,13 @@ Status: ✅ built · ⬜ planned
 | `--by` | `churn` ranks hotspots by smells and changes, `smells` by smells alone | `churn` |
 | `--only SMELL` | keep one kind of smell, repeatable | every kind |
 | `--json` | print JSON | off |
-| `--dismiss` | quiet the session note until the severe count grows | off |
+| `--dismiss` | cut the session note to its count until the severe count grows | off |
 
 With `--only function_lines` or `--only type_lines` alone, the list goes on under the limit until `--top` is full.
 
 **Called by**: a person and the clean skill. Claude runs `--dismiss` when the user says not now.
 
-**Prints**: stdout gets a first line with the counts, then `Hotspots:` and `Worst smells:` blocks, a `Longest under the limit (not smells):` block when `--only` asks for sizes, `N smell(s) accepted as known hidden` when known smells were left out, and `note:` lines. With `--json` those sizes are under `sizes`, each with `file`, `line`, `name` and `value`. stderr gets `broom: not inside a git repository` or `broom: unknown revision '<REV>'`.
+**Prints**: stdout gets a first line with the counts, which count the smells accepted as known too and end with how many are collapsed, then `Hotspots:` and `Worst smells:` blocks, which leave the known ones out, a `Longest under the limit (not smells):` block when `--only` asks for sizes, and `note:` lines. With `--json` those sizes are under `sizes`, each with `file`, `line`, `name` and `value`. stderr gets `broom: not inside a git repository` or `broom: unknown revision '<REV>'`.
 
 **Fails**: exit 1 outside a repo and for an unknown REV, and exit 2 for an unknown SMELL. It exits 0 whether or not smells are found.
 
@@ -133,20 +133,20 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 **Status**: ✅
 
-`broom diagnose [paths...] [--top N] [--days N] [--json] [--out FILE] [--vulnerabilities]` measures a whole repo with no time cut.
+`broom diagnose [paths...] [--top N] [--commits N] [--json] [--out FILE] [--vulnerabilities]` measures a whole repo with no time cut.
 
 | Flag | Means | Default |
 |---|---|---|
 | `paths` | limit to these files or directories | the repo |
 | `--top N` | how long each list is | 10 |
-| `--days N` | how far back changes are counted | 90 |
+| `--commits N` | how many of the last commits changes are counted over | 500 |
 | `--json` | print JSON, with every smell | off |
 | `--out FILE` | write the report to a file and say where | off |
 | `--vulnerabilities` | ask osv-scanner for known vulnerabilities, which sends package names and versions to osv.dev | off |
 
 **Called by**: a person, Claude, the `/broom:scan` skill and the clean skill.
 
-**Prints**: stdout gets a report that also reads as Markdown: a summary with how many smells accepted as known it left out, the smells by kind and by language, the hotspots by churn, the worst smells, the check-up's counters, the tests that repeat one another, the unused dependencies and the four sections of `broom stats`. The last line says how long it took. stderr gets `broom: not inside a git repository`.
+**Prints**: stdout gets a report that also reads as Markdown: a summary whose counts include the smells accepted as known, with how many are collapsed, the smells by kind and by language, the hotspots by churn, the worst smells, the check-up's counters, the tests that repeat one another, the unused dependencies and the four sections of `broom stats`. The last line says how long it took. stderr gets `broom: not inside a git repository`.
 
 **Fails**: exit 1 outside a repo.
 
@@ -226,23 +226,22 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 **Status**: ✅
 
-`broom report [paths...] [--days N | --since YYYY-MM-DD] [--all] [--json]` prints what broom stopped, what was fixed and what went through.
+`broom report [paths...] [--since VERSION] [--all] [--json]` prints what broom stopped, what was fixed and what went through.
 
 | Flag | Means | Default |
 |---|---|---|
 | `paths` | limit to these files or directories | the repo |
-| `--days N` | how far back to look | 30 |
-| `--since YYYY-MM-DD` | look from that day on, in place of `--days` | off |
+| `--since VERSION` | only what broom VERSION or later wrote, such as `0.29.0` | the whole record |
 | `--all` | every repo in the ledger but those in a temporary folder | off |
 | `--json` | print JSON | off |
 
 **Called by**: a person, Claude and the `/broom:status` skill.
 
-**Prints**: stdout gets a line of totals with the fix rate, then a table per rule, the skips by tool, the median and longest seconds of a whole check at a commit and at a turn's end, the same per tool and the self-waivers by kind. The open findings say how many of them were put to the user, as `still open 5 (asked 3)`, and those count against the fix rate. With `--all` the first line says how many repos in a temporary folder were left out. With nothing recorded it prints `broom: nothing recorded for <repo> in the last N days`. stderr gets `broom: not inside a git repository`.
+**Prints**: stdout gets a line of totals with the fix rate, then a table per rule, the skips by tool, the median and longest seconds of a whole check at a commit and at a turn's end, the same per tool and the self-waivers by kind. The open findings say how many of them were put to the user, as `still open 5 (asked 3)`, and those count against the fix rate. With `--all` the first line says how many repos in a temporary folder were left out. With nothing recorded it prints `broom: nothing recorded for <repo> in the whole record`, or `since VERSION`. stderr gets `broom: not inside a git repository`.
 
-**Fails**: exit 1 outside a repo without `--all`. Exit 2 for a `--since` that is no day.
+**Fails**: exit 1 outside a repo without `--all`. Exit 2 for a `--since` that is no version.
 
-**Example**: `broom report --days 7` prints `blocked 41, fixed 33, let through 8, still open 0` with the fix rate, then the rules behind it.
+**Example**: `broom report --since 0.29.0` prints `blocked 41, fixed 33, let through 8, still open 0` with the fix rate, then the rules behind it.
 
 ---
 
@@ -250,13 +249,13 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 **Status**: ✅
 
-`broom stats [paths...] [--top N] [--days N] [--json]` counts the size, the tests, the rot and the history of a repo.
+`broom stats [paths...] [--top N] [--commits N] [--json]` counts the size, the tests, the rot and the history of a repo.
 
 | Flag | Means | Default |
 |---|---|---|
 | `paths` | limit to these files or directories | the repo |
 | `--top N` | how long each list is | 10 |
-| `--days N` | how far back history looks | 90 |
+| `--commits N` | how many of the last commits history reads | 500 |
 | `--json` | print JSON | off |
 
 **Called by**: a person and Claude.
@@ -367,12 +366,12 @@ An uncaught error exits 1 with a traceback.
 7 commands print JSON a script relies on:
 
 - **`broom doctor --json`**: `version` · `repo` · `languages` · `items` · `fix` · `configure` · `fix_global` · `configure_global` · `healthy` · `optional` · `settings` · `checks`.
-- **`broom smells --json`**: `repo` · `base` · `only` · `total` · `severe` · `hints` · `known` · `by` · `hotspots` · `smells` · `notes` · `sizes` when `--only` asks for sizes. `known` is how many smells the known-issue store left out.
+- **`broom smells --json`**: `repo` · `base` · `only` · `total` · `severe` · `hints` · `known` · `open` · `by` · `hotspots` · `smells` · `notes` · `sizes` when `--only` asks for sizes. `total`, `severe` and `hints` count the smells accepted as known, `known` says how many those are and `open` how many are not.
 - **`broom diagnose --json`**: `repo` · `paths` · `summary` · `by_smell` · `by_language` · `by` · `hotspots` · `smells` · `duplicate_tests` · `dependencies` · `missing_tools` · `notes` · `checkup` · `stats`.
 - **`broom compare --json`**: `repo` · `base` · `base_commit` · `summary` · `kinds` · `gone` · `new` · `shrank` · `grew` · `hotspots` · `not_comparable` · `notes` · `quote` · `seconds`.
-- **`broom stats --json`**: `repo` · `paths` · `files` · `days` · `size` · `tests` · `rot` · `history`. Each section holds a `note` that says what is missing, or null.
+- **`broom stats --json`**: `repo` · `paths` · `files` · `last_commits` · `size` · `tests` · `rot` · `history`. Each section holds a `note` that says what is missing, or null.
 - **`broom fixes --json`**: one key per smell, with its fix line.
-- **`broom report --json`**: `days` · `since` · `repos` · `left_out` · `blocked` · `fixed` · `let_through` · `open` · `open_asked` · `asked` · `how` · `fix_rate` · `rules` · `waivers` · `skips` · `seconds` · `checks` · `errors`.
+- **`broom report --json`**: `since` · `repos` · `left_out` · `blocked` · `fixed` · `let_through` · `open` · `open_asked` · `asked` · `how` · `fix_rate` · `rules` · `waivers` · `skips` · `seconds` · `checks` · `errors`.
 
 Each item of `checks` holds 6 keys: `language` · `check` · `status` · `tool` · `why` · `fix`. Its `status` is `on`, `off` or `none`.
 

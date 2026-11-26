@@ -10,7 +10,7 @@ This part ranks the smells already in a repo and tells Claude when there are sev
 
 With `--base REV` it lists only what the changes since that revision made worse, with each smell's size or count at the revision.
 
-A smell the known-issue store holds is left out, and the report says how many. `broom diagnose` and the session note's count leave it out too.
+A smell the known-issue store holds is collapsed: the hotspots and the worst smells leave it out, the counts keep it, and the first line says how many are collapsed. `broom diagnose` and the session note count it the same way.
 
 Asked for function or type lengths alone, it measures a second time with that soft limit at 1, so the tools report every function or type. The rows under the real limit fill what `--top` leaves after the smells. The measurement cache keeps rows by the limits they were measured under, so these never reach a check.
 
@@ -32,6 +32,6 @@ On a 2,376-file repo the scan took 13 to 36 seconds. On a 3,184-file repo it too
 
 When smells past the hard limit exist, Claude is told to raise them at a natural point and offer a cleanup. It doesn't start a cleanup.
 
-`broom smells --dismiss` records the count of severe smells. The note returns only when that count grows.
+`broom smells --dismiss` records the count of severe smells. The note then gives only that count, in one line, and asks for no cleanup, until the count grows. The count holds the smells accepted as known, collapsed.
 
 - [018: broom offers a cleanup and never starts one](decisions/018-offer-cleanup.md)

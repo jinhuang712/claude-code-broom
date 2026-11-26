@@ -21,7 +21,7 @@ Every block, fix, pass and skip is written as one line: when, which repo, which 
 
 A finding counts as fixed when it was blocked and is gone from a later check that covered its file with its tool. A commit of other files fixes nothing, and neither does a run where the tool was skipped.
 
-The ledger also notes how many seconds each check took, and each time a hook failed and let the action through. It keeps 90 days and at most 2 MB.
+The ledger also notes how many seconds each check took, and each time a hook failed and let the action through. It keeps at most 2 MB, the newest lines, and each line holds the version of broom that wrote it.
 
 - **How it works**: [Record](../specs/record.md)
 
@@ -42,7 +42,7 @@ When a turn let something through, the user sees one line at its end, such as `b
 
 ## F9.3: Report
 
-`broom report` prints the record of a repo over a period: findings blocked, fixed and let through with the fix rate, then the same per rule, the skips by tool and the seconds a check takes at a commit and at a turn's end. It covers 30 days and this repo unless told otherwise. `--since` starts the period on a day, such as the day a rule changed.
+`broom report` prints the record of a repo over a period: findings blocked, fixed and let through with the fix rate, then the same per rule, the skips by tool and the seconds a check takes at a commit and at a turn's end. It covers the whole record of this repo unless told otherwise. `--since` starts it at a version of broom, such as the one a rule changed in.
 
 `--all` covers every repo but those in a temporary folder, where only a test or a trial puts one, and says how many it left out.
 
@@ -76,7 +76,7 @@ It goes in 4 steps:
 
 1. It looks at what the repo lacks: tools, configs and git's hook.
 2. When something is missing, it says what it would install and add, and asks one question: all of it, let me pick, or not now.
-3. It reads the record: the checks that run, what broom stopped, fixed and let through in the last 7 days, and the findings accepted with their reasons.
+3. It reads the record: the checks that run, what broom stopped, fixed and let through, and the findings accepted with their reasons.
 4. It sums up what protects the repo and what broom did, with up to three next steps.
 
 It runs no linter and measures no code. It starts no scan and changes no setting: those wait for the user's go-ahead. A repo new to broom has no history yet, and the summary says so. A number of days given after the command replaces the 7.
@@ -91,4 +91,4 @@ It runs no linter and measures no code. It starts no scan and changes no setting
 
 **Stories** (1):
 
-- A user about to work in a complex repo runs it once to get the repo ready, and again a week later to see what broom stopped.
+- A user about to work in a complex repo runs it once to get the repo ready, and again after some work to see what broom stopped.

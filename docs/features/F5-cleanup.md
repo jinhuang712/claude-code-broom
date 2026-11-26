@@ -15,7 +15,7 @@ Cleanup goes after the smells already in a repo, which the checks on a change ne
 
 `broom smells` lists the hotspot files, ranked by their smells and by how often they change, and the worst smells, furthest past their limit first. It covers the whole repo or some paths, and says how many more there are.
 
-With `--base REV` it lists only what the changes since that revision made worse. Missing tools are named in the first line, where counts without them read as cleaner than the code is. A smell the user decided to keep and that was accepted as known is left out, and the last line says how many.
+With `--base REV` it lists only what the changes since that revision made worse. Missing tools are named in the first line, where counts without them read as cleaner than the code is. A smell the user decided to keep and that was accepted as known is collapsed: the lists leave it out, the counts keep it, and the first line says how many are collapsed.
 
 - **Commands**: [broom smells](../CLI.md#broom-smells)
 - **How it works**: [Cleanup](../specs/cleanup.md)
@@ -30,7 +30,7 @@ With `--base REV` it lists only what the changes since that revision made worse.
 
 When a repo has smells past the hard limit, broom tells Claude at the start of a session. Claude raises them at a natural point and offers a cleanup. It doesn't interrupt the user's task and doesn't clean up without their go-ahead.
 
-When the user says not now, Claude runs `broom smells --dismiss`, and the note stays quiet until the count grows. A repo of more than 5,000 files is not scanned at session start.
+When the user says not now, Claude runs `broom smells --dismiss`. The note then gives only its count, in one line, and asks for no cleanup until the count grows. A repo of more than 5,000 files is not scanned at session start.
 
 - **Design**: [7. Nothing is installed or set without a yes](../DESIGNS.md#7-nothing-is-installed-or-set-without-a-yes)
 - **Commands**: [broom smells](../CLI.md#broom-smells)
