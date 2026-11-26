@@ -24,7 +24,7 @@ from .maintained import DEPENDENCY_DIRS
 from .state import load_json, save_json, session_dir
 from .toolchain import lang_of
 
-SNAPSHOT = "snapshot.json"  # {repo: {"head": sha, "files": {path: [mtime_ns, size]}}}
+SNAPSHOT = "snapshot.json"  # {repo: {"head": sha, "files": {path: [mtime_ns, size]}, "t": second it was noted}}
 DEFERRED = "deferred.json"  # {"t": when the gate first waited for background work}
 WAIT_SECONDS = 1800
 FINISHED = {"completed", "failed", "killed", "stopped", "cancelled", "canceled", "done", "error", "timeout"}
@@ -56,11 +56,24 @@ def tree(root: Path) -> dict:
 
 
 def snapshot(d: Path, root: Path, now: Optional[dict] = None) -> None:
-    """Record the repo's tree (`now`, or as it is read here) in the turn's snapshot in `d`, to compare at the turn's
-    end."""
+    """Record the repo's tree (`now`, or as it is read here) and the second it was read in the turn's snapshot in `d`,
+    to compare at the turn's end."""
     data = load_json(d / SNAPSHOT, {})
-    data[str(root)] = now or tree(root)
+    data[str(root)] = {**(now or tree(root)), "t": int(time.time())}
     save_json(d / SNAPSHOT, data)
+
+
+def committed_in_turn(root: Path, snap: dict, head: str) -> List[str]:
+    """The files that commits made since the snapshot added or changed. A commit the turn brought in, by a pull, a
+    reset to another branch or a landing of work done before the prompt, was committed before the snapshot and is
+    not the turn's; a merge counts only what it resolved. A snapshot with no time counts every commit."""
+    out = git(["log", "--format=%x00%ct", "--name-only", "--diff-filter=ACMR", "-c", f"{snap['head']}..{head}"], root)
+    files: List[str] = []
+    for chunk in (out or "").split("\0")[1:]:
+        when, _, names = chunk.partition("\n")
+        if when.isdigit() and int(when) >= snap.get("t", 0):
+            files += [n for n in names.splitlines() if n]
+    return files
 
 
 def changed_since_snapshot(d: Path, root: Path, now: dict) -> List[Path]:
@@ -71,18 +84,24 @@ def changed_since_snapshot(d: Path, root: Path, now: dict) -> List[Path]:
         return []
     out = [root / rel for rel, stat in now["files"].items() if snap["files"].get(rel) != stat]
     if snap.get("head") and now["head"] and now["head"] != snap["head"]:
-        committed = git(["diff", "--name-only", "--diff-filter=ACMR", snap["head"], now["head"]], root) or ""
-        out += [root / n for n in committed.splitlines() if n and (n == REPO_FILE or lang_of(root / n))]
+        committed = committed_in_turn(root, snap, now["head"])
+        out += [root / n for n in committed if n == REPO_FILE or lang_of(root / n)]
     return [f for f in dict.fromkeys(out) if f.is_file()]
 
 
 def turn_base(d: Path, root: Optional[Path]) -> str:
     """What the turn's changes are measured against: HEAD as the prompt found it, so a commit made during the turn
-    still shows as the turn's change. HEAD itself without such a note, or once that commit is gone."""
-    head = (load_json(d / SNAPSHOT, {}).get(str(root)) or {}).get("head") if root else None
-    if head and git(["rev-parse", "--verify", "-q", f"{head}^{{commit}}"], root) is not None:
-        return head
-    return "HEAD"
+    still shows as the turn's change. When the turn brought in commits made before the prompt, the newest of them on
+    HEAD's line, so what they hold is not the turn's. HEAD itself without a note, or once that commit is gone."""
+    if root is None:
+        return "HEAD"
+    snap = load_json(d / SNAPSHOT, {}).get(str(root)) or {}
+    head = snap.get("head")
+    if not head or git(["rev-parse", "--verify", "-q", f"{head}^{{commit}}"], root) is None:
+        return "HEAD"
+    line = git(["log", "--first-parent", "--format=%H %ct", f"{head}..HEAD"], root) or ""
+    older = [sha for sha, _, when in (c.partition(" ") for c in line.splitlines()) if int(when) < snap.get("t", 0)]
+    return older[0] if older else head
 
 
 def note_config(path: Path, sd: Path) -> None:
@@ -97,8 +116,9 @@ def note_config(path: Path, sd: Path) -> None:
 
 
 def waiting(d: Path) -> bool:
-    """Whether the gate is waiting for background work, from an earlier turn's end."""
-    return (d / DEFERRED).exists()
+    """Whether the gate is waiting for background work, from an earlier turn's end, for half an hour at most."""
+    first = load_json(d / DEFERRED, {}).get("t")
+    return first is not None and time.time() - first < WAIT_SECONDS
 
 
 def paused(data: dict, d: Path) -> bool:

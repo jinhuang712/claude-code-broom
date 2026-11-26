@@ -83,13 +83,15 @@ def hook_stop(data: dict) -> None:
 
 def hook_prompt(data: dict) -> None:
     """A new prompt starts a turn: note the working tree, so the turn's end sees what Bash changed or committed.
-    Not while a gate is waiting or blocked: those changes still belong to the turn before. It runs as an async hook
-    (0.2 s on a 2,376-file repo, which no prompt should wait for); Claude's first tool call comes seconds later."""
+    Not while a gate is waiting or blocked: those changes still belong to the turn before. A wait past its half hour
+    is given up, since the turn it waited for never came. It runs as an async hook (0.2 s on a 2,376-file repo,
+    which no prompt should wait for); Claude's first tool call comes seconds later."""
     cwd = Path(data.get("cwd") or os.getcwd()).resolve()
     root = git_root(cwd)
     d = turn_dir(data)
     if waiting(d) or (d / "gate.json").exists():
         return
+    (d / DEFERRED).unlink(missing_ok=True)
     ledger.forget_through(d)  # what the turn before let through or waived was never shown: no stop hook ended it
     if root and setting("check_on", cwd) == "stop":
         snapshot(d, root)

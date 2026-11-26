@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import time
 from pathlib import Path
 
@@ -47,6 +48,38 @@ class TurnTest(BroomCase):
         self.sh(r, "git", "commit", "-qm", "a wrapper committed it")  # no `git commit` from Claude to see
         reason = self.stop(r, "t1")["reason"]
         self.assertIn("by_wrapper is 120 code lines long (hard limit 100; new)", reason, "measured from the prompt's HEAD")
+
+    def test_commits_the_turn_brought_in_are_not_its_own(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        branch = self.sh(r, "git", "branch", "--show-current").strip()
+        self.sh(r, "git", "checkout", "-qb", "upstream")
+        (r / "b.py").write_text(py_function("theirs", 120))
+        (r / "c.py").write_text(py_function("elsewhere", 120).replace("+=", "-="))
+        self.sh(r, "git", "add", "b.py", "c.py")
+        subprocess.run(["git", "commit", "-qm", "pushed before the prompt"], cwd=r, check=True,
+                       env={**self.env, "GIT_COMMITTER_DATE": "2026-01-01T00:00:00"})
+        self.sh(r, "git", "checkout", "-q", branch)
+        self.hook("prompt", {"session_id": "p1", "cwd": str(r)})
+        self.sh(r, "git", "merge", "-q", "--ff-only", "upstream")  # a pull
+        with (r / "b.py").open("a") as f:
+            f.write('\n\ndef mine() -> int:\n    """Mine."""\n    return 1\n')
+        self.edit(r, r / "b.py", "p1")
+        reason = self.stop(r, "p1").get("reason", "")
+        self.assertNotIn("theirs is 120", reason, "measured from what the pull brought, not from the prompt's HEAD")
+        self.assertNotIn("elsewhere", reason, "a file only the pull changed is not the turn's")
+
+    def test_a_wait_given_up_lets_the_next_prompt_start_a_turn(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        self.hook("prompt", {"session_id": "g1", "cwd": str(r)})
+        self.assertEqual(self.stop(r, "g1", background_tasks=RUNNING), {}, "a pause")
+        deferred = self.tmp / "data/sessions/g1/deferred.json"
+        deferred.write_text(json.dumps({"t": time.time() - 3600}))  # the work never woke a turn
+        (r / "b.py").write_text(py_function("theirs", 120))
+        self.sh(r, "git", "add", "b.py")
+        self.sh(r, "git", "commit", "-qm", "another session landed its work")
+        self.hook("prompt", {"session_id": "g1", "cwd": str(r)})
+        self.assertFalse(deferred.exists(), "the wait is given up")
+        self.assertNotIn("theirs", self.stop(r, "g1").get("reason", ""), "the new prompt noted the tree")
 
     def test_a_subagents_edits_wait_for_its_own_end(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
