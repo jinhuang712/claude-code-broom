@@ -22,9 +22,10 @@ Features
 │   ├── ✅ F2.3: Subagent check — a subagent fixes its own work
 │   ├── ✅ F2.4: git's pre-commit hook — commits Claude Code never sees
 │   │   └── ✅ F2.4.1: Offered at setup
-│   ├── ✅ F2.5: Known issues — what was let through, and why
+│   ├── 🚧 F2.5: Known issues — what was let through, and why
 │   │   ├── ✅ F2.5.1: A reason for every pass
-│   │   └── ✅ F2.5.2: A turn can end with a finding open
+│   │   ├── ✅ F2.5.2: A turn can end with a finding open
+│   │   └── 🚧 F2.5.3: A standing smell the user keeps — the session note sees an accept after the next commit
 │   ├── 🚧 F2.6: Scan on request — a scan from one commit covers the later commits too
 │   ├── 🚧 F2.7: Time limit — a cold build can be cut off and go unchecked
 │   ├── 🚧 F2.8: Self-waivers shown — a config loosened by a command is missed with `check_on` at `commit`

@@ -121,7 +121,7 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 **Called by**: a person and the clean skill. Claude runs `--dismiss` when the user says not now.
 
-**Prints**: stdout gets a first line with the counts, then `Hotspots:` and `Worst smells:` blocks, a `Longest under the limit (not smells):` block when `--only` asks for sizes, and `note:` lines. With `--json` those sizes are under `sizes`, each with `file`, `line`, `name` and `value`. stderr gets `broom: not inside a git repository` or `broom: unknown revision '<REV>'`.
+**Prints**: stdout gets a first line with the counts, then `Hotspots:` and `Worst smells:` blocks, a `Longest under the limit (not smells):` block when `--only` asks for sizes, `N smell(s) accepted as known hidden` when known smells were left out, and `note:` lines. With `--json` those sizes are under `sizes`, each with `file`, `line`, `name` and `value`. stderr gets `broom: not inside a git repository` or `broom: unknown revision '<REV>'`.
 
 **Fails**: exit 1 outside a repo and for an unknown REV, and exit 2 for an unknown SMELL. It exits 0 whether or not smells are found.
 
@@ -146,7 +146,7 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 **Called by**: a person, Claude, the `/broom:scan` skill and the clean skill.
 
-**Prints**: stdout gets a report that also reads as Markdown: a summary, the smells by kind and by language, the hotspots by churn, the worst smells, the check-up's counters, the tests that repeat one another, the unused dependencies and the four sections of `broom stats`. The last line says how long it took. stderr gets `broom: not inside a git repository`.
+**Prints**: stdout gets a report that also reads as Markdown: a summary with how many smells accepted as known it left out, the smells by kind and by language, the hotspots by churn, the worst smells, the check-up's counters, the tests that repeat one another, the unused dependencies and the four sections of `broom stats`. The last line says how long it took. stderr gets `broom: not inside a git repository`.
 
 **Fails**: exit 1 outside a repo.
 
@@ -201,23 +201,24 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 **Status**: ✅
 
-`broom known [paths...] [--accept WHY [--agreed] | --ask QUESTION] [--clear]` lists, accepts or clears known issues, or puts a question to the user.
+`broom known [paths...] [--accept WHY [--agreed [--smell KIND]] | --ask QUESTION] [--clear]` lists, accepts or clears known issues, or puts a question to the user.
 
 | Flag | Means | Default |
 |---|---|---|
 | none | list the known issues under `paths` | the repo |
 | `--accept WHY` | accept what the last blocked commit or turn end showed, with the reason | off |
 | `--agreed` | with `--accept`, record that the user agreed | off |
+| `--smell KIND` | with `--accept` and `--agreed`, accept the smells of that kind standing at `paths`, each a file, a folder or `FILE:LINE` | off |
 | `--ask QUESTION` | mark what the last block showed as waiting for the user, and pass nothing | off |
 | `--clear` | remove the known issues under `paths` | off |
 
-**Called by**: a person, the `/broom:status` skill, and Claude when a block message offers `--accept`.
+**Called by**: a person, the `/broom:status` skill, Claude when a block message offers `--accept`, and the clean skill once the user agreed that a smell stays.
 
-**Prints**: stdout gets one line per known issue with its location, tool, rule, message, date and reason. Accept prints `broom: accepted N issue(s) as known (WHY); commit again`, or `stop again` after a turn-end block. Ask prints `broom: N issue(s) wait for the user's answer (QUESTION)` and that nothing is accepted. stderr gets the refusals.
+**Prints**: stdout gets one line per known issue with its location, tool, rule, message, date and reason. Accept prints `broom: accepted N issue(s) as known (WHY); commit again`, or `stop again` after a turn-end block. With `--smell` it prints `broom: accepted N standing KIND smell(s) in <repo> as known (WHY)`. An accept the user agreed to is listed with `the user agreed` beside its reason. Ask prints `broom: N issue(s) wait for the user's answer (QUESTION)` and that nothing is accepted. stderr gets the refusals.
 
-**Fails**: exit 1 when there is no blocked commit or turn end to accept or to ask about, when every finding is one that can't be accepted, when WHY or QUESTION is empty, when `BROOM_NO_ACCEPT` is set for an accept and outside a repo. Exit 2 for `--agreed` without `--accept`, and for `--accept` with `--ask`.
+**Fails**: exit 1 when there is no blocked commit or turn end to accept or to ask about, when every finding is one that can't be accepted, when WHY or QUESTION is empty, when `BROOM_NO_ACCEPT` is set for an accept and outside a repo. Exit 1 for `--agreed` without `--accept`, and for `--smell` without `--accept`, without `--agreed`, without paths, or with no smell of KIND there that isn't known already. Exit 2 for `--accept` with `--ask`, and for an unknown KIND.
 
-**Example**: `broom known --accept "predates this change"` prints `broom: accepted 2 issue(s) as known (predates this change); commit again`.
+**Example**: `broom known --accept "predates this change"` prints `broom: accepted 2 issue(s) as known (predates this change); commit again`. `broom known --accept "rounds up to whole seconds" --agreed --smell magic_numbers src/clock.go:41` accepts one magic number the user decided to keep.
 
 ---
 
@@ -366,7 +367,7 @@ An uncaught error exits 1 with a traceback.
 7 commands print JSON a script relies on:
 
 - **`broom doctor --json`**: `version` · `repo` · `languages` · `items` · `fix` · `configure` · `fix_global` · `configure_global` · `healthy` · `optional` · `settings` · `checks`.
-- **`broom smells --json`**: `repo` · `base` · `only` · `total` · `severe` · `hints` · `by` · `hotspots` · `smells` · `notes` · `sizes` when `--only` asks for sizes.
+- **`broom smells --json`**: `repo` · `base` · `only` · `total` · `severe` · `hints` · `known` · `by` · `hotspots` · `smells` · `notes` · `sizes` when `--only` asks for sizes. `known` is how many smells the known-issue store left out.
 - **`broom diagnose --json`**: `repo` · `paths` · `summary` · `by_smell` · `by_language` · `by` · `hotspots` · `smells` · `duplicate_tests` · `dependencies` · `missing_tools` · `notes` · `checkup` · `stats`.
 - **`broom compare --json`**: `repo` · `base` · `base_commit` · `summary` · `kinds` · `gone` · `new` · `shrank` · `grew` · `hotspots` · `not_comparable` · `notes` · `quote` · `seconds`.
 - **`broom stats --json`**: `repo` · `paths` · `files` · `days` · `size` · `tests` · `rot` · `history`. Each section holds a `note` that says what is missing, or null.

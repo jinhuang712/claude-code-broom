@@ -14,6 +14,15 @@
 
 ---
 
+### Known issues
+
+- A known issue never expires. It stays known until its code changes or `broom known --clear` removes it. Before, it expired after 30 days, a limit no decision had chosen, and only once the next accept was written.
+- `broom known --accept "<why>" --agreed --smell KIND FILE[:LINE]` accepts a smell that stands in code no change touches, once the user agreed it stays. Before, only what a block showed could be accepted, so `broom smells` listed such a smell for good.
+- `broom smells`, `broom diagnose` and the session note leave an accepted smell out and say how many they left out. It comes back when its line changes, or when a sized smell's size changes.
+- `broom known` marks an accept the user agreed to with `the user agreed` beside its reason.
+
+---
+
 ### Record
 
 - A finding put to the user with `--ask` that no later check found gone, and that wasn't accepted, counts against its rule's fix rate. Before, it counted against no rule, so a rule that was mostly noise read as fixed every time.

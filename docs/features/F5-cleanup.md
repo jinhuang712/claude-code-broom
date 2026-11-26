@@ -15,7 +15,7 @@ Cleanup goes after the smells already in a repo, which the checks on a change ne
 
 `broom smells` lists the hotspot files, ranked by their smells and by how often they change, and the worst smells, furthest past their limit first. It covers the whole repo or some paths, and says how many more there are.
 
-With `--base REV` it lists only what the changes since that revision made worse. Missing tools are named in the first line, where counts without them read as cleaner than the code is.
+With `--base REV` it lists only what the changes since that revision made worse. Missing tools are named in the first line, where counts without them read as cleaner than the code is. A smell the user decided to keep and that was accepted as known is left out, and the last line says how many.
 
 - **Commands**: [broom smells](../CLI.md#broom-smells)
 - **How it works**: [Cleanup](../specs/cleanup.md)

@@ -35,6 +35,10 @@ unless they already asked for the cleanup itself.
 - A smell that is deliberate (a long lookup table, a protocol's fixed parameter list, code loaded dynamically)
   stays: say so, and offer `.broom.json` `exclude`, `limits` (`test_limits` for tests that are long because they
   list cases), `legacy` (code a migration is replacing) or `smells_off` instead of contorting the code.
+- One smell that is ordinary code (the `0.5` of a published formula, a guard that must stay) stays too. Ask the
+  user, and only once they agree, accept it where `broom smells` lists it:
+  `broom known --accept "<why it stays>" --agreed --smell <kind> <file>:<line>`. `broom smells` then leaves it
+  out until its code changes.
 
 How each kind is usually put right: run `broom fixes`, or `broom fixes <smell>` for one. It prints the usual fix of
 each smell, the same line a block message carries.

@@ -10,7 +10,11 @@ This part ranks the smells already in a repo and tells Claude when there are sev
 
 With `--base REV` it lists only what the changes since that revision made worse, with each smell's size or count at the revision.
 
+A smell the known-issue store holds is left out, and the report says how many. `broom diagnose` and the session note's count leave it out too.
+
 Asked for function or type lengths alone, it measures a second time with that soft limit at 1, so the tools report every function or type. The rows under the real limit fill what `--top` leaves after the smells. The measurement cache keeps rows by the limits they were measured under, so these never reach a check.
+
+- [047: A standing smell is accepted with the user's agreement](decisions/047-standing-smells-accepted.md)
 
 ---
 

@@ -104,6 +104,8 @@ A linter can be wrong, an issue can predate the change, and a refactor can belon
   - [031: Trying again passes nothing, and three blocks end in a loud give-up](specs/decisions/031-no-pass-on-a-second-try.md)
   - [044: An open finding comes back until it ends](specs/decisions/044-open-findings-come-back.md)
   - [016: A smell past the hard limit blocks like a type error](specs/decisions/016-severe-smells.md)
+  - [046: A known issue never expires](specs/decisions/046-known-issues-never-expire.md)
+  - [047: A standing smell is accepted with the user's agreement](specs/decisions/047-standing-smells-accepted.md)
 - **How it works**:
   - [Commit check](specs/commit-check.md)
   - [Turn end](specs/turn-end.md)

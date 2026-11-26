@@ -18,9 +18,13 @@ Files the repo's `.broom.json` excludes never count. Files outside any git repo 
 
 A finding Claude accepted with a reason is recorded as known and not raised again. Its key is the file, the tool, the rule, the message and the text of the line, so it stays known when lines above it move. The file is named as the main checkout holds it, so a finding accepted in a linked worktree stays known once the work lands.
 
-A known issue expires after 30 days. `broom known` lists and clears them, with the reason beside each accepted one.
+A known issue never expires. It stays known until its code changes, which makes a new key, or until `broom known --clear` removes it. `broom known` lists them, with the reason beside each accepted one and whether the user agreed.
+
+A smell that stands in code no change touches never blocks, so it is accepted another way: by its kind and its place, with the user's agreement, as `broom known --accept WHY --agreed --smell KIND FILE[:LINE]`. Each occurrence is keyed by its file, its kind and the text of its line. A sized smell is keyed by its message, which holds its name, its size and its limit, and by the text of its first line. `broom smells`, `broom diagnose` and the session note leave a known one out and say how many. The hooks don't read these entries, since a standing smell reaches a hook only once its code changed.
 
 - [003: Every finding passes fixed or accepted with a reason](decisions/003-reason-for-every-pass.md)
+- [046: A known issue never expires](decisions/046-known-issues-never-expire.md)
+- [047: A standing smell is accepted with the user's agreement](decisions/047-standing-smells-accepted.md)
 
 ---
 

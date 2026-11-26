@@ -9,7 +9,8 @@ F2: Sweep
 │   └── F2.4.1: Offered at setup
 ├── F2.5: Known issues — what was let through, and why
 │   ├── F2.5.1: A reason for every pass
-│   └── F2.5.2: A turn can end with a finding open
+│   ├── F2.5.2: A turn can end with a finding open
+│   └── F2.5.3: A standing smell the user keeps — accepted by its place, with their agreement
 ├── F2.6: Scan on request — a scope in the user's own words, found and not fixed
 ├── F2.7: Time limit — a hook run takes at most 30 seconds
 ├── F2.8: Self-waivers shown — a loosened bar never goes unseen
@@ -105,12 +106,14 @@ It never replaces another tool's hook and prints the line to add to it instead. 
 
 ## F2.5: Known issues
 
-A finding Claude accepted with a reason is known and not raised again for 30 days. One accepted in a linked worktree stays known in the main checkout, where the work lands. `broom known` lists and clears them.
+A finding Claude accepted with a reason is known and not raised again until its code changes. It never expires. One accepted in a linked worktree stays known in the main checkout, where the work lands. `broom known` lists and clears them.
 
 - **Design**: [6. A finding ends fixed or with a reason the user sees](../DESIGNS.md#6-a-finding-ends-fixed-or-with-a-reason-the-user-sees)
 - **Commands**: [broom known](../CLI.md#broom-known)
 - **How it works**: [What counts](../specs/what-counts.md)
-- **Why**: [003: Every finding passes fixed or accepted with a reason](../specs/decisions/003-reason-for-every-pass.md)
+- **Why**:
+  - [003: Every finding passes fixed or accepted with a reason](../specs/decisions/003-reason-for-every-pass.md)
+  - [046: A known issue never expires](../specs/decisions/046-known-issues-never-expire.md)
 
 ---
 
@@ -125,6 +128,27 @@ A blocked finding passes fixed, or after `broom known --accept "<why>"`, which p
 ### F2.5.2: A turn can end with a finding open
 
 After three blocks broom gives up, since it never traps a turn for good. Nothing becomes known that way: what is left stays open, the user is told in a line that opens `broom GAVE UP`, and the next commit of that file still stops on it.
+
+---
+
+### F2.5.3: A standing smell the user keeps
+
+A smell in code no change touches never blocks, so no block offers to accept it. When the user decides it stays, such as the constants of a published formula, Claude accepts it where `broom smells` lists it:
+
+```
+broom known --accept "<why it stays>" --agreed --smell KIND FILE:LINE
+```
+
+`--agreed` is required, so Claude accepts a standing smell only once the user agreed. A `FILE` or a folder without a line accepts every smell of that kind there. Each occurrence is accepted on its own: a file with 3 magic numbers keeps 2 after one is accepted.
+
+`broom smells`, `broom diagnose` and the session note leave it out and say how many they left out. It comes back when its line changes, or when a sized smell's size changes.
+
+2 gaps:
+
+- The session note reads a scan cached by HEAD, so an accept shows there after the next commit.
+- `broom report` doesn't show it, since nothing blocked it. `broom known` lists it.
+
+- **Why**: [047: A standing smell is accepted with the user's agreement](../specs/decisions/047-standing-smells-accepted.md)
 
 ---
 
@@ -249,7 +273,7 @@ When the user must decide, Claude runs `broom known --ask "<question>"` and stop
 
 When the user said yes, Claude accepts with `--agreed`, and the summary shows that finding as one the user agreed to. A turn in which Claude accepted 3 findings or more on its own opens the user's line with `Claude ACCEPTED`, so a reason never becomes the cheap way out.
 
-An accepted finding is a debt on record and not a closed case: `broom known` lists it with its reason, and after 30 days it is raised again.
+An accepted finding stays on record: `broom known` lists it with its reason, and it is raised again once its code changes.
 
 2 gaps:
 

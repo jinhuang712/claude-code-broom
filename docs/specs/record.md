@@ -35,7 +35,7 @@ The ledger is `ledger.jsonl` in the data directory, one JSON object per line. Ev
 
 A pass says how it went through, in 2 ways:
 
-- **accept**: Claude ran `broom known --accept`, and the line keeps the reason. With `--agreed` it also says that the user agreed.
+- **accept**: Claude ran `broom known --accept`, and the line keeps the reason. With `--agreed` it also says that the user agreed. An accept of a standing smell with `--smell` writes no line, since nothing blocked it.
 - **gave-up**: The turn-end check gave up after three blocks. The finding is not known.
 
 Older lines can hold four more: `retry`, `denials` and `stop-again` from before 0.19.0, and `turn-ended` from before 0.23.5.
