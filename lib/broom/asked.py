@@ -4,9 +4,10 @@ turn's end showed, and passes nothing.
 It is how a turn ends with a question put, where Claude may not accept a finding on its own: the findings are marked
 as waiting for the user's answer for this turn only (a row each in the turn's `asked.jsonl`), the turn's end no longer
 blocks on them and opens the line the user sees with `lead`, and a ledger line `ask` says it was asked. The findings stay
-blocked, open in the record and unknown: a commit of that content is still denied, and the next turn's end blocks on
-them again unless they were fixed, accepted or asked about again. This module loads nothing heavy: a turn's end reads
-it for every turn.
+blocked, open in the record and unknown: a commit of that content is still denied, and a later turn's end blocks on
+them again once that turn changes their file, unless they were fixed, accepted or asked about again. A turn that changes
+nothing, or only other files, ends without them. This module loads nothing heavy: a turn's end reads it for every
+turn.
 """
 
 from __future__ import annotations

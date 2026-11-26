@@ -12,7 +12,7 @@ A turn's end blocks until a finding is fixed or accepted. But ending the turn is
 
 ## The choice
 
-`broom known --ask "<question>"` marks what the last block showed as waiting for the user, for that turn only. The turn's end no longer blocks on it and opens the user's line with the question. Nothing passes: the finding stays open and unknown, a commit of it is still denied, and the next turn's end blocks on it again.
+`broom known --ask "<question>"` marks what the last block showed as waiting for the user, for that turn only. The turn's end no longer blocks on it and opens the user's line with the question. Nothing passes: the finding stays open and unknown, a commit of it is still denied, and a later turn's end blocks on it again once that turn changes its file.
 
 ---
 

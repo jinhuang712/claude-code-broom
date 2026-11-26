@@ -269,16 +269,17 @@ A nit, which is slight, is told and never blocks: magic numbers · TODO comments
 
 A block tells Claude to accept only for a real reason, such as a refactor that comes in a later step, and to say in its reply what it accepted and why. The turn's summary names each accepted finding with its reason.
 
-When the user must decide, Claude runs `broom known --ask "<question>"` and stops. That passes nothing: the commit is still denied and the finding stays open. The turn ends, and the user's line opens with `WAITS FOR YOUR ANSWER` and the question. At the next turn the finding blocks again until it is fixed or accepted.
+When the user must decide, Claude runs `broom known --ask "<question>"` and stops. That passes nothing: the commit is still denied and the finding stays open. The turn ends, and the user's line opens with `WAITS FOR YOUR ANSWER` and the question. A later turn's end blocks on the finding again only when that turn changed its file, and a commit of its file is denied until it is fixed or accepted.
 
 When the user said yes, Claude accepts with `--agreed`, and the summary shows that finding as one the user agreed to. A turn in which Claude accepted 3 findings or more on its own opens the user's line with `Claude ACCEPTED`, so a reason never becomes the cheap way out.
 
 An accepted finding stays on record: `broom known` lists it with its reason, and it is raised again once its code changes.
 
-2 gaps:
+3 gaps:
 
 - With `check_on` at `commit` no turn's end shows the line, so Claude's own reply has to carry the question.
 - A subagent that asks about a denied commit is still blocked at its own end.
+- A finding asked about leaves Claude's sight once the turns move to other files. [F2.14: Open findings come back](#f214-open-findings-come-back) tells it again.
 
 - **Stance**: [Fixed, or let through with a reason the user sees](../PHILOSOPHY.md#how-does-a-finding-end)
 - **Commands**: [broom known](../CLI.md#broom-known)

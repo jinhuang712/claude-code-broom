@@ -62,7 +62,7 @@ An accept of the finding is kept in the turn's directory and not among the known
 
 ## Asking the user
 
-Ending the turn is how Claude asks the user anything, so a block would keep a question from being put. `broom known --ask "<question>"` marks what the last block showed as waiting for the user, in the turn it was blocked in. The turn's end leaves those findings out of its block for that turn and opens the user's line with the question. They stay in the repo's last blocked result, so an accept still serves them once the user has answered. At the next turn they block like any other.
+Ending the turn is how Claude asks the user anything, so a block would keep a question from being put. `broom known --ask "<question>"` marks what the last block showed as waiting for the user, in the turn it was blocked in. The turn's end leaves those findings out of its block for that turn and opens the user's line with the question. They stay in the repo's last blocked result, so an accept still serves them once the user has answered. A later turn's end blocks on them like any other finding, but only when that turn changed their file: a turn that changes nothing, or only other files, ends without them. A commit of their file is denied until they are fixed or accepted.
 
 - [033: A turn can end with a question to the user, which passes nothing](decisions/033-ask-the-user.md)
 
