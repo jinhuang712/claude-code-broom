@@ -6,6 +6,10 @@
 
 ---
 
+## 0.28.4 — 2026-11-26
+
+---
+
 ### Smells
 
 - Go's `globals` counts a package variable that a function assigns, as its message says. Before, every package variable counted, a lookup table and a table of test cases among them. What `init` assigns, a write to a field or an element and a method call such as an atomic counter's `Add` stay quiet. The variables come from every file of the package, so a test that assigns a variable of another file of its package counts.
