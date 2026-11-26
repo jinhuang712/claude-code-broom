@@ -19,6 +19,7 @@ from support import BroomCase, py_function
 from broom import checkup
 from broom.config import SMELL_PRESENCE
 from broom.smells import find_smells
+from broom.testrot import TEST_FILE
 
 SKIP = "@unittest." + "skip"  # a decorator line in a test file, which this file must not hold itself
 XFAIL = "@pytest.mark." + "xfail"
@@ -321,3 +322,15 @@ class DuplicateTestsWithoutTheToolTest(GitWork):
         text = self.cli(r, "diagnose", env=bare).stdout
         self.assertIn("## Duplicate tests\n  not measured: jscpd is missing", text)
         self.assertRegex(text, r"\n  duplicate test blocks\s+-\s+-\s+not measured\n")
+
+
+class TestPathTest(unittest.TestCase):
+    def test_a_jest_manual_mock_and_a_runners_setup_file_are_test_code(self) -> None:
+        tests = ["src/__mocks__/api.ts", "__mocks__/fs.js", "src/setupTests.ts", "jest.setup.js", "web/vitest.setup.mts",
+                 *(f"vitest.setup.{ext}" for ext in ("js", "jsx", "ts", "tsx", "mjs", "cjs"))]
+        for rel in tests:
+            with self.subTest(rel=rel):
+                self.assertTrue(TEST_FILE.search(rel))
+        for rel in ("src/mocks/api.ts", "src/setup.ts", "jest.config.js", "src/mysetupTests.ts", "vitest.setup.py"):
+            with self.subTest(rel=rel):
+                self.assertIsNone(TEST_FILE.search(rel), "code")

@@ -29,8 +29,9 @@ from .treefacts import TREE_LANGS, skip_trees
 # A test file is test code by its path. Besides the names test runners collect, 2 helpers count (decision 045): a Go
 # file in a folder named for a test-helper package, as `httptest` or `iotest` (Go names a package after its
 # folder), and pytest's `conftest.py`.
-TEST_FILE = re.compile(r"(^|/)(tests?|__tests__|Tests)/|_test\.(go|py)$|(^|/)test_[^/]*\.py$|"
-                       r"\.(test|spec)\.[cm]?[jt]sx?$|Tests?\.swift$|(^|/)[^/]+test/[^/]+\.go$|(^|/)conftest\.py$")
+TEST_FILE = re.compile(r"(^|/)(tests?|__tests__|__mocks__|Tests)/|_test\.(go|py)$|(^|/)test_[^/]*\.py$|"
+                       r"\.(test|spec)\.[cm]?[jt]sx?$|Tests?\.swift$|(^|/)[^/]+test/[^/]+\.go$|(^|/)conftest\.py$|"
+                       r"(^|/)(setupTests|jest\.setup|vitest\.setup)\.[cm]?[jt]sx?$")
 SKIPPED_TEST = "skipped_test"
 def tree_skip_rows(texts: Dict[str, str], notes: List[str]) -> List[Raw]:
     """A row for each skip no condition decides in the test files `texts` of a tree language, read from their trees."""
