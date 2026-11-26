@@ -1,8 +1,9 @@
 """The ledger: what broom did with each finding, one JSON line each, appended to `ledger.jsonl` in broom's data
 directory. `broom report` reads it back.
 
-A line holds `t` (epoch seconds), `repo` (the main worktree's root, so a repo and its linked worktrees share one
-record), `event`, `where` (the hook: commit, pre-commit, stop, subagent-stop) and per event:
+A line holds `t` (epoch seconds, which only orders the lines), `v` (the version of broom that wrote it; older lines
+have none), `repo` (the main worktree's root, so a repo and its linked worktrees share one record), `event`, `where`
+(the hook: commit, pre-commit, stop, subagent-stop) and per event:
 
 - block: a finding stopped a commit or a turn's end. `key` is the finding's key from gate.issue_key, `tool`, `rule`
   and `file` (relative to its own worktree's root) say which.
@@ -32,13 +33,13 @@ from collections import Counter
 from pathlib import Path
 from typing import Dict, Iterable, Iterator, List, Optional, Set, Tuple
 
+from . import __version__
 from .gitutil import git_root, main_worktree
 from .state import DATA_ROOT, locked
 from .toolchain import lang_of
 
 LEDGER = DATA_ROOT / "ledger.jsonl"
-MAX_BYTES = 2_000_000  # over this at an append, the oldest lines go
-KEEP_DAYS = 90
+MAX_BYTES = 2_000_000  # over this at an append, the oldest lines go, down to three quarters of it
 THROUGH = "through.jsonl"  # in a turn's directory: what the turn let through, for its summary
 WAIVED = "waivers.jsonl"  # in a turn's directory: the self-waivers it saw, for its summary and so each counts once
 ASKED = "asked.jsonl"  # in a turn's directory: the findings Claude asked the user about, which don't block this turn
@@ -89,8 +90,8 @@ def repo_of(path: Path) -> str:
 
 
 def line(event: str, repo: str, **fields: object) -> dict:
-    """One ledger row for `event` in `repo`, stamped with the time and the hook; a field that is None or empty is left
-    out."""
+    """One ledger row for `event` in `repo`, stamped with the time and the hook (`write` adds broom's version); a
+    field that is None or empty is left out."""
     row: dict = {"t": round(time.time(), 3), "repo": repo, "event": event, "where": HOOK.where}
     row.update({k: v for k, v in fields.items() if v not in (None, "")})
     return row
@@ -121,12 +122,9 @@ def read(path: Path) -> Iterator[dict]:
 
 
 def trim() -> None:
-    """Drop the lines older than KEEP_DAYS. A ledger still over the limit after that loses its oldest lines too,
-    down to three quarters of it, so it stays bounded and isn't rewritten at every append."""
-    cutoff = time.time() - KEEP_DAYS * 86400
-    kept = [raw for raw in LEDGER.read_text().splitlines() if line_time(raw) >= cutoff]
-    if sum(len(raw.encode()) + 1 for raw in kept) > MAX_BYTES:
-        kept = newest_within(kept, MAX_BYTES * 3 // 4)
+    """Drop the oldest lines down to three quarters of MAX_BYTES, so the ledger stays bounded and isn't rewritten at
+    every append."""
+    kept = newest_within(LEDGER.read_text().splitlines(), MAX_BYTES * 3 // 4)
     tmp = LEDGER.with_name(f".{LEDGER.name}.{os.getpid()}.tmp")
     tmp.write_text("".join(raw + "\n" for raw in kept))
     tmp.replace(LEDGER)
@@ -144,22 +142,12 @@ def newest_within(rows: List[str], limit: int) -> List[str]:
     return newest[::-1]
 
 
-def line_time(raw: str) -> float:
-    """The `t` (epoch seconds) of one raw ledger line, or 0 when it doesn't parse or has no number there, so `trim`
-    drops it."""
-    try:
-        t = json.loads(raw).get("t", 0)
-        return t if isinstance(t, (int, float)) else 0
-    except (ValueError, AttributeError):
-        return 0
-
-
 def write(rows: List[dict]) -> None:
     """Append `rows` in one write. A ledger that can't be written is no reason to stop a hook."""
     if not rows:
         return
     try:
-        text = "".join(json.dumps(r, separators=(",", ":"), default=str) + "\n" for r in rows)
+        text = "".join(json.dumps({"v": __version__, **r}, separators=(",", ":"), default=str) + "\n" for r in rows)
         with locked(LEDGER):
             with open(LEDGER, "a") as f:
                 f.write(text)

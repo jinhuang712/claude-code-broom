@@ -7,7 +7,7 @@ import time
 import unittest
 from pathlib import Path
 
-from test_ledger import DAY, LedgerCase, lines
+from test_ledger import LedgerCase, lines
 from support import py_function
 
 from broom import ledger
@@ -19,13 +19,13 @@ class ReportTest(LedgerCase):
                 "rule": rule, "file": "a.py", **more}
 
     def fill(self, r: Path) -> None:
-        old = time.time() - 40 * DAY
+        old = "0.20.0"  # an earlier broom wrote these
         rows = [self.row(r, "block", "k1"), self.row(r, "block", "k1"), self.row(r, "fix", "k1"),
                 self.row(r, "block", "k2"), self.row(r, "pass", "k2", how="retry"),
                 self.row(r, "block", "k3", "function_lines", "smells"),
                 self.row(r, "pass", "k3", "function_lines", "smells", how="accept", why="legacy"),
                 self.row(r, "block", "k4", "function_lines", "smells"),
-                {**self.row(r, "block", "k5"), "t": old}, {**self.row(r, "fix", "k5"), "t": old},
+                {**self.row(r, "block", "k5"), "v": old}, {**self.row(r, "fix", "k5"), "v": old},
                 self.row(Path("/elsewhere"), "block", "k6"),
                 {"t": time.time(), "repo": str(r), "event": "skip", "tool": "ruff", "note": "missing:ruff (x)"},
                 {"t": time.time(), "repo": str(r), "event": "skip", "tool": "ruff", "note": "missing:ruff (x)"},
@@ -47,9 +47,10 @@ class ReportTest(LedgerCase):
         out = self.cli(r, "report")
         self.assertEqual(out.returncode, 0, out.stderr)
         text = out.stdout
-        self.assertIn("blocked 4, fixed 1, let through 2, still open 1, fix rate 33%", text)
+        self.assertIn("in the whole record", text)
+        self.assertIn("blocked 5, fixed 2, let through 2, still open 1, fix rate 50%", text)
         rule = {words[0]: line for line in text.splitlines() if (words := line.split())}
-        self.assertEqual(rule["F401"].split(), ["F401", "ruff", "2", "1", "1", "(retry", "1)", "0", "50%"])
+        self.assertEqual(rule["F401"].split(), ["F401", "ruff", "3", "2", "1", "(retry", "1)", "0", "67%"])
         self.assertEqual(rule["function_lines"].split(), ["function_lines", "smells", "2", "0", "1", "(accept", "1)",
                                                            "1", "0%"])
         self.assertIn("ruff: 3 (missing 2, timeout 1)", text)
@@ -63,28 +64,39 @@ class ReportTest(LedgerCase):
         self.fill(r)
         data = self.report(r)
         self.assertEqual((data["repos"], data["blocked"], data["fixed"], data["let_through"], data["open"]),
-                         ([str(r)], 4, 1, 2, 1))
-        self.assertEqual(data["fix_rate"], round(1 / 3, 3))
+                         ([str(r)], 5, 2, 2, 1))
+        self.assertNotIn("days", data)
+        self.assertIsNone(data["since"])
+        self.assertEqual(data["fix_rate"], 0.5)
         self.assertEqual(data["how"], {"retry": 1, "accept": 1})
         rules = {x["rule"]: x for x in data["rules"]}
-        self.assertEqual((rules["F401"]["fix_rate"], rules["function_lines"]["fix_rate"]), (0.5, 0.0))
+        self.assertEqual((rules["F401"]["fix_rate"], rules["function_lines"]["fix_rate"]), (0.667, 0.0))
         self.assertEqual(data["skips"], {"ruff": {"missing": 2, "timeout": 1}})
         self.assertEqual(data["seconds"]["ruff"], {"runs": 3, "median": 0.3, "max": 0.5})
-        self.assertEqual(self.report(r, "--days", "60")["blocked"], 5, "the finding of 40 days ago counts in 60")
         every = self.report(r, "--all")
         self.assertEqual((every["repos"], every["blocked"], every["left_out"]), ("all", 1, 1),
                          "the other repo counts, and this one, in a temporary folder, is left out")
         self.assertIn("every repo but 1 in a temporary folder", self.cli(r, "report", "--all").stdout)
 
-    def test_since_a_day_replaces_the_days(self) -> None:
+    def test_since_a_version_keeps_the_lines_that_version_or_a_later_one_wrote(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
         self.fill(r)
-        day = time.strftime("%Y-%m-%d", time.localtime(time.time() - 45 * DAY))
-        data = self.report(r, "--since", day)
-        self.assertEqual((data["since"], data["blocked"]), (day, 5), "the finding of 40 days ago is after that day")
-        self.assertEqual(self.report(r, "--since", time.strftime("%Y-%m-%d"))["blocked"], 4)
-        self.assertIn(f"since {day}", self.cli(r, "report", "--since", day).stdout)
-        self.assertEqual(self.cli(r, "report", "--since", "last week").returncode, 2)
+        with open(ledger.LEDGER, "a") as f:  # a line from before broom marked its lines with a version
+            f.write(json.dumps({k: v for k, v in self.row(r, "block", "k0").items()}) + "\n")
+        self.assertEqual(self.report(r)["blocked"], 6, "the whole record")
+        data = self.report(r, "--since", "0.20.0")
+        self.assertEqual((data["since"], data["blocked"]), ("0.20.0", 5), "a line with no version is older than any")
+        self.assertEqual(self.report(r, "--since", "0.20.1")["blocked"], 4, "k5 was written by 0.20.0")
+        self.assertEqual(self.report(r, "--since", ledger.__version__)["blocked"], 4)
+        self.assertEqual(self.report(r, "--since", "999.0")["blocked"], 0)
+        self.assertIn("since 0.20.1", self.cli(r, "report", "--since", "0.20.1").stdout)
+        self.assertIn("nothing recorded for", self.cli(r, "report", "--since", "999.0").stdout)
+
+    def test_since_that_is_no_version_and_the_removed_days_are_refused(self) -> None:
+        r = self.repo({"a.py": "x = 1\n"})
+        for args in (("--since", "2026-11-01x"), ("--since", "last week"), ("--since", "v0.28.5"), ("--since", ""),
+                     ("--days", "30")):
+            self.assertEqual(self.cli(r, "report", *args).returncode, 2, args)
 
     def test_a_check_that_ran_a_tool_leaves_its_whole_seconds_once(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})

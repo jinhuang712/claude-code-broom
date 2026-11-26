@@ -11,7 +11,7 @@ from unittest import mock
 
 from support import BROOM, HAS_PY, BroomCase, py_function
 
-from broom import checks, ledger
+from broom import __version__, checks, ledger
 
 DAY = 86400
 QUIET = '{"smells_off": ["dead_code"]}'  # a function nothing calls is dead code too: not what these tests are about
@@ -261,15 +261,15 @@ class RecordTest(LedgerCase):
         self.hook("prompt", {"session_id": "s1", "cwd": str(r)})
         self.assertEqual(self.stop(r), {}, "the new prompt started a turn that let nothing through")
 
-    def test_the_ledger_stays_bounded_and_a_ledger_that_cant_be_written_stops_nothing(self) -> None:
-        old, now = time.time() - 100 * DAY, time.time()
-        pad = "k" * 40
-        rows = [{"t": t, "repo": "/a", "event": "block", "key": pad} for t in (old, now)]
+    def test_the_ledger_stays_bounded_by_size_alone_and_every_new_line_holds_the_version(self) -> None:
+        now, pad = time.time(), "k" * 40
+        old = [{"t": now - 1000 * DAY, "repo": "/a", "event": "block", "key": pad}]  # age decides nothing
         ledger.LEDGER.parent.mkdir(parents=True, exist_ok=True)
-        ledger.LEDGER.write_text("".join(json.dumps(x) + "\n" for x in rows))
-        with mock.patch.object(ledger, "MAX_BYTES", 300):
-            ledger.write([{"t": now, "repo": "/a", "event": "fix", "key": pad}])
-        self.assertEqual([x["event"] for x in lines()], ["block", "fix"], "the line older than 90 days is gone")
+        ledger.LEDGER.write_text("".join(json.dumps(x) + "\n" for x in old))
+        ledger.write([{"t": now, "repo": "/a", "event": "fix", "key": pad}])
+        self.assertEqual([x["event"] for x in lines()], ["block", "fix"], "the line of 1000 days ago stays")
+        self.assertEqual([x.get("v") for x in lines()], [None, __version__], "an old line has no version")
+        self.assertEqual(lines("fix")[0]["v"], __version__)
         with mock.patch.object(ledger, "MAX_BYTES", 1000):
             ledger.write([{"t": now, "repo": "/a", "event": "pass", "key": str(n)} for n in range(50)])
         self.assertLess(ledger.LEDGER.stat().st_size, 1000, "recent lines go too, the oldest first, when it is over")

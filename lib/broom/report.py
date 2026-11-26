@@ -1,4 +1,5 @@
-"""`broom report`: what the ledger says broom stopped, what was fixed and what went through, over a period.
+"""`broom report`: what the ledger says broom stopped, what was fixed and what went through, in the whole record or
+from a broom version on.
 
 A finding counts once: the ledger holds a block line each time a commit or a turn's end is blocked on it, and the
 report counts the distinct findings, (repo, key), each by how it ended last: fixed, let through (with its `how`), or
@@ -13,7 +14,6 @@ from __future__ import annotations
 
 import statistics
 import tempfile
-import time
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple
@@ -59,10 +59,26 @@ def throwaway(repo: str) -> bool:
     return any(repo == root or repo.startswith(root + "/") for root in TEMP_ROOTS)
 
 
-def window(cutoff: float, repos: Optional[Set[str]], narrow: Dict[str, List[str]]) -> List[dict]:
-    """The ledger rows from `cutoff` (epoch seconds) on that `wanted` keeps, oldest first; a row without a numeric
-    time is skipped."""
-    rows = [r for r in ledger.read(ledger.LEDGER) if isinstance(r.get("t"), (int, float)) and r["t"] >= cutoff]
+def version_key(text: object) -> Optional[Tuple[int, ...]]:
+    """A broom version such as `0.28.5` as numbers to compare (trailing zeros left out, so `1.0` is `1`), or None when
+    it is no version."""
+    parts = text.split(".") if isinstance(text, str) else []
+    if not parts or not all(p.isascii() and p.isdigit() for p in parts):
+        return None
+    numbers = [int(n) for n in parts]
+    while numbers and numbers[-1] == 0:
+        numbers.pop()
+    return tuple(numbers)
+
+
+def window(since: Optional[str], repos: Optional[Set[str]], narrow: Dict[str, List[str]]) -> List[dict]:
+    """The ledger rows that `wanted` keeps, oldest first: all of them, or with `since` (a version) only those written
+    by that broom version or a later one. A row with no `v` is older than any version; one without a numeric time is
+    skipped."""
+    floor = version_key(since)
+    rows = [r for r in ledger.read(ledger.LEDGER) if isinstance(r.get("t"), (int, float))]
+    if floor is not None:
+        rows = [r for r in rows if (v := version_key(r.get("v"))) is not None and v >= floor]
     return sorted((r for r in rows if wanted(r, repos, narrow)), key=lambda r: r["t"])
 
 
@@ -151,16 +167,15 @@ def waivers(rows: List[dict]) -> dict:
             "config": [f"{r.get('file', '')} {r.get('note', '')}".strip() for r in found if r.get("kind") == "config"]}
 
 
-def report(roots: List[Path], days: int, since: Optional[float] = None) -> dict:
-    """The record of the repos `roots` are in over the last `days` days, or from `since` (epoch seconds) when it is
-    given. Without roots it covers every repo but those in a temporary folder, which it counts in `left_out`."""
+def report(roots: List[Path], since: Optional[str] = None) -> dict:
+    """The record of the repos `roots` are in: all of it, or the lines written by broom version `since` or later.
+    Without roots it covers every repo but those in a temporary folder, which it counts in `left_out`."""
     repos, narrow = scope(roots) if roots else (None, {})
-    rows = window(since if since is not None else time.time() - days * 86400, repos, narrow)
+    rows = window(since, repos, narrow)
     left = {str(r.get("repo")) for r in rows if throwaway(str(r.get("repo")))} if repos is None else set()
     rows = [r for r in rows if str(r.get("repo")) not in left]
     found = ended(rows)
-    return {"days": days, "since": time.strftime("%Y-%m-%d", time.localtime(since)) if since is not None else None,
-            "repos": sorted(repos) if repos is not None else "all", "left_out": len(left), **tally(found.values()),
+    return {"since": since, "repos": sorted(repos) if repos is not None else "all", "left_out": len(left), **tally(found.values()),
             "rules": by_rule(found), "skips": skips(rows), "seconds": seconds(rows), "checks": whole_checks(rows),
             "waivers": waivers(rows), "errors": sum(1 for r in rows if r.get("event") == "error")}
 
@@ -222,7 +237,7 @@ def render(data: dict) -> str:
     where = "every repo" if data["repos"] == "all" else ", ".join(display(Path(r)) for r in data["repos"])
     if data["left_out"]:
         where += f" but {data['left_out']} in a temporary folder"
-    period = f"since {data['since']}" if data["since"] else f"in the last {data['days']} days"
+    period = f"since {data['since']}" if data["since"] else "in the whole record"
     if not (data["blocked"] or data["skips"] or data["seconds"] or data["checks"] or data["errors"]
             or data["waivers"]["count"]):
         return f"broom: nothing recorded for {where} {period}"

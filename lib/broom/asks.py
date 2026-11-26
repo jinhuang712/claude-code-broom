@@ -17,24 +17,23 @@ def cmd_fixes(args: argparse.Namespace) -> int:
     return 0
 
 
-def day_start(text: str) -> float:
-    """The epoch seconds at local midnight of a `YYYY-MM-DD` day, for `--since`; argparse says when it isn't one."""
-    import time
+def broom_version(text: str) -> str:
+    """A broom version such as `0.28.5`, for `--since`; argparse says (and exits 2) when the text is none."""
+    from .report import version_key
 
-    try:
-        return time.mktime(time.strptime(text, "%Y-%m-%d"))
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"not a day as YYYY-MM-DD: {text!r}") from None
+    if version_key(text) is None:
+        raise argparse.ArgumentTypeError(f"not a version such as 0.28.5: {text!r}")
+    return text
 
 
 def cmd_report(args: argparse.Namespace) -> int:
     """Print the `broom report` for the repos the paths are in (this repo without paths, every repo with `--all`) over
-    `--days` or from `--since`, as JSON with `--json`. Returns 0, or exits with an error outside a git repo unless `--all` is given."""
+    `--since`, as JSON with `--json`. Returns 0, or exits with an error outside a git repo unless `--all` is given."""
     from .cli import repo_or_exit
     from .report import render, report
 
     roots = [] if args.all else [Path(p).resolve() for p in args.paths] or [repo_or_exit()]
-    data = report(roots, args.days, args.since)
+    data = report(roots, args.since)
     sys.stdout.write((json.dumps(data, indent=1) if args.json else render(data)) + "\n")
     return 0
 
@@ -93,8 +92,8 @@ def add_ask_parsers(sub: argparse._SubParsersAction) -> None:
     fx.set_defaults(fn=cmd_fixes)
     r = sub.add_parser("report", help="what broom stopped, what was fixed and what went through, over a period")
     r.add_argument("paths", nargs="*", help="limit to these files or directories (default: the repo)")
-    r.add_argument("--days", type=int, default=30, help="how far back to look (default: 30)")
-    r.add_argument("--since", type=day_start, metavar="YYYY-MM-DD", help="from this day on, in place of --days")
+    r.add_argument("--since", type=broom_version, metavar="VERSION",
+                   help="only the lines written by this broom version or a later one (default: the whole record)")
     r.add_argument("--all", action="store_true",
                    help="every repo, not only this one, but those in a temporary folder")
     r.add_argument("--json", action="store_true", help="the same as JSON")
