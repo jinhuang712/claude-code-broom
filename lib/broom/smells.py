@@ -209,21 +209,22 @@ def clone_smells(keep: Maintained, clones: List[Clone], scope: set, base: Option
                  lim: RepoLimits) -> List[Smell]:
     """New duplicate blocks with a side in `scope`, the files measured (every clone when `base` is None), the other
     side code someone maintains. Clones between two test files are left out: tests repeat their setup on purpose.
-    So are clones of legacy code, which the new code is there to replace."""
+    So are clones of legacy code, which the new code is there to replace. A block's size is the code lines of the span
+    on the side measured (decision 039), so a clone of comments and blanks falls short of the limit."""
     repo = keep.repo
     out = []
     for c in clones:
-        sides = [(c.rel, c.line, c.other, c.other_line), (c.other, c.other_line, c.rel, c.line)]
+        sides = [(c.rel, c.line, c.other, c.other_line, c.lines), (c.other, c.other_line, c.rel, c.line, c.other_lines)]
         mine = next((s for s in sides if s[0] in scope), None)
         if (base is not None and not c.new) or mine is None or not keep(mine[2]) or generated(repo / mine[2]):
             continue
         if keep.legacy(c.rel) or keep.legacy(c.other):
             continue
         pair = lim.of(mine[0])["duplicate_lines"]
-        at = level(c.lines, pair)
+        at = level(mine[4], pair)
         if at and not (TEST_FILE.search(c.rel) and TEST_FILE.search(c.other)):
             limit = pair[1] if at == "block" else pair[0]
-            out.append(Smell(repo, repo / mine[0], mine[1], "duplicate_lines", f"{mine[2]}:{mine[3]}", c.lines,
+            out.append(Smell(repo, repo / mine[0], mine[1], "duplicate_lines", f"{mine[2]}:{mine[3]}", mine[4],
                              None, "jscpd", at, limit))
     return out
 

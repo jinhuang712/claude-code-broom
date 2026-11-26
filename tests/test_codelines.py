@@ -150,8 +150,8 @@ class MeasuredLengthTest(unittest.TestCase):
         body = padded([f"    x += {i}" for i in range(6)], ["    // c", "", "    /* d", "       e */"])
         swift = text("/// Doc.", "func long(_ n: Int) -> Int {", "    var x = n", *body, "    return x", "}")
         self.assertEqual(self.lengths({"a.swift": swift}),
-                         [("a.swift", "file_lines", "file", 10, 0), ("a.swift", "function_lines", "long", 8, 0)],
-                         "SwiftLint counts the body's code lines, and gives no span")
+                         [("a.swift", "file_lines", "file", 10, 0), ("a.swift", "function_lines", "long", 8, 18)],
+                         "SwiftLint counts the body's code lines, and the tree gives the span")
 
 
 class ChangeTest(BroomCase):

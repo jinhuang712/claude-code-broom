@@ -10,23 +10,28 @@ import shutil
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, Iterable, List, Optional
 
+from .codelines import Lines, code_lines
 from .gitutil import git, run
 
+SIDES = ("firstFile", "secondFile")  # the two copies in one of jscpd's clones
 FORMATS = "javascript,typescript,jsx,tsx,python,go,swift,rust,css,scss,less"
 TIMEOUT = 120
 
 
 @dataclass
 class Clone:
-    """A duplicated block: where it is (`rel`, `line`), its copy (`other`, `other_line`), its size, and if it is new."""
+    """A duplicated block: where it is (`rel`, `line`), its copy (`other`, `other_line`), its size on each side, and if
+    it is new. A size is in code lines (decision 039): jscpd counts the comment and blank lines of a block too, and
+    its two sides may hold different ones."""
     rel: str
     line: int
     other: str
     other_line: int
-    lines: int
+    lines: int  # the code lines of its side's span
     new: bool  # absent at the base revision
+    other_lines: int = 0  # the code lines of the copy's span
 
 
 @dataclass
@@ -72,8 +77,29 @@ def find_clones(repo: Path, base: Optional[str], min_lines: int, skip_dirs: List
     known = base is not None and git(["rev-parse", "--verify", "-q", f"{base}^{{commit}}"], repo) is not None
     args = ["-f", FORMATS, "--min-lines", str(min_lines), *(["--baseline-from-ref", base] if known else [])]
     found = (run_jscpd(repo, args, "jscpd-report.json", skip_dirs, notes) or {}).get("duplicates", [])
+    code = code_lines(read_texts(repo, {d[side]["name"] for d in found for side in SIDES}), notes, repo)
     return [Clone(d["firstFile"]["name"], int(d["firstFile"]["start"]), d["secondFile"]["name"],
-                  int(d["secondFile"]["start"]), int(d["lines"]), bool(d.get("isNew"))) for d in found]
+                  int(d["secondFile"]["start"]), code_in(code, d["firstFile"]), bool(d.get("isNew")),
+                  code_in(code, d["secondFile"])) for d in found]
+
+
+def read_texts(repo: Path, rels: Iterable[str]) -> Dict[str, str]:
+    """The text of each of the files `rels` of the repo that can be read."""
+    out = {}
+    for rel in rels:
+        try:
+            out[rel] = (repo / rel).read_text(errors="replace")
+        except OSError:
+            pass
+    return out
+
+
+def code_in(code: Lines, side: dict) -> int:
+    """The code lines in the span jscpd gives for one side of a clone (its file, first and last line); every line of
+    the span for a file whose code lines weren't read."""
+    first, last = int(side["start"]), int(side["end"])
+    lines = code.get(side["name"])
+    return last - first + 1 if lines is None else sum(first <= n <= last for n in lines)
 
 
 def find_unused(repo: Path, skip_dirs: List[str], notes: List[str]) -> List[Unused]:
