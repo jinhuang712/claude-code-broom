@@ -2,10 +2,11 @@
 
 A finding counts once: the ledger holds a block line each time a commit or a turn's end is blocked on it, and the
 report counts the distinct findings, (repo, key), each by how it ended last: fixed, let through (with its `how`), or
-still open (blocked, and neither fixed nor let through yet). The fix rate is fixed over fixed plus let through, so a
-finding that hasn't ended doesn't count against a rule. The self-waivers, changes that loosened the bar, are counted by
-kind beside that, with what each `.broom.json` change was. A finding the user was asked about (an `ask` line) is no
-outcome: it stays open until it is fixed or let through, and the report says how many were asked.
+still open (blocked, and neither fixed nor let through yet). A finding the user was asked about (an `ask` line) is no
+outcome: it stays open until it is fixed or let through. The fix rate is fixed over fixed, let through and still open
+after a question, so a question that nothing ended counts against its rule, and one still open otherwise doesn't
+(decision 043). The self-waivers, changes that loosened the bar, are counted by kind beside that, with what each
+`.broom.json` change was.
 """
 
 from __future__ import annotations
@@ -87,13 +88,18 @@ def rate(fixed: int, through: int) -> Optional[float]:
 
 
 def tally(found: Iterable[dict]) -> dict:
-    """Counts of the findings by how they ended: `blocked` (all of them), `fixed`, `let_through`, `open`, `how` (the
-    let-through ones by `how`), `fix_rate` and `asked` (those the user was asked about, whatever became of them)."""
+    """Counts of the findings by how they ended: `blocked` (all of them), `fixed`, `let_through`, `open`,
+    `open_asked` (the open ones the user was asked about), `how` (the let-through ones by `how`), `fix_rate` and
+    `asked` (those the user was asked about, whatever became of them). An open finding the user was asked about counts
+    against the fix rate: the code still holds it."""
+    found = list(found)
     counts = Counter(f["outcome"] for f in found)
     how = Counter(f["how"] or "?" for f in found if f["outcome"] == "let through")
     fixed, through = counts["fixed"], counts["let through"]
+    waiting = sum(1 for f in found if f["outcome"] == "open" and f.get("asked"))
     return {"blocked": sum(counts.values()), "fixed": fixed, "let_through": through, "open": counts["open"],
-            "how": dict(how), "fix_rate": rate(fixed, through), "asked": sum(1 for f in found if f.get("asked"))}
+            "open_asked": waiting, "how": dict(how), "fix_rate": rate(fixed, through + waiting),
+            "asked": sum(1 for f in found if f.get("asked"))}
 
 
 def by_rule(found: Dict[Tuple[str, str], dict]) -> List[dict]:
@@ -175,11 +181,16 @@ def through_text(t: dict) -> str:
     return f"{t['let_through']} (" + ", ".join(f"{how} {n}" for how, n in sorted(t["how"].items())) + ")"
 
 
+def open_text(t: dict) -> str:
+    """The count of open findings, with how many of them the user was asked about."""
+    return f"{t['open']} (asked {t['open_asked']})" if t["open_asked"] else str(t["open"])
+
+
 def rule_rows(rules: List[dict]) -> List[str]:
     """The rule table as lines of aligned text: a header, then one row per rule, with the number columns
     right-aligned."""
     head = ("rule", "tool", "blocked", "fixed", "let through", "open", "fix rate")
-    table = [head] + [(x["rule"], x["tool"], str(x["blocked"]), str(x["fixed"]), through_text(x), str(x["open"]),
+    table = [head] + [(x["rule"], x["tool"], str(x["blocked"]), str(x["fixed"]), through_text(x), open_text(x),
                        percent(x["fix_rate"])) for x in rules]
     widths = [max(len(row[c]) for row in table) for c in range(len(head))]
     return ["  ".join(cell.rjust(w) if c in NUMBERS else cell.ljust(w) for c, (cell, w) in enumerate(zip(row, widths)))
@@ -218,8 +229,9 @@ def render(data: dict) -> str:
     asked = f"asked the user {data['asked']}, " if data["asked"] else ""
     out = [f"broom report: {where}, {period}",
            f"blocked {data['blocked']}, fixed {data['fixed']}, let through {data['let_through']}, "
-           f"still open {data['open']}, {asked}fix rate {percent(data['fix_rate'])}"]
-    sections = [("By rule (each finding counts once; fix rate is fixed over fixed plus let through):",
+           f"still open {open_text(data)}, {asked}fix rate {percent(data['fix_rate'])}"]
+    sections = [("By rule (each finding counts once; fix rate is fixed over fixed, let through and still open after a "
+                 "question):",
                  [f"  {row}" for row in rule_rows(data["rules"])] if data["rules"] else []),
                 ("Skipped checks, by tool:", skip_rows(data["skips"])),
                 ("Seconds per whole check that ran a tool:", second_rows(data["checks"])),

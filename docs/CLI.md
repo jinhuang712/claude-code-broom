@@ -237,7 +237,7 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 **Called by**: a person, Claude and the `/broom:status` skill.
 
-**Prints**: stdout gets a line of totals with the fix rate, then a table per rule, the skips by tool, the median and longest seconds of a whole check at a commit and at a turn's end, the same per tool and the self-waivers by kind. With `--all` the first line says how many repos in a temporary folder were left out. With nothing recorded it prints `broom: nothing recorded for <repo> in the last N days`. stderr gets `broom: not inside a git repository`.
+**Prints**: stdout gets a line of totals with the fix rate, then a table per rule, the skips by tool, the median and longest seconds of a whole check at a commit and at a turn's end, the same per tool and the self-waivers by kind. The open findings say how many of them were put to the user, as `still open 5 (asked 3)`, and those count against the fix rate. With `--all` the first line says how many repos in a temporary folder were left out. With nothing recorded it prints `broom: nothing recorded for <repo> in the last N days`. stderr gets `broom: not inside a git repository`.
 
 **Fails**: exit 1 outside a repo without `--all`. Exit 2 for a `--since` that is no day.
 
@@ -371,7 +371,7 @@ An uncaught error exits 1 with a traceback.
 - **`broom compare --json`**: `repo` · `base` · `base_commit` · `summary` · `kinds` · `gone` · `new` · `shrank` · `grew` · `hotspots` · `not_comparable` · `notes` · `quote` · `seconds`.
 - **`broom stats --json`**: `repo` · `paths` · `files` · `days` · `size` · `tests` · `rot` · `history`. Each section holds a `note` that says what is missing, or null.
 - **`broom fixes --json`**: one key per smell, with its fix line.
-- **`broom report --json`**: `days` · `since` · `repos` · `left_out` · `blocked` · `fixed` · `let_through` · `open` · `asked` · `how` · `fix_rate` · `rules` · `waivers` · `skips` · `seconds` · `checks` · `errors`.
+- **`broom report --json`**: `days` · `since` · `repos` · `left_out` · `blocked` · `fixed` · `let_through` · `open` · `open_asked` · `asked` · `how` · `fix_rate` · `rules` · `waivers` · `skips` · `seconds` · `checks` · `errors`.
 
 Each item of `checks` holds 6 keys: `language` · `check` · `status` · `tool` · `why` · `fix`. Its `status` is `on`, `off` or `none`.
 

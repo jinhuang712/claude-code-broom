@@ -81,12 +81,13 @@ broom keeps no record of what it stopped and what was fixed, so nobody can say w
 
 The three features shipped in 0.18.2 on 2026-11-17. The measures get their first value after a week of sessions on the new version. The ledger holds a whole check's seconds since 0.25.10 on 2026-11-20, so the check time waits a week from then. Until 0.28.3 on 2026-11-26 a turn that pulled commits was blocked for the findings in them, so the fix rate waits a week from then.
 
-**Delivers** (4):
+**Delivers** (5):
 
 - [F9.1: Ledger](../features/F9-record.md#f91-ledger)
 - [F9.2: Turn summary](../features/F9-record.md#f92-turn-summary)
 - [F9.3: Report](../features/F9-record.md#f93-report)
 - The report gives the seconds of a whole check, leaves out the throwaway repos in temporary folders and starts on a day with `--since`, done on 2026-11-20.
+- A question to the user that nothing ended counts against its rule's fix rate and stays shown as open, done on 2026-11-26.
 
 **Exit criteria** (2):
 

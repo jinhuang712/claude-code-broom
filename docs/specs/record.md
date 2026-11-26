@@ -84,8 +84,10 @@ The notes are cleared at the next prompt. With `check_on` at `commit` no stop ho
 
 `broom report` counts distinct findings by repo and key, each by how it ended last: fixed, let through or still open. A finding blocked three times and then fixed counts once as blocked and once as fixed.
 
-The fix rate is the fixed over the fixed plus the let through, so a finding that hasn't ended counts against no rule. A block of self-waivers gives their count by kind and the notes of the config ones. The lines of nits are written and not yet shown.
+The fix rate is the fixed over the fixed, the let through and the still open that the user was asked about. A question that nothing ended counts against its rule, since the code still holds the finding, and it stays among the open ones, as `38 (asked 36)`. A finding still open that nobody asked about counts against no rule. A block of self-waivers gives their count by kind and the notes of the config ones. The lines of nits are written and not yet shown.
 
 The run lines give the seconds of a whole check, grouped by moment: git's hook and Claude Code's commit hook are both at a commit, and a subagent's end is at a turn's end. The time lines give the seconds per tool beside them. Before 0.25.10 the ledger held only the time lines, which leave out the smells.
 
 Without paths and with `--all`, a repo in a temporary folder is left out: the system's temporary folder, `/tmp` and `/var/folders`, as given and resolved. The first line says how many were left out.
+
+- [043: A question that nothing ended counts against its rule](decisions/043-asked-findings-count-against-the-rate.md)

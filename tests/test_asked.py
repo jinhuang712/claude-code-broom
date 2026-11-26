@@ -65,7 +65,7 @@ class AskTest(AskedCase):
                       "the same commit is still denied: nothing passed")
         self.assertEqual(self.cli(r, "known").stdout.strip(), "broom: no known issues here")
 
-    def test_asking_writes_an_ask_line_and_no_pass_and_the_report_counts_the_finding_open(self) -> None:
+    def test_asking_writes_an_ask_line_and_no_pass_and_the_report_counts_it_open_and_against_the_rate(self) -> None:
         r = self.blocked_commit()
         self.assertEqual(self.ask(r).returncode, 0)
         (block,) = rows("block")
@@ -74,9 +74,12 @@ class AskTest(AskedCase):
                          (block["key"], QUESTION, "params", "a.py", "commit"))
         self.assertEqual(passes(), [], "asking lets nothing through")
         data = json.loads(self.cli(r, "report", "--json").stdout)
-        self.assertEqual((data["blocked"], data["open"], data["fixed"], data["let_through"], data["asked"]),
-                         (1, 1, 0, 0, 1))
-        self.assertIn("still open 1, asked the user 1, fix rate -", self.cli(r, "report").stdout)
+        self.assertEqual((data["blocked"], data["open"], data["open_asked"], data["fixed"], data["let_through"],
+                          data["asked"], data["fix_rate"]), (1, 1, 1, 0, 0, 1, 0.0), "nothing ended the question")
+        text = self.cli(r, "report").stdout
+        self.assertIn("still open 1 (asked 1), asked the user 1, fix rate 0%", text)
+        row = next(line.split() for line in text.splitlines() if line.strip().startswith("params"))
+        self.assertEqual(row[-4:], ["1", "(asked", "1)", "0%"], "the rule's row: open, asked, and its rate")
 
     def test_a_finding_that_was_asked_about_is_fixed_later_and_the_fix_is_on_record(self) -> None:
         r = self.blocked_commit()
@@ -85,7 +88,8 @@ class AskTest(AskedCase):
         self.staged(r, py_function("small", 20))
         self.assertEqual(self.commit(r, "git commit -m x"), {})
         data = json.loads(self.cli(r, "report", "--json").stdout)
-        self.assertEqual((data["open"], data["fixed"], data["asked"]), (0, 1, 1), "asked, then fixed")
+        self.assertEqual((data["open"], data["open_asked"], data["fixed"], data["asked"], data["fix_rate"]),
+                         (0, 0, 1, 1, 1.0), "asked, then fixed")
 
     def test_the_finding_blocks_again_at_the_next_turns_end(self) -> None:
         r = self.blocked_commit()

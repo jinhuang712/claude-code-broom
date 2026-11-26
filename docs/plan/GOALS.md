@@ -218,12 +218,12 @@ How much of what broom blocks gets fixed. A low rate for one rule means the rule
 - [F9.3: Report](../features/F9-record.md#f93-report)
 - [F9.4: Tiers by fix rate](../features/F9-record.md#f94-tiers-by-fix-rate)
 
-**How**: The ledger of the author's machine over 30 days, read as the fix rate of `broom report --all`, where a finding still open counts against no rule. The report leaves out the throwaway repos in temporary folders. `--since` splits a rule's numbers at the day the rule changed.
+**How**: The ledger of the author's machine over 30 days, read as the fix rate of `broom report --all`. A finding still open after a question to the user counts against its rule, and any other open finding counts against none. The report leaves out the throwaway repos in temporary folders. `--since` splits a rule's numbers at the day the rule changed.
 
 **Formula**:
 
 ```
-M1 = findings fixed / (findings fixed + findings let through)        per rule, and over all rules
+M1 = fixed / (fixed + let through + open after a question)        per rule, and over all rules
 ```
 
 **Last value**: open. Until 0.28.3 on 2026-11-26 a turn that pulled commits was blocked for every finding in them, and the ledger holds one such turn, so the first value counts from 0.28.3.

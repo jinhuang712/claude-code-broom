@@ -6,6 +6,13 @@
 
 ---
 
+### Record
+
+- A finding put to the user with `--ask` that no later check found gone, and that wasn't accepted, counts against its rule's fix rate. Before, it counted against no rule, so a rule that was mostly noise read as fixed every time.
+- It stays among the open findings, marked as asked, as `38 (asked 36)`, and is never shown as let through.
+
+---
+
 ## 0.28.4 — 2026-11-26
 
 ---

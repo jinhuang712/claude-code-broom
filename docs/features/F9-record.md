@@ -46,7 +46,7 @@ When a turn let something through, the user sees one line at its end, such as `b
 
 `--all` covers every repo but those in a temporary folder, where only a test or a trial puts one, and says how many it left out.
 
-A finding counts once, however often it was blocked.
+A finding counts once, however often it was blocked. A finding put to the user and not yet fixed or accepted stays among the open ones, marked as asked, and counts against its rule's fix rate, since the code still holds it.
 
 1 gap:
 
@@ -54,6 +54,7 @@ A finding counts once, however often it was blocked.
 
 - **Commands**: [broom report](../CLI.md#broom-report)
 - **How it works**: [Record](../specs/record.md)
+- **Why**: [043: A question that nothing ended counts against its rule](../specs/decisions/043-asked-findings-count-against-the-rate.md)
 
 ---
 
