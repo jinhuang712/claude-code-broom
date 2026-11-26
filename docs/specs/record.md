@@ -22,7 +22,7 @@ The ledger is `ledger.jsonl` in the data directory, one JSON object per line. Ev
 
 10 events:
 
-- **block**: A finding stopped a commit or a turn's end.
+- **block**: A finding stopped a commit or a turn's end. From 0.30.0 it holds the finding's line and a spot, the hash of that line's text, by which a check again matches it once its message has changed.
 - **fix**: A finding of an earlier block is gone.
 - **pass**: A finding was let through, with how.
 - **ask**: A question about a blocked finding was put to the user. It is no outcome, and the finding stays open.
@@ -91,3 +91,15 @@ The run lines give the seconds of a whole check, grouped by moment: git's hook a
 Without paths and with `--all`, a repo in a temporary folder is left out: the system's temporary folder, `/tmp` and `/var/folders`, as given and resolved. The first line says how many were left out.
 
 - [043: A question that nothing ended counts against its rule](decisions/043-asked-findings-count-against-the-rate.md)
+
+---
+
+## Findings told again
+
+A finding blocked and not ended, by a fix or a pass, is open. It is told to Claude again at the prompt after a question about it, and at a session's start in its repo. A finding of the tests that ran at a turn's end belongs to that turn and is never told again.
+
+Before telling at a session's start, broom checks the files of the open findings again, after the smell scan and the check-up. A finding the check no longer finds gets a fix line. One whose rule the repo turned off since gets a fix line too. One whose file is gone, excluded or of no language broom checks leaves with no line. A check that didn't run ends nothing.
+
+A smell's message changes when it is measured with no base to compare with, so a finding is matched by its file, tool, rule and spot, and a block line written before 0.30.0 by its file, tool and rule.
+
+- [044: An open finding comes back until it ends](decisions/044-open-findings-come-back.md)

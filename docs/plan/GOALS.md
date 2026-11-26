@@ -19,7 +19,7 @@ Goals
 │   ├── ✅ O8: Done means tests ran — a turn that changed code ends with its tests run
 │   ├── ✅ O9: The first three languages measure every smell — Python, TS/JS and Go
 │   ├── ✅ O10: Swift and Rust measure every smell — bar what each language rules out
-│   └── ⬜ O11: No open finding is forgotten — Claude is told it again until it ends
+│   └── ✅ O11: No open finding is forgotten — Claude is told it again until it ends
 ├── Measures
 │   ├── ⬜ M1: Fix rate — how much of what broom blocks gets fixed
 │   └── ⬜ M2: Check time — the seconds a commit check takes
@@ -216,7 +216,7 @@ A finding that no check has ended is told to Claude again until it is fixed or a
 
 **Acceptance**: A test blocks two findings and puts them to the user. A next prompt and a new session in the repo touch no file, and Claude is told both at each. One of them fixed by hand in between is not told at the new session, and the record holds it as fixed.
 
-**Status**: ⬜, set by the user on 2026-11-26.
+**Status**: ✅ 2026-11-27, by `tests/test_comeback.py`: two findings blocked and put to the user are told at the next prompt and at a new session, which touch no file, and one fixed by hand in between is not told at the new session and holds a fix line. An idle prompt starts no Python, and an idle session start runs no check.
 
 ---
 

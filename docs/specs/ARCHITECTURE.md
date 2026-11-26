@@ -6,7 +6,7 @@ broom is a Claude Code plugin. Claude Code starts one of its hooks at a session 
 Claude Code
   │ SessionStart · UserPromptSubmit · PreToolUse(Bash) · PostToolUse(edit) · PostToolUseFailure(Bash) · Stop · SubagentStop
   ▼
-hooks/hooks.json ──▶ hooks/commit.sh ──▶ bin/broom ──▶ lib/broom/
+hooks/hooks.json ──▶ hooks/*.sh ──────▶ bin/broom ──▶ lib/broom/
                                             ▲              │
 git pre-commit hook ────────────────────────┘              ├──▶ the project's tools (formatters, linters, type checkers)
 skills/ (setup · status · scan · clean) ───▶ bin/broom    ├──▶ defaults/ (configs where a project has none)
@@ -17,7 +17,7 @@ skills/ (setup · status · scan · clean) ───▶ bin/broom    ├──�
 
 ## Hook declarations
 
-They say which Claude Code events start broom, with a 30-second timeout each. The Bash hook goes through a shell prefilter first.
+They say which Claude Code events start broom, with a 30-second timeout each. The Bash hooks and the synchronous prompt hook go through a shell prefilter first, which leaves before Python starts when there is nothing to do.
 
 They live in `hooks/`.
 

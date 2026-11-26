@@ -6,6 +6,15 @@
 
 ---
 
+### Open findings come back
+
+- A finding that stopped a commit or a turn's end and that no fix or accept has ended is told to Claude again: at the prompt that holds the user's answer to a question about it, and at a session's start in its repo. Before, it left Claude's sight once the turns moved to other files.
+- Before a session's start tells, broom checks the findings' files again: one gone is recorded as fixed and not told. At the answer it tells at once and checks right after.
+- It tells and never blocks. A prompt with no question waiting costs one shell start, about 10 ms, and no Python.
+- A block line of the ledger holds the finding's line and the hash of its text.
+
+---
+
 ## 0.29.0 — 2026-11-27
 
 ---

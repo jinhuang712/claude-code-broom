@@ -34,7 +34,7 @@ Features
 │   ├── ✅ F2.11: Nothing is waved through — a finding ends fixed or accepted with a reason
 │   ├── 🚧 F2.12: A pass is told to the user — no line for the user with `check_on` at `commit`
 │   ├── 🚧 F2.13: A turn that changed code shows that tests ran — a run in the background or piped counts as passed
-│   └── ⬜ F2.14: Open findings come back — told again at the next prompt and at a session's start until they end
+│   └── ✅ F2.14: Open findings come back — told again at the next prompt and at a session's start until they end
 ├── ✅ F3: Formatting — the project's formatter on what changed
 │   ├── ✅ F3.1: When to format — at commit, after every edit, or never
 │   └── ✅ F3.2: How much to format — the scope

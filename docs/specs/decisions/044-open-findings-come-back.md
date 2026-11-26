@@ -41,3 +41,7 @@ It is built once [CP14: No clock](../../plan/ROADMAP.md#cp14-no-clock) has shipp
 The check again costs time at a session's start, in the scan that already runs in the background there.
 
 A finding whose file is gone leaves the record with no line, as before, and is not told.
+
+Claude Code hands an async hook's output to Claude only on the next turn, and the prompt hook is async. So the question leaves a mark, and a synchronous prompt hook tells Claude from the record when the mark is there. The check again would hold up the prompt, so at that moment it runs right after the telling, in the async hook, and a finding it finds gone is told as gone on a later turn. Without a mark the synchronous hook is a shell test of one file, about 10 ms, and no Python.
+
+A block line holds the finding's line and a spot, the hash of that line's text, since a smell's message changes when it is measured again with no base.

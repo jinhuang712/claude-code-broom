@@ -322,9 +322,19 @@ It is told at 2 moments:
 - **The next prompt after a question**: the user's answer has come, so Claude is told the findings it asked about, to fix them or to accept them with `--agreed`.
 - **A session's start in the repo**: Claude is told the findings still open there, asked about or not.
 
-Before it tells, broom checks the files of those findings again with the rules of the day. A finding no longer there is recorded as fixed and is not told, so a rule changed since or a fix made by hand makes no noise.
+Before it tells, broom checks the files of those findings again with the rules of the day. A finding no longer there is recorded as fixed and is not told, so a rule changed since or a fix made by hand makes no noise. At the prompt after a question that check would hold up the prompt, so Claude is told from the record at once, and the check runs right after: a finding it finds gone is recorded as fixed and told as gone on a later turn.
+
+The message gives how many findings are open, names up to 5 and says how many more there are. Claude is told to fix them when it fits, and to tell the user at a natural point. The user sees nothing of it.
 
 It tells and never blocks. The finding still blocks wherever a check covers its file.
+
+A prompt with no question waiting costs one shell start, about 10 ms, and no Python. A session's start with nothing open reads the ledger and runs no check.
+
+3 gaps:
+
+- A finding fixed by hand between the question and the answer is told once at the answer, and told as gone on the next turn.
+- A finding blocked before 0.30.0 is matched by its file, tool and rule only, so one that shares them with another open finding of its file may still be told after its fix.
+- With less than 6 seconds of a session start's hook left, the findings are told without the check again.
 
 - **Stance**: [Fixed, or let through with a reason the user sees](../PHILOSOPHY.md#how-does-a-finding-end)
 - **Why**: [044: An open finding comes back until it ends](../specs/decisions/044-open-findings-come-back.md)

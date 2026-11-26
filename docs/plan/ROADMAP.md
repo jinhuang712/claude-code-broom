@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP13: Nothing is forgotten](#cp13-nothing-is-forgotten), set by the user on 2026-11-26. [CP14: No clock](#cp14-no-clock) came before it at the user's word on 2026-11-27 and ended that day, and [CP15: Sharper rules and more rot](#cp15-sharper-rules-and-more-rot) follows CP13. [CP8: Lighter](#cp8-lighter) waits for the ledger's numbers from 0.29.0: 100 checks that ran a tool for the check time and 100 findings that ended for the fix rate. The user set on 2026-11-20 that no feature is added until then, and lifted that for CP13, CP14 and CP15. What follows them is open in [What it takes for a second user to install broom and stay](TODO.md#p1discussion-what-it-takes-for-a-second-user-to-install-broom-and-stay). [CP9: Ready for a public release](#cp9-ready-for-a-public-release) ended on 2026-11-20 with 0.28.0, once the README got its hero. CP10 ended on 2026-11-20 with 0.26.0, and [CP11: Read from a syntax tree](#cp11-read-from-a-syntax-tree) with 0.27.0 that day. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
+**Current checkpoint**: [CP15: Sharper rules and more rot](#cp15-sharper-rules-and-more-rot), picked by the user on 2026-11-27. [CP14: No clock](#cp14-no-clock) and [CP13: Nothing is forgotten](#cp13-nothing-is-forgotten) ended that day, in that order at the user's word. [CP8: Lighter](#cp8-lighter) waits for the ledger's numbers from 0.29.0: 100 checks that ran a tool for the check time and 100 findings that ended for the fix rate. The user set on 2026-11-20 that no feature is added until then, and lifted that for CP13, CP14 and CP15. What follows them is open in [What it takes for a second user to install broom and stay](TODO.md#p1discussion-what-it-takes-for-a-second-user-to-install-broom-and-stay). [CP9: Ready for a public release](#cp9-ready-for-a-public-release) ended on 2026-11-20 with 0.28.0, once the README got its hero. CP10 ended on 2026-11-20 with 0.26.0, and [CP11: Read from a syntax tree](#cp11-read-from-a-syntax-tree) with 0.27.0 that day. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
 
 ---
 
@@ -35,7 +35,7 @@ Roadmap
 │   └── ✅ CP10.2: Swift and Rust
 ├── ✅ CP11: Read from a syntax tree — what no linter covers, read by a parser
 ├── ⬜ CP12: Waits for a need
-├── ⬜ CP13: Nothing is forgotten — an open finding comes back until it ends
+├── ✅ CP13: Nothing is forgotten — an open finding comes back until it ends
 ├── ✅ CP14: No clock — events and counts, and what Claude hides still counts
 └── ⬜ CP15: Sharper rules and more rot — the user's pick from TODO
 ```
@@ -567,9 +567,9 @@ The user set this on 2026-11-20: a check rests on a mechanism and not on a text 
 
 ## CP13: Nothing is forgotten
 
-**Status**: ⬜
+**Status**: ✅
 
-The user set this on 2026-11-26: the core want is that no problem is hidden, and that Claude is reminded of one until it is dealt with. A finding put to the user, or left in another session, left Claude's sight. It starts once [CP14: No clock](#cp14-no-clock) has shipped. It doesn't wait for CP8's numbers, which `broom report --since` splits at the version CP13 ships in.
+The user set this on 2026-11-26: the core want is that no problem is hidden, and that Claude is reminded of one until it is dealt with. A finding put to the user, or left in another session, left Claude's sight. It started once [CP14: No clock](#cp14-no-clock) had shipped, and ended on 2026-11-27, to ship in 0.30.0. It didn't wait for CP8's numbers, which `broom report --since` splits at that version.
 
 **Delivers** (1):
 
@@ -578,7 +578,7 @@ The user set this on 2026-11-26: the core want is that no problem is hidden, and
 **Exit criteria** (1):
 
 - **Objectives**
-  - [O11: No open finding is forgotten](GOALS.md#o11-no-open-finding-is-forgotten)
+  - [O11: No open finding is forgotten](GOALS.md#o11-no-open-finding-is-forgotten): ✅ 2026-11-27
 
 ---
 

@@ -312,11 +312,11 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 `broom hook <event>` handles one hook event. It is left out of `--help`.
 
-The 9 events: `commit` · `edit` · `prompt` · `stop` · `subagent-stop` · `session` · `session-scan` · `pre-commit` · `test-failed`.
+The 10 events: `commit` · `edit` · `prompt` · `answer` · `stop` · `subagent-stop` · `session` · `session-scan` · `pre-commit` · `test-failed`.
 
 **Called by**: Claude Code through `hooks/hooks.json`, and git through the pre-commit script.
 
-**Prints**: stdout gets one JSON object when there is something to say. `commit` denies with a reason or adds context. `edit` adds context. `stop` and `subagent-stop` block with a reason or give a system message. `session` and `session-scan` add context. stderr gets the denial text for `pre-commit`.
+**Prints**: stdout gets one JSON object when there is something to say. `commit` denies with a reason or adds context. `edit` adds context. `stop` and `subagent-stop` block with a reason or give a system message. `answer`, `prompt`, `session` and `session-scan` add context. stderr gets the denial text for `pre-commit`.
 
 **Fails**: `pre-commit` exits 1 on a denial. Every other event exits 0, also when a handler raises and when the hook gives up.
 

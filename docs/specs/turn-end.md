@@ -64,7 +64,10 @@ An accept of the finding is kept in the turn's directory and not among the known
 
 Ending the turn is how Claude asks the user anything, so a block would keep a question from being put. `broom known --ask "<question>"` marks what the last block showed as waiting for the user, in the turn it was blocked in. The turn's end leaves those findings out of its block for that turn and opens the user's line with the question. They stay in the repo's last blocked result, so an accept still serves them once the user has answered. A later turn's end blocks on them like any other finding, but only when that turn changed their file: a turn that changes nothing, or only other files, ends without them. A commit of their file is denied until they are fixed or accepted.
 
+The question leaves a mark in the session's directory. The next prompt holds the user's answer, so a synchronous hook tells Claude then which findings it asked about, from the record, and the async prompt hook checks their files again: one found gone is recorded as fixed and told as gone on a later turn. Without the mark, the synchronous hook is a shell test that exits before Python starts.
+
 - [033: A turn can end with a question to the user, which passes nothing](decisions/033-ask-the-user.md)
+- [044: An open finding comes back until it ends](decisions/044-open-findings-come-back.md)
 
 ---
 
