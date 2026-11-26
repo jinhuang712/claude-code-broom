@@ -1,0 +1,10 @@
+# The package a Go file belongs to, the name its package clause gives (gomeasure.py): a print in a `package main`
+# program is its output, and a package's variables are those its files in one folder declare under one name.
+id: go-package
+language: Go
+message: the file's package
+metadata: {smell: package}
+rule:
+  kind: package_identifier
+  inside: {kind: package_clause}
+  pattern: $NAME

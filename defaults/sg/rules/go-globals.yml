@@ -1,0 +1,66 @@
+# A package-level variable that a function assigns (gomeasure.py, decision 042), read in four parts: the variables a
+# package declares, the functions, the names a function assigns and the names a function declares itself, which hide
+# a package variable of the same name. An assignment is `x = …`, `x op= …`, `x++` or `x--`; a write to a field or an
+# element of `x` is none, as in Python and TS/JS. gomeasure.py joins the parts across the files of one package.
+id: go-state-var
+language: Go
+message: a package-level variable
+metadata: {smell: package_var}
+rule:
+  kind: identifier
+  pattern: $NAME
+  inside:
+    kind: var_spec  # a direct child is a name: one with `field: name` would be the first name alone
+    inside:
+      any:
+        - {kind: var_declaration, inside: {kind: source_file}}
+        - {kind: var_spec_list, inside: {kind: var_declaration, inside: {kind: source_file}}}
+---
+# A function, a method, or a function literal outside both, as in a package variable's value.
+id: go-state-func
+language: Go
+message: a function
+metadata: {smell: function}
+rule:
+  any:
+    - {kind: function_declaration, has: {field: name, pattern: $NAME}}
+    - kind: method_declaration
+    - kind: func_literal
+      not:
+        inside:
+          stopBy: end
+          any: [kind: function_declaration, kind: method_declaration, kind: func_literal]
+---
+id: go-state-assign
+language: Go
+message: a name a function assigns
+metadata: {smell: assigned}
+rule:
+  kind: identifier
+  pattern: $NAME
+  any:
+    - inside: {kind: expression_list, inside: {kind: assignment_statement, field: left}}
+    - inside: {kind: inc_statement}
+    - inside: {kind: dec_statement}
+  inside:
+    stopBy: end
+    any: [kind: function_declaration, kind: method_declaration, kind: func_literal]
+---
+id: go-state-local
+language: Go
+message: a name a function declares
+metadata: {smell: local}
+rule:
+  kind: identifier
+  pattern: $NAME
+  any:
+    - inside:
+        kind: expression_list
+        inside:
+          field: left
+          any: [kind: short_var_declaration, kind: range_clause, kind: receive_statement]
+    - inside: {kind: expression_list, inside: {kind: type_switch_statement, field: alias}}
+    - inside: {any: [kind: var_spec, kind: parameter_declaration, kind: variadic_parameter_declaration]}
+  inside:
+    stopBy: end
+    any: [kind: function_declaration, kind: method_declaration, kind: func_literal]

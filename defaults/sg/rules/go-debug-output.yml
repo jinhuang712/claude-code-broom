@@ -1,0 +1,29 @@
+# A print in Go (gomeasure.py, decision 042). The builtins `print` and `println` write to standard error and serve
+# debugging alone. `fmt.Print`, `fmt.Printf` and `fmt.Println` are a program's output in a `package main` file that
+# is no test, and gomeasure.py lets those off. An example function prints what `go test` compares with its
+# `// Output:` comment, so a print inside one is no debug print.
+id: go-print
+language: Go
+message: a print builtin
+metadata: {smell: debug_output}
+rule:
+  kind: call_expression
+  has: {field: function, kind: identifier, regex: '^(print|println)$'}
+---
+id: go-fmt-print
+language: Go
+message: a print of package fmt
+metadata: {smell: debug_output}
+rule:
+  kind: call_expression
+  has:
+    field: function
+    kind: selector_expression
+    all:
+      - has: {field: operand, kind: identifier, regex: '^fmt$'}
+      - has: {field: field, regex: '^Print(f|ln)?$'}
+  not:
+    inside:
+      kind: function_declaration
+      stopBy: end
+      has: {field: name, regex: '^Example'}

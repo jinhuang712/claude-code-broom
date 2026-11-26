@@ -12,6 +12,7 @@ TODO = "// TO" + "DO: later"
 SCAFFOLD = {"go.mod": "module example.com/m\n\ngo 1.22\n"}
 LINT = ("golangci-lint",)
 TYPED = ("golangci-lint", "go")  # the linters that need types build the module
+TREE = ("ast-grep",)
 CLONE = repeated("\ttotal += values[{i}] + offsets[{i}]*scale", 40)
 TYPE_HEAD = ("package a", "", "type Big struct {", "\tx int", "}", "")
 
@@ -46,12 +47,12 @@ SAMPLES = {
     "unused_params": Sample({"a.go": text("package a", "", "func F(a, unused int) int {", "\treturn a", "}")}, LINT),
     "magic_numbers": Sample({"a.go": text("package a", "", "func F(x int) int {", "\treturn x * 86400", "}")}, LINT),
     "debug_output": Sample({"a.go": text("package a", "", 'import "fmt"', "", "func F() {", '\tfmt.Println("x")', "}")},
-                           TYPED),
+                           TREE),
     "todo": Sample({"a.go": text("package a", "", TODO, "func F() int {", "\treturn 1", "}")}, LINT),
     "type_escape": Sample({"a.go": text("package a", "", "func F(a interface{}) string {", "\treturn a.(string)", "}")},
                           LINT),
     "globals": Sample({"a.go": text("package a", "", "var counter int", "", "func Bump() int {", "\tcounter++",
-                                    "\treturn counter", "}")}, TYPED),
+                                    "\treturn counter", "}")}, TREE),
     "bool_params": Sample({"a.go": text("package a", "", "func F(a int, verbose bool) int {", "\tif verbose {",
                                         "\t\treturn a", "\t}", "\treturn 0", "}")}, LINT),
     "broad_test_asserts": Sample({"a_test.go": text("package a", "", "func TestA(t *testing.T) {", "\tx := 1",

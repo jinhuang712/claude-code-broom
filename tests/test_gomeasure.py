@@ -1,5 +1,6 @@
-"""What broom reads from Go source itself: a type's length with its methods, a `recover()` whose value is dropped and
-a testify assertion any error passes, each read from the syntax tree by ast-grep. None of it needs golangci-lint, so
+"""What broom reads from Go source itself: a type's length with its methods, a `recover()` whose value is dropped, a
+testify assertion any error passes, a print and a package variable a function assigns, each read from the syntax tree
+by ast-grep. None of it needs golangci-lint, so
 none of these tests do. Sample code is a list of lines, so that a handler of it never stands in this file as one."""
 
 from __future__ import annotations
@@ -7,7 +8,7 @@ from __future__ import annotations
 import json
 import shutil
 import unittest
-from typing import List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from support import BroomCase
 
@@ -15,7 +16,7 @@ from broom.gomeasure import type_sizes
 from broom.syntax import matches
 from broom.smells import find_smells
 
-METRICS = ("type_lines", "broad_catch", "broad_test_asserts")
+METRICS = ("type_lines", "broad_catch", "broad_test_asserts", "debug_output", "globals")
 
 
 def text(*rows: str) -> str:
@@ -44,9 +45,11 @@ def with_line(row: str) -> str:
 
 @unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
 class GoTextCase(BroomCase):
-    def changed(self, rel: str, before: str, after: str) -> List[Tuple[str, str, List[int]]]:
-        """The (smell, key, added lines) a change from `before` to `after` of the file `rel` makes."""
-        r = self.repo({rel: before, ".broom.json": json.dumps({"smells_off": ["dead_code"]})})
+    def changed(self, rel: str, before: str, after: str, others: Optional[Dict[str, str]] = None
+                ) -> List[Tuple[str, str, List[int]]]:
+        """The (smell, key, added lines) a change from `before` to `after` of the file `rel` makes, beside the files
+        `others`, which it leaves as they are."""
+        r = self.repo({rel: before, **(others or {}), ".broom.json": json.dumps({"smells_off": ["dead_code"]})})
         (r / rel).write_text(after)
         found, _ = find_smells(r, [r / rel], "HEAD")
         return [(s.metric, s.key, s.added) for s in found if s.metric in METRICS]
@@ -123,6 +126,70 @@ class AnyErrorTest(GoTextCase):
     def test_an_old_occurrence_stays_quiet_when_the_change_is_elsewhere(self) -> None:
         old = text("package a", "", "func TestA(t *testing.T) {", ERR, "}")
         self.assertEqual(self.changed("a_test.go", old, old + "\nvar y = 1\n"), [])
+
+
+class PrintTest(GoTextCase):
+    def printed(self, rel: str, package: str, rows: Tuple[str, ...]) -> List[List[int]]:
+        """The added lines of each debug print that adding `rows` to a function of `package` in `rel` makes."""
+        head = (f"package {package}", "", 'import "fmt"', "")
+        before = text(*head, "func F() {", "}")
+        return [f[2] for f in self.changed(rel, before, text(*head, "func F() {", *rows, "}"))
+                if f[0] == "debug_output"]
+
+    def test_a_print_in_a_library_or_a_test_and_a_print_builtin_anywhere_are_hints(self) -> None:
+        for rel, package, row in (("a.go", "lib", '\tfmt.Println("x")'), ("main_test.go", "main", '\tfmt.Printf("%d", 1)'),
+                                  ("main.go", "main", '\tprintln("x")')):
+            with self.subTest(rel=rel, row=row):
+                self.assertEqual(self.printed(rel, package, (row,)), [[6]])
+
+    def test_a_programs_output_a_write_to_a_writer_a_comment_and_a_string_are_quiet(self) -> None:
+        for rel, package, row in (("main.go", "main", '\tfmt.Println("listening")'),
+                                  ("a.go", "lib", '\tfmt.Fprintln(w, "x")'), ("a.go", "lib", '\t// fmt.Println("x")'),
+                                  ("a.go", "lib", '\t_ = "fmt.Println(1)"')):
+            with self.subTest(rel=rel, row=row):
+                self.assertEqual(self.printed(rel, package, (row,)), [])
+
+    def test_an_example_prints_what_go_test_compares(self) -> None:
+        before = text("package lib_test", "", 'import "fmt"', "")
+        after = before + text("func ExampleF() {", '\tfmt.Println("x")', "\t// Output: x", "}")
+        self.assertEqual(self.changed("lib_test.go", before, after), [])
+
+
+STATE = ("package a", "", "var count int", "")
+
+
+class GlobalsTest(GoTextCase):
+    def assigned(self, rows: Tuple[str, ...], others: Optional[Dict[str, str]] = None, rel: str = "a.go",
+                 head: Tuple[str, ...] = STATE) -> List[List[int]]:
+        """The added lines of the globals that adding `rows` after `head` in `rel` makes, beside the files `others`."""
+        return [f[2] for f in self.changed(rel, text(*head), text(*head, *rows), others) if f[0] == "globals"]
+
+    def test_a_function_that_assigns_a_package_variable_is_a_hint_at_its_first_assignment(self) -> None:
+        for rows in (("func Bump() {", "\tcount++", "}"), ("func Set(n int) {", "\tcount, _ = n, 0", "}"),
+                     ("func Add(n int) {", "\tcount += n", "\tdefer func() { count = 0 }()", "}")):
+            with self.subTest(rows=rows):
+                self.assertEqual(self.assigned(rows), [[6]])
+
+    def test_a_variable_of_another_file_of_the_package_counts_where_a_test_assigns_it(self) -> None:
+        rows = ("func TestRun(t *testing.T) {", "\tagents = []string{\"a\"}", "\tdefer func() { agents = nil }()", "}")
+        others = {"run.go": text("package a", "", "var agents []string")}
+        self.assertEqual(self.assigned(rows, others, "run_test.go", ("package a", "")), [[4]])
+        self.assertEqual(self.assigned(rows, others, "run_test.go", ("package a_test", "")), [], "another package")
+
+    def test_a_table_init_a_local_a_field_an_element_and_a_method_call_are_quiet(self) -> None:
+        for rows in (("var table = map[string]int{\"a\": 1}", "", "func Get(k string) int {", "\treturn table[k]", "}"),
+                     ("func init() {", "\tcount = 3", "}"),
+                     ("func Local() int {", "\tcount := 1", "\tcount = 2", "\treturn count", "}"),
+                     ("func Param(count int) {", "\tcount++", "}"),
+                     ("var cfg struct{ n int }", "", "func Field() {", "\tcfg.n = 1", "}"),
+                     ("var seen = map[string]bool{}", "", "func Mark(k string) {", "\tseen[k] = true", "}"),
+                     ("var ids atomic.Uint64", "", "func Next() uint64 {", "\treturn ids.Add(1)", "}")):
+            with self.subTest(rows=rows):
+                self.assertEqual(self.assigned(rows), [])
+
+    def test_an_old_assignment_stays_quiet_when_the_change_is_elsewhere(self) -> None:
+        old = text(*STATE, "func Bump() {", "\tcount++", "}")
+        self.assertEqual(self.changed("a.go", old, old + "\nvar y = 1\n"), [])
 
 
 if __name__ == "__main__":

@@ -17,6 +17,7 @@ from typing import Dict, Iterator, List, Optional, Tuple
 from .config import DEAD_CODE, OPTIONAL_NOTE
 from .findings import failure
 from .foldercycles import js_folder_cycles, python_folder_cycles
+from .gomeasure import assigned_globals
 from .gitutil import run
 from .jsmeasure import OXLINT_CATEGORIES
 from .langlint import golangci_cache
@@ -60,18 +61,15 @@ class Found:
 
 
 # The linters that need types, by what they find. They run with broom's own config, never the project's.
-GO_TYPED = {"forbidigo": "debug_output", "gochecknoglobals": "globals", "gocritic": "commented_code",
-            "unused": DEAD_CODE, "staticcheck": "deprecated_api"}  # of staticcheck only SA1019, a deprecated call
+GO_TYPED = {"gocritic": "commented_code", "unused": DEAD_CODE,
+            "staticcheck": "deprecated_api"}  # of staticcheck only SA1019, a deprecated call
 GO_CONFIG = """version: "2"
 linters:
   default: none
-  enable: [forbidigo, gochecknoglobals, gocritic, staticcheck, unused]
+  enable: [gocritic, staticcheck, unused]
   settings:
     staticcheck:
       checks: ["-all", "SA1019"]
-    forbidigo:
-      forbid:
-        - pattern: '^(fmt\\.Print(f|ln)?|print|println)$'
     gocritic:
       disable-all: true
       enabled-checks: [commentedOutCode]
@@ -141,6 +139,18 @@ def go_issues(repo: Path, module: Path, issues: List[dict]) -> List[Found]:
             found.append(Found(rel, int((i.get("Pos") or {}).get("Line", 0)), metric, "golangci-lint",
                                go_key(metric, text)))
     return found
+
+
+def go_state(repo: Path, rels: List[str], notes: List[str], budget: Budget) -> List[Found]:
+    """A package variable that a function of the changed Go files assigns, read from the trees of their packages'
+    files, which only the real tree holds (decision 042)."""
+    if not any(Path(rel).suffix in GO_EXTS for rel in rels):
+        return []
+    timeout = budget.timeout()
+    if not timeout:
+        notes.append(OUT_OF_TIME.format(tool="ast-grep"))
+        return []
+    return [Found(rel, line, "globals", "broom") for rel, line in assigned_globals(repo, rels, notes, timeout)]
 
 
 def go_key(metric: str, text: str) -> str:
@@ -310,7 +320,8 @@ def find_in_real_tree(repo: Path, rels: List[str], soft: Dict[str, int], notes: 
     `soft` maps a sized smell to its soft limit; clippy gets those of rustlint.SOFT_LIMITS. The quick tools go
     first, so clippy, which may be building a crate cold, gets what is left of a `budget`."""
     budget = budget or Budget()
-    found = go_found(repo, rels, notes, budget) + js_found(repo, rels, notes, budget)
+    found = go_found(repo, rels, notes, budget) + go_state(repo, rels, notes, budget)
+    found += js_found(repo, rels, notes, budget)
     for metric, cycles in (("import_cycle", import_cycles), ("import_cycle", rust_import_cycles),
                            ("folder_cycle", python_folder_cycles), ("folder_cycle", rust_folder_cycles)):
         found += [Found(rel, line, metric, "broom") for rel, line in cycles(repo, rels)]

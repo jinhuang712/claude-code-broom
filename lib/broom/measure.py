@@ -19,6 +19,7 @@ from .jsmeasure import measure_js
 from .reading import TOOL_TIMEOUT, Limits, Raw, Reader, match, number, quoted_name
 from .rustmeasure import rust_text
 from .swiftmeasure import swift_text
+from .syntax import inside
 from .toolchain import CSS_EXTS, GO_EXTS, JS_EXTS, PY_EXTS, RS_EXTS, SWIFT_EXTS
 
 UNREACHABLE = 1_000_000  # a SwiftLint error level nothing reaches: broom tells hints from blocks itself
@@ -148,10 +149,11 @@ def nesting_depth(complexity: int) -> int:
 
 def golangci_config(lim: Limits) -> str:
     """Linters that read syntax alone: the scratch tree holds only the changed files, so imports don't resolve,
-    and one linter that needs types (goconst, forbidigo, gochecknoglobals) would stop them all."""
+    and one linter that needs types (goconst, staticcheck, unused) would stop them all. A type assertion that
+    checks with a second result, `_` among them, can't panic, so it is no type escape (decision 042)."""
     revive = [f"{{name: argument-limit, arguments: [{lim['params'][0]}]}}", "{name: unused-parameter}",
-              "{name: empty-block}", "{name: flag-parameter}", "{name: unchecked-type-assertion}",
-              "{name: exported}"]
+              "{name: empty-block}", "{name: flag-parameter}", "{name: exported}",
+              "{name: unchecked-type-assertion, arguments: [{acceptIgnoredAssertionResult: true}]}"]
     return "\n".join([
         'version: "2"',
         "linters:",
@@ -198,8 +200,9 @@ def golangci_read(linter: str, text: str) -> Optional[Tuple[str, Optional[int], 
 
 def measure_go(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None:
     """Measure the Go files: what broom reads from their trees (the lengths among it), then the rest with
-    golangci-lint in a scratch module; without golangci-lint, a note and no more rows."""
-    go_text(r, rels, lim)
+    golangci-lint in a scratch module; without golangci-lint, a note and no more rows. A setter's boolean
+    parameter is no flag (decision 042)."""
+    setters = go_text(r, rels, lim)
     exe = shutil.which("golangci-lint")
     if not exe:
         r.notes.append("missing:golangci-lint (brew install golangci-lint)")
@@ -213,9 +216,10 @@ def measure_go(r: Reader, rels: List[str], lim: Limits, _start: Path) -> None:
                      env=env)
     for d in (r.json(rc, out, {}) or {}).get("Issues") or []:
         read = golangci_read(d.get("FromLinter", ""), d.get("Text", ""))
-        if read:
-            pos = d.get("Pos") or {}
-            r.add(pos.get("Filename", ""), int(pos.get("Line", 0)), *read)
+        pos = d.get("Pos") or {}
+        rel, line = r.rel(pos.get("Filename", "")), int(pos.get("Line", 0))
+        if read and not (read[0] == "bool_params" and inside(line, setters.get(rel, []))):
+            r.add(rel, line, *read)
 
 
 SWIFTLINT_SIZES = {"function_body_length": "function_lines", "function_parameter_count": "params",

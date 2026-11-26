@@ -13,8 +13,8 @@ from broom.smells import find_smells
 
 SOFT = {metric: pair[0] for metric, pair in SMELL_LIMITS.items()}
 GO_MOD = "module example.com/x\n\ngo 1.22\n"
-GO_CLEAN = 'package main\n\nimport "strings"\n\nfunc Upper(s string) string {\n\treturn strings.ToUpper(s)\n}\n'
-GO_SMELLY = """package main
+GO_CLEAN = 'package x\n\nimport "strings"\n\nfunc Upper(s string) string {\n\treturn strings.ToUpper(s)\n}\n'
+GO_SMELLY = """package x
 
 import (
 	"fmt"
@@ -24,6 +24,7 @@ import (
 var counter int
 
 func Upper(s string) string {
+	counter++
 	fmt.Println("debug")
 	// x := compute(1, 2)
 	// if x > 3 { return }
@@ -67,15 +68,15 @@ class RealTreeTest(BroomCase):
     def test_go_smells_that_need_types_are_found_on_the_lines_a_change_adds(self) -> None:
         r = self.repo({"go.mod": GO_MOD, "main.go": GO_CLEAN})
         (r / "main.go").write_text(GO_SMELLY)
-        self.assertEqual(self.metrics(r, "main.go"),  # `counter` and `helper` are both unused
+        self.assertEqual(self.metrics(r, "main.go"),  # `counter` is only written and `helper` never called
                          [("hint", "debug_output"), ("hint", "globals"), ("nit", "commented_code"),
                           ("nit", "dead_code"), ("nit", "dead_code")])
 
     @unittest.skipUnless(HAS_GO, "go or golangci-lint missing")
     def test_a_go_smell_the_change_did_not_add_stays_quiet(self) -> None:
         r = self.repo({"go.mod": GO_MOD, "main.go": GO_SMELLY})
-        (r / "main.go").write_text(GO_SMELLY.replace('"debug"', '"debug twice"'))  # the line is edited, not new
-        self.assertEqual([m for _, m in self.metrics(r, "main.go")], ["debug_output"], "the edited line only")
+        (r / "main.go").write_text(GO_SMELLY.replace("counter++", "counter += 2"))  # the line is edited, not new
+        self.assertEqual([m for _, m in self.metrics(r, "main.go")], ["globals"], "the edited line only")
         (r / "main.go").write_text(GO_SMELLY + "\n// a note\n")  # a line far from every smell
         self.assertEqual(self.metrics(r, "main.go"), [])
 
@@ -149,5 +150,6 @@ class RealTreeTest(BroomCase):
         notes: list = []
         with no_depcruise():
             self.assertEqual(find_in_real_tree(r, ["main.go", "a.ts"], SOFT, notes, Budget(0)), [])
-        self.assertEqual(sorted(n.split(" before ")[1].split(" measured")[0] for n in notes), ["golangci-lint", "oxlint"])
+        self.assertEqual(sorted(n.split(" before ")[1].split(" measured")[0] for n in notes),
+                         ["ast-grep", "golangci-lint", "oxlint"])
         self.assertTrue(find_in_real_tree(r, ["main.go"], SOFT, [], Budget(60)), "a roomy budget still measures")

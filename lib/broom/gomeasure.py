@@ -1,24 +1,27 @@
 """What broom reads from Go source itself: how long a function is and how long a type is with its methods, both in
-code lines (decision 039), and for the smells golangci-lint has no linter for, a `recover()` whose value is dropped
-and a testify assertion that any error passes.
+code lines (decision 039), and for the smells golangci-lint has no linter for, a `recover()` whose value is dropped,
+a testify assertion that any error passes, a print and a package variable that a function assigns (decision 042).
 
 Each is read from the syntax tree by ast-grep's rules `go-function-lines.yml`, `go-type-lines.yml`,
-`go-broad-catch.yml` and `go-broad-test-asserts.yml` under `defaults/sg/rules/` (decision 038), in one run over the
-files. A string or a comment
-that looks like code is never taken for it, and a type declared inside a `type ( ... )` group counts like any other. A
-region the grammar can't read (`unparsed.yml`) is left out, with a note.
+`go-broad-catch.yml`, `go-broad-test-asserts.yml`, `go-debug-output.yml`, `go-globals.yml` and `go-package.yml` under
+`defaults/sg/rules/` (decision 038). A string or a comment that looks like code is never taken for it, and a type
+declared inside a `type ( ... )` group counts like any other. A region the grammar can't read (`unparsed.yml`) is
+left out, with a note.
 """
 
 from __future__ import annotations
 
-from typing import Callable, Dict, List, Optional, Tuple
+from pathlib import Path
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from .reading import TOOL_TIMEOUT, Limits, Reader
-from .syntax import Match, Rules, by_file, matches, parsed
+from .syntax import Match, Rules, Span, by_file, matches, parsed
 
 TYPE_LINES = "type_lines"
 FUNCTION_LINES = "function_lines"
-GO_RULES = Rules(only="^go-(type|method|func|broad-.*|unparsed)$")  # the smells, and what the grammar can't read
+# The smells, the package clause, and what the grammar can't read.
+GO_RULES = Rules(only="^go-(type|method|func|broad-.*|print|fmt-print|package|unparsed)$")
+STATE_RULES = Rules(only="^go-(state-.*|package|unparsed)$")  # what a package declares and its functions assign
 Count = Callable[[str, int, int], int]  # the code lines of a file from one line through another
 
 
@@ -34,16 +37,95 @@ def type_sizes(found: List[Match], count: Optional[Count] = None) -> Dict[Tuple[
     return sizes
 
 
-def go_text(r: Reader, rels: List[str], lim: Limits) -> None:
+def packages(found: List[Match]) -> Dict[str, str]:
+    """The package each file among the matches `found` belongs to, by its package clause."""
+    return {m.file: m.caught.get("NAME", "") for m in found if m.rule == "go-package"}
+
+
+def counted_print(m: Match, package: Dict[str, str]) -> bool:
+    """Whether the print `m` is a debug print: a builtin anywhere, and a fmt print in a test file or in a package
+    other than `main`, where printing is no program's output."""
+    return m.rule == "go-print" or m.file.endswith("_test.go") or package.get(m.file) != "main"
+
+
+def setter(name: str) -> bool:
+    """Whether `name` is a setter's, `Set` or `set` alone or before a capital, as `SetKeepAlivesEnabled`: the name
+    says what its boolean sets, so the call doesn't read `f(x, true)`."""
+    rest = next((name[len(prefix):] for prefix in ("Set", "set") if name.startswith(prefix)), None)
+    return rest is not None and (not rest or rest[0].isupper())
+
+
+def go_text(r: Reader, rels: List[str], lim: Limits) -> Dict[str, List[Span]]:
     """Add the rows read from the trees of the Go files `rels`: a function and a type past its length limit, a
-    dropped `recover()` and, in a test file, an assertion that any error passes. Without ast-grep, a note and none of
-    these rows; what lies in a region the grammar can't read is left out, with a note."""
+    dropped `recover()`, a debug print and, in a test file, an assertion that any error passes. Give the lines each
+    setter takes, per file, whose boolean parameters are no flag. Without ast-grep, a note and none of these rows;
+    what lies in a region the grammar can't read is left out, with a note."""
     per_file = parsed(by_file(matches(r.root, rels, r.notes, TOOL_TIMEOUT, GO_RULES), rels), r.notes)
     found = [m for ms in per_file.values() for m in ms]
+    package = packages(found)
     for (rel, name), (line, size) in type_sizes(found, r.count).items():
         r.add(rel, line, TYPE_LINES, size if size > lim[TYPE_LINES][0] else None, name)
+    setters: Dict[str, List[Span]] = {}
     for m in found:
         if m.smell == FUNCTION_LINES:
             r.add_length(m.file, (m.line, m.end), FUNCTION_LINES, lim[FUNCTION_LINES][0], m.caught.get("NAME"))
-        elif m.smell == "broad_catch" or (m.smell == "broad_test_asserts" and m.file.endswith("_test.go")):
+            if setter(m.caught.get("NAME", "")):
+                setters.setdefault(m.file, []).append((m.line, m.end))
+        elif (m.smell == "broad_catch" or (m.smell == "broad_test_asserts" and m.file.endswith("_test.go"))
+              or (m.smell == "debug_output" and counted_print(m, package))):
             r.add(m.file, m.line, m.smell, 1)
+    return setters
+
+
+def package_files(root: Path, rels: List[str]) -> List[str]:
+    """Every Go file in the folders of the Go files `rels`, relative to `root`: a package's files share its folder."""
+    folders = sorted({Path(rel).parent for rel in rels if rel.endswith(".go")})
+    return sorted({(folder / f.name).as_posix() for folder in folders for f in (root / folder).glob("*.go")})
+
+
+def declared(per_file: Dict[str, List[Match]]) -> Dict[Tuple[str, str], Set[str]]:
+    """The package variables per (folder, package), from the matches of every file of it. `_` is no variable."""
+    package = packages([m for ms in per_file.values() for m in ms])
+    out: Dict[Tuple[str, str], Set[str]] = {}
+    for rel, ms in per_file.items():
+        names = out.setdefault((str(Path(rel).parent), package.get(rel, "")), set())
+        names.update(m.caught.get("NAME", "") for m in ms if m.rule == "go-state-var")
+    for names in out.values():
+        names.discard("_")
+    return out
+
+
+def unit_of(m: Match, units: List[Match]) -> Optional[int]:
+    """The index among `units` of the outermost function that holds `m`; None outside every function."""
+    return next((i for i, u in enumerate(units) if u.start <= m.start < u.stop), None)
+
+
+def first_assignments(ms: List[Match], names: Set[str]) -> List[int]:
+    """The lines of one file's matches `ms` where a function first assigns one of the package variables `names`.
+    `init` sets the package up, so what it assigns doesn't count; neither does a name the function declares."""
+    units = [m for m in ms if m.rule == "go-state-func"]
+    local = {(unit_of(m, units), m.caught.get("NAME")) for m in ms if m.rule == "go-state-local"}
+    seen: Set[Tuple[Optional[int], Optional[str]]] = set()
+    lines = []
+    for m in sorted((m for m in ms if m.rule == "go-state-assign"), key=lambda m: m.start):
+        key = (unit_of(m, units), m.caught.get("NAME"))
+        if key[0] is None or key[1] not in names or key in local or key in seen:
+            continue
+        seen.add(key)
+        if units[key[0]].caught.get("NAME") != "init":
+            lines.append(m.line)
+    return lines
+
+
+def assigned_globals(root: Path, rels: List[str], notes: List[str], timeout: float) -> List[Tuple[str, int]]:
+    """Each (file, line) among the Go files `rels` where a function first assigns a variable its package declares.
+    The package's other files in the folder are read too, for the variables they declare, and only a region of
+    `rels` the grammar can't read gets a note."""
+    files, wanted = package_files(root, rels), set(rels)
+    per_file = by_file(matches(root, files, notes, timeout, STATE_RULES), files)
+    mine = parsed({rel: ms for rel, ms in per_file.items() if rel in wanted}, notes)
+    per_file = {**parsed({rel: ms for rel, ms in per_file.items() if rel not in mine}, []), **mine}
+    package = packages([m for ms in per_file.values() for m in ms])
+    names = declared(per_file)
+    return [(rel, line) for rel, ms in mine.items()
+            for line in first_assignments(ms, names.get((str(Path(rel).parent), package.get(rel, "")), set()))]

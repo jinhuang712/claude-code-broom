@@ -45,6 +45,9 @@ class SmellLanguageTest(BroomCase):
                      ("hint", "unused_params")),
             "go/a.go": ("golangci-lint", "package a\n\nfunc F(a interface{}) string {\n\treturn a.(string)\n}\n",
                         ("hint", "type_escape")),
+            "go/e.go": ("golangci-lint", "package e\n\ntype R struct{ on bool }\n\n"
+                        "func (r *R) Settle(id string, active bool) string {\n\tif active {\n\t\tr.on = true\n"
+                        "\t}\n\treturn id\n}\n", ("hint", "bool_params")),
             "a.swift": ("swiftlint", 'func f() {\n    print("x")\n    NSLog("y")\n}\n', ("hint", "debug_output")),
             "c.ts": ("oxlint", "export function f(a: number, verbose: boolean): number {\n  return verbose ? a : 0;\n}\n",
                      ("hint", "bool_params")),
@@ -72,6 +75,12 @@ class SmellLanguageTest(BroomCase):
                      "  return a;\n}\n", "unused_params"),
             "go/b.go": ("golangci-lint", "package b\n\nfunc F(a interface{}) string {\n\ts, ok := a.(string)\n"
                         '\tif !ok {\n\t\treturn ""\n\t}\n\treturn s\n}\n', "type_escape"),
+            "go/c.go": ("golangci-lint", "package c\n\nfunc F(m map[string]any) string {\n"
+                        '\tif kind, _ := m["type"].(string); kind != "" {\n\t\treturn kind\n\t}\n'
+                        '\tname, _ := m["name"].(string)\n\treturn name\n}\n', "type_escape"),
+            "go/d.go": ("golangci-lint", "package d\n\ntype R struct{ on bool }\n\n"
+                        "func (r *R) SetActive(id string, active bool) string {\n\tif active {\n\t\tr.on = true\n"
+                        "\t}\n\treturn id\n}\n", "bool_params"),
             "b.swift": ("swiftlint", 'func f(printer: Printer) {\n    printer.print("x")\n}\n', "debug_output"),
             "c.ts": ("oxlint", "export const mapped = [1, 2].map((x: number, ok: boolean) => (ok ? x : 0));\n"
                      "export function g(options: { verbose: boolean }): boolean {\n  return options.verbose;\n}\n",
