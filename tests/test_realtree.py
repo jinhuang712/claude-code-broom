@@ -80,6 +80,20 @@ class RealTreeTest(BroomCase):
         (r / "main.go").write_text(GO_SMELLY + "\n// a note\n")  # a line far from every smell
         self.assertEqual(self.metrics(r, "main.go"), [])
 
+    @unittest.skipUnless(HAS_GO and shutil.which("ast-grep"), "go, golangci-lint or ast-grep missing")
+    def test_a_go_error_dropped_with_the_blank_name_is_a_nit_and_a_dropped_value_or_an_unchecked_call_is_not(
+            self) -> None:
+        head = 'package x\n\nimport "errors"\n\nfunc fail() error { return errors.New("x") }\n\n'
+        head += "func pair() (int, error) { return 1, nil }\n\nfunc two() (int, int) { return 1, 2 }\n\n"
+        before = head + "func Use() int {\n\treturn 0\n}\n"
+        for body, want in (("\t_ = fail()\n", [("nit", "swallowed_error")]),
+                           ("\tv, _ := pair()\n\t_ = v\n", [("nit", "swallowed_error")]),
+                           ("\tv, _ := two()\n\t_ = v\n", []), ("\tfail()\n", [])):
+            with self.subTest(body=body):
+                r = self.repo({"go.mod": GO_MOD, "main.go": before})
+                (r / "main.go").write_text(before.replace("\treturn 0\n", body + "\treturn 0\n"))
+                self.assertEqual([f for f in self.metrics(r, "main.go") if f[1] != "dead_code"], want)
+
     @unittest.skipUnless(shutil.which("oxlint"), "oxlint missing")
     def test_an_import_that_closes_a_ts_cycle_is_found_where_it_is_added(self) -> None:
         r = self.repo({"a.ts": "export const a = 1;\n", "b.ts": 'import { a } from "./a";\nexport const b = a;\n'})
