@@ -24,7 +24,6 @@ from .state import DATA_ROOT, load_json, say, short_hash, update_json
 BASELINE = DATA_ROOT / "baseline.json"
 COMMITS = DATA_ROOT / "commits.json"  # per repo: what the last commit or turn end blocked, by which hook
 STOPS = ("stop", "subagent-stop")  # the hooks of a turn's end, as the ledger and commits.json name them
-BASELINE_DAYS = 30
 MAX_SHOWN = 40
 MAX_CHARS = 9000  # what a block message holds at most: findings give way to the rest of it
 MORE_ROOM = 40  # for the "... and N more" line
@@ -92,13 +91,12 @@ def baseline_keys() -> Set[str]:
 
 
 def baseline_add_entries(entries: Dict[str, dict]) -> None:
-    """Add `entries` to the baseline on disk, dropping entries older than BASELINE_DAYS; takes the file's lock."""
-    cutoff = time.time() - BASELINE_DAYS * 86400
-
+    """Add `entries` to the baseline on disk, under the file's lock. An entry never expires (decision 046): its key
+    holds the text of its line, so it stops matching once that code changes, and `broom known --clear` removes it."""
     def add(raw: dict) -> dict:
         data = baseline_entries(raw)
         data.update(entries)
-        return {k: v for k, v in data.items() if v.get("t", 0) >= cutoff}
+        return data
 
     update_json(BASELINE, {}, add)
 
@@ -187,8 +185,9 @@ def accept_blocked(repo: Path, why: str, *, agreed: bool = False) -> Tuple[int, 
     if pending:
         now = time.time()
         once = {k: v for k, v in pending.items() if v.get("tool") == TESTS_TOOL}  # no test ran: accepted for this turn only
-        baseline_add_entries({k: {**v, "file": str(checkout_path(Path(str(v.get("file") or "")))), "t": now, "why": why}
-                              for k, v in pending.items() if k not in once})
+        mark = {"agreed": True} if agreed else {}
+        baseline_add_entries({k: {**v, "file": str(checkout_path(Path(str(v.get("file") or "")))), "t": now, "why": why,
+                                  **mark} for k, v in pending.items() if k not in once})
         turn = Path(prior["turn"]) if prior.get("turn") else None
         ledger.let_through(pending, "accept", turn, why=why, where=where, agreed=agreed or None)
         if turn is not None and once:
