@@ -107,14 +107,14 @@ class GateTest(BroomCase):
         (r / "a.py").write_text("".join(f"x{i} = {i}\n" for i in range(30)))
         self.sh(r, "git", "add", "a.py")
         self.assertEqual(self.commit(r, "git commit -m x"), {}, "passes, and the content is recorded")
-        (r / ".broom.json").write_text(quiet + ', "limits": {"file_lines": [5, 10]}}')  # it would block now
         self.assertEqual(self.cli(r, "hook", "pre-commit").returncode, 0, "git's hook: passed already")
         self.hook("edit", {"session_id": "s9", "cwd": str(r), "tool_name": "Edit",
                            "tool_input": {"file_path": str(r / "a.py")}})
         self.assertEqual(self.hook("stop", {"session_id": "s9", "cwd": str(r)}), {}, "the turn's end too")
-        (r / "a.py").write_text("".join(f"x{i} = {i}\n" for i in range(31)))
-        self.sh(r, "git", "add", "a.py")
-        self.assertEqual(self.cli(r, "hook", "pre-commit").returncode, 1, "new content is checked")
+        (r / ".broom.json").write_text(quiet + ', "limits": {"file_lines": [5, 10]}}')  # it would block now
+        self.assertEqual(self.cli(r, "hook", "pre-commit").returncode, 1, "a changed .broom.json is a new bar")
+        (r / ".broom.json").write_text(quiet + "}")
+        self.assertEqual(self.cli(r, "hook", "pre-commit").returncode, 0, "the same bar again: passed already")
 
     def test_accepting_can_be_turned_off(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})

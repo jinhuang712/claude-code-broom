@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import json
 import unittest
 from pathlib import Path
 from unittest import mock
 
 from support import BroomCase
 
-from broom import commitgate
+from broom import commitgate, passed
+from broom.state import load_json
 from broom.findings import Issue
 from broom.smells import Smell
 
@@ -63,6 +65,40 @@ class PassedTests(BroomCase):
     def test_clean_content_is_not_checked_again(self) -> None:
         self.check()
         self.assertEqual(self.check(), [], "every file passed: nothing runs")
+
+    def test_content_that_passed_stays_passed_however_old_the_record_is(self) -> None:
+        self.check()
+        data = load_json(passed.PASSED, {})
+        for record in data[str(self.repo_dir)].values():
+            record[1] = 0  # written at the dawn of time
+        passed.PASSED.write_text(json.dumps(data))
+        self.assertEqual(self.check(), [], "the record's stamp only orders records: it expires nothing")
+
+    def test_only_the_file_whose_content_changed_is_checked_again(self) -> None:
+        self.check()
+        self.files[1].write_text("y = 3\n")
+        self.assertEqual(self.check(), [["b.py"]])
+
+    def test_a_new_broom_version_checks_what_passed_again(self) -> None:
+        self.check()
+        with mock.patch.object(passed, "__version__", "99.0.0"):
+            self.assertEqual(self.check(), [["a.py", "b.py", "c.py"]])
+            self.assertEqual(self.check(), [], "and it passes under the new version too")
+
+    def test_a_changed_broom_json_checks_what_passed_again(self) -> None:
+        self.check()
+        (self.repo_dir / ".broom.json").write_text('{"smells_off": ["magic_numbers"]}')
+        self.assertEqual(self.check(), [["a.py", "b.py", "c.py"]])
+        self.assertEqual(self.check(), [])
+        (self.repo_dir / ".broom.json").unlink()
+        self.assertEqual(self.check(), [["a.py", "b.py", "c.py"]], "no config is another bar")
+
+    def test_the_file_keeps_the_newest_records_and_drops_the_oldest_first(self) -> None:
+        with mock.patch.object(passed, "MAX_ENTRIES", 2):
+            for name in ("a.py", "b.py", "c.py"):
+                passed.record(self.repo_dir, [(self.repo_dir / name).resolve()])
+        kept = load_json(passed.PASSED, {})[str(self.repo_dir)]
+        self.assertEqual(sorted(kept), ["b.py", "c.py"], "a.py was recorded first")
 
 
 if __name__ == "__main__":

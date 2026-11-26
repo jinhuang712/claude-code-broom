@@ -1,7 +1,8 @@
-"""What the smell measurers found in a file's content, kept by that content for a day, so a file is measured once
+"""What the smell measurers found in a file's content, kept by that content, so a file is measured once
 however often it is checked: the base of a change doesn't change from one try to the next, and a file the stop
 gate checks again, still blocked, is the same text. Only a measurement that finished whole is kept: with a tool
-missing or timed out, the rows are a part."""
+missing or timed out, the rows are a part. A record stays until what decided it changes (the content, the limits, the
+tools, broom's version) or until MAX_ENTRIES newer ones push it out; the stamp in it only orders them."""
 
 from __future__ import annotations
 
@@ -18,7 +19,6 @@ from .state import DATA_ROOT, load_json, short_hash, update_json
 from .toolchain import resolve_bin
 
 ROWS = DATA_ROOT / "rows"
-KEEP_SECONDS = 86400
 MAX_ENTRIES = 20000
 MEASURE_TOOLS = ("ruff", "oxlint", "node", "golangci-lint", "swiftlint", "ast-grep")  # what the rows depend on
 Measure = Callable[[Path, Dict[str, str], Limits, Path, List[str]], List[Raw]]
@@ -30,8 +30,7 @@ class RowCache:
         self.repo, self.limits, self.measuring = repo, limits, measuring or measure
         self.path = ROWS / f"{short_hash(str(repo))}.json"
         self.lock = threading.Lock()
-        cutoff = time.time() - KEEP_SECONDS
-        self.entries: Dict[str, list] = {k: v for k, v in load_json(self.path, {}).items() if v[0] >= cutoff}
+        self.entries: Dict[str, list] = load_json(self.path, {})
         self.changed = False
         # Where each tool is, so one that is gone or upgraded (a new path) gets its measurements made again, and a
         # missing one is said so, not hidden behind rows it measured before.

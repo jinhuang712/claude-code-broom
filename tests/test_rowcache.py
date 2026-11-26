@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import unittest
 from unittest import mock
 
@@ -54,6 +55,33 @@ class RowCacheTests(BroomCase):
         self.cache({"function_lines": (10, 20)}).measure(self.tmp, {"a.py": "aa"}, [])
         self.cache().measure(self.tmp, {"c.py": "aa"}, [])
         self.assertEqual(self.calls, [["a.py"], ["a.py"], ["c.py"]])
+
+    def test_a_measurement_is_kept_however_old_it_is_and_changes_with_the_version(self) -> None:
+        first = self.cache()
+        first.measure(self.tmp, {"a.py": "aa"}, [])
+        first.save()
+        path = first.path
+        data = json.loads(path.read_text())
+        for entry in data.values():
+            entry[0] = 0  # written at the dawn of time: the stamp only orders entries
+        path.write_text(json.dumps(data))
+        self.cache().measure(self.tmp, {"a.py": "aa"}, [])
+        self.assertEqual(self.calls, [["a.py"]], "no expiry")
+        with mock.patch.object(rowcache, "__version__", "99.0.0"):
+            self.cache().measure(self.tmp, {"a.py": "aa"}, [])
+        self.assertEqual(self.calls, [["a.py"], ["a.py"]], "broom's version is part of the key")
+
+    def test_the_cache_keeps_the_newest_entries_and_drops_the_oldest_first(self) -> None:
+        with mock.patch.object(rowcache, "MAX_ENTRIES", 2):
+            for name in ("a.py", "b.py", "c.py"):
+                cache = self.cache()
+                cache.measure(self.tmp, {name: name}, [])
+                cache.save()
+        self.calls.clear()
+        self.cache().measure(self.tmp, {"b.py": "b.py", "c.py": "c.py"}, [])
+        self.assertEqual(self.calls, [], "the two newest are kept")
+        self.cache().measure(self.tmp, {"a.py": "a.py"}, [])
+        self.assertEqual(self.calls, [["a.py"]], "the oldest went")
 
     def test_a_tool_that_went_missing_gets_its_files_measured_again(self) -> None:
         first = self.cache()
