@@ -226,7 +226,7 @@ How much of what broom blocks gets fixed. A low rate for one rule means the rule
 M1 = findings fixed / (findings fixed + findings let through)        per rule, and over all rules
 ```
 
-**Last value**: open, since the ledger began on 2026-11-17 and holds too few days of use.
+**Last value**: open. Until 0.28.3 on 2026-11-26 a turn that pulled commits was blocked for every finding in them, and the ledger holds one such turn, so the first value counts from 0.28.3.
 
 ---
 

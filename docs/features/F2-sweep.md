@@ -46,17 +46,24 @@ A Bash call that isn't a commit costs about 13 ms, or about 60 ms when the comma
 
 ## F2.2: Turn-end check
 
-When Claude stops, broom checks the files the turn changed: files Claude edited, and files changed or committed since the prompt by any means. It blocks the turn's end while a finding is left, and after three blocks it gives up and tells the user.
+When Claude stops, broom checks the files the turn changed: files Claude edited, files changed since the prompt by any means and files committed after it. It blocks the turn's end while a finding is left, and after three blocks it gives up and tells the user.
+
+A commit made before the prompt is not the turn's, so a pull or a reset to a remote branch brings in no finding.
 
 It applies with `check_on` at `stop`, the default. It waits while background work runs, up to half an hour. A turn in plan mode is not checked. An idle turn end costs one Python start, 30 to 45 ms measured on macOS.
 
 A hint stops the turn here as a block does.
+
+1 gap:
+
+- Another session's commit in the same checkout during the turn counts as the turn's.
 
 - **Design**: [6. A finding ends fixed or with a reason the user sees](../DESIGNS.md#6-a-finding-ends-fixed-or-with-a-reason-the-user-sees)
 - **How it works**: [Turn end](../specs/turn-end.md)
 - **Why**:
   - [019: The turn-end check waits for background work](../specs/decisions/019-wait-for-background.md)
   - [020: The turn's changes come from a snapshot at the prompt](../specs/decisions/020-turn-snapshot.md)
+  - [041: A commit counts as the turn's when it was made after the prompt](../specs/decisions/041-turn-own-commits.md)
 
 **Stories** (1):
 

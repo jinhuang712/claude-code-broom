@@ -18,7 +18,7 @@ Features
 │   └── ✅ F1.5: Protection list — which checks run and which don't
 ├── 🚧 F2: Sweep — Claude's changes are formatted, checked and held back
 │   ├── ✅ F2.1: Commit check — a git commit is formatted, checked and held back
-│   ├── ✅ F2.2: Turn-end check — what a turn changed is checked when Claude stops
+│   ├── 🚧 F2.2: Turn-end check — another session's commit during the turn counts as the turn's
 │   ├── ✅ F2.3: Subagent check — a subagent fixes its own work
 │   ├── ✅ F2.4: git's pre-commit hook — commits Claude Code never sees
 │   │   └── ✅ F2.4.1: Offered at setup

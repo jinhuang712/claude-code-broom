@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP8: Lighter](#cp8-lighter), which waits for a week of the ledger's numbers: about 2026-11-24 for the fix rate and 2026-11-27 for the check time. The user set on 2026-11-20 that no feature is added until then, and what follows CP8 is open in [What it takes for a second user to install broom and stay](TODO.md#p1discussion-what-it-takes-for-a-second-user-to-install-broom-and-stay). [CP9: Ready for a public release](#cp9-ready-for-a-public-release) ended on 2026-11-20 with 0.28.0, once the README got its hero. CP10 ended on 2026-11-20 with 0.26.0, and [CP11: Read from a syntax tree](#cp11-read-from-a-syntax-tree) with 0.27.0 that day. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
+**Current checkpoint**: [CP8: Lighter](#cp8-lighter), which waits for a week of the ledger's numbers: 2026-11-27 for the check time and about 2026-12-03 for the fix rate, a week after 0.28.3. The user set on 2026-11-20 that no feature is added until then, and what follows CP8 is open in [What it takes for a second user to install broom and stay](TODO.md#p1discussion-what-it-takes-for-a-second-user-to-install-broom-and-stay). [CP9: Ready for a public release](#cp9-ready-for-a-public-release) ended on 2026-11-20 with 0.28.0, once the README got its hero. CP10 ended on 2026-11-20 with 0.26.0, and [CP11: Read from a syntax tree](#cp11-read-from-a-syntax-tree) with 0.27.0 that day. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
 
 ---
 
@@ -79,7 +79,7 @@ broom keeps no record of what it stopped and what was fixed, so nobody can say w
 
 **Status**: 🟨
 
-The three features shipped in 0.18.2 on 2026-11-17. The measures get their first value after a week of sessions on the new version. The ledger holds a whole check's seconds since 0.25.10 on 2026-11-20, so the check time waits a week from then.
+The three features shipped in 0.18.2 on 2026-11-17. The measures get their first value after a week of sessions on the new version. The ledger holds a whole check's seconds since 0.25.10 on 2026-11-20, so the check time waits a week from then. Until 0.28.3 on 2026-11-26 a turn that pulled commits was blocked for the findings in them, so the fix rate waits a week from then.
 
 **Delivers** (4):
 
@@ -382,12 +382,14 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 **Status**: ⬜
 
-**Delivers** (4):
+**Delivers** (6):
 
 - [F9.4: Tiers by fix rate](../features/F9-record.md#f94-tiers-by-fix-rate)
 - A finding accepted in a linked worktree stays known once the work lands on the main checkout, done on 2026-11-20.
 - A length counts code lines, so a comment line and a blank line stop no change, done on 2026-11-24.
 - A test file may be twice as long as a code file, so a list of cases stops no change, done on 2026-11-24.
+- A commit the turn brought in by a pull or a reset is not the turn's change, done on 2026-11-26.
+- A wait for background work that never woke a turn ends at the next prompt after half an hour, done on 2026-11-26.
 
 **Exit criteria** (1):
 

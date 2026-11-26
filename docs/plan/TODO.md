@@ -20,6 +20,43 @@
 
 ---
 
+### [P1][DISCUSSION] How a finding put to the user counts in the fix rate
+
+- description:
+  - The fix rate leaves out a finding still open, and a finding put to the user with `--ask` stays open until a later turn fixes or accepts it.
+  - In the ledger of 2026-11-26 most findings put to the user had neither, so the rate says nothing about them.
+  - 3 ways are on the table: leave them out as now · count each as let through · close them when the user's answer comes and count that.
+- created: 2026-11-26
+- status: OPEN
+- found: the look at the ledger on 2026-11-26
+- blocks: [M1: Fix rate](GOALS.md#m1-fix-rate)
+- next: settle with the user before the fix rate gets its first value
+
+---
+
+### [P2][IDEA] The report split by repo and by day
+
+- description:
+  - `broom report --all` sums every repo over the whole period.
+  - The look at the ledger on 2026-11-26 needed a script to split it by repo and by day, which found the one turn behind most of the questions put to the user.
+  - The report could list each repo's counts and each day's, since every line of the ledger holds its repo and its time.
+- created: 2026-11-26
+- found: the look at the ledger on 2026-11-26
+- related: [F9.3: Report](../features/F9-record.md#f93-report)
+
+---
+
+### [P2][IDEA] An edit to a file git ignores is checked at the turn's end
+
+- description:
+  - An edit record names any file, and the turn's end checks it even when git ignores it, such as a local script in a folder `.git/info/exclude` names.
+  - Only `.broom.json`'s `exclude` keeps a file out today.
+- created: 2026-11-26
+- found: a turn's end on 2026-11-26 that blocked on a local script under `report/`
+- related: [F2.2: Turn-end check](../features/F2-sweep.md#f22-turn-end-check)
+
+---
+
 ### [P2][DISCUSSION] Whether the limits come down now that a length counts code lines
 
 - description:

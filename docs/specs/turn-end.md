@@ -15,17 +15,20 @@ stop   ─▶ background work running? ─ yes ─▶ wait for the turn it wakes
 
 ## What the turn changed
 
-Edit and Write are recorded as they happen. A Bash command can rewrite files too, and a wrapper can commit them. An async prompt hook notes the changed code files by modification time and size, and HEAD. The turn's end adds what changed since and what was committed since, and measures it all against that HEAD. A commit made during the turn still shows as the turn's change. A turn that changed no code ends after that one look at the tree.
+Edit and Write are recorded as they happen. A Bash command can rewrite files too, and a wrapper can commit them. An async prompt hook notes the changed code files by modification time and size, HEAD and the second it looked. The turn's end adds what changed since and the files of the commits made since, and measures it all against that HEAD. A commit made during the turn still shows as the turn's change. A turn that changed no code ends after that one look at the tree.
+
+A commit made before that second is not the turn's, though the turn may bring it in by a pull, a reset or a landing of earlier work. Its files are left out, and the turn's change is measured from the newest such commit on HEAD's first-parent line. A merge counts only the files it resolved.
 
 A many-file edit through Serena names no files, so the turn's end takes the repo's changed files instead.
 
 - [020: The turn's changes come from a snapshot at the prompt](decisions/020-turn-snapshot.md)
+- [041: A commit counts as the turn's when it was made after the prompt](decisions/041-turn-own-commits.md)
 
 ---
 
 ## Pauses
 
-A Stop hook fires whenever Claude finishes responding, not only when the work is done. The check waits while any background task runs and checks at the turn that work wakes. It gives up the wait after half an hour.
+A Stop hook fires whenever Claude finishes responding, not only when the work is done. The check waits while any background task runs and checks at the turn that work wakes. It gives up the wait after half an hour. A prompt after that starts a new turn, and the edits the waiting turn recorded are checked at its end.
 
 A turn in plan mode is not checked.
 
