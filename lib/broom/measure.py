@@ -9,12 +9,13 @@ from __future__ import annotations
 import ast
 import shutil
 from pathlib import Path
-from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from .codelines import code_lines
 from .config import NOTED, SMELL_PRESENCE
 from .gitutil import run
 from .gomeasure import go_text
+from .pyasserts import empty_tests
 from .jsmeasure import measure_js
 from .reading import TOOL_TIMEOUT, Limits, Raw, Reader, match, number, quoted_name
 from .rustmeasure import rust_text
@@ -23,7 +24,6 @@ from .smell import nothing_key
 from .swiftmeasure import span_from, swift_text
 from .syntax import inside
 from .testrot import TEST_FILE
-from .treefacts import decorator_skip
 from .toolchain import CSS_EXTS, GO_EXTS, JS_EXTS, PY_EXTS, RS_EXTS, SWIFT_EXTS
 
 UNREACHABLE = 1_000_000  # a SwiftLint error level nothing reaches: broom tells hints from blocks itself
@@ -59,42 +59,11 @@ def setter_params(tree: ast.AST) -> Set[Spot]:
             for a in (*node.args.posonlyargs, *node.args.args)}
 
 
-# What lets a Python test fail besides a crash: a call whose last name starts so (`assertEqual`, `expect`, `fail`,
-# `assert_called_once`), `pytest.raises`, `pytest.warns` and `pytest.fail`, an `assert` and a `raise`.
-ASSERTING_CALLS = ("assert", "expect", "fail")
-PYTEST_CHECKS = {"raises", "warns", "fail"}
-
-
-def asserts(node: ast.AST) -> bool:
-    """Whether the test `node` holds anything that can fail it, in its own body or a function inside it."""
-    for n in ast.walk(node):
-        if isinstance(n, (ast.Assert, ast.Raise)):
-            return True
-        if isinstance(n, ast.Call):
-            name = n.func.attr if isinstance(n.func, ast.Attribute) else getattr(n.func, "id", "")
-            owner = n.func.value if isinstance(n.func, ast.Attribute) else None
-            if name.startswith(ASSERTING_CALLS) or (name in PYTEST_CHECKS and getattr(owner, "id", "") == "pytest"):
-                return True
-    return False
-
-
-def python_tests(tree: ast.Module) -> Iterator[ast.AST]:
-    """The tests of a Python file that run: a `test_*` function at module level, and a `test*` method of a class
-    there. A test a decorator skips with no condition is a skipped test, whatever it asserts."""
-    functions = (ast.FunctionDef, ast.AsyncFunctionDef)
-    found = [node for node in tree.body if isinstance(node, functions) and node.name.startswith("test_")]
-    for node in tree.body:
-        if isinstance(node, ast.ClassDef):
-            found += [m for m in node.body if isinstance(m, functions) and m.name.startswith("test")]
-    yield from (n for n in found if all(decorator_skip(d) is not False for d in n.decorator_list))
-
-
-def empty_tests(r: Reader, rel: str, tree: ast.Module) -> None:
-    """A row for each test of the test file `rel` that asserts nothing (`asserts`); none outside a test file."""
+def asserting_nothing(r: Reader, rel: str, tree: ast.Module) -> None:
+    """A row for each test of the test file `rel` that asserts nothing (pyasserts); none outside a test file."""
     if TEST_FILE.search(rel):
-        for node in python_tests(tree):
-            if not asserts(node):
-                r.add(rel, node.lineno, "broad_test_asserts", 1, nothing_key(node.name))
+        for node in empty_tests(tree):
+            r.add(rel, node.lineno, "broad_test_asserts", 1, nothing_key(getattr(node, "name", "")))
 
 
 def python_sizes(r: Reader, rel: str, lim: Limits) -> Set[Spot]:
@@ -117,7 +86,7 @@ def python_sizes(r: Reader, rel: str, lim: Limits) -> Set[Spot]:
 
     walk(tree, "")
     nested_ternaries(r, rel, tree)
-    empty_tests(r, rel, tree)
+    asserting_nothing(r, rel, tree)
     return setter_params(tree)
 
 
