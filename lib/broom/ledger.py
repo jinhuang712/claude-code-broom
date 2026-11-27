@@ -145,12 +145,12 @@ def rows_of(repo: str) -> Iterator[dict]:
             yield r
 
 
-def every_row() -> Iterator[dict]:
-    """The lines of every repo the index lists, of the folders in no repo, and of the old shared ledger that hasn't
-    moved yet (repos broom hasn't been in since)."""
+def every_row(mains: Optional[List[Path]] = None) -> Iterator[dict]:
+    """The lines of every repo of `mains` (every one the index lists by default), of the folders in no repo, and of
+    the old shared ledger that hasn't moved yet (repos broom hasn't been in since)."""
     from .migrate import OLD_LEDGER
 
-    for main in repodata.every():
+    for main in repodata.every() if mains is None else mains:
         yield from rows_of(str(main))
     yield from read(repodata.OUTSIDE / repodata.LEDGER)
     yield from read(OLD_LEDGER)

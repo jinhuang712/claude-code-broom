@@ -80,6 +80,18 @@ class RepoDataTest(RepoDataCase):
 
 
 class ReportAllTest(RepoDataCase):
+    def test_report_all_never_reads_a_tracked_folder(self) -> None:
+        mine, came = self.repo({"b.py": "x = 1\n"}), self.repo({"b.py": "x = 1\n"})
+        for r in (mine, came):
+            self.huge(r)
+            self.assertTrue(self.blocked(r))
+        self.sh(came, "git", "add", "-f", ".broom")
+        self.sh(came, "git", "commit", "-qm", "the records, committed")
+        with mock.patch.object(report, "TEMP_ROOTS", ()):
+            data = report.report([])
+        self.assertEqual((data["blocked"], data["tracked_out"]), (self.numbers(mine)[0], 1))
+        self.assertIn("1 left out: git tracks its .broom/", report.render(data))
+
     def test_report_all_sums_every_indexed_repo(self) -> None:
         repos = [self.repo({"b.py": "x = 1\n"}) for _ in range(2)]
         for r in repos:

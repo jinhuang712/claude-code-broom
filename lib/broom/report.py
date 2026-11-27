@@ -18,7 +18,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple
 
-from . import ledger
+from . import ledger, repodata
 from .gate import display
 from .gitutil import git_root, main_worktree
 
@@ -71,12 +71,21 @@ def version_key(text: object) -> Optional[Tuple[int, ...]]:
     return tuple(numbers)
 
 
-def window(since: Optional[str], repos: Optional[Set[str]], narrow: Dict[str, List[str]]) -> List[dict]:
+def readable() -> Tuple[List[Path], int]:
+    """The repos the index lists whose records can be read, and how many were left out because git tracks their
+    `.broom/`: it came with the repo, and broom never reads it."""
+    mains = repodata.every()
+    kept = [m for m in mains if not repodata.tracked(m)]
+    return kept, len(mains) - len(kept)
+
+
+def window(since: Optional[str], repos: Optional[Set[str]], narrow: Dict[str, List[str]],
+           mains: Optional[List[Path]] = None) -> List[dict]:
     """The ledger rows that `wanted` keeps, oldest first: all of them, or with `since` (a version) only those written
     by that broom version or a later one. A row with no `v` is older than any version; one without a numeric time is
     skipped."""
     floor = version_key(since)
-    every = ledger.every_row() if repos is None else (r for repo in sorted(repos) for r in ledger.rows_of(repo))
+    every = ledger.every_row(mains) if repos is None else (r for repo in sorted(repos) for r in ledger.rows_of(repo))
     rows = [r for r in every if isinstance(r.get("t"), (int, float))]
     if floor is not None:
         rows = [r for r in rows if (v := version_key(r.get("v"))) is not None and v >= floor]
@@ -172,11 +181,13 @@ def report(roots: List[Path], since: Optional[str] = None) -> dict:
     """The record of the repos `roots` are in: all of it, or the lines written by broom version `since` or later.
     Without roots it covers every repo but those in a temporary folder, which it counts in `left_out`."""
     repos, narrow = scope(roots) if roots else (None, {})
-    rows = window(since, repos, narrow)
+    mains, tracked = readable() if repos is None else (None, 0)
+    rows = window(since, repos, narrow, mains)
     left = {str(r.get("repo")) for r in rows if throwaway(str(r.get("repo")))} if repos is None else set()
     rows = [r for r in rows if str(r.get("repo")) not in left]
     found = ended(rows)
-    return {"since": since, "repos": sorted(repos) if repos is not None else "all", "left_out": len(left), **tally(found.values()),
+    return {"since": since, "repos": sorted(repos) if repos is not None else "all", "left_out": len(left),
+            "tracked_out": tracked, **tally(found.values()),
             "rules": by_rule(found), "skips": skips(rows), "seconds": seconds(rows), "checks": whole_checks(rows),
             "waivers": waivers(rows), "errors": sum(1 for r in rows if r.get("event") == "error")}
 
@@ -238,6 +249,8 @@ def render(data: dict) -> str:
     where = "every repo" if data["repos"] == "all" else ", ".join(display(Path(r)) for r in data["repos"])
     if data["left_out"]:
         where += f" but {data['left_out']} in a temporary folder"
+    if data.get("tracked_out"):
+        where += f" ({data['tracked_out']} left out: git tracks its .broom/, which came with the repo)"
     period = f"since {data['since']}" if data["since"] else "in the whole record"
     if not (data["blocked"] or data["skips"] or data["seconds"] or data["checks"] or data["errors"]
             or data["waivers"]["count"]):
