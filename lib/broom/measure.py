@@ -179,6 +179,7 @@ def golangci_config(lim: Limits) -> str:
         f"    revive: {{rules: [{', '.join(revive)}]}}",
         "    nolintlint: {require-explanation: true, require-specific: true}",
         "    godox: {keywords: [TODO, FIXME, HACK, XXX]}",
+        "    mnd: {ignored-numbers: ['-1', '0', '1', '2']}",  # as TS/JS and Rust leave them out; mnd's own is 0 and 1
         "run: {tests: true, relative-path-mode: wd}",  # paths from the scratch tree, not the config's directory
         "issues: {max-issues-per-linter: 0, max-same-issues: 0, uniq-by-line: false}",
         "",

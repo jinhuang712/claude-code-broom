@@ -284,6 +284,18 @@ class SmellTest(BroomCase):
                 self.assertIn("takes 9 parameters (hard limit 8; new)", " ".join(s.text() for s in found))
 
 
+class GoNumberTest(BroomCase):
+    @unittest.skipUnless(shutil.which("golangci-lint"), "golangci-lint missing")
+    def test_a_go_number_counts_unless_it_is_minus_one_zero_one_or_two(self) -> None:
+        r = self.repo({"go.mod": "module example.com/m\n\ngo 1.22\n", "a.go": "package a\n",
+                       ".broom.json": '{"smells_off": ["dead_code"]}'})
+        body = ("package a\n\nfunc F(x int) int {\n\ta := x / 2\n\tb := x - -1\n\tc := x * 0\n\td := x * 100\n"
+                "\treturn a + b + c + d\n}\n")
+        (r / "a.go").write_text(body)
+        found, _ = find_smells(r, [r / "a.go"], "HEAD")
+        self.assertEqual([(s.value, s.added) for s in found if s.metric == "magic_numbers"], [(1, [7])])
+
+
 class TestCallbackTest(BroomCase):
     @unittest.skipUnless(shutil.which("ast-grep"), "ast-grep missing")
     def test_a_describe_or_it_callback_is_told_by_the_call_it_is_given_to(self) -> None:
