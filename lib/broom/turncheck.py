@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, NamedTuple, Optional
 
 from . import asked, ledger
+from .comeback import settle_covered
 from .commitgate import checked, collapsed_line, collapsed_text, entries_of, issues_by_repo, way_out
 from .findings import Issue
 from .gate import (
@@ -161,6 +162,7 @@ def check_turn(turn: Turn, files: List[Path]) -> None:
     blocking, told, notes, collapsed = checked(files, turn_base(d, turn.root), d)
     blocking += test_findings(d, turn.root, files)  # a main session's turn only
     waiting = settle_asks(d, gate, blocking, files, notes)
+    settle_covered(files, {issue_key(i) for i in blocking})  # what other turns and sessions left open in these files
     asked_keys = {r["key"] for r in waiting}
     blocking = [i for i in blocking if issue_key(i) not in asked_keys]
     if not blocking:

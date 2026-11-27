@@ -107,6 +107,57 @@ class MomentsTest(ComebackCase):
         self.assertIn(", and 2 more.", self.session_told(r, "s3"))
 
 
+class ElsewhereTest(ComebackCase):
+    """A finding a turn's end blocked and put to the user closes when a later check of its file finds it gone: a turn
+    of another session, in a linked worktree too, or a commit."""
+
+    def asked_at_a_turns_end(self) -> Path:
+        r = self.repo({"a.py": "x = 1\n"})
+        self.sh(r, "git", "commit", "-qam", "base", "--allow-empty")
+        self.touch(r, "a.py", six("first", "second"))
+        self.assertIn("params", self.stop(r).get("reason", ""))
+        self.assertEqual(self.ask(r).returncode, 0)
+        self.stop(r)
+        self.assertEqual(len(comeback.standing(str(r))), 2)
+        return r
+
+    def turn(self, tree: Path, session: str, text: str) -> None:
+        """A turn of `session` in `tree` that writes a.py and ends."""
+        self.hook("prompt", {"session_id": session, "cwd": str(tree)})
+        (tree / "a.py").write_text(text)
+        self.hook("edit", {"session_id": session, "cwd": str(tree), "tool_name": "Edit",
+                           "tool_input": {"file_path": str(tree / "a.py")}})
+        self.hook("stop", {"session_id": session, "cwd": str(tree), "permission_mode": "default"})
+
+    def test_a_fix_in_another_sessions_turn_closes_it(self) -> None:
+        r = self.asked_at_a_turns_end()
+        self.turn(r, "s2", six("first") + "\n\n" + FEWER)
+        self.assertEqual([f["rule"] for f in rows("fix")], ["params"])
+        self.assertEqual(list(comeback.standing(str(r))), [b["key"] for b in rows("block") if b["line"] == 1][:1])
+
+    def test_a_fix_in_a_linked_worktree_closes_it(self) -> None:
+        r = self.asked_at_a_turns_end()
+        self.sh(r, "git", "add", "a.py")
+        self.sh(r, "git", "commit", "-qm", "blocked work")
+        linked = r / "wt-fix"
+        self.sh(r, "git", "worktree", "add", "-q", str(linked), "-b", "fix")
+        self.turn(linked, "s2", "x = 1\n")
+        self.assertEqual(len(rows("fix")), 2)
+        self.assertEqual(comeback.standing(str(r)), {})
+
+    def test_a_commit_that_fixes_it_closes_it(self) -> None:
+        r = self.asked_at_a_turns_end()
+        self.staged(r, six("first") + "\n\n" + FEWER)
+        self.assertIn("params", self.denied(self.commit(r, "git commit -m x")), "the first is still there")
+        self.assertEqual(len(rows("fix")), 1)
+
+    def test_a_check_that_sees_it_still_there_closes_nothing(self) -> None:
+        r = self.asked_at_a_turns_end()
+        self.turn(r, "s2", six("first", "second") + "\n# more\n")
+        self.assertEqual(rows("fix"), [])
+        self.assertEqual(len(comeback.standing(str(r))), 2)
+
+
 class IdleTest(ComebackCase):
     def test_an_idle_prompt_leaves_before_python_starts_and_tells_nothing(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})

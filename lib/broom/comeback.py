@@ -27,7 +27,7 @@ from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from . import asked, ledger
 from .config import NIT, TESTS_TOOL, excluded, setting
-from .gitutil import CLOCK, main_worktree
+from .gitutil import CLOCK, git_root, main_worktree
 from .state import emit
 from .toolchain import lang_of
 
@@ -134,6 +134,27 @@ def recheck(root: Path, found: Dict[str, dict]) -> Dict[str, dict]:
     ledger.write(ledger.not_fixed_yet([ledger.line("fix", str(r.get("repo")), key=k, tool=r.get("tool"),
                                                    rule=r.get("rule"), file=r.get("file")) for k, r in gone.items()]))
     return {k: r for k, r in here.items() if k not in gone}
+
+
+def settle_covered(files: Iterable[Path], now: Iterable[str]) -> None:
+    """At the check of a commit or a turn's end that covered `files`: check again the open findings of the record in
+    those files, whichever check blocked them, and write a `fix` line for each that is gone. A turn's end knows only
+    its own turn's blocks and a commit only the commits', so without this a finding fixed in another turn, another
+    session or a worktree stays open until the comeback. `now` holds the keys this check blocks on again, which are
+    there. A run that saw a looser `.broom.json` ends nothing, as `ledger.fixes`."""
+    if ledger.HOOK.loosened:
+        return
+    by_root: Dict[Path, Set[Path]] = {}
+    for f in files:
+        root = git_root(f.parent)
+        if root is not None:
+            by_root.setdefault(root, set()).add(f.resolve())
+    skip = set(now)
+    for root, covered_here in by_root.items():
+        found = {k: r for k, r in standing(str(main_worktree(root))).items()
+                 if k not in skip and (root / str(r.get("file"))).resolve() in covered_here}
+        if found:
+            recheck(root, found)
 
 
 # ---------------------------------------------------------------- a session's start
