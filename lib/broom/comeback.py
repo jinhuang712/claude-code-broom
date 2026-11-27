@@ -136,12 +136,13 @@ def recheck(root: Path, found: Dict[str, dict]) -> Dict[str, dict]:
     return {k: r for k, r in here.items() if k not in gone}
 
 
-def settle_covered(files: Iterable[Path], now: Iterable[str]) -> None:
+def settle_covered(files: Iterable[Path], now: Iterable[str], prior: Dict[str, dict]) -> None:
     """At the check of a commit or a turn's end that covered `files`: check again the open findings of the record in
     those files, whichever check blocked them, and write a `fix` line for each that is gone. A turn's end knows only
     its own turn's blocks and a commit only the commits', so without this a finding fixed in another turn, another
     session or a worktree stays open until the comeback. `now` holds the keys this check blocks on again, which are
-    there. A run that saw a looser `.broom.json` ends nothing, as `ledger.fixes`."""
+    there. The file, tool and rule of a finding the check's own record held (`prior`) are left to `ledger.fixes`,
+    which tells a finding that changed its key from a fixed one. A run that saw a looser `.broom.json` ends nothing."""
     if ledger.HOOK.loosened:
         return
     by_root: Dict[Path, Set[Path]] = {}
@@ -149,10 +150,14 @@ def settle_covered(files: Iterable[Path], now: Iterable[str]) -> None:
         root = git_root(f.parent)
         if root is not None:
             by_root.setdefault(root, set()).add(f.resolve())
-    skip = set(now)
+    skip = set(now) | set(prior)
+    held = {(str(Path(str(e.get("file") or "")).resolve()), e.get("tool"), e.get("rule")) for e in prior.values()}
     for root, covered_here in by_root.items():
-        found = {k: r for k, r in standing(str(main_worktree(root))).items()
-                 if k not in skip and (root / str(r.get("file"))).resolve() in covered_here}
+        found = {}
+        for k, r in standing(str(main_worktree(root))).items():
+            f = (root / str(r.get("file"))).resolve()
+            if k not in skip and f in covered_here and (str(f), r.get("tool"), r.get("rule")) not in held:
+                found[k] = r
         if found:
             recheck(root, found)
 

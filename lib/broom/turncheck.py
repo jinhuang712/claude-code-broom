@@ -150,6 +150,7 @@ def settle_asks(d: Path, gate: dict, blocking: List[Issue], files: List[Path], n
     prior = {**held(d), **asked.entries(waiting), **(gate.get("blocked") or {})}
     known = baseline_keys() | accepted_here(d)  # what was accepted for this turn only is as good as known in it
     gone = ledger.fixes(prior, entries_of(blocking), known, files, notes) if prior else set()
+    settle_covered(files, {issue_key(i) for i in blocking}, prior)  # what other turns and sessions left open in them
     return [r for r in waiting if r["key"] not in gone and r["key"] not in known]
 
 
@@ -162,7 +163,6 @@ def check_turn(turn: Turn, files: List[Path]) -> None:
     blocking, told, notes, collapsed = checked(files, turn_base(d, turn.root), d)
     blocking += test_findings(d, turn.root, files)  # a main session's turn only
     waiting = settle_asks(d, gate, blocking, files, notes)
-    settle_covered(files, {issue_key(i) for i in blocking})  # what other turns and sessions left open in these files
     asked_keys = {r["key"] for r in waiting}
     blocking = [i for i in blocking if issue_key(i) not in asked_keys]
     if not blocking:

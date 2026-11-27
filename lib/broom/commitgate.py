@@ -197,7 +197,7 @@ def gate_files(repo: Path, files: List[Path], sd: Path, cwd: Path, state: dict) 
     key, found, known = str(repo), entries_of(blocking), baseline_keys()
     prior = open_findings(state.get(key, {}))
     ended = ledger.fixes(prior, found, known, files, notes) if prior else set()
-    settle_covered(files, {*found, *ended})  # what turns' ends left open in these files
+    settle_covered(files, found, prior)  # what turns' ends left open in these files
     kept = kept_blocks(state.get(key), known, {*found, *ended})
     if blocking or kept:
         state[key] = last_block(found, kept, sd)
