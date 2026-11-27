@@ -101,9 +101,9 @@ def rank(smells: List[Smell], churn: Dict[str, int], by: str = "churn") -> Tuple
 
 def smell_row(repo: Path, s: Smell, base: Optional[str] = None) -> dict:
     """One smell as the JSON and the worst-smells list show it; `was` is its size or count at `base`, None for a
-    new smell and without a base."""
-    return {"file": str(s.file.relative_to(repo)), "line": s.line, "smell": s.metric, "level": s.level,
-            "text": s.text(), "was": s.was if base else None}
+    new smell and without a base. `lines` is every line it stands on, where `text` cuts a long list short."""
+    return {"file": str(s.file.relative_to(repo)), "line": s.line, "lines": lines_of(s), "smell": s.metric,
+            "level": s.level, "text": s.text(), "was": s.was if base else None}
 
 
 def lines_of(s: Smell) -> List[int]:

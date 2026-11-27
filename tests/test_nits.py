@@ -8,7 +8,7 @@ from pathlib import Path
 
 from support import BroomCase
 
-from broom.hotspots import counts, order_text, rank, render
+from broom.hotspots import counts, order_text, rank, render, smell_row
 from broom.smells import Smell
 
 REPO = Path("/r")
@@ -57,6 +57,17 @@ class CountsTest(unittest.TestCase):
         self.assertNotIn("Hotspots", text)
 
 
+class LinesTest(unittest.TestCase):
+    def test_a_row_lists_every_line_of_an_occurrence_and_the_text_stays_cut(self) -> None:
+        many = smell("a.py", "nit", added=tuple(range(1, 31)))
+        row = smell_row(REPO, many)
+        self.assertEqual(row["lines"], list(range(1, 31)))
+        self.assertTrue(row["text"].endswith(" ..."), row["text"])
+        self.assertTrue(row["text"].endswith("line(s) 1, 2, 3, 4, 5 ..."), row["text"])
+        sized = smell("a.py", "hint", "function_lines")
+        self.assertEqual(smell_row(REPO, sized)["lines"], [1], "a sized smell stands on its first line")
+
+
 class NitsEndToEndTest(BroomCase):
     def test_smells_json_and_text_count_nits_apart(self) -> None:
         env = self.fake_path(("ruff",))
@@ -66,6 +77,7 @@ class NitsEndToEndTest(BroomCase):
         text = self.cli(r, "smells", env=env).stdout
         self.assertIn(f"0 hints, {data['total']} nits", text)
         self.assertEqual((data["hotspots"], len(data["smells"])), ([], 1), "listed as a smell, not a hotspot")
+        self.assertEqual((data["smells"][0]["line"], data["smells"][0]["lines"]), (2, [2, 3]))
         self.assertNotIn("Hotspots", text)
 
 
