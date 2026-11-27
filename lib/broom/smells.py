@@ -111,16 +111,11 @@ def one_per_line(rows: List[Raw]) -> List[Raw]:
 # Where a smell is found by a guess, not a parse, it is only a nit even when the same smell blocks in another
 # language. In Rust `let _ = f();` drops a Result by design as often as by mistake, and clippy can't tell which.
 GUESSED = {"commented_code": JS_EXTS | GO_EXTS | RS_EXTS | SWIFT_EXTS, "swallowed_error": RS_EXTS}
-# The same by the tool that finds it, where the language's other finder of that smell is sure: Go's `_ = f()`, which
-# golangci-lint's errcheck finds, drops an error by design as often (`_ = conn.Close()`); an empty block doesn't.
-GUESSED_BY = {("swallowed_error", "golangci-lint")}
 
 
-def presence_level(metric: str, rel: str, tool: str = "") -> str:
-    """The level of a presence smell in file `rel` found by `tool`: a nit for a kind guessed, by text or by a tool
-    that can't tell a deliberate one, else its normal level."""
-    guessed = Path(rel).suffix in GUESSED.get(metric, ()) or (metric, tool) in GUESSED_BY
-    return NIT if guessed else SMELL_PRESENCE[metric]
+def presence_level(metric: str, rel: str) -> str:
+    """The level of a presence smell in file `rel`: a nit for a kind guessed by text, else its normal level."""
+    return NIT if Path(rel).suffix in GUESSED.get(metric, ()) else SMELL_PRESENCE[metric]
 
 
 def example(metric: str, rows: list) -> str:
@@ -144,7 +139,7 @@ def compare_occurrences(now: List[Raw], before: Optional[List[Raw]], repo: Path)
     was = Counter((r.rel, r.metric) for r in before or [])
     # An edited line that keeps its occurrence is new by text but adds nothing: only a higher count counts.
     return [Smell(repo, repo / rel, rows[0].line, metric, example(metric, rows), total[(rel, metric)],
-                  None if before is None else was[(rel, metric)], rows[0].tool, presence_level(metric, rel, rows[0].tool), 0,
+                  None if before is None else was[(rel, metric)], rows[0].tool, presence_level(metric, rel), 0,
                   [r.line for r in rows])
             for (rel, metric), rows in added.items() if before is None or total[(rel, metric)] > was[(rel, metric)]]
 
@@ -283,7 +278,7 @@ def real_tree_smells(found: List[Found], change: Change, lim: RepoLimits, off: T
                                  pair[1] if at == "block" else pair[0]))
     for (rel, metric), rows in added.items():
         out.append(Smell(repo, repo / rel, rows[0].line, metric, example(metric, rows), len(rows), None, rows[0].tool,
-                         presence_level(metric, rel, rows[0].tool), 0, [r.line for r in rows]))
+                         presence_level(metric, rel), 0, [r.line for r in rows]))
     return out
 
 

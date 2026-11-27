@@ -12,7 +12,7 @@ import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Iterator, List, Optional, Set, Tuple
+from typing import Dict, Iterator, List, Optional, Tuple
 
 from .config import DEAD_CODE, OPTIONAL_NOTE
 from .findings import failure
@@ -28,11 +28,10 @@ from .rustmeasure import FN_RULES, rust_tree
 from .state import DATA_ROOT, keep_newest, short_hash
 from .swiftcheck import swift_deprecated
 from .swiftmeasure import swift_unused
-from .syntax import Match, Rules, matches
+from .syntax import Match
 from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS, find_up, resolve_bin
 
 TOOL_TIMEOUT = 150
-BLANK_RULES = Rules(only="^go-blank$")  # go-blank.yml
 OUT_OF_TIME = "timeout:the time of this scan ran out before {tool} measured smells"
 
 
@@ -64,15 +63,12 @@ class Found:
 
 # The linters that need types, by what they find. They run with broom's own config, never the project's.
 GO_TYPED = {"gocritic": "commented_code", "unused": DEAD_CODE,
-            "staticcheck": "deprecated_api",  # of staticcheck only SA1019, a deprecated call
-            "errcheck": "swallowed_error"}  # of errcheck only an error dropped with `_`; an unchecked call is lint's
+            "staticcheck": "deprecated_api"}  # of staticcheck only SA1019, a deprecated call
 GO_CONFIG = """version: "2"
 linters:
   default: none
-  enable: [errcheck, gocritic, staticcheck, unused]
+  enable: [gocritic, staticcheck, unused]
   settings:
-    errcheck:
-      check-blank: true
     staticcheck:
       checks: ["-all", "SA1019"]
     gocritic:
@@ -129,32 +125,20 @@ def go_found(repo: Path, rels: List[str], notes: List[str], budget: Budget) -> L
             except ValueError:
                 notes.append(f"golangci-lint failed measuring smells in {module}: {failure(out, err)}")
                 continue
-            found += go_issues(repo, module, issues, blanks(repo, module, issues, notes, budget))
+            found += go_issues(repo, module, issues)
     return found
 
 
-def blanks(repo: Path, module: Path, issues: List[dict], notes: List[str], budget: Budget) -> Set[Tuple[str, int]]:
-    """Where the files errcheck found something in drop a value with the blank name, as (file, byte offset), read
-    from their trees: errcheck says no more than that an error is unchecked, at the `_` for a dropped one."""
-    rels = sorted({rel_of(repo, module / (i.get("Pos") or {}).get("Filename", "")) or ""
-                   for i in issues if i.get("FromLinter") == "errcheck"} - {""})
-    timeout = budget.timeout()
-    if not rels or not timeout:
-        return set()
-    return {(m.file, m.start) for m in matches(repo, rels, notes, timeout, BLANK_RULES)}
-
-
-def go_issues(repo: Path, module: Path, issues: List[dict], dropped: Set[Tuple[str, int]]) -> List[Found]:
-    """Turn golangci-lint's `issues` for `module` into Found rows: typed linters, files inside the repo only, and of
-    errcheck what lies at a blank name among `dropped`."""
+def go_issues(repo: Path, module: Path, issues: List[dict]) -> List[Found]:
+    """Turn golangci-lint's `issues` for `module` into Found rows: typed linters, files inside the repo only."""
     found = []
     for i in issues:
-        linter, text, pos = i.get("FromLinter", ""), i.get("Text", ""), i.get("Pos") or {}
+        linter, text = i.get("FromLinter", ""), i.get("Text", "")
         metric = GO_TYPED.get(linter)  # `typecheck`, a module that doesn't compile, has none
-        rel = rel_of(repo, module / pos.get("Filename", ""))
-        if (metric and rel and (linter != "staticcheck" or text.startswith("SA1019"))
-                and (linter != "errcheck" or (rel, int(pos.get("Offset", -1))) in dropped)):
-            found.append(Found(rel, int(pos.get("Line", 0)), metric, "golangci-lint", go_key(metric, text)))
+        rel = rel_of(repo, module / (i.get("Pos") or {}).get("Filename", ""))
+        if metric and rel and (linter != "staticcheck" or text.startswith("SA1019")):
+            found.append(Found(rel, int((i.get("Pos") or {}).get("Line", 0)), metric, "golangci-lint",
+                               go_key(metric, text)))
     return found
 
 
