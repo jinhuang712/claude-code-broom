@@ -179,6 +179,12 @@ class CssTest(BroomCase):
         self.assertIn("  color: red;\n  margin: 1px;\n", text, "the changed rule is formatted")
         self.assertIn("  color:blue;\n", text, "the untouched rule is not")
 
+    def test_doctor_lists_ast_grep_in_a_repo_of_css_alone(self) -> None:
+        r = self.repo({"a.css": ".a {}\n"})
+        item = next(i for i in self.doctor(r, self.fake_path())["items"] if i["tool"] == "ast-grep")
+        self.assertEqual((item["lang"], item["status"]), ("css", "missing"))
+        self.assertIn("ast-grep", item["fix"])
+
     def test_doctor_finds_css_at_any_depth_inside_and_outside_js_projects(self) -> None:
         r = self.repo({"go.mod": "module example.com/m\n\ngo 1.26\n", "static/app.css": ".a {}\n",
                        "static/app.min.css": ".a{}\n", "web/package.json": '{"name":"w","private":true}\n',
