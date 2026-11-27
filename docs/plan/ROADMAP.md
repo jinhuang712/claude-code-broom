@@ -1,6 +1,6 @@
 # Roadmap
 
-**Current checkpoint**: [CP8: Lighter](#cp8-lighter). [CP15: Sharper rules and more rot](#cp15-sharper-rules-and-more-rot) shipped its 13 items on 2026-11-27 and waits for the fix rate it is judged by. [CP16: Tests by what they prove](#cp16-tests-by-what-they-prove) was set that day and comes next, after 0.30.2. [CP14: No clock](#cp14-no-clock) and [CP13: Nothing is forgotten](#cp13-nothing-is-forgotten) ended that day, in that order at the user's word. [CP8: Lighter](#cp8-lighter) waits for the ledger's numbers from 0.29.0: 100 checks that ran a tool for the check time and 100 findings that ended for the fix rate. The user set on 2026-11-20 that no feature is added until then, and lifted that for CP13, CP14, CP15 and CP16. What follows them is open in [What it takes for a second user to install broom and stay](TODO.md#p1discussion-what-it-takes-for-a-second-user-to-install-broom-and-stay). [CP9: Ready for a public release](#cp9-ready-for-a-public-release) ended on 2026-11-20 with 0.28.0, once the README got its hero. CP10 ended on 2026-11-20 with 0.26.0, and [CP11: Read from a syntax tree](#cp11-read-from-a-syntax-tree) with 0.27.0 that day. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
+**Current checkpoint**: [CP8: Lighter](#cp8-lighter). [CP15: Sharper rules and more rot](#cp15-sharper-rules-and-more-rot) shipped its 13 items on 2026-11-27 and waits for the fix rate it is judged by. [CP16: Tests by what they prove](#cp16-tests-by-what-they-prove) was set that day and ended with 0.31.0. [CP14: No clock](#cp14-no-clock) and [CP13: Nothing is forgotten](#cp13-nothing-is-forgotten) ended that day, in that order at the user's word. [CP8: Lighter](#cp8-lighter) waits for the ledger's numbers from 0.29.0: 100 checks that ran a tool for the check time and 100 findings that ended for the fix rate. The user set on 2026-11-20 that no feature is added until then, and lifted that for CP13, CP14, CP15 and CP16. What follows them is open in [What it takes for a second user to install broom and stay](TODO.md#p1discussion-what-it-takes-for-a-second-user-to-install-broom-and-stay). [CP9: Ready for a public release](#cp9-ready-for-a-public-release) ended on 2026-11-20 with 0.28.0, once the README got its hero. CP10 ended on 2026-11-20 with 0.26.0, and [CP11: Read from a syntax tree](#cp11-read-from-a-syntax-tree) with 0.27.0 that day. CP6 ended on 2026-11-19 with 0.25.0, once the user moved its last two items to [CP9: Ready for a public release](#cp9-ready-for-a-public-release). CP2 and CP3 shipped, and their goals that need use are still open. CP7 ended with 0.24.0, CP5 with 0.22.0, CP2.2 with 0.22.2 and CP4 with 0.23.0.
 
 ---
 
@@ -38,7 +38,7 @@ Roadmap
 ├── ✅ CP13: Nothing is forgotten — an open finding comes back until it ends
 ├── ✅ CP14: No clock — events and counts, and what Claude hides still counts
 ├── 🟨 CP15: Sharper rules and more rot — shipped, the fix rate after it is open
-└── ⬜ CP16: Tests by what they prove — only what lets a test lie stops a change
+└── ✅ CP16: Tests by what they prove — only what lets a test lie stops a change
 ```
 
 ---
@@ -641,15 +641,18 @@ The user picked this on 2026-11-27 among the directions of TODO: rules that find
 
 ## CP16: Tests by what they prove
 
-**Status**: ⬜
+**Status**: ✅
+
+It ended on 2026-11-27 with 0.31.0.
 
 The user set this on 2026-11-27: how well a test is written matters little, and the work on broom had spent much of its time on test files. In the ledger 122 of 135 blocks in test files of real repos were about a test's shape, and one was a skipped test. A test now stops a change only for what lets it pass while the code is wrong, and its shape is told as a nit.
 
-**Delivers** (1):
+**Delivers** (2):
 
 - [F4.7: Tests](../features/F4-smells.md#f47-tests), with the shape of a test as a nit.
+- A linked worktree inside the repo is no copy of it in the clone scan, done on 2026-11-27 at the user's word.
 
 **Exit criteria** (1):
 
 - **Constraints**
-  - [R9: A test's shape never stops Claude](GOALS.md#r9-a-tests-shape-never-stops-claude)
+  - [R9: A test's shape never stops Claude](GOALS.md#r9-a-tests-shape-never-stops-claude): ✅ 2026-11-27

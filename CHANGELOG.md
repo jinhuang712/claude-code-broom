@@ -6,6 +6,23 @@
 
 ---
 
+## 0.31.0 — 2026-11-27
+
+---
+
+### Tests by what they prove
+
+- In a test file only what lets a test pass while the code is wrong stops a change: a skipped test, a broad test assertion, a swallowed error and a lint suppression. Every other smell there is a nit, past the hard limit too, such as a 120-line test function or one of 9 parameters.
+- The limits card says so in one clause at a session's start.
+
+---
+
+### Fixed
+
+- A linked worktree that sits inside the repo is no copy of it. jscpd read the folder, so every file of such a worktree read as a duplicate of the repo's own.
+
+---
+
 ## 0.30.2 — 2026-11-27
 
 ---

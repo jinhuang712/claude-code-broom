@@ -144,7 +144,7 @@ A Go package variable that a function assigns is read from every file in the fol
 
 ## Duplicate and dead code
 
-jscpd 5 scans every code file in the repo, and a clone's size is the code lines of the side measured. Given the base ref it scans that tree too and marks the clones the base lacked. A clone counts when it is new and has a side in the change's files. jscpd gets a baseline only from a base git can resolve.
+jscpd 5 scans every code file in the repo, and a clone's size is the code lines of the side measured. It reads the folder and not git, so a linked worktree that sits inside the repo is left out, since its files are the repo's own. Given the base ref it scans that tree too and marks the clones the base lacked. A clone counts when it is new and has a side in the change's files. jscpd gets a baseline only from a base git can resolve.
 
 Dead code comes from the same tool in TS/JS and Python, with tests and entry points left out, from golangci-lint's `unused` in Go, from rustc in Rust and from Swift's tree, where a `private` or `fileprivate` declaration no other token of its file names is dead. A finding counts on a line the change added, or in a new file. Generated code still counts as using code.
 

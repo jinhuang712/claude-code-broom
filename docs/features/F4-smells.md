@@ -189,8 +189,9 @@ A Rust file is tested when it holds a `#[test]` or a `#[cfg(test)]`, or when a f
 
 A new duplicate block with a side in the change's files hints past 10 lines and blocks past 30. It is found anywhere in the repo, and compared with the base so old copies stay quiet.
 
-3 kinds of clone don't count:
+4 kinds of clone don't count:
 
+- Clones of a linked worktree that sits inside the repo, whose files are the repo's own.
 - Clones between two test files.
 - Clones of generated or vendored code.
 - Clones with a side in `.broom.json` `legacy`.
