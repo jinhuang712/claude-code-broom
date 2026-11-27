@@ -237,7 +237,7 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 **Called by**: a person, Claude and the `/broom:status` skill.
 
-**Prints**: stdout gets a line of totals with the fix rate, then a table per rule, the skips by tool, the median and longest seconds of a whole check at a commit and at a turn's end, the same per tool and the self-waivers by kind. The open findings say how many of them were put to the user, as `still open 5 (asked 3)`, and those count against the fix rate. With `--all` the first line says how many repos in a temporary folder were left out. With nothing recorded it prints `broom: nothing recorded for <repo> in the whole record`, or `since VERSION`. stderr gets `broom: not inside a git repository`.
+**Prints**: stdout gets a line of totals with the fix rate, then a table per rule, the skips by tool, the median and longest seconds of a whole check at a commit and at a turn's end, the same per tool and the self-waivers by kind. The open findings say how many of them were put to the user, as `still open 5 (asked 3)`, and those count against the fix rate. With `--all` it reads every repo the data directory's index names, and the first line says how many repos in a temporary folder were left out and how many whose `.broom/` git tracks. With nothing recorded it prints `broom: nothing recorded for <repo> in the whole record`, or `since VERSION`. stderr gets `broom: not inside a git repository`.
 
 **Fails**: exit 1 outside a repo without `--all`. Exit 2 for a `--since` that is no version.
 

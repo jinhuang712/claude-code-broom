@@ -6,6 +6,20 @@
 
 ---
 
+## 0.32.0 — 2026-11-27
+
+---
+
+### Findings live in the repo
+
+- What broom finds in a repo lives in `.broom/` at the root of its main checkout: known issues, the ledger, the last blocked result, the check-up, the session scan, passed content and a check that ran out of time. The folder holds a `.gitignore` of `*`, so it is never committed.
+- Every linked worktree writes the main checkout's folder, by paths from the repo's root, so a repo moved to another folder keeps its records and a deleted one takes them along.
+- The first time broom keeps something for a repo, it moves that repo's records out of the old files of the data directory.
+- A `.broom/` that git tracks came with the repo and is never read, by the hooks or by `broom report --all`: the repo's records then live in the data directory, and a note says so.
+- `broom report --all` reads every repo of an index in the data directory.
+
+---
+
 ## 0.31.0 — 2026-11-27
 
 ---

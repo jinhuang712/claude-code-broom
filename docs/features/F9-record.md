@@ -17,13 +17,20 @@ The record says what broom did with each finding. The user ends up knowing wheth
 
 ## F9.1: Ledger
 
-Every block, fix, pass and skip is written as one line: when, which repo, which rule, which file and how it ended. A repo and its linked worktrees share one record.
+Every block, fix, pass and skip is written as one line: when, which repo, which rule, which file and how it ended. Each repo keeps its record in the `.broom/` of its main checkout, which git ignores, and its linked worktrees write there too. A repo moved to another folder keeps it, and a deleted one takes it along.
 
 A finding counts as fixed when it was blocked and is gone from a later check that covered its file with its tool. A commit of other files fixes nothing, and neither does a run where the tool was skipped.
 
-The ledger also notes how many seconds each check took, and each time a hook failed and let the action through. It keeps at most 2 MB, the newest lines, and each line holds the version of broom that wrote it.
+The ledger also notes how many seconds each check took, and each time a hook failed and let the action through. It keeps at most 2 MB per repo, the newest lines, and each line holds the version of broom that wrote it.
+
+3 gaps:
+
+- A repo whose `.broom/` git tracks, or whose root can't be written, keeps its record in the data directory under a name made from its path, so moving it loses the record.
+- A linked worktree outside the main checkout is named by its absolute path in the repo's records.
+- The old shared files keep the records of repos that are gone, since only a repo still on disk moves its own out.
 
 - **How it works**: [Record](../specs/record.md)
+- **Why**: [053: What broom finds in a repo lives in the repo's `.broom/`](../specs/decisions/053-findings-live-in-the-repo.md)
 
 ---
 

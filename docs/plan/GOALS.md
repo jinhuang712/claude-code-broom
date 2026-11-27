@@ -39,7 +39,7 @@ Goals
     ├── ✅ R7: No rule turns on the clock
     ├── ✅ R8: What is hidden still counts
     ├── ✅ R9: A test's shape never stops Claude
-    └── ⬜ R10: A repo's findings live in the repo
+    └── ✅ R10: A repo's findings live in the repo
 ```
 
 ---
@@ -501,4 +501,4 @@ An edit must not be felt, since Claude makes many in a row.
 
 **How**: A test accepts a finding, moves the repo to another folder and expects the finding still known and the report's numbers the same. Another commits a `.broom/` with a known issue and expects it never read, with a note.
 
-**Status**: ⬜
+**Status**: ✅ 2026-11-27, by `tests/test_repodata.py`: a repo moved to another folder keeps its known issue, its report's numbers and the commit it blocked, which `broom known --accept` still finds. A `.broom/` that git tracks is never read, by the hooks or by `broom report --all`, and the note says so. A copy of this machine's data moved this repo's 436 ledger lines and 4 known issues into its `.broom/` in 0.16 seconds, and the report gave the same numbers before and after.

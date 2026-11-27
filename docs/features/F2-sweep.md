@@ -106,7 +106,7 @@ It never replaces another tool's hook and prints the line to add to it instead. 
 
 ## F2.5: Known issues
 
-A finding Claude accepted with a reason is known and not raised again until its code changes. It never expires. One accepted in a linked worktree stays known in the main checkout, where the work lands. One accepted before 0.28.1 in a worktree since deleted moves to the main checkout's file the next time `broom known` lists it, once a line of that file proves it is the same finding. `broom known` lists and clears them.
+A finding Claude accepted with a reason is known and not raised again until its code changes. It never expires. Known issues live in the repo's `.broom/`, by paths from its root, so one accepted in a linked worktree stays known in the main checkout, where the work lands, and a moved repo keeps them. One accepted before 0.28.1 in a worktree since deleted moves to the main checkout's file the next time `broom known` lists it, once a line of that file proves it is the same finding. `broom known` lists and clears them.
 
 - **Design**: [6. A finding ends fixed or with a reason the user sees](../DESIGNS.md#6-a-finding-ends-fixed-or-with-a-reason-the-user-sees)
 - **Commands**: [broom known](../CLI.md#broom-known)

@@ -16,7 +16,7 @@ Files the repo's `.broom.json` excludes never count. Files outside any git repo 
 
 ## Known issues
 
-A finding Claude accepted with a reason is recorded as known and not raised again. Its key is the file, the tool, the rule, the message and the text of the line, so it stays known when lines above it move. The file is named as the main checkout holds it, so a finding accepted in a linked worktree stays known once the work lands.
+A finding Claude accepted with a reason is recorded as known and not raised again. Its key is the file, the tool, the rule, the message and the text of the line, so it stays known when lines above it move. The file is named by its path from the repo's root, and known issues live in the main checkout's `.broom/`, so a finding accepted in a linked worktree stays known once the work lands, and a repo moved to another folder keeps them.
 
 A known issue never expires. It stays known until its code changes, which makes a new key, or until `broom known --clear` removes it. `broom known` lists them, with the reason beside each accepted one and whether the user agreed. An entry that no line of its file gives any more, in the main checkout or in a linked worktree, is marked as one whose code changed, and stays until `--clear`.
 
@@ -25,6 +25,7 @@ A smell that stands in code no change touches never blocks, so it is accepted an
 - [003: Every finding passes fixed or accepted with a reason](decisions/003-reason-for-every-pass.md)
 - [046: A known issue never expires](decisions/046-known-issues-never-expire.md)
 - [047: A standing smell is accepted with the user's agreement](decisions/047-standing-smells-accepted.md)
+- [053: What broom finds in a repo lives in the repo's `.broom/`](decisions/053-findings-live-in-the-repo.md)
 
 ---
 
