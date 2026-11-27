@@ -38,7 +38,8 @@ Goals
     ├── ✅ R6: No check reads code by a text pattern
     ├── ✅ R7: No rule turns on the clock
     ├── ✅ R8: What is hidden still counts
-    └── ✅ R9: A test's shape never stops Claude
+    ├── ✅ R9: A test's shape never stops Claude
+    └── ⬜ R10: A repo's findings live in the repo
 ```
 
 ---
@@ -487,3 +488,17 @@ An edit must not be felt, since Claude makes many in a row.
 **How**: A test commits a test file with a function past the hard limit, too many parameters and a skipped test, and expects the commit to stop on the skip alone, with the rest told as nits.
 
 **Status**: ✅ 2026-11-27, by `tests/test_test_lies.py`: a 120-line function and a function of 9 parameters in a test file come back as nits, the commit stops on the skipped test alone, and it passes once the skip is gone.
+
+---
+
+#### R10: A repo's findings live in the repo
+
+**Want**: nothing passes silently.
+
+**Checks**: [F9.1: Ledger](../features/F9-record.md#f91-ledger)
+
+**Condition**: A repo's known issues, its ledger, its last blocked result and its check-up live in its main checkout's `.broom/`, which git never tracks. A repo moved to another folder keeps them, and a `.broom/` that git tracks is never read.
+
+**How**: A test accepts a finding, moves the repo to another folder and expects the finding still known and the report's numbers the same. Another commits a `.broom/` with a known issue and expects it never read, with a note.
+
+**Status**: ⬜

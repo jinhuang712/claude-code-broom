@@ -24,6 +24,7 @@ Each term has its meaning, the words that lost to it and its name in the code wh
 | Severe smell | a smell past its hard limit | — | `Issue.severe` |
 | Touched smell | an old sized smell in a function, a type or a file the change touches | — | `Smell.touched` |
 | Known issue | a finding accepted with a reason, which broom no longer raises until its code changes | baseline · accepted issue | `baseline.json` |
+| `.broom/` | the folder at the root of a repo's main checkout that holds what broom found there, ignored by git and shared by its worktrees | data folder | `repodata` |
 | Collapsed | hidden by Claude's choice: left out of the lists and still counted in every total | hidden · folded | `known` |
 | Standing smell | a smell in code no change touches, which no block shows | old smell | `standing` |
 | Accept | to record a blocked result as known with a reason | — | `broom known --accept` |
