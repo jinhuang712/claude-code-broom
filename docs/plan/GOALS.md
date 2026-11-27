@@ -38,7 +38,7 @@ Goals
     ├── ✅ R6: No check reads code by a text pattern
     ├── ✅ R7: No rule turns on the clock
     ├── ✅ R8: What is hidden still counts
-    └── ⬜ R9: A test's shape never stops Claude
+    └── ✅ R9: A test's shape never stops Claude
 ```
 
 ---
@@ -486,4 +486,4 @@ An edit must not be felt, since Claude makes many in a row.
 
 **How**: A test commits a test file with a function past the hard limit, too many parameters and a skipped test, and expects the commit to stop on the skip alone, with the rest told as nits.
 
-**Status**: ⬜
+**Status**: ✅ 2026-11-27, by `tests/test_test_lies.py`: a 120-line function and a function of 9 parameters in a test file come back as nits, the commit stops on the skipped test alone, and it passes once the skip is gone.

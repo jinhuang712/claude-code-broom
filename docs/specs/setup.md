@@ -36,7 +36,7 @@ The scan makes two lookups beside each project's own tools: oxlint at the repo r
 
 The SessionStart hook runs a cached doctor. The cache key includes the modification time of every PATH directory, so installing a tool invalidates it. When there are gaps it asks Claude, once per session, to offer `/broom:setup`.
 
-The same hook tells Claude the limits card first: the repo's smell limits, what blocks for being added, how a finding passes and which command answers a question about the repo. The card is built from the cached diagnosis and the repo's config alone, so no tool runs for it.
+The same hook tells Claude the limits card first: the repo's smell limits, what blocks for being added, that in test files only the 4 test lies stop a change, how a finding passes and which command answers a question about the repo. The card is built from the cached diagnosis and the repo's config alone, so no tool runs for it.
 
 ---
 
