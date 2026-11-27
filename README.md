@@ -105,6 +105,8 @@ A scan takes its scope in your own words:
 
 Four settings in `/config` start at defaults and are never asked. A `.broom.json` at the repo root overrides them for one repo, excludes paths and moves the smell limits. [F7: Settings](docs/features/F7-settings.md) lists them.
 
+What broom finds in a repo, such as the findings accepted with a reason and its record, lives in `.broom/` at the repo's root. The folder ignores itself in git, so it is never committed.
+
 ---
 
 ## Architecture
@@ -121,13 +123,15 @@ flowchart LR
   L["lib/broom/"]:::broom
   T["the project's tools<br/>formatters · linters · type checkers"]:::tool
   D["defaults/<br/>configs where a project has none"]:::tool
-  S[("data directory<br/>state shared by every hook")]:::data
+  R[("&lt;repo&gt;/.broom/<br/>what broom found in that repo")]:::data
+  S[("data directory<br/>caches shared by every repo")]:::data
   LSP[".lsp.json<br/>language servers"]:::tool
   CC --> H --> B --> L
   GIT --> B
   SK --> B
   L --> T
   L --> D
+  L --> R
   L --> S
   CC --> LSP
   classDef host fill:#ede9fe,stroke:#7c3aed,color:#2e1065

@@ -105,6 +105,8 @@ Claude 修好问题后再次提交。broom 有三个命令，上面这些都不�
 
 `/config` 里的四个设置都从默认值开始，从不询问。仓库根目录的 `.broom.json` 可以为单个仓库覆盖它们，还能排除路径、调整坏味道的上限。[F7: Settings](features/F7-settings.md)（英文）列出了全部设置。
 
+broom 在一个仓库里发现的东西，比如带理由接受的问题和它的记录，都放在仓库根目录的 `.broom/` 里。这个文件夹自己让 git 忽略自己，所以永远不会被提交。
+
 ---
 
 ## 架构
@@ -121,13 +123,15 @@ flowchart LR
   L["lib/broom/"]:::broom
   T["the project's tools<br/>formatters · linters · type checkers"]:::tool
   D["defaults/<br/>configs where a project has none"]:::tool
-  S[("data directory<br/>state shared by every hook")]:::data
+  R[("&lt;repo&gt;/.broom/<br/>what broom found in that repo")]:::data
+  S[("data directory<br/>caches shared by every repo")]:::data
   LSP[".lsp.json<br/>language servers"]:::tool
   CC --> H --> B --> L
   GIT --> B
   SK --> B
   L --> T
   L --> D
+  L --> R
   L --> S
   CC --> LSP
   classDef host fill:#ede9fe,stroke:#7c3aed,color:#2e1065
