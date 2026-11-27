@@ -22,7 +22,8 @@ LEAD = "broom's bar in this repo, for the code you write or touch: {}."
 LENGTHS = ("function_lines", "file_lines")
 CODE_LINES = "A length counts code lines: comment lines and blank lines are free."
 # Decision 051: a test file's shape stops nothing.
-IN_TESTS = "In test files only a skipped test, a broad assertion, a swallowed error and a suppression stop a change."
+IN_TESTS = ("In test files only a skipped test, a broad or missing assertion, a swallowed error and a suppression "
+            "stop a change.")
 ACCEPT = ('A commit and a turn\'s end stop on code past the first number, as on most smells a change adds, until it '
           'is fixed or accepted with `broom known --accept "<why>"`: trying again passes nothing. If the user must '
           'decide, `broom known --ask "<question>"` and stop. Code already past its hard limit can\'t grow.')

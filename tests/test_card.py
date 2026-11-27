@@ -12,7 +12,7 @@ BAR = (
     "to 400 (1000), test files up to 800 (2000), parameters up to 5 (8), nesting up to 4 (6), complexity up to 10 "
     "(20). A length counts code lines: comment lines and blank lines are free. A change is also blocked "
     "when it adds a lint suppression without a reason, a swallowed error or commented-out code. In test files only a "
-    "skipped test, a broad assertion, a swallowed error and a suppression stop a change. A commit and a "
+    "skipped test, a broad or missing assertion, a swallowed error and a suppression stop a change. A commit and a "
     "turn's end stop on code past the first number, as on most smells a change adds, until it is fixed or accepted "
     'with `broom known --accept "<why>"`: trying again passes nothing. If the user must decide, `broom known --ask '
     '"<question>"` and stop. Code already past its hard limit can\'t grow. '
