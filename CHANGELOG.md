@@ -15,7 +15,7 @@
 - A Go error dropped with `_` is no smell again. Most of what 0.30.1 flagged was cleanup, such as `_ = x.Close()`, or an encode, such as `_ = json.Marshal(v)`: the form errcheck itself asks for.
 - A Go `main` that assigns another package's variable, as in `flag.Usage = usage`, sets the program up and doesn't count for `globals`, as `init` didn't.
 - Go's magic numbers leave out -1, 0, 1 and 2, as TS/JS and Rust do, so `n / 2` counts in no language.
-- Nits are counted apart from hints: `0 past the hard limit, 6 hints, 238 nits`. Before, a nit read as a hint in every total.
+- Nits are counted apart from hints: `1 past the hard limit, 4 hints, 7 nits`. Before, a nit read as a hint in every total.
 - A nit weighs nothing in a hotspot's score, and a file of nits alone is no hotspot.
 - `broom smells --json` gives each smell's `lines`, every line it stands on, where `text` cuts the list short.
 - The `tests_not_run` fix line says that a runner of the project's own is seen only once `test_commands` names it, where the repo names none.

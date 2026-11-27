@@ -26,9 +26,9 @@ class CountsTest(unittest.TestCase):
         self.assertEqual(counts(kept, hidden), {"total": 4, "severe": 1, "hints": 1, "nits": 2, "known": 1, "open": 3})
 
     def test_the_headline_gives_hints_and_nits_apart(self) -> None:
-        data = {"repo": "/r", "base": None, "total": 244, "severe": 0, "hints": 6, "nits": 238, "known": 5,
+        data = {"repo": "/r", "base": None, "total": 12, "severe": 1, "hints": 4, "nits": 7, "known": 5,
                 "notes": [], "smells": [], "hotspots": [], "by": "smells"}
-        self.assertEqual(render(data), "[broom] 244 code smell(s) in /r: 0 past the hard limit, 6 hints, 238 nits; "
+        self.assertEqual(render(data), "[broom] 12 code smell(s) in /r: 1 past the hard limit, 4 hints, 7 nits; "
                                        "5 accepted as known, collapsed.")
 
     def test_a_file_row_counts_its_nits_and_they_weigh_nothing_in_its_score(self) -> None:
