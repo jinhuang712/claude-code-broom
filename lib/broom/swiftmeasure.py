@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import Dict, Iterator, List, Optional, Tuple
 
 from .reading import Limits, Reader
-from .swiftcalls import broad_asserts, file_smells, unused_private
+from .smell import nothing_key
+from .swiftcalls import broad_asserts, empty_tests, file_smells, unused_private
 from .swiftcomments import commented_code
 from .swiftkit import MISSING as SOURCEKIT_MISSING
 from .swiftkit import SwiftFile, library, open_text
@@ -220,6 +221,8 @@ def swift_text(r: Reader, rels: List[str], lim: Limits) -> Dict[str, List[Tuple[
             test = [(line, "broad_test_asserts") for line in broad_asserts(source)] if TEST_FILE.search(rel) else []
             for line, metric in file_smells(source) + test:
                 r.add(rel, line, metric, 1)
+            for line, name in empty_tests(source) if TEST_FILE.search(rel) else []:
+                r.add(rel, line, "broad_test_asserts", 1, nothing_key(name))
     for rel, line in commented_code(r.root, rels):
         r.add(rel, line, "commented_code", 1)
     r.rows[kept:] = [row for row in r.rows[kept:] if row.rel not in trees or not trees[row.rel].unread(row.line)]

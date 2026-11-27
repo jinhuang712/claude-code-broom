@@ -1,7 +1,7 @@
 """Swift smells read from SourceKit's structure and tokens (swiftkit): a debug print, an unlabeled Bool parameter, a
-test that any error at all is thrown, a skipped test, a test case, unsafe code, and a private name nothing in its file
+test that any error at all is thrown, a test that asserts nothing, a skipped test, a test case, unsafe code, and a private name nothing in its file
 uses. Each is a node of the parser's structure, a call, a parameter or a declaration, and a token's text is only ever
-compared whole or by its ends, so a string or a comment that looks like one is never taken for it.
+compared whole or by its ends (or, for a macro, by the `#` before it), so a string or a comment that looks like one is never taken for it.
 """
 
 from __future__ import annotations
@@ -102,15 +102,42 @@ def skips(f: SwiftFile) -> Iterator[Tuple[int, bool]]:
             yield f.line(n.offset), any(c.name == "if" for c in n.children)
 
 
+def marked_test(f: SwiftFile, n: Node) -> bool:
+    """Whether the declaration `n` carries swift-testing's `@Test`."""
+    return any(t.text == "Test" for a in n.raw.get("key.attributes") or []
+               for t in f.tokens if t.offset == int(a.get("key.offset", -1)) + 1)
+
+
 def test_cases(f: SwiftFile) -> int:
     """How many test cases `f` declares: methods named `test…` (XCTest) and functions marked `@Test`."""
-    count = 0
-    for n in f.root.walk():
-        if n.kind.startswith("decl.function"):
-            marked = any(t.text == "Test" for a in n.raw.get("key.attributes") or []
-                         for t in f.tokens if t.offset == int(a.get("key.offset", -1)) + 1)
-            count += marked or n.name.startswith("test")
-    return count
+    return sum(1 for n in f.root.walk()
+               if n.kind.startswith("decl.function") and (marked_test(f, n) or n.name.startswith("test")))
+
+
+CHECKS = {"XCTFail", "XCTUnwrap"}  # besides the `XCTAssert…` calls
+MACRO_CHECKS = {"expect", "require"}  # swift-testing's `#expect` and `#require`
+
+
+def can_fail(f: SwiftFile, n: Node) -> bool:
+    """Whether the test `n` holds anything that can fail it: an `XCTAssert…`, `XCTFail` or `XCTUnwrap` call, an
+    `#expect` or a `#require`, or a `try`. A macro is the identifier token right after a `#`."""
+    if any(c.kind == "expr.call" and (c.name.startswith("XCTAssert") or c.name in CHECKS) for c in n.walk()):
+        return True
+    return any((t.kind == "keyword" and t.text == "try")
+               or (t.kind == "identifier" and t.text in MACRO_CHECKS and f.data[t.offset - 1:t.offset] == b"#")
+               for t in f.within(n))
+
+
+def empty_tests(f: SwiftFile) -> Iterator[Tuple[int, str]]:
+    """The (line, name) of each test that asserts nothing (`can_fail`): an XCTest method `test…()` of a class, and a
+    function marked `@Test`."""
+    for n, parents in walk_with_parents(f.root):
+        if not n.kind.startswith("decl.function"):
+            continue
+        xctest = (n.name.startswith("test") and n.name.endswith("()") and bool(parents)
+                  and parents[-1].kind == "decl.class")
+        if (xctest or marked_test(f, n)) and not can_fail(f, n):
+            yield f.line(n.offset), n.name.partition("(")[0]
 
 
 def unsafe_uses(f: SwiftFile) -> int:

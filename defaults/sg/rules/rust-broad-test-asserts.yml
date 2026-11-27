@@ -23,3 +23,42 @@ rule:
     - pattern: assert!($$$X.is_err())
     - pattern: assert!($$$X.is_err(), $$$M)
     - pattern: assert!(matches!($$$X, Err(_)))
+---
+# A test that asserts nothing: a `#[test]` function with no assertion macro (`assert…`, `debug_assert…`), no `panic!`,
+# `unreachable!` or `todo!`, no `.unwrap()` or `.expect(…)`, no `?` and no `#[should_panic]`. A helper of the test's
+# own may still assert, so broom takes it for a guess.
+id: rust-empty-test
+language: rust
+message: a test that asserts nothing
+metadata: {smell: broad_test_asserts}
+utils:
+  test-attribute:
+    kind: attribute_item
+    has:
+      kind: attribute
+      any:
+        - all:
+            - has: {kind: identifier, regex: ^test$}
+            - not: {has: {kind: token_tree}}
+        - has: {kind: scoped_identifier, has: {field: name, regex: ^test$}}
+  should-panic:
+    kind: attribute_item
+    has: {kind: attribute, has: {kind: identifier, regex: ^should_panic$}}
+  not-attribute:
+    not: {any: [{kind: attribute_item}, {kind: line_comment}, {kind: block_comment}]}
+rule:
+  kind: function_item
+  has: {field: name, pattern: $NAME}
+  follows: {matches: test-attribute, stopBy: {matches: not-attribute}}
+  all:
+    - not: {follows: {matches: should-panic, stopBy: {matches: not-attribute}}}
+    - not:
+        has:
+          field: body
+          stopBy: end
+          any:
+            - kind: macro_invocation
+              has: {field: macro, regex: '^(assert\w*|debug_assert\w*|panic|unreachable|todo)$'}
+            - kind: try_expression
+            - kind: call_expression
+              has: {field: function, kind: field_expression, has: {field: field, regex: '^(unwrap|expect)$'}}

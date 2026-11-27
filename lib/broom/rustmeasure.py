@@ -1,6 +1,6 @@
 """What broom reads from Rust source itself, for the smells clippy has no lint for: magic numbers, commented-out code,
-global state, how long a type is with its impls (in code lines, decision 039), tests that any error passes, handlers
-that catch every error and an `if` expression nested in another's branch.
+global state, how long a type is with its impls (in code lines, decision 039), tests that any error passes or that
+assert nothing, handlers that catch every error and an `if` expression nested in another's branch.
 
 Each is read from the syntax tree by ast-grep (decision 038), with the rules in `defaults/sg/rules/rust-*.yml`; this
 file only joins what they match. A region the grammar can't read is left out, with a note. Test code is a file under
@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple
 
 from .reading import TOOL_TIMEOUT, Limits, Reader
+from .smell import nothing_key
 from .state import DEFAULTS
 from .syntax import Match, Rules, Span, inside, matches, parsed
 
@@ -23,6 +24,7 @@ PROBE = DEFAULTS / "sg" / "probe" / "sgconfig.yml"
 # A file of tests by its path: what lies under `tests/`, `tests.rs`, `*_test.rs` and `*_tests.rs`.
 TEST_PATH = re.compile(r"(^|/)tests(/|\.rs$)|_tests?\.rs$")
 TEST_ITEM = "rust-test-item"
+EMPTY_TEST = "rust-empty-test"  # a test that asserts nothing
 # Smells a rule's match is on its own, anywhere; and those that count outside test code, or only inside it.
 WHOLE = {"globals", "broad_catch", "nested_ternary"}
 OUTSIDE_TESTS = {"magic_numbers"}
@@ -170,7 +172,8 @@ def file_rows(r: Reader, rel: str, found: List[Match], lim: Limits) -> None:
     tests = test_spans(rel, found)
     for m in found:
         if m.smell in WHOLE or m.smell in INSIDE_TESTS and inside(m.line, tests):
-            r.add(rel, m.line, m.smell, 1)
+            name = nothing_key(m.caught.get("NAME", "")) if m.rule == EMPTY_TEST else None
+            r.add(rel, m.line, m.smell, 1, name)
         elif m.smell in OUTSIDE_TESTS and not inside(m.line, tests) and not plain(m.caught.get("N", "0")):
             r.add(rel, m.line, m.smell, 1)
 
