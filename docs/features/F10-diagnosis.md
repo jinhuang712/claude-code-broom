@@ -81,6 +81,7 @@ The longest functions and types come from `broom smells --only function_lines` a
 
 - **Commands**: [broom stats](../CLI.md#broom-stats)
 - **How it works**: [Stats](../specs/stats.md)
+- **Why**: [052: broom answers by commands that grow where a session had to script](../specs/decisions/052-commands-grow-where-a-session-scripted.md)
 
 ---
 
