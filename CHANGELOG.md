@@ -6,6 +6,24 @@
 
 ---
 
+## 0.32.1 — 2026-11-27
+
+---
+
+### A test that asserts nothing
+
+- A test with no assertion passes whatever the code does, so it is a `broad_test_asserts` and stops a change like the other test lies. It is a hint in TS/JS, by oxlint's `expect-expect`, and in Go, where the test never names its `t`. It is a nit in Python, Rust and Swift, where a helper in another file may assert.
+- In Python and Swift a call to a helper of the same file that asserts counts as an assertion, and in Python a function that returns a value is no test.
+- The fix line of `broad_test_asserts` covers both forms, and the limits card names a missing assertion among the test lies.
+
+---
+
+### Fixed
+
+- `broom doctor` offers ast-grep in a repo of CSS, SCSS or Less alone, which reads their comments.
+
+---
+
 ## 0.32.0 — 2026-11-27
 
 ---

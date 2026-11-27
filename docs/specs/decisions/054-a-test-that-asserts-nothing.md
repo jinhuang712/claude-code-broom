@@ -22,7 +22,7 @@ It is a form of `broad_test_asserts`, an assertion that any outcome passes: no a
 | Rust | a `#[test]` with no `assert…!`, `panic!`, `unreachable!` or `todo!`, no `unwrap` or `expect`, no `?` and no `#[should_panic]` | nit |
 | Swift | an XCTest `test…` method or a `@Test` function with no `XCTAssert…`, `XCTFail`, `XCTUnwrap`, `#expect`, `#require` or `try` | nit |
 
-A call to a function of the same file that asserts counts as asserting, since a test may hand its checks to a helper beside it. Where the reader can't see a helper of another file, the finding is a guess, so it is a nit.
+In Python and Swift a call to a function of the same file that asserts, directly or through another, counts as asserting, since a test may hand its checks to a helper beside it. In Python a function that returns a value is no test, as pytest warns of one, so a factory named `test_…` is left out. A helper of another file can't be seen, so in these three languages the finding is a guess and a nit.
 
 ---
 
@@ -38,3 +38,7 @@ A call to a function of the same file that asserts counts as asserting, since a 
 The fix line of `broad_test_asserts` covers both: assert the specific outcome the test is for, the exact error, message or value.
 
 A test skipped by a decorator with no condition is left out, since it is a skipped test already.
+
+1 gap:
+
+- Rust doesn't read a helper of the same file, since its rule is one ast-grep pattern, so a Rust test that asserts only through one is told as a nit.

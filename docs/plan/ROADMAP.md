@@ -648,10 +648,11 @@ It ended on 2026-11-27 with 0.31.0.
 
 The user set this on 2026-11-27: how well a test is written matters little, and the work on broom had spent much of its time on test files. In the ledger 122 of 135 blocks in test files of real repos were about a test's shape, and one was a skipped test. A test now stops a change only for what lets it pass while the code is wrong, and its shape is told as a nit.
 
-**Delivers** (2):
+**Delivers** (3):
 
 - [F4.7: Tests](../features/F4-smells.md#f47-tests), with the shape of a test as a nit.
 - A linked worktree inside the repo is no copy of it in the clone scan, done on 2026-11-27 at the user's word.
+- A test that asserts nothing stops a change as a test lie, done on 2026-11-27 with 0.32.1, after the checkpoint ended.
 
 **Exit criteria** (1):
 
