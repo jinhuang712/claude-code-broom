@@ -1,6 +1,6 @@
 """What broom reads from Go source itself: how long a function is and how long a type is with its methods, both in
 code lines (decision 039), and for the smells golangci-lint has no linter for, a `recover()` whose value is dropped,
-a testify assertion that any error passes, a print and a package variable that a function assigns (decision 042).
+a testify assertion that any error passes, a test that asserts nothing, a print and a package variable that a function assigns (decision 042).
 
 Each is read from the syntax tree by ast-grep's rules `go-function-lines.yml`, `go-type-lines.yml`,
 `go-broad-catch.yml`, `go-broad-test-asserts.yml`, `go-debug-output.yml`, `go-globals.yml` and `go-package.yml` under
@@ -16,13 +16,15 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from .reading import TOOL_TIMEOUT, Limits, Reader
 from .setters import camel_setter
+from .smell import nothing_key
 from .syntax import Match, Rules, Span, by_file, matches, parsed
 from .testrot import TEST_FILE
 
 TYPE_LINES = "type_lines"
 FUNCTION_LINES = "function_lines"
+EMPTY_TEST = "go-empty-test"  # a test that asserts nothing
 # The smells, the package clause, and what the grammar can't read.
-GO_RULES = Rules(only="^go-(type|method|func|broad-.*|print|fmt-print|package|unparsed)$")
+GO_RULES = Rules(only="^go-(type|method|func|broad-.*|empty-test|print|fmt-print|package|unparsed)$")
 STATE_RULES = Rules(only="^go-(state-.*|package|unparsed)$")  # what a package declares and its functions assign
 Count = Callable[[str, int, int], int]  # the code lines of a file from one line through another
 
@@ -52,9 +54,9 @@ def counted_print(m: Match, package: Dict[str, str]) -> bool:
 
 def go_text(r: Reader, rels: List[str], lim: Limits) -> Dict[str, List[Span]]:
     """Add the rows read from the trees of the Go files `rels`: a function and a type past its length limit, a
-    dropped `recover()`, a debug print and, in a test file, an assertion that any error passes. Give the lines each
-    setter takes, per file, whose boolean parameters are no flag. Without ast-grep, a note and none of these rows;
-    what lies in a region the grammar can't read is left out, with a note."""
+    dropped `recover()`, a debug print and, in a test file, an assertion that any error passes or a test that
+    asserts nothing. Give the lines each setter takes, per file, whose boolean parameters are no flag. Without
+    ast-grep, a note and none of these rows; what lies in a region the grammar can't read is left out, with a note."""
     per_file = parsed(by_file(matches(r.root, rels, r.notes, TOOL_TIMEOUT, GO_RULES), rels), r.notes)
     found = [m for ms in per_file.values() for m in ms]
     package = packages(found)
@@ -68,7 +70,8 @@ def go_text(r: Reader, rels: List[str], lim: Limits) -> Dict[str, List[Span]]:
                 setters.setdefault(m.file, []).append((m.line, m.end))
         elif (m.smell == "broad_catch" or (m.smell == "broad_test_asserts" and TEST_FILE.search(m.file))
               or (m.smell == "debug_output" and counted_print(m, package))):
-            r.add(m.file, m.line, m.smell, 1)
+            name = nothing_key(m.caught.get("NAME", "")) if m.rule == EMPTY_TEST else None
+            r.add(m.file, m.line, m.smell, 1, name)
     return setters
 
 

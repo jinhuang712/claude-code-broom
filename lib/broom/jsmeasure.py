@@ -6,11 +6,12 @@ import json
 import re
 import shutil
 from pathlib import Path
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from .config import SMELL_PRESENCE
 from .gitutil import run
 from .reading import TOOL_TIMEOUT, Limits, Reader, number, quoted_name
+from .smell import nothing_key
 from .state import DEFAULTS
 from .syntax import Rules, matches
 from .toolchain import resolve_bin
@@ -21,7 +22,7 @@ OXLINT_METRICS = {
     "ban-ts-comment": "suppression", "no-empty": "swallowed_error", "no-useless-catch": "swallowed_error",
     "no-magic-numbers": "magic_numbers", "no-console": "debug_output", "no-warning-comments": "todo",
     "no-explicit-any": "type_escape", "no-non-null-assertion": "type_escape", "no-unused-vars": "unused_params",
-    "require-to-throw-message": "broad_test_asserts",
+    "require-to-throw-message": "broad_test_asserts", "expect-expect": "broad_test_asserts",
 }
 OXLINT_CATEGORIES = ("correctness", "suspicious", "perf", "pedantic", "style", "restriction", "nursery")
 OXLINT_MAGIC = {"ignore": [-1, 0, 1, 2], "ignoreArrayIndexes": True, "ignoreDefaultValues": True, "ignoreEnums": True}
@@ -37,8 +38,8 @@ def oxlint_config(lim: Limits) -> dict:
         "complexity": ["warn", {"max": lim["complexity"][0]}],
     }
     present = {rule: "warn" for rule, metric in OXLINT_METRICS.items() if metric in SMELL_PRESENCE}
-    return {"plugins": ["typescript", "jest"], "categories": {c: "off" for c in OXLINT_CATEGORIES},
-            "rules": {**{rule_name(r): v for r, v in present.items()},
+    return {"plugins": ["typescript", "jest", "vitest"], "categories": {c: "off" for c in OXLINT_CATEGORIES},
+            "rules": {**{rule_name(r): v for r, v in present.items()}, f"vitest/{EXPECT_EXPECT}": "warn",
                       "no-magic-numbers": ["warn", OXLINT_MAGIC], "no-nested-ternary": "warn",
                       "no-unused-vars": ["warn", {"args": "all", "argsIgnorePattern": "^_"}], **sized}}
 
@@ -51,7 +52,10 @@ def oxlint_metric(rule: str, msg: str) -> Optional[str]:
 
 
 TS_RULES = {"ban-ts-comment", "no-explicit-any", "no-non-null-assertion"}
-JEST_RULES = {"require-to-throw-message"}
+# A test with no assertion: Jest's and Vitest's `expect-expect`, with their defaults. Each takes the other's assertion
+# for none (Jest's knows no `assert`), so a test counts only when both say it asserts nothing (`asserting_nothing`).
+EXPECT_EXPECT = "expect-expect"
+JEST_RULES = {"require-to-throw-message", EXPECT_EXPECT}
 
 
 def rule_name(rule: str) -> str:
@@ -93,11 +97,35 @@ def label_lines(r: Reader, rel: str, span: dict) -> Optional[Tuple[int, int]]:
     return line, line + data[start:start + length].count(b"\n")
 
 
+def place(d: dict) -> Tuple[str, int]:
+    """The file and the line of an oxlint finding."""
+    return d.get("filename", ""), int(((d.get("labels") or [{}])[0].get("span") or {}).get("line", 0))
+
+
+def asserting_nothing(diagnostics: List[dict]) -> List[dict]:
+    """`diagnostics` with one `expect-expect` finding where both Jest's and Vitest's give it, and none where only one
+    does."""
+    plugins: Dict[Tuple[str, int], Set[str]] = {}
+    for d in diagnostics:
+        if d.get("code", "").endswith(f"({EXPECT_EXPECT})"):
+            plugins.setdefault(place(d), set()).add(d["code"])
+    both = {at for at, codes in plugins.items() if len(codes) > 1}
+    kept = []
+    for d in diagnostics:
+        if not d.get("code", "").endswith(f"({EXPECT_EXPECT})"):
+            kept.append(d)
+        elif place(d) in both:
+            kept.append(d)
+            both.discard(place(d))
+    return kept
+
+
 def read_oxlint(r: Reader, diagnostics: List[dict], metric_of: Callable[[str, str], Optional[str]],
                 lim: Limits) -> None:
     """Add as rows the findings that `metric_of(rule, message)` gives a metric. A function or a class past its length
-    limit is counted in code lines over the lines its label marks; without those, the number oxlint gives stands."""
-    for d in diagnostics:
+    limit is counted in code lines over the lines its label marks; without those, the number oxlint gives stands. A
+    test that asserts nothing is keyed by its line's text (`nothing_key`)."""
+    for d in asserting_nothing(diagnostics):
         rule = re.sub(r"^[\w-]+\(|\)$", "", d.get("code", ""))
         msg = d.get("message", "")
         metric = metric_of(rule, msg)
@@ -108,6 +136,9 @@ def read_oxlint(r: Reader, diagnostics: List[dict], metric_of: Callable[[str, st
         lines = label_lines(r, rel, span) if metric in LENGTHS else None
         if lines:
             r.add_length(rel, lines, metric, lim[metric][0], quoted_name(msg))
+        elif rule == EXPECT_EXPECT:
+            line = int(span.get("line", 0))
+            r.add(rel, line, metric, 1, nothing_key(r.line_text(r.rel(rel), line)))
         else:
             r.add(rel, int(span.get("line", 0)), metric, oxlint_value(metric, msg), quoted_name(msg))
 

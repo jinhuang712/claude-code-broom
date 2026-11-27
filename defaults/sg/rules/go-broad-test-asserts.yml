@@ -17,3 +17,26 @@ rule:
             - {kind: identifier, regex: '^(assert|require)$'}
             - pattern: $S.Assert()
             - pattern: $S.Require()
+---
+# A test that asserts nothing: a `func TestX(t *testing.T)` whose `t` the body never names, or that names it `_` or
+# not at all. Nothing but a panic can fail it. `t` handed to a helper is named, so that test may assert.
+id: go-empty-test
+language: Go
+message: a test that asserts nothing
+metadata: {smell: broad_test_asserts}
+rule:
+  kind: function_declaration
+  has: {field: name, regex: '^Test', pattern: $NAME}
+  all:
+    - has: {field: parameters, has: {kind: parameter_declaration, has: {field: type, pattern: '*testing.T'}}}
+    - any:
+        - has:
+            field: parameters
+            has:
+              kind: parameter_declaration
+              any:
+                - has: {field: name, regex: '^_$'}
+                - not: {has: {field: name, regex: '.'}}
+        - all:
+            - has: {field: parameters, has: {kind: parameter_declaration, has: {field: name, pattern: $T}}}
+            - not: {has: {field: body, has: {kind: identifier, pattern: $T, stopBy: end}}}
