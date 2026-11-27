@@ -6,6 +6,30 @@
 
 ---
 
+## 0.30.2 — 2026-11-27
+
+---
+
+### What a real Go repo met
+
+- A Go error dropped with `_` is no smell again. Most of what 0.30.1 flagged was cleanup, such as `_ = x.Close()`, or an encode, such as `_ = json.Marshal(v)`: the form errcheck itself asks for.
+- A Go `main` that assigns another package's variable, as in `flag.Usage = usage`, sets the program up and doesn't count for `globals`, as `init` didn't.
+- Go's magic numbers leave out -1, 0, 1 and 2, as TS/JS and Rust do, so `n / 2` counts in no language.
+- Nits are counted apart from hints: `0 past the hard limit, 6 hints, 238 nits`. Before, a nit read as a hint in every total.
+- A nit weighs nothing in a hotspot's score, and a file of nits alone is no hotspot.
+- `broom smells --json` gives each smell's `lines`, every line it stands on, where `text` cuts the list short.
+- The `tests_not_run` fix line says that a runner of the project's own is seen only once `test_commands` names it, where the repo names none.
+
+---
+
+### The record
+
+- A commit or a turn's end that covers a file closes the open findings another turn, another session or a worktree left there, once they are gone. Before, a fix made elsewhere stayed open in the record and lowered the fix rate.
+- A test run counts for the whole session, so work tested in a worktree at one turn counts as tested when a later turn lands it.
+- A known issue accepted before 0.28.1 in a worktree since deleted moves to the main checkout's file once a line of that file proves it, where before it read as changed.
+
+---
+
 ## 0.30.1 — 2026-11-27
 
 ---

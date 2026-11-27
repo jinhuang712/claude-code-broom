@@ -68,6 +68,8 @@ A type error in a file outside the checked files is never counted as fixed.
 
 A commit keeps what earlier commits blocked in files it didn't take. Such a finding stays in the repo's record until a commit covers its file, it is accepted or its file is gone. One whose file is gone leaves with no line, since a moved file would otherwise read as fixed.
 
+A check also ends what other checks left. A commit or a turn's end that covers a file checks that whole file again for the open findings another turn, another session or a worktree blocked there, and writes a fix line for each one gone. A finding whose file, tool and rule the check's own record held is left to the rule above, which tells a finding that changed its key from a fixed one. A run that saw a looser `.broom.json` ends nothing. With a cold tool cache, a check again of many files can run out of the hook's time and end none, until a later check.
+
 ---
 
 ## The turn summary
@@ -96,7 +98,7 @@ Without paths and with `--all`, a repo in a temporary folder is left out: the sy
 
 ## Findings told again
 
-A finding blocked and not ended, by a fix or a pass, is open. It is told to Claude again at the prompt after a question about it, and at a session's start in its repo. A finding of the tests that ran at a turn's end belongs to that turn and is never told again.
+A finding blocked and not ended, by a fix or a pass, is open. It is told to Claude again at the prompt after a question about it, and at a session's start in its repo. A finding of the tests that ran at a turn's end belongs to that turn and is never told again. A commit or a turn's end that covers its file ends it too, as [When a fix counts](#when-a-fix-counts) says.
 
 Before telling at a session's start, broom checks the files of the open findings again, after the smell scan and the check-up. A finding the check no longer finds gets a fix line. One whose rule the repo turned off since gets a fix line too. One whose file is gone, excluded or of no language broom checks leaves with no line. A check that didn't run ends nothing.
 

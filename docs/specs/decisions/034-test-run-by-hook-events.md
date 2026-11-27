@@ -31,3 +31,5 @@ An accept of this finding holds for its turn only. It is written to the record, 
 ## Consequences
 
 A test command is known by its words, from a list of runners and what a repo names in `test_commands`, so a runner of a project's own can go unseen until it is named. A test run in the background or piped into another command exits 0 as far as the hook can tell, so it counts as passed.
+
+Until 0.30.2 the notes were cleared at each prompt, so a run in a worktree at one turn didn't count once a later turn landed the same content on the main checkout, against "whenever that was". A session now keeps its newest 200 runs across its turns.

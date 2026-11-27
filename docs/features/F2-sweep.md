@@ -106,7 +106,7 @@ It never replaces another tool's hook and prints the line to add to it instead. 
 
 ## F2.5: Known issues
 
-A finding Claude accepted with a reason is known and not raised again until its code changes. It never expires. One accepted in a linked worktree stays known in the main checkout, where the work lands. `broom known` lists and clears them.
+A finding Claude accepted with a reason is known and not raised again until its code changes. It never expires. One accepted in a linked worktree stays known in the main checkout, where the work lands. One accepted before 0.28.1 in a worktree since deleted moves to the main checkout's file the next time `broom known` lists it, once a line of that file proves it is the same finding. `broom known` lists and clears them.
 
 - **Design**: [6. A finding ends fixed or with a reason the user sees](../DESIGNS.md#6-a-finding-ends-fixed-or-with-a-reason-the-user-sees)
 - **Commands**: [broom known](../CLI.md#broom-known)
@@ -297,7 +297,7 @@ At a turn's end, a turn that changed code has work left over in 2 cases:
 - A code file the turn changed holds content that no test run tested, and the block names up to three such files.
 - The last test run failed, and the block names its exit code and its command.
 
-It stops the turn's end like any finding, and passes when the tests ran and passed, by an accept with a reason or by a question to the user. An accept holds for that turn only. broom looks for the trace and runs no test itself. It judges by content and not by time, so code tested in a worktree and merged afterwards counts as tested. It knows a test run by the words of the command, from a list of runners and from what `.broom.json` names in `test_commands`.
+It stops the turn's end like any finding, and passes when the tests ran and passed, by an accept with a reason or by a question to the user. An accept holds for that turn only. broom looks for the trace and runs no test itself. It judges by content and not by time, so code tested in a worktree and merged afterwards, in a later turn too, counts as tested. It knows a test run by the words of the command, from a list of runners and from what `.broom.json` names in `test_commands`.
 
 It applies where the repo tracks a test file, and at the main session's end only. `smells_off: ["tests_not_run"]` turns it off.
 
@@ -326,15 +326,16 @@ Before it tells, broom checks the files of those findings again with the rules o
 
 The message gives how many findings are open, names up to 5 and says how many more there are. Claude is told to fix them when it fits, and to tell the user at a natural point. The user sees nothing of it.
 
-It tells and never blocks. The finding still blocks wherever a check covers its file.
+It tells and never blocks. The finding still blocks wherever a check covers its file, and a commit or a turn's end that covers its file and no longer finds it records it as fixed.
 
 A prompt with no question waiting costs one shell start, about 10 ms, and no Python. A session's start with nothing open reads the ledger and runs no check.
 
-3 gaps:
+4 gaps:
 
 - A finding fixed by hand between the question and the answer is told once at the answer, and told as gone on the next turn.
 - A finding blocked before 0.30.0 is matched by its file, tool and rule only, so one that shares them with another open finding of its file may still be told after its fix.
 - With less than 6 seconds of a session start's hook left, the findings are told without the check again.
+- With a cold tool cache, a check again of many files can run out of the hook's time and end none, until a later check.
 
 - **Stance**: [Fixed, or let through with a reason the user sees](../PHILOSOPHY.md#how-does-a-finding-end)
 - **Why**: [044: An open finding comes back until it ends](../specs/decisions/044-open-findings-come-back.md)

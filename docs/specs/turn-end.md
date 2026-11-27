@@ -50,7 +50,7 @@ A nit never blocks. The user's line at the turn's end tells it, once.
 
 A turn that changed code has work left over when a code file it changed holds content no test run tested, or when the last test run failed. The turn's end raises it as one finding, where the repo tracks a test file.
 
-The trace comes from two hooks. The hook before each Bash command notes a command that is a test run, with the time. A hook on the event Claude Code fires after a command that didn't exit 0 notes one that failed, with the first line of its error. A test run with no failure after it counts as passed. Both notes sit in the session's directory, so a subagent's test run counts for the main session.
+The trace comes from two hooks. The hook before each Bash command notes a command that is a test run, with the time. A hook on the event Claude Code fires after a command that didn't exit 0 notes one that failed, with the first line of its error. A test run with no failure after it counts as passed. Both notes sit in the session's directory, so a subagent's test run counts for the main session. They outlive the turn: the session keeps its newest 200, so work tested in a worktree at one turn counts when a later turn lands it.
 
 A test run's note holds what it tested: the commit of the repo it ran in, and the blob of each code file that differed from that commit. A file the turn changed counts as tested when a run that didn't fail tested its content as it is now. So a file tested in a linked worktree and then merged into the main checkout counts, and so does a file that was only touched. The finding names up to three files that are not tested. A file the turn deleted needs no test.
 

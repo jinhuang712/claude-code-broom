@@ -386,7 +386,7 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 
 **Status**: ⬜
 
-**Delivers** (9):
+**Delivers** (10):
 
 - [F9.4: Tiers by fix rate](../features/F9-record.md#f94-tiers-by-fix-rate)
 - A finding accepted in a linked worktree stays known once the work lands on the main checkout, done on 2026-11-20.
@@ -397,6 +397,7 @@ The ledger's numbers say which rule is noise and which tool is slow. This checkp
 - Go's rules flag what their messages say, so a lookup table, a program's output, a checked type assertion and a setter stop no change, done on 2026-11-26.
 - A Go test-helper package and `conftest.py` are test code, so a fixture's numbers stop no change, done on 2026-11-27.
 - A known issue never expires, and a smell the user keeps is accepted by its place with their agreement, so `broom smells` can reach zero, done on 2026-11-27 at the user's request.
+- What a real Go repo met on 0.30.1, done on 2026-11-27: the Go `_ =` rule taken back out, nits counted apart and weighing nothing in a hotspot, a fix made in another session or a worktree closed at the next check of its file, and a known issue of a deleted worktree found again.
 
 **Exit criteria** (1):
 
