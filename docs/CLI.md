@@ -121,11 +121,11 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 **Called by**: a person and the clean skill. Claude runs `--dismiss` when the user says not now.
 
-**Prints**: stdout gets a first line with the counts, which count the smells accepted as known too and end with how many are collapsed, then `Hotspots:` and `Worst smells:` blocks, which leave the known ones out, a `Longest under the limit (not smells):` block when `--only` asks for sizes, and `note:` lines. With `--json` those sizes are under `sizes`, each with `file`, `line`, `name` and `value`. stderr gets `broom: not inside a git repository` or `broom: unknown revision '<REV>'`.
+**Prints**: stdout gets a first line with the counts, past the hard limit, hints and nits apart, which count the smells accepted as known too and end with how many are collapsed, then `Hotspots:` and `Worst smells:` blocks, which leave the known ones out, a `Longest under the limit (not smells):` block when `--only` asks for sizes, and `note:` lines. With `--json` those sizes are under `sizes`, each with `file`, `line`, `name` and `value`. stderr gets `broom: not inside a git repository` or `broom: unknown revision '<REV>'`.
 
 **Fails**: exit 1 outside a repo and for an unknown REV, and exit 2 for an unknown SMELL. It exits 0 whether or not smells are found.
 
-**Example**: `broom smells src --top 3` prints `[broom] 12 code smell(s) in ~/code/app` and three files.
+**Example**: `broom smells src --top 3` prints `[broom] 12 code smell(s) in ~/code/app: 1 past the hard limit, 4 hints, 7 nits.` and three files.
 
 ---
 
@@ -366,7 +366,7 @@ An uncaught error exits 1 with a traceback.
 7 commands print JSON a script relies on:
 
 - **`broom doctor --json`**: `version` · `repo` · `languages` · `items` · `fix` · `configure` · `fix_global` · `configure_global` · `healthy` · `optional` · `settings` · `checks`.
-- **`broom smells --json`**: `repo` · `base` · `only` · `total` · `severe` · `hints` · `known` · `open` · `by` · `hotspots` · `smells` · `notes` · `sizes` when `--only` asks for sizes. `total`, `severe` and `hints` count the smells accepted as known, `known` says how many those are and `open` how many are not.
+- **`broom smells --json`**: `repo` · `base` · `only` · `total` · `severe` · `hints` · `nits` · `known` · `open` · `by` · `hotspots` · `smells` · `notes` · `sizes` when `--only` asks for sizes. `total`, `severe`, `hints` and `nits` count the smells accepted as known, `known` says how many those are and `open` how many are not.
 - **`broom diagnose --json`**: `repo` · `paths` · `summary` · `by_smell` · `by_language` · `by` · `hotspots` · `smells` · `duplicate_tests` · `dependencies` · `missing_tools` · `notes` · `checkup` · `stats`.
 - **`broom compare --json`**: `repo` · `base` · `base_commit` · `summary` · `kinds` · `gone` · `new` · `shrank` · `grew` · `hotspots` · `not_comparable` · `notes` · `quote` · `seconds`.
 - **`broom stats --json`**: `repo` · `paths` · `files` · `last_commits` · `size` · `tests` · `rot` · `history`. Each section holds a `note` that says what is missing, or null.
@@ -375,7 +375,7 @@ An uncaught error exits 1 with a traceback.
 
 Each item of `checks` holds 6 keys: `language` · `check` · `status` · `tool` · `why` · `fix`. Its `status` is `on`, `off` or `none`.
 
-Each item of `smells` holds 6 keys: `file` · `line` · `smell` · `level` · `text` · `was`. `level` is `block`, `hint` or `nit`. `was` is null for a new smell.
+Each item of `smells` holds 7 keys: `file` · `line` · `lines` · `smell` · `level` · `text` · `was`. `lines` is every line the smell stands on, where `text` cuts a long list short. `level` is `block`, `hint` or `nit`. `was` is null for a new smell.
 
 ---
 

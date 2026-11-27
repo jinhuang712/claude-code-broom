@@ -22,7 +22,7 @@ A finding Claude hid leaves the lists and stays in every total, and a line says 
 
 | Where | Now |
 |---|---|
-| `broom smells` | `[broom] 51 code smell(s) in <repo>: 0 past the hard limit, 51 hints; 25 accepted as known, collapsed`. JSON gives `known` and `open` beside `total` |
+| `broom smells` | `[broom] 51 code smell(s) in <repo>: 0 past the hard limit, 51 hints, 0 nits; 25 accepted as known, collapsed`. JSON gives `known` and `open` beside `total` |
 | `broom diagnose` | its summary counts them, and a row says how many are collapsed |
 | `broom sweep` | `[broom] N issue(s) in the changed lines; M accepted as known, collapsed` |
 | The session note after `--dismiss` | one line with the count and no request for a cleanup, until the count grows |

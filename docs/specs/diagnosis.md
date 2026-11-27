@@ -22,6 +22,8 @@ A hotspot's score is its smells times one more than the commits that touched it 
 score = (3 x past the hard limit + hints) x (1 + changes)
 ```
 
+A nit weighs nothing, so a file that holds nits alone is left out of the hotspots and stays in the list of smells.
+
 The commits per file come from one `git log`. When no commit falls in the period, or git log fails, every file has no changes and the order is by smells alone, with a note that says so.
 
 ---
@@ -55,4 +57,4 @@ Smells match across the two measurings by file, smell and the function's name, e
 
 A tool that can't run in the temporary tree, as when its dependencies are installed only in the working tree, leaves a note on one side only. The smells of that tool are then left out of every count and list, and the report names the kinds that are not comparable. A tool that fails there without a note is not caught.
 
-The caches golangci-lint and clippy make for the temporary path stay until the usual 7-day prune removes them.
+The caches golangci-lint and clippy make for the temporary path stay until their count bound trims them: the newest 20 golangci-lint caches and 10 clippy build folders are kept.

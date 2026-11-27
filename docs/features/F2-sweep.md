@@ -304,7 +304,7 @@ It applies where the repo tracks a test file, and at the main session's end only
 3 gaps:
 
 - A test run in the background, or piped into another command, counts as passed.
-- A runner of a project's own goes unseen until `test_commands` names it.
+- A runner of a project's own goes unseen until `test_commands` names it. The block's fix line says so where the repo names none.
 - A command that rewrites code and then runs the tests reads as a change after the run.
 
 - **Stance**: [At three moments of Claude's flow](../PHILOSOPHY.md#when-may-a-check-interrupt)

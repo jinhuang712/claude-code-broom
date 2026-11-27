@@ -34,7 +34,7 @@ It has no time cut and no limit on the number of files. A repo of 5,825 files to
 
 ## F10.2: Hotspots by churn
 
-Files are ranked by their smells and by how often they changed in the last 500 commits. A bad file that changes often costs more than a bad file nobody touches, so it comes first. Each row shows the file's smells past the hard limit, its hints, its changes and its score.
+Files are ranked by their smells and by how often they changed in the last 500 commits. A bad file that changes often costs more than a bad file nobody touches, so it comes first. Each row shows the file's smells past the hard limit, its hints, its nits, its changes and its score. A nit weighs nothing in the score, so a file of nits alone is no hotspot.
 
 `broom smells` and `broom diagnose` rank this way, and so do the worst files the session note names. `broom smells --by smells` gives the order by smells alone. With no history the order falls back to that one, and a note says so.
 
