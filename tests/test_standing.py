@@ -37,7 +37,7 @@ class StandingTest(BroomCase):
         self.assertEqual([s["file"] for s in data["smells"]], ["b.py"], "and is not listed")
         first = self.cli(r, "smells", "--only", "function_lines").stdout.splitlines()[0]
         self.assertIn("2 code smell(s) of function_lines in ", first)
-        self.assertTrue(first.endswith(": 0 past the hard limit, 2 hints; 1 accepted as known, collapsed."), first)
+        self.assertTrue(first.endswith(": 0 past the hard limit, 2 hints, 0 nits; 1 accepted as known, collapsed."), first)
         self.assertIn("(a day in seconds; the user agreed)", self.cli(r, "known").stdout)
         (r / "a.py").write_text(py_function("long", 61))
         self.assertEqual((self.smells(r)["total"], self.smells(r)["known"]), (2, 0), "it grew: its code changed")

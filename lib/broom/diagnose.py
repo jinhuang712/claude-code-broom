@@ -40,12 +40,13 @@ def by_smell(repo: Path, ordered: List[Smell]) -> List[dict]:
 
 
 def by_language(found: List[Smell]) -> List[dict]:
-    """Per language: the smells, how many are past the hard limit and how many are hints (a note counts as one)."""
+    """Per language: the smells, how many are past the hard limit and how many are hints and how many nits."""
     groups: Dict[str, List[Smell]] = {}
     for s in found:
         groups.setdefault(lang_of(s.file) or s.file.suffix, []).append(s)
     rows = [{"language": lang, "count": len(rows), "severe": sum(s.level == "block" for s in rows),
-             "hints": sum(s.level != "block" for s in rows)} for lang, rows in groups.items()]
+             "hints": sum(s.level == "hint" for s in rows), "nits": sum(s.level == "nit" for s in rows)}
+            for lang, rows in groups.items()]
     return sorted(rows, key=lambda r: (-r["severe"], -r["count"], r["language"]))
 
 
@@ -62,7 +63,8 @@ def diagnose(repo: Path, paths: List[Path], top: int, last: int = CHURN_COMMITS,
     stats = stats_report(repo, paths, top, last, facts)
     lines, tally = stats["size"]["total"], counts(kept, hidden)
     summary = {"files": stats["files"], "lines": lines["lines"] + lines["test_lines"], "smells": tally["total"],
-               "severe": tally["severe"], "hints": tally["hints"], "known": tally["known"], "open": tally["open"],
+               "severe": tally["severe"], "hints": tally["hints"], "nits": tally["nits"], "known": tally["known"],
+               "open": tally["open"],
                "seconds": round(time.monotonic() - started, 1)}
     return {"repo": str(repo), "paths": stats["paths"], "summary": summary, "by_smell": by_smell(repo, ordered),
             "by_language": by_language(kept), "by": order, "hotspots": files[:top],

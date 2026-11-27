@@ -34,13 +34,13 @@ def list_lines(rows: List[dict], top: int, key: str) -> List[str]:
 
 
 def hotspot_lines(data: dict) -> List[str]:
-    """How each hotspot of the base moved: the smells past the hard limit and the hints, before -> after."""
+    """How each hotspot of the base moved: the smells past the hard limit, the hints and the nits, before -> after."""
     def moves(r: dict, key: str) -> str:
         return f"{r[key]['before']} -> {r[key]['after']}"
 
     rows = [[r["file"] + (f" (now {r['now']})" if r["now"] != r["file"] else ""), moves(r, "severe"),
-             moves(r, "hints"), r["changes"], r["status"]] for r in data["hotspots"]]
-    return table(["file", "past the hard limit", "hints", "changes then", "now"], rows, left=(0, 4))
+             moves(r, "hints"), moves(r, "nits"), r["changes"], r["status"]] for r in data["hotspots"]]
+    return table(["file", "past the hard limit", "hints", "nits", "changes then", "now"], rows, left=(0, 5))
 
 
 def not_comparable_lines(data: dict) -> List[str]:

@@ -39,7 +39,7 @@ class DiagnoseTest(GitWork):
                                   "missing_tools", "notes", "stats", "checkup", "duplicate_tests", "dependencies"})
         self.assertEqual((d["repo"], d["paths"]), (str(r), []))
         s = d["summary"]
-        self.assertEqual((s["files"], s["smells"], s["severe"], s["hints"]), (3, 3, 1, 2))
+        self.assertEqual((s["files"], s["smells"], s["severe"], s["hints"], s["nits"]), (3, 3, 1, 2, 0))
         self.assertGreater(s["lines"], 600)
         self.assertEqual(len(d["smells"]), 3, "every smell, whatever --top says")
         self.assertEqual(len(d["hotspots"]), 1, "the lists that --top cuts")
@@ -54,8 +54,8 @@ class DiagnoseTest(GitWork):
         worst = kinds["function_lines"]["worst"]
         self.assertEqual((worst["file"], worst["level"]), ("a.py", "block"))
         self.assertEqual(d["by_smell"][0]["smell"], "function_lines", "the kind with most past the hard limit first")
-        self.assertEqual(d["by_language"], [{"language": "py", "count": 2, "severe": 1, "hints": 1},
-                                            {"language": "js", "count": 1, "severe": 0, "hints": 1}])
+        self.assertEqual(d["by_language"], [{"language": "py", "count": 2, "severe": 1, "hints": 1, "nits": 0},
+                                            {"language": "js", "count": 1, "severe": 0, "hints": 1, "nits": 0}])
 
     def test_hotspots_come_by_churn_and_every_smell_has_no_was(self) -> None:
         d = self.diagnose(self.smelly_repo())

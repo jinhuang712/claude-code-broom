@@ -67,7 +67,7 @@ class ChurnTest(GitWork):
     def test_the_text_rows_show_changes_and_score(self) -> None:
         out = self.cli(self.busy_repo(), "smells", env=self.bare).stdout
         row = next(r for r in out.splitlines() if r.startswith("  busy.py"))
-        self.assertRegex(row, r"busy\.py  0 severe, 1 hints, 7 changes, score 8; worst: ")
+        self.assertRegex(row, r"busy\.py  0 severe, 1 hints, 0 nits, 7 changes, score 8; worst: ")
         self.assertIn("Hotspots, by score", out)
         self.assertIn("Hotspots, most severe first", self.cli(self.busy_repo(), "smells", "--by", "smells", env=self.bare).stdout)
 

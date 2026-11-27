@@ -131,9 +131,9 @@ def triple(was: int, now: int) -> dict:
 
 
 def summary_of(before: List[Smell], after: List[Smell]) -> dict:
-    """The smells, those past the hard limit and the hints (a note counts as one), before and after."""
+    """The smells, those past the hard limit, the hints and the nits, before and after."""
     out = {}
-    for name, levels in (("smells", None), ("severe", ("block",)), ("hints", ("hint", "nit"))):
+    for name, levels in (("smells", None), ("severe", ("block",)), ("hints", ("hint",)), ("nits", ("nit",))):
         count = [sum(levels is None or s.level in levels for s in rows) for rows in (before, after)]
         out[name] = triple(*count)
     return out
@@ -158,10 +158,11 @@ def hotspot_moves(before: List[Smell], after: List[Smell], churn: Dict[str, int]
     rows = []
     for f in files[:top]:
         here = moved.get(f["file"], f["file"])
-        n = now.get(here, {"severe": 0, "hints": 0})
+        n = now.get(here, {"severe": 0, "hints": 0, "nits": 0})
         rows.append({"file": f["file"], "now": here, "changes": f["changes"],
                      "severe": {"before": f["severe"], "after": n["severe"]},
                      "hints": {"before": f["hints"], "after": n["hints"]},
+                     "nits": {"before": f["nits"], "after": n["nits"]},
                      "status": status_of(score(f["severe"], f["hints"], 0), score(n["severe"], n["hints"], 0))})
     return rows
 

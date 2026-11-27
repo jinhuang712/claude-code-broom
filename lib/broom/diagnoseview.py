@@ -28,7 +28,7 @@ def summary_lines(data: dict) -> List[str]:
     code is, so the tools come before any table."""
     s = data["summary"]
     rows = [("files read", s["files"]), ("code lines", s["lines"]), ("smells", s["smells"]),
-            ("past the hard limit", s["severe"]), ("hints", s["hints"])]
+            ("past the hard limit", s["severe"]), ("hints", s["hints"]), ("nits", s["nits"])]
     rows += [("accepted as known, collapsed", s["known"])] if s.get("known") else []
     width = max(len(name) for name, _ in rows)
     out = [f"  {name.ljust(width)}  {value}" for name, value in rows]
@@ -47,15 +47,15 @@ def kind_lines(data: dict) -> List[str]:
 
 def language_lines(data: dict) -> List[str]:
     """Smells by language."""
-    return table(["language", "count", "past the hard limit", "hints"],
-                 [[LANG_NAMES.get(r["language"], r["language"]), r["count"], r["severe"], r["hints"]]
+    return table(["language", "count", "past the hard limit", "hints", "nits"],
+                 [[LANG_NAMES.get(r["language"], r["language"]), r["count"], r["severe"], r["hints"], r["nits"]]
                   for r in data["by_language"]])
 
 
 def hotspot_lines(data: dict) -> List[str]:
     """The hotspot files with their smells, changes and score, under the line that says how they are ordered."""
-    rows = [[f["file"], f["severe"], f["hints"], f["changes"], f["score"]] for f in data["hotspots"]]
-    shown = table(["file", "past the hard limit", "hints", "changes", "score"], rows)
+    rows = [[f["file"], f["severe"], f["hints"], f["nits"], f["changes"], f["score"]] for f in data["hotspots"]]
+    shown = table(["file", "past the hard limit", "hints", "nits", "changes", "score"], rows)
     return [f"  Ordered {order_text(data['by'], data['stats']['last_commits'])}.", *shown] if shown else []
 
 

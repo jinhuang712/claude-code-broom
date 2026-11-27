@@ -89,9 +89,9 @@ def rank(smells: List[Smell], churn: Dict[str, int], by: str = "churn") -> Tuple
     files = []
     for f, rows in by_file.items():
         rel = str(f.relative_to(rows[0].repo))
-        severe, hints = sum(s.level == "block" for s in rows), sum(s.level != "block" for s in rows)
+        severe, hints, nits = (sum(s.level == level for s in rows) for level in ("block", "hint", "nit"))
         changes = churn.get(rel, 0)
-        files.append({"file": rel, "severe": severe, "hints": hints, "changes": changes,
+        files.append({"file": rel, "severe": severe, "hints": hints, "nits": nits, "changes": changes,
                       "score": score(severe, hints, changes), "worst": rows[0].text()})
     return ordered, sorted(files, key=ORDERS[by], reverse=True)
 
@@ -137,11 +137,11 @@ def drop_known(found: List[Smell], known: Optional[Set[str]] = None) -> Tuple[Li
 
 
 def counts(kept: List[Smell], hidden: List[Smell]) -> Dict[str, int]:
-    """The counts every report gives: `total`, `severe` and `hints` count the known smells too, `known` says how many
-    of them are known (collapsed, not listed) and `open` how many are not."""
-    severe = sum(s.level == "block" for s in kept + hidden)
-    total = len(kept) + len(hidden)
-    return {"total": total, "severe": severe, "hints": total - severe, "known": len(hidden), "open": len(kept)}
+    """The counts every report gives: `total`, `severe`, `hints` and `nits` count the known smells too, `known` says
+    how many of them are known (collapsed, not listed) and `open` how many are not."""
+    every = kept + hidden
+    severe, hints, nits = (sum(s.level == level for s in every) for level in ("block", "hint", "nit"))
+    return {"total": len(every), "severe": severe, "hints": hints, "nits": nits, "known": len(hidden), "open": len(kept)}
 
 
 class Ask(NamedTuple):
@@ -183,7 +183,8 @@ def size_rows(repo: Path, files: List[Path], metric: str, room: int) -> Tuple[Li
 
 def hotspot_line(f: dict) -> str:
     """One hotspot row of the text report."""
-    return (f"  {f['file']}  {f['severe']} severe, {f['hints']} hints, {f['changes']} changes, score {f['score']}; "
+    return (f"  {f['file']}  {f['severe']} severe, {f['hints']} hints, {f['nits']} nits, {f['changes']} changes, "
+            f"score {f['score']}; "
             f"worst: {f['worst']}")
 
 
@@ -214,7 +215,7 @@ def render(data: dict) -> str:
     missing = [note_text(n) for n in data["notes"] if n.startswith("missing:")]
     kinds = f" of {', '.join(data['only'])}" if data.get("only") else ""
     first = (f"[broom] {data['total']} code smell(s){kinds} {where}: {data['severe']} past the hard limit, "
-             f"{data['hints']} hints{known_part(data.get('known') or 0)}."
+             f"{data['hints']} hints, {data['nits']} nits{known_part(data.get('known') or 0)}."
              + (f" Not all measured, missing: {'; '.join(missing)}." if missing else ""))
     rows = [first] + worst_rows(data) + size_lines(data)
     return "\n".join(rows + [f"note: {note_text(n)}" for n in data["notes"] if not n.startswith("missing:")])
