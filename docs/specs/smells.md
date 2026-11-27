@@ -135,7 +135,7 @@ Commented-out code is decided by the language's own parser: a comment, or a run 
 
 A Go type's length is its declaration plus every method on it in the same file, matched by the receiver's type, in a `type ( ... )` group too. A Rust type's length is its item plus its `impl` blocks in the same file. Rust's test code is a file under `tests/`, a file named for tests, or an item under `#[cfg(test)]` or marked as a test.
 
-A Go package variable that a function assigns is read from every file in the folder of a changed Go file, grouped by the name in each file's package clause. The package's variables come from all of them, and the assignments from the changed files, one row per function and variable at its first assignment. An assignment in `init`, or to a name the function declares itself, is left out. A Go print in a `package main` file that is no test is the program's output, so only the print builtins count there.
+A Go package variable that a function assigns is read from every file in the folder of a changed Go file, grouped by the name in each file's package clause. The package's variables come from all of them, and the assignments from the changed files, one row per function and variable at its first assignment. What `init` assigns, another package's variable that `main` assigns and a name the function declares itself are left out. A Go print in a `package main` file that is no test is the program's output, so only the print builtins count there.
 
 - [038: Smells are read from a syntax tree](decisions/038-syntax-trees.md)
 - [042: A Go rule flags what its message says](decisions/042-go-rules-flag-their-message.md)

@@ -623,7 +623,7 @@ The user picked this on 2026-11-27 among the directions of TODO: rules that find
 - `broom known` marks an entry whose code changed, done on 2026-11-27.
 - A Swift and a Rust function carry the lines they take, so a change near a long function's end is told, done on 2026-11-27.
 - A repeated block counts code lines, done on 2026-11-27.
-- A Go error dropped with `_` is a `swallowed_error` nit, done on 2026-11-27.
+- A Go error dropped with `_` is a `swallowed_error` nit, done on 2026-11-27 and taken back out in 0.30.2.
 - Unsafe code is a counter, done on 2026-11-27.
 - Type escapes are a counter, done on 2026-11-27.
 - Broken Markdown links are a counter, done on 2026-11-27.

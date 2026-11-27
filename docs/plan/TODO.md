@@ -225,3 +225,27 @@
 - created: 2026-11-20
 - found: the look for missed rot at the end of CP9
 - related: [F11.1: Counters](../features/F11-checkup.md#f111-counters)
+
+---
+
+### [P2][IDEA] A Go error dropped from a call that does work
+
+- description:
+  - 0.30.1 counted every Go error dropped with `_` as a `swallowed_error` nit, and 0.30.2 took it back out: in a real Go repo most of what it flagged was cleanup or an encode, the form errcheck itself asks for.
+  - What is left worth a reader is a dropped error of a call that does work, such as a write to a store or a run of a job, above all in a test that drops the error of the call it tests.
+  - Telling it apart needs the call's kind from the tree or from types. A list of names such as `Close` would be a guess.
+- created: 2026-11-27
+- found: a real Go repo's report on 0.30.1
+- related: [050: More rot is counted, each from what parses it](../specs/decisions/050-rot-read-from-trees.md)
+
+---
+
+### [P2][IDEA] A rule new in a version is named where it moves a count
+
+- description:
+  - A new rule in a release can move a repo's total at once: one new nit rule took a repo near zero to hundreds of smells, and nothing said that the code was the same.
+  - The first scan after an upgrade could name each rule that is new in this version of broom beside the count it added.
+  - broom's version is in each record since 0.29.0, so the event is the first scan on a new version, not a day.
+- created: 2026-11-27
+- found: a real Go repo's report on 0.30.1
+- related: [F10.1: Whole-repo diagnosis](../features/F10-diagnosis.md#f101-whole-repo-diagnosis)

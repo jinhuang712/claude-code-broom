@@ -46,6 +46,8 @@ Markdown has no grammar in ast-grep and no parser in Python's standard library. 
 
 Each counter is new to the record a check-up keeps, so its first number is taken silently.
 
+The Go error dropped with `_` was taken back out in 0.30.2, the day it shipped. In a real Go repo most of what it flagged was cleanup, such as `_ = x.Close()` in a `defer`, or an encode, such as `_ = json.Marshal(v)`: the form errcheck itself asks for. That broke the rule of [042: A Go rule flags what its message says](042-go-rules-flag-their-message.md), which flags nothing the standard library writes as a matter of course. A dropped error of a call that does work waits in TODO.
+
 3 gaps:
 
 - A Markdown link inside an indented code block is read as a link.

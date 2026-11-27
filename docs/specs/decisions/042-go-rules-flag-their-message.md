@@ -23,7 +23,7 @@ A Go rule flags what its message says, and nothing the Go standard library write
 
 | Smell | Counts | Stays quiet |
 |---|---|---|
-| `globals` | a package variable that a function assigns: `x = …`, `x += …`, `x++` | a variable no function assigns · what `init` assigns · a write to a field or an element · a method call |
+| `globals` | a package variable that a function assigns: `x = …`, `x += …`, `x++` | a variable no function assigns · what `init` assigns · another package's variable that `main` assigns · a write to a field or an element · a method call |
 | `debug_output` | `print` and `println` anywhere · `fmt.Print`, `Printf` and `Println` in a library or a test file | `fmt.Print*` in a `package main` file that is no test · a print in an `Example…` function |
 | `type_escape` | a type assertion with one result, `x.(T)` | the comma-ok form, `_` in place of `ok` among them · `any` |
 | `bool_params` | a boolean that steers the function | a boolean of a function named `Set` or `set`, alone or before a capital |
@@ -61,6 +61,8 @@ golangci-lint's typed run lost forbidigo and gochecknoglobals. Without ast-grep,
 A print is counted in the copy of the changed files now, as the other occurrence smells are. An edited line that keeps its print adds nothing, where before it counted as added.
 
 Since 2026-11-27 a setter's boolean is left out in every language, and a variable another package assigns, as in `pkg.Default = v`, counts in the file that assigns it.
+
+Since 0.30.2 another package's variable that `main` assigns is the program's setup and stays quiet, as `flag.Usage = usage` is how the standard library's own commands use `flag`. Go's magic numbers leave out -1, 0, 1 and 2 since then, as TS/JS and Rust do, so a half and a doubling count in no language.
 
 2 gaps:
 
