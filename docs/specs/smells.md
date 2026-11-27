@@ -162,6 +162,10 @@ A new code file counts as untested when no test file anywhere in the repo is nam
 
 A test file is told by its path: a name a test runner collects, such as `test_a.py`, `a_test.go`, `a.test.ts` or a file under `tests/`, a Go file directly in a folder whose name ends in `test`, such as `httptest`, pytest's `conftest.py`, and Jest's and Vitest's helpers: a file under `__mocks__/` and the setup files `setupTests.*`, `jest.setup.*` and `vitest.setup.*`. Go names a package after its folder, so the folder's name is the package's. A test file's limits are the code's with `file_lines` doubled, and then what `test_limits` sets. The tools measure against the lower soft limit of the two sets, and each row takes its level from the limits of its own file.
 
+A test that asserts nothing is a row of `broad_test_asserts` keyed by the test's name, so its finding reads apart from a broad assertion. TS/JS's comes from oxlint's `jest/expect-expect` and `vitest/expect-expect`, Go's and Rust's from ast-grep, Python's from `ast` and Swift's from SourceKit. It is a hint where the reader is sure, in TS/JS and Go, and a nit in the other three.
+
+- [054: A test that asserts nothing is a broad test assertion](decisions/054-a-test-that-asserts-nothing.md)
+
 A row in a test file then keeps its level only for `skipped_test`, `broad_test_asserts`, `swallowed_error` and `suppression`. Every other row there becomes a nit, a touched one and one past the hard limit among them. The level is set once, as the row is made (`Smell.__post_init__`), so the commit check, the turn's end, the scans and the hotspots all read the same level.
 
 - [051: A test is judged by what it proves, not by how it reads](decisions/051-tests-judged-by-what-they-prove.md)

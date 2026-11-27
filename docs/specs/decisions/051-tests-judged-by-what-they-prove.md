@@ -21,7 +21,7 @@ In a test file, only what lets a test pass while the code is wrong keeps its lev
 | Smell | Level | How it lets a test lie |
 |---|---|---|
 | `skipped_test` | hint | the test never runs |
-| `broad_test_asserts` | hint | any error passes it |
+| `broad_test_asserts` | hint | any error passes it, or, since [054](054-a-test-that-asserts-nothing.md), it asserts nothing |
 | `swallowed_error` | block | the failure is caught and dropped |
 | `suppression` | block | a rule the project set is silenced |
 

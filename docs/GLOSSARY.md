@@ -19,7 +19,7 @@ Each term has its meaning, the words that lost to it and its name in the code wh
 | Hard limit | the size past which a sized smell blocks | — | `limits[1]` |
 | Hint | a smell below its hard limit that stops a commit and a turn's end until it is fixed or accepted | — | `level == "hint"` |
 | Nit | a slight smell, one a detector guesses, or a test's shape, that is told and stops nothing | note · slight | `level == "nit"` |
-| Test lie | a smell that lets a test pass while the code is wrong: a skipped test, a broad test assertion, a swallowed error or a suppression, the only smells that keep their level in a test file | — | `TEST_LIES` |
+| Test lie | a smell that lets a test pass while the code is wrong: a skipped test, a broad test assertion or none at all, a swallowed error or a suppression, the only smells that keep their level in a test file | — | `TEST_LIES` |
 | Block | the stop of a commit or a turn's end by a finding, and the level of a smell past its hard limit | denial | `level == "block"` |
 | Severe smell | a smell past its hard limit | — | `Issue.severe` |
 | Touched smell | an old sized smell in a function, a type or a file the change touches | — | `Smell.touched` |
