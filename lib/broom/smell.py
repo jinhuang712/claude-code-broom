@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Iterable, List, Optional, Tuple
 
 from .clones import Clone
-from .config import DEAD_CODE, NOTED, SMELL_PRESENCE
+from .config import DEAD_CODE, NIT, NOTED, SMELL_PRESENCE, TEST_LIES
 from .findings import Issue
 
 DESCRIBE = {
@@ -64,6 +64,17 @@ class Smell:
     compared: bool = True  # measured against a base; a whole-repo scan isn't, so nothing in it is "new"
     touched: bool = False  # an old smell the change didn't make worse, in a unit it touched
     span: int = 0  # how many lines of the file a function or a type takes from `line` on, where its tool says
+
+    def __post_init__(self) -> None:
+        """The one place the level is settled for a test file (decision 051): only `TEST_LIES` keep theirs, every
+        other smell there is a nit, whatever its size and whether it is old."""
+        from .testrot import TEST_FILE  # testrot builds smells, so it can't be imported above
+        try:
+            rel = self.file.relative_to(self.repo).as_posix()
+        except ValueError:
+            return
+        if self.metric not in TEST_LIES and TEST_FILE.search(rel):
+            self.level = NIT
 
     def text(self) -> str:
         """The message for this smell: what it is, its limit, and how it compares with the base (new, or was N)."""

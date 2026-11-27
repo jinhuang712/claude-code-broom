@@ -75,7 +75,7 @@ class ScopeTest(BroomCase):
         self.assertIn("45 code lines long (over 40", said["tests/test_b.py"], "its soft limit is twice the code's 20")
         (r / "tests/test_b.py").write_text("".join(rows) + "".join(f"y{i} = {i}\n" for i in range(40)))
         found, _ = find_smells(r, [r / "tests/test_b.py"], None)
-        self.assertEqual([s.level for s in found if s.metric == "file_lines"], ["block"], "85, past twice the hard 40")
+        self.assertEqual([s.level for s in found if s.metric == "file_lines"], ["nit"], "85, past twice the hard 40, is a nit in a test")
 
     def test_test_files_get_their_own_limits(self) -> None:
         lines = "".join(f"x{i} = {i}\n" for i in range(25))

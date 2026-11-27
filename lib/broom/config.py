@@ -69,6 +69,9 @@ SMELL_PRESENCE = {
     "untested_file": NIT,  # a code file of 30 lines or more a change adds, with no test file beside it by name
     "deprecated_api": "hint",  # a call to something its author marked deprecated
 }
+# In a test file only these smells keep their level (decision 051): each lets a test pass while the code is wrong.
+# Every other smell there is a nit, whatever its size.
+TEST_LIES = ("skipped_test", "broad_test_asserts", "swallowed_error", "suppression")
 # Presence smells whose text carries what the tool said of the first finding: a deprecation note names what replaced it.
 NOTED = ("deprecated_api",)
 # What starts a note about a tool nobody asked the user to install: a hook never shows it, a diagnosis does.
