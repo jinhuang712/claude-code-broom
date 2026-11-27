@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from . import ledger
-from .state import load_json, session_dir
+from .state import session_dir
 
 SHOWN = 5  # the findings the user's line names before "and N more"
 DUE = "answer-due.jsonl"  # in a session's directory: the findings asked about, for the next prompt to tell (comeback)
@@ -48,9 +48,9 @@ def ask_blocked(repo: Path, question: str) -> int:
     turn they were blocked in, and write an `ask` line for each. Nothing becomes known and nothing passes: the record
     keeps them pending, so `--accept` still serves them after the user answers. Returns how many; 0 with nothing
     blocked."""
-    from .gate import COMMITS  # the command is the only one that needs it
+    from .gate import load_commits  # the command is the only one that needs it
 
-    prior = load_json(COMMITS, {}).get(str(repo)) or {}
+    prior = load_commits([repo]).get(str(repo)) or {}
     pending = prior.get("pending") or {}
     ledger.write([ledger.finding("ask", k, e, why=question, where=prior.get("where") or "commit")
                   for k, e in pending.items()])

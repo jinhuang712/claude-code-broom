@@ -13,9 +13,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from .gate import BASELINE, baseline_entries, key_of, line_texts
+from .gate import baseline_change, key_of, line_texts
 from .gitutil import git_root, main_worktree
-from .state import update_json
 
 
 def main_of(f: Path) -> Optional[Path]:
@@ -61,14 +60,13 @@ def recover(entries: Dict[str, dict]) -> Dict[str, dict]:
     if not moved:
         return entries
 
-    def move(raw: dict) -> dict:
-        data = baseline_entries(raw)
+    def move(data: dict) -> None:
         for k, (new, e) in moved.items():
             data.pop(k, None)
             data[new] = e
-        return data
 
-    update_json(BASELINE, {}, move)
+    for main in {main_of(Path(str(e.get("file")))) for _, e in moved.values()}:
+        baseline_change(main, move)
     out = {k: e for k, e in entries.items() if k not in moved}
     out.update(dict(moved.values()))
     return out

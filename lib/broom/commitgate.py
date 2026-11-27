@@ -19,13 +19,13 @@ from pathlib import Path
 from typing import Dict, Iterable, List, NamedTuple, Optional, Tuple
 
 from . import ledger, waivers
-from .checks import SLOW_PATH, run_checks
+from .checks import run_checks
 from .comeback import settle_covered
 from .findings import Issue
 from .config import excluded, setting
 from .fmt import format_files
 from .gate import (
-    COMMITS, accept_allowed, baseline_keys, issue_entry, issue_key, kept_blocks, last_block, new_notes, note_text,
+    accept_allowed, baseline_keys, issue_entry, issue_key, kept_blocks, last_block, load_commits, new_notes, note_text,
     open_findings, render, save_commits, select, setup_hint,
 )
 from .gitcmd import CommitPlan, GitOp, parse, parse_commit, plan_commit, staged
@@ -33,7 +33,7 @@ from .githook import installed
 from .gitutil import ChangedLines, git, git_root
 from .passed import record, staged_blobs, unpassed, worktree_blobs
 from .smells import Smell, gate_smells, nits_text
-from .state import DATA_ROOT, emit, keep_newest, load_json, session_dir, warn
+from .state import DATA_ROOT, emit, keep_newest, session_dir, warn
 from .toolchain import lang_of
 
 
@@ -87,8 +87,8 @@ def checked(files: List[Path], base: str = "HEAD", turn: Optional[Path] = None) 
     files = [f for repo, group in by_repo(files).items() for f in unpassed(repo, group, worktree_blobs(repo, group))]
     if not files:
         return Checked([], [], [])
-    issues, notes = run_checks(files, SLOW_PATH)
-    known = baseline_keys()
+    issues, notes = run_checks(files, remember=True)
+    known = baseline_keys(files)
     changed, groups = ChangedLines(base), by_repo(files)
     every = select(issues, set(files), set(), changed)
     blocking = [i for i in every if issue_key(i) not in known]
@@ -194,7 +194,7 @@ def gate_files(repo: Path, files: List[Path], sd: Path, cwd: Path, state: dict) 
     blocking, told, notes, collapsed = checked(files, turn=sd)
     context = [nits_text(told)] if told else []
     ledger.hinted(entries_of(s.issue() for s in told))
-    key, found, known = str(repo), entries_of(blocking), baseline_keys()
+    key, found, known = str(repo), entries_of(blocking), baseline_keys([repo])
     prior = open_findings(state.get(key, {}))
     ended = ledger.fixes(prior, found, known, files, notes) if prior else set()
     settle_covered(files, found, prior)  # what turns' ends left open in these files
@@ -221,7 +221,7 @@ def hook_pre_commit() -> int:
     files = [f for f in sorted(staged(repo)) if not excluded(f) and lang_of(f)]
     if not unpassed(repo, files, staged_blobs(repo, files)):
         return 0
-    state = load_json(COMMITS, {})
+    state = load_commits([repo])
     denial, context = gate_files(repo, files, session_dir("git-pre-commit"), repo, state)
     save_commits(state, [repo])
     for line in context + ([denial] if denial else []):
@@ -282,10 +282,10 @@ def hook_commit(data: dict) -> bool:
         return False
     sd = session_dir(data.get("session_id") or "cli")
     ledger.waived(waivers.no_verify_waivers(ops, (data.get("tool_input") or {}).get("command") or ""), sd)
-    state = load_json(COMMITS, {})
     denials: List[str] = []
     context: List[str] = []
     plans = commit_plans(ops)
+    state = load_commits(plan.repo for plan in plans)
     for plan in plans:
         if setting("format_on", plan.repo) != "off":
             context += format_commit(plan)

@@ -38,7 +38,7 @@ def at(s: Smell, line: int, places: List[Place]) -> bool:
 def accept_standing(found: List[Smell], metric: str, places: List[Place], why: str) -> int:
     """Record the smells of kind `metric` among `found` that stand at `places` as known, with the reason and the
     user's agreement. Returns how many were not known before."""
-    known = baseline_keys()
+    known = baseline_keys(s.file for s in found)
     entries = {}
     for s in found:
         for line in lines_of(s) if s.metric == metric else []:

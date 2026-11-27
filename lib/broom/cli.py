@@ -88,7 +88,7 @@ def cmd_sweep(args: argparse.Namespace) -> int:
     code = [f for f in files if lang_of(f)]
     issues, notes = run_checks(code, whole=args.all)
     every = select(issues, set(code), set(), changed, whole=args.all)
-    known = set() if args.include_known else baseline_keys()
+    known = set() if args.include_known else baseline_keys([*code, Path.cwd()])
     found = [i for i in every if issue_key(i) not in known]
     hidden = len(every) - len(found)
     scope = "in the repo" if args.all else "in the changed lines"
@@ -255,7 +255,7 @@ def cmd_known(args: argparse.Namespace) -> int:
         return known_ask(args, roots)
     entries = baseline_under(roots)
     if args.clear:
-        baseline_remove(list(entries))
+        baseline_remove(list(entries), roots)
         say(f"broom: cleared {len(entries)} known issue(s)")
         return 0
     if not entries:

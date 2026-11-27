@@ -13,7 +13,7 @@ import isolation
 from isolation import BROOM, DEFAULT_DATA, RealDataWrite
 from support import BroomCase
 
-from broom import hooktrace, ledger, state
+from broom import hooktrace, repodata, state
 
 OPEN_NEW = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
 
@@ -32,8 +32,8 @@ class IsolationTests(BroomCase):
         self.assertEqual(os.environ["CLAUDE_PLUGIN_DATA"], str(isolation.DATA))
         self.assertFalse(isolation.reaches_real(isolation.DATA))
         self.assertEqual(state.DATA_ROOT, self.tmp / "data", "the test's, over the run's")
-        self.assertEqual((ledger.LEDGER, hooktrace.LOG), (self.tmp / "data" / "ledger.jsonl",
-                                                          self.tmp / "data" / "hook-trace.log"))
+        self.assertEqual((repodata.INDEX, hooktrace.LOG), (self.tmp / "data" / "repos.json",
+                                                           self.tmp / "data" / "hook-trace.log"))
 
     def test_no_module_keeps_a_path_into_the_real_directory(self) -> None:
         self.assertGreater(len(isolation.PATHS), 10, "the paths broom derives from its data directory are found")

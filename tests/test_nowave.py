@@ -23,7 +23,7 @@ GIVE_UP = ("broom GAVE UP after 3 blocks: 1 finding(s) left unfixed and unaccept
 
 def passes() -> list:
     """The pass lines of the ledger, as (how, rule)."""
-    return [(r["how"], r["rule"]) for r in ledger.read(ledger.LEDGER) if r["event"] == "pass"]
+    return [(r["how"], r["rule"]) for r in ledger.every_row() if r["event"] == "pass"]
 
 
 class NoWaveCase(BroomCase):
@@ -88,7 +88,7 @@ class CommitTest(NoWaveCase):
         context = out["hookSpecificOutput"]["additionalContext"]
         self.assertIn("1 nit(s) this change made worse; nothing stops on them", context)
         self.assertIn("a.py:1 1 more TODO/FIXME comment(s)", context)
-        self.assertEqual([(x["rule"], x["file"]) for x in ledger.read(ledger.LEDGER) if x["event"] == "hint"],
+        self.assertEqual([(x["rule"], x["file"]) for x in ledger.every_row() if x["event"] == "hint"],
                          [("todo", "a.py")])
 
     def test_with_accepting_off_a_hint_says_only_a_fix_passes(self) -> None:
@@ -158,7 +158,7 @@ class TurnEndTest(NoWaveCase):
         self.edit(r)
         self.assertEqual(self.stop(r), {})
         self.assertEqual(passes(), [])
-        self.assertEqual([x["event"] for x in ledger.read(ledger.LEDGER) if x["event"] in ("block", "fix")],
+        self.assertEqual([x["event"] for x in ledger.every_row() if x["event"] in ("block", "fix")],
                          ["block", "block", "fix"])
 
     def test_a_hint_accepted_at_a_turns_end_doesnt_block_again(self) -> None:

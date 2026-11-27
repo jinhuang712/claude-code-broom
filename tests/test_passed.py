@@ -32,7 +32,7 @@ class PassedTests(BroomCase):
         """Run `checked` with fake tools; the files the checks were asked about."""
         asked = []
 
-        def run_checks(files, _slow):
+        def run_checks(files, **_kw):
             asked.append(sorted(f.name for f in files))
             return list(blocking), []
 
@@ -68,10 +68,10 @@ class PassedTests(BroomCase):
 
     def test_content_that_passed_stays_passed_however_old_the_record_is(self) -> None:
         self.check()
-        data = load_json(passed.PASSED, {})
+        data = load_json(self.repo_dir / ".broom" / "passed.json", {})
         for record in data[str(self.repo_dir)].values():
             record[1] = 0  # written at the dawn of time
-        passed.PASSED.write_text(json.dumps(data))
+        (self.repo_dir / ".broom" / "passed.json").write_text(json.dumps(data))
         self.assertEqual(self.check(), [], "the record's stamp only orders records: it expires nothing")
 
     def test_only_the_file_whose_content_changed_is_checked_again(self) -> None:
@@ -97,7 +97,7 @@ class PassedTests(BroomCase):
         with mock.patch.object(passed, "MAX_ENTRIES", 2):
             for name in ("a.py", "b.py", "c.py"):
                 passed.record(self.repo_dir, [(self.repo_dir / name).resolve()])
-        kept = load_json(passed.PASSED, {})[str(self.repo_dir)]
+        kept = load_json(self.repo_dir / ".broom" / "passed.json", {})[str(self.repo_dir)]
         self.assertEqual(sorted(kept), ["b.py", "c.py"], "a.py was recorded first")
 
 

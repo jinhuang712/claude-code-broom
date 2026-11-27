@@ -1,5 +1,6 @@
-"""The ledger: what broom did with each finding, one JSON line each, appended to `ledger.jsonl` in broom's data
-directory. `broom report` reads it back.
+"""The ledger: what broom did with each finding, one JSON line each, appended to `ledger.jsonl` in the folder that
+keeps the repo's records (repodata), so each repo has its own and it moves with the repo; a line about a folder in no
+repo goes to the data directory's `outside` folder. `broom report` reads them back.
 
 A line holds `t` (epoch seconds, which only orders the lines), `v` (the version of broom that wrote it; older lines
 have none), `repo` (the main worktree's root, so a repo and its linked worktrees share one record), `event`, `where`
@@ -34,13 +35,12 @@ from collections import Counter
 from pathlib import Path
 from typing import Dict, Iterable, Iterator, List, Optional, Set, Tuple
 
-from . import __version__
+from . import __version__, repodata
 from .gitutil import git_root, main_worktree
-from .state import DATA_ROOT, locked, short_hash
+from .state import locked, short_hash
 from .toolchain import lang_of
 
-LEDGER = DATA_ROOT / "ledger.jsonl"
-MAX_BYTES = 2_000_000  # over this at an append, the oldest lines go, down to three quarters of it
+MAX_BYTES = 2_000_000  # per repo: over this at an append, the oldest lines go, down to three quarters of it
 THROUGH = "through.jsonl"  # in a turn's directory: what the turn let through, for its summary
 WAIVED = "waivers.jsonl"  # in a turn's directory: the self-waivers it saw, for its summary and so each counts once
 ASKED = "asked.jsonl"  # in a turn's directory: the findings Claude asked the user about, which don't block this turn
@@ -124,16 +124,48 @@ def read(path: Path, needle: str = "") -> Iterator[dict]:
             yield row
 
 
+def ledger_of(repo: str, *, write: bool = False) -> Path:
+    """The ledger of `repo`, a main checkout as a line names it; the `outside` folder's for a folder in no repo. A
+    main checkout is told by its `.git`, with no git started."""
+    main = Path(repo) if repo else None
+    if main is None or not (main / ".git").exists():
+        return repodata.OUTSIDE / repodata.LEDGER
+    return (repodata.made(main) if write else repodata.folder(main)) / repodata.LEDGER
+
+
+def rows_of(repo: str) -> Iterator[dict]:
+    """The lines of one repo's ledger, each naming the repo where it is now: a repo moved elsewhere keeps its record."""
+    path = ledger_of(repo)
+    own = path.parent != repodata.OUTSIDE
+    for r in read(path, "" if own else json.dumps(repo)[1:-1]):
+        if own:
+            r["repo"] = repo
+            yield r
+        elif r.get("repo") == repo:
+            yield r
+
+
+def every_row() -> Iterator[dict]:
+    """The lines of every repo the index lists, of the folders in no repo, and of the old shared ledger that hasn't
+    moved yet (repos broom hasn't been in since)."""
+    from .migrate import OLD_LEDGER
+
+    for main in repodata.every():
+        yield from rows_of(str(main))
+    yield from read(repodata.OUTSIDE / repodata.LEDGER)
+    yield from read(OLD_LEDGER)
+
+
 # ---------------------------------------------------------------- writing
 
 
-def trim() -> None:
-    """Drop the oldest lines down to three quarters of MAX_BYTES, so the ledger stays bounded and isn't rewritten at
-    every append."""
-    kept = newest_within(LEDGER.read_text().splitlines(), MAX_BYTES * 3 // 4)
-    tmp = LEDGER.with_name(f".{LEDGER.name}.{os.getpid()}.tmp")
+def trim(path: Path) -> None:
+    """Drop the oldest lines of the ledger at `path` down to three quarters of MAX_BYTES, so it stays bounded and isn't
+    rewritten at every append."""
+    kept = newest_within(path.read_text().splitlines(), MAX_BYTES * 3 // 4)
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
     tmp.write_text("".join(raw + "\n" for raw in kept))
-    tmp.replace(LEDGER)
+    tmp.replace(path)
 
 
 def newest_within(rows: List[str], limit: int) -> List[str]:
@@ -149,18 +181,25 @@ def newest_within(rows: List[str], limit: int) -> List[str]:
 
 
 def write(rows: List[dict]) -> None:
-    """Append `rows` in one write. A ledger that can't be written is no reason to stop a hook."""
-    if not rows:
-        return
-    try:
-        text = "".join(json.dumps({"v": __version__, **r}, separators=(",", ":"), default=str) + "\n" for r in rows)
-        with locked(LEDGER):
-            with open(LEDGER, "a") as f:
-                f.write(text)
-            if LEDGER.stat().st_size > MAX_BYTES:
-                trim()
-    except (OSError, ValueError, TypeError):
-        pass
+    """Append `rows`, in one write per repo's ledger. A ledger that can't be written is no reason to stop a hook."""
+    groups: Dict[str, List[dict]] = {}
+    for r in rows:
+        groups.setdefault(str(r.get("repo") or ""), []).append(r)
+    for repo, part in groups.items():
+        try:
+            append(ledger_of(repo, write=True), part)
+        except (OSError, ValueError, TypeError):
+            pass
+
+
+def append(path: Path, rows: List[dict]) -> None:
+    """Append `rows` to the ledger at `path` under its lock, and keep it within MAX_BYTES."""
+    text = "".join(json.dumps({"v": __version__, **r}, separators=(",", ":"), default=str) + "\n" for r in rows)
+    with locked(path):
+        with open(path, "a") as f:
+            f.write(text)
+        if path.stat().st_size > MAX_BYTES:
+            trim(path)
 
 
 # ---------------------------------------------------------------- events
@@ -229,7 +268,8 @@ def not_fixed_yet(rows: List[dict]) -> List[dict]:
     turn's end that both see a finding gone write its one fix line between them."""
     if not rows:
         return rows
-    last = {(r.get("repo"), r.get("key")): r["event"] for r in read(LEDGER) if r.get("event") in OUTCOME_EVENTS}
+    last = {(r.get("repo"), r.get("key")): r["event"] for repo in {str(r["repo"]) for r in rows}
+            for r in rows_of(repo) if r.get("event") in OUTCOME_EVENTS}
     return [r for r in rows if last.get((r["repo"], r["key"])) != "fix"]
 
 

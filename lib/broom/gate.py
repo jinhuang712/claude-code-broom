@@ -14,15 +14,13 @@ from collections import Counter
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
-from . import ledger
+from . import ledger, repodata
 from .findings import Issue
 from .config import OPTIONAL_NOTE, TESTS_NOT_RUN, TESTS_TOOL, excluded, repo_config
 from .fixes import how_to_fix
 from .gitutil import ChangedLines, git_root, main_worktree, worktrees
-from .state import DATA_ROOT, load_json, say, short_hash, update_json
+from .state import load_json, say, short_hash, update_json
 
-BASELINE = DATA_ROOT / "baseline.json"
-COMMITS = DATA_ROOT / "commits.json"  # per repo: what the last commit or turn end blocked, by which hook
 STOPS = ("stop", "subagent-stop")  # the hooks of a turn's end, as the ledger and commits.json name them
 MAX_SHOWN = 40
 MAX_CHARS = 9000  # what a block message holds at most: findings give way to the rest of it
@@ -63,8 +61,9 @@ def issue_key(i: Issue) -> str:
 
 
 def key_of(file: Path, tool: str, rule: str, msg: str, text: str) -> str:
-    """The id of a finding from its parts: `file` as the main checkout names it, and `text`, its line stripped."""
-    return short_hash(f"{file}|{tool}|{rule}|{msg}|{text}")
+    """The id of a finding from its parts: `file` as the main checkout names it, and `text`, its line stripped. The
+    file is keyed relative to the main checkout (repodata.key_path), so a repo moved elsewhere keeps its keys."""
+    return short_hash(f"{repodata.key_path(file)}|{tool}|{rule}|{msg}|{text}")
 
 
 def issue_entry(i: Issue) -> Dict[str, object]:
@@ -85,40 +84,96 @@ def baseline_entries(raw: dict) -> Dict[str, dict]:
     return {k: (v if isinstance(v, dict) else {"t": v}) for k, v in raw.items()}
 
 
-def baseline_load() -> Dict[str, dict]:
-    """The known-issue baseline from disk, keyed by issue key; empty when there is none."""
-    return baseline_entries(load_json(BASELINE, {}))
+def mains(places: Iterable[Path]) -> Set[Optional[Path]]:
+    """The main checkouts of the repos that hold `places`; None for a place in no repo."""
+    return {repodata.main_of(p) for p in places}
 
 
-def baseline_keys() -> Set[str]:
-    """The keys of the baseline's known issues, for telling which findings are already known."""
-    return set(baseline_load())
+def store(main: Optional[Path], name: str, *, write: bool = False) -> Path:
+    """The record `name` of the repo whose main checkout is `main` (the folder outside any repo for None)."""
+    if main is None:
+        return repodata.OUTSIDE / name  # save_json makes the folder
+    return (repodata.made(main) if write else repodata.folder(main)) / name
+
+
+def absolute(main: Optional[Path], entries: Dict[str, dict]) -> Dict[str, dict]:
+    """Known issues as the repo's folder keeps them, each file relative to `main`, with each file made whole."""
+    if main is None:
+        return entries
+    return {k: {**e, "file": str(main / str(e["file"]))} if e.get("file") and not Path(str(e["file"])).is_absolute()
+            else e for k, e in entries.items()}
+
+
+def relative(entries: Dict[str, dict]) -> Dict[str, dict]:
+    """Known issues as the repo's folder keeps them: each file relative to its main checkout."""
+    return {k: {**e, "file": repodata.key_path(Path(str(e["file"])))} if e.get("file") else e
+            for k, e in entries.items()}
+
+
+def stored(main: Optional[Path]) -> Dict[str, dict]:
+    """The known issues of one repo, keyed by issue key, each file whole; empty when there are none."""
+    return absolute(main, baseline_entries(load_json(store(main, repodata.BASELINE), {})))
+
+
+def baseline_load(places: Iterable[Path]) -> Dict[str, dict]:
+    """The known issues of the repos that hold `places`, keyed by issue key; empty when there are none."""
+    out: Dict[str, dict] = {}
+    for main in mains(places):
+        out.update(stored(main))
+    return out
+
+
+def baseline_keys(places: Iterable[Path]) -> Set[str]:
+    """The keys of the known issues of the repos that hold `places`, for telling which findings are already known."""
+    return set(baseline_load(places))
+
+
+def baseline_change(main: Optional[Path], change) -> None:
+    """Let `change(entries)` change one repo's known issues (each file whole) and write them back, under the lock."""
+    def apply(raw: dict) -> dict:
+        data = absolute(main, baseline_entries(raw))
+        result = change(data)
+        return relative(data if result is None else result)
+
+    update_json(store(main, repodata.BASELINE, write=True), {}, apply)
 
 
 def baseline_add_entries(entries: Dict[str, dict]) -> None:
-    """Add `entries` to the baseline on disk, under the file's lock. An entry never expires (decision 046): its key
-    holds the text of its line, so it stops matching once that code changes, and `broom known --clear` removes it."""
-    def add(raw: dict) -> dict:
-        data = baseline_entries(raw)
-        data.update(entries)
-        return data
+    """Add `entries` to the known issues of their files' repos, under each file's lock. An entry never expires
+    (decision 046): its key holds the text of its line, so it stops matching once that code changes, and `broom known
+    --clear` removes it."""
+    groups: Dict[Optional[Path], Dict[str, dict]] = {}
+    for k, e in entries.items():
+        groups.setdefault(repodata.main_of(Path(str(e.get("file") or "/"))), {})[k] = e
+    for main, part in groups.items():
+        baseline_change(main, lambda data, part=part: data.update(part))
 
-    update_json(BASELINE, {}, add)
+
+def load_commits(roots: Iterable[Path]) -> dict:
+    """The last-blocked records of the worktree roots of the repos that hold `roots`, by worktree root."""
+    state: dict = {}
+    for main in mains(roots):
+        raw = load_json(store(main, repodata.COMMITS), {})
+        state.update(raw if isinstance(raw, dict) else {})
+    return state
 
 
 def save_commits(state: dict, repos: Iterable[Path]) -> None:
-    """Write this run's repos' entries of the last-blocked-commit record back, and leave the other repos' as they
-    are on disk: another hook may have changed them since this one read the file."""
-    keys = {str(r) for r in repos}
+    """Write this run's repos' entries of the last-blocked record back to each repo's folder, and leave the other
+    roots' as they are on disk: another hook may have changed them since this one read the file."""
+    groups: Dict[Optional[Path], Set[str]] = {}
+    for r in repos:
+        groups.setdefault(repodata.main_of(Path(r)), set()).add(str(r))
 
-    def put(data: dict) -> None:
-        for key in keys:
-            if key in state:
-                data[key] = state[key]
-            else:
-                data.pop(key, None)
+    for main, keys in groups.items():
+        def put(data: dict, keys: Set[str] = keys) -> None:
+            for key in keys:
+                if key in state:
+                    data[key] = state[key]
+                else:
+                    data.pop(key, None)
 
-    update_json(COMMITS, {}, put)
+        update_json(store(main, repodata.COMMITS, write=True), {}, put)
 
 
 def open_findings(record: dict) -> Dict[str, dict]:
@@ -177,7 +232,7 @@ def accept_blocked(repo: Path, why: str, *, agreed: bool = False) -> Tuple[int, 
     `agreed` when the user agreed to leave them. Returns how many, and the hook that blocked them (`commit` when none
     is recorded). A smell that was past its hard limit and grew can't be accepted: it stays pending, and a line says
     so; with nothing else to accept the command exits."""
-    state = load_json(COMMITS, {})
+    state = load_commits([repo])
     prior = state.get(str(repo)) or {}
     pending = prior.get("pending") or {}
     where = prior.get("where") or "commit"
@@ -208,9 +263,10 @@ def accept_blocked(repo: Path, why: str, *, agreed: bool = False) -> Tuple[int, 
 def baseline_under(roots: List[Path]) -> Dict[str, dict]:
     """Known issues in files under any of `roots`, each root as the main checkout names it: an accept keeps its file
     that way, so a linked worktree and the main checkout list the same ones."""
-    roots = [checkout_path(r) for r in roots]
     out = {}
-    for k, v in baseline_load().items():
+    every = baseline_load(roots)
+    roots = [checkout_path(r) for r in roots]
+    for k, v in every.items():
         f = Path(str(v.get("file", "")))
         if any(f == r or r in f.parents for r in roots):
             out[k] = v
@@ -247,15 +303,15 @@ def changed_code(entries: Dict[str, dict]) -> Set[str]:
     return gone
 
 
-def baseline_remove(keys: List[str]) -> None:
-    """Remove the baseline entries for `keys` from disk, under the file's lock; keys not there are ignored."""
-    def drop(raw: dict) -> dict:
-        data = baseline_entries(raw)
+def baseline_remove(keys: List[str], places: Iterable[Path]) -> None:
+    """Remove the known issues for `keys` from the repos that hold `places`, under each file's lock; keys not there
+    are ignored."""
+    def drop(data: dict) -> None:
         for k in keys:
             data.pop(k, None)
-        return data
 
-    update_json(BASELINE, {}, drop)
+    for main in mains(places):
+        baseline_change(main, drop)
 
 
 # ---------------------------------------------------------------- selection and report

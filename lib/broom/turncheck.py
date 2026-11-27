@@ -17,15 +17,16 @@ from .comeback import settle_covered
 from .commitgate import checked, collapsed_line, collapsed_text, entries_of, issues_by_repo, way_out
 from .findings import Issue
 from .gate import (
-    COMMITS, STOPS, baseline_keys, issue_key, kept_blocks, last_block, new_notes, note_text, rel, render, save_commits,
-    setup_hint,
+    STOPS, baseline_keys, issue_key, kept_blocks, last_block, load_commits, new_notes, note_text, rel, render,
+    save_commits, setup_hint,
 )
 from .smells import Smell
-from .state import emit, load_json, save_json
+from .state import append_line, emit, load_json, read_lines, save_json
 from .testrun import accepted_here, findings as test_findings
 from .turnhooks import finish
 from .turns import turn_base
 
+BLOCKED_IN = "blocked-in.txt"  # in a turn's directory: the repos its turn-end blocks were noted in, one per line
 MAX_BLOCKS = 3  # how often a turn's end blocks before it gives up
 SHOWN = 5  # the findings a line for the user names before "and N more"
 
@@ -58,6 +59,11 @@ def gave_up_line(blocking: List[Issue]) -> str:
             f"{names(blocking)}")
 
 
+def blocked_in(d: Path) -> List[Path]:
+    """The repos the turn-end blocks of the turn in `d` were noted in."""
+    return [Path(p) for p in dict.fromkeys(read_lines(d / BLOCKED_IN))]
+
+
 def turn_records(state: dict, d: Path) -> List[str]:
     """The repos whose last-blocked record in `state` (commits.json) is a turn-end block of the turn in `d`."""
     return [k for k, v in state.items() if isinstance(v, dict) and v.get("turn") == str(d) and v.get("where") in STOPS]
@@ -70,7 +76,10 @@ def note_turn_block(d: Path, groups: Dict[Path, List[Issue]], waiting: List[dict
     them still has their fix lines to write. What this block shows again is its own to end. An earlier turn-end block
     is no part of it: its turn's gate.json holds it. What the turn asked the user about (`waiting`) stays in it,
     for `broom known --accept` to serve once the user has answered."""
-    state, known = load_json(COMMITS, {}), baseline_keys()
+    state, known = load_commits(groups), baseline_keys(groups)
+    for repo in groups:
+        if str(repo) not in read_lines(d / BLOCKED_IN):
+            append_line(d / BLOCKED_IN, str(repo))
     for repo, issues in groups.items():
         shown = {**entries_of(issues), **asked.entries([r for r in waiting if r.get("repo") == str(repo)])}
         state[str(repo)] = last_block(shown, kept_blocks(state.get(str(repo)), known, shown), d)
@@ -80,7 +89,7 @@ def note_turn_block(d: Path, groups: Dict[Path, List[Issue]], waiting: List[dict
 def held(d: Path) -> Dict[str, dict]:
     """What the turn-end blocks of the session in `d` left in the repos' last-blocked records: the findings an earlier
     turn asked the user about, which this turn's end must see fixed to write their fix lines."""
-    state = load_json(COMMITS, {})
+    state = load_commits(blocked_in(d))
     return {k: e for repo in turn_records(state, d) for k, e in (state[repo].get("pending") or {}).items()}
 
 
@@ -89,7 +98,7 @@ def forget_turn_blocks(d: Path, waiting: Iterable[str] = ()) -> None:
     a later `broom known --accept` doesn't accept what is gone or pass it a second time. What a commit blocked before
     them stays, to be fixed; so do the findings of the turn that wait for the user (their keys in `waiting`), which the
     user's answer may accept."""
-    state = load_json(COMMITS, {})
+    state = load_commits(blocked_in(d))
     mine, wait = turn_records(state, d), set(waiting)
     for k in mine:
         left = {key: e for key, e in (state[k].get("pending") or {}).items() if key in wait}
@@ -148,7 +157,7 @@ def settle_asks(d: Path, gate: dict, blocking: List[Issue], files: List[Path], n
     waits for the user's answer: asked about in this turn, and neither fixed nor accepted since."""
     waiting = asked.rows(d)
     prior = {**held(d), **asked.entries(waiting), **(gate.get("blocked") or {})}
-    known = baseline_keys() | accepted_here(d)  # what was accepted for this turn only is as good as known in it
+    known = baseline_keys(files) | accepted_here(d)  # what was accepted for this turn only is as good as known in it
     gone = ledger.fixes(prior, entries_of(blocking), known, files, notes) if prior else set()
     settle_covered(files, {issue_key(i) for i in blocking}, prior)  # what other turns and sessions left open in them
     return [r for r in waiting if r["key"] not in gone and r["key"] not in known]

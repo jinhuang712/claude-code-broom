@@ -51,7 +51,7 @@ class TurnCheckTest(BroomCase):
         self.assertEqual(self.hook("stop", stop)["systemMessage"],
                          "broom GAVE UP after 3 blocks: 1 finding(s) left unfixed and unaccepted: a.py:1 function_lines; "
                          "broom let 1 through this turn: 1 function_lines (gave-up)")
-        (through,) = [row for row in ledger.read(ledger.LEDGER) if row["event"] == "pass"]
+        (through,) = [row for row in ledger.every_row() if row["event"] == "pass"]
         self.assertEqual((through["how"], through["where"]), ("gave-up", "stop"))
         self.assertEqual(self.hook("stop", stop), {}, "the turn is over")
 

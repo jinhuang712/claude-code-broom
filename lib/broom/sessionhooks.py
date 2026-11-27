@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 from typing import List, Optional
 
+from . import repodata
 from .card import limits_card
 from .checkup import check_up_time
 from .config import setting
@@ -33,7 +34,7 @@ def hook_session(data: dict) -> None:
         return  # once per session: a compaction or /clear doesn't repeat it
     diagnosis = diagnose_cached(repo)
     smells = session_note(repo, cached_summary(repo))
-    notes = [n for n in (limits_card(repo, diagnosis), setup_note(repo, diagnosis), smells) if n]
+    notes = [n for n in (limits_card(repo, diagnosis), setup_note(repo, diagnosis), smells, repodata.note(repo)) if n]
     if smells:
         append_line(sd / "smells-noted.txt", str(repo))
     if not notes:

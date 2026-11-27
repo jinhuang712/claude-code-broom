@@ -58,11 +58,11 @@ class AcceptedInAWorktreeTest(TouchedCase):
         self.assertIn(f"{r / 'a.py'}:1  smells function_lines", listed[1], "listed where the work lands")
         self.assertEqual(listed[0], listed[1], "and the worktree lists the same")
 
-    def test_a_finding_of_the_main_checkout_keeps_the_key_it_had(self) -> None:
+    def test_a_finding_is_keyed_by_its_file_relative_to_the_main_checkout(self) -> None:
         r = self.repo({"a.py": py_function("legacy", 60)})
         issue = Issue("smells", r, r / "a.py", 1, 0, "function_lines", "legacy is 60 code lines long (over 50)")
-        old = short_hash(f"{issue.file}|{issue.tool}|{issue.rule}|{issue.msg}|{line_text(issue.file, issue.line)}")
-        self.assertEqual(issue_key(issue), old, "so what was accepted before this version stays known")
+        rel = short_hash(f"a.py|{issue.tool}|{issue.rule}|{issue.msg}|{line_text(issue.file, issue.line)}")
+        self.assertEqual(issue_key(issue), rel, "so a repo moved elsewhere keeps its known issues")
 
 
 class TouchedHintTest(TouchedCase):

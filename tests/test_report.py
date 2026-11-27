@@ -81,7 +81,7 @@ class ReportTest(LedgerCase):
     def test_since_a_version_keeps_the_lines_that_version_or_a_later_one_wrote(self) -> None:
         r = self.repo({"a.py": "x = 1\n"})
         self.fill(r)
-        with open(ledger.LEDGER, "a") as f:  # a line from before broom marked its lines with a version
+        with open(ledger.ledger_of(str(r)), "a") as f:  # a line from before broom marked its lines with a version
             f.write(json.dumps({k: v for k, v in self.row(r, "block", "k0").items()}) + "\n")
         self.assertEqual(self.report(r)["blocked"], 6, "the whole record")
         data = self.report(r, "--since", "0.20.0")

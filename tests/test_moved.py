@@ -26,7 +26,7 @@ class MovedTest(BroomCase):
         self.assertIn("2 known issue(s), 1 of them with their code changed", out)
         self.assertIn(f"{r / 'a.py'}:1  smells function_lines  {msg}", out)
         self.assertIn(f"wt-side/a.py:1  smells function_lines  {lost['msg']}", out)
-        stored = json.loads((self.tmp / "data" / "baseline.json").read_text())
+        stored = json.loads((r / ".broom" / "baseline.json").read_text())  # moved into the repo's own folder
         self.assertIn(key_of(r / "a.py", "smells", "function_lines", msg, line), stored, "the key the main checkout gives")
         (r / "a.py").write_text(text + "\n")
         self.sh(r, "git", "add", "a.py")

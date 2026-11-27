@@ -3,8 +3,8 @@
 A turn that edits and then commits used to check the same files at the commit and again at the turn's end, and
 git's pre-commit hook would check them a third time. Content counts as passed only when nothing stopped it and
 nothing hinted, and no check timed out, so a skip never hides what a check would have said. A record stays until
-what decided it changes: the content, broom's version or the repo's .broom.json. The file holds the newest
-MAX_ENTRIES records and drops the oldest first.
+what decided it changes: the content, broom's version or the repo's .broom.json. The records are kept in the repo's
+folder (repodata), by worktree root; the file holds the newest MAX_ENTRIES records and drops the oldest first.
 """
 
 from __future__ import annotations
@@ -14,12 +14,12 @@ import time
 from pathlib import Path
 from typing import Dict, List
 
-from . import __version__
+from . import __version__, repodata
 from .config import repo_file
 from .gitutil import git
-from .state import DATA_ROOT, load_json, update_json
+from .state import load_json, update_json
 
-PASSED = DATA_ROOT / "passed.json"  # {repo: {path: [blob id, written, bar]}}; `written` only orders the records
+# In the repo's folder, repodata.PASSED: {worktree root: {path: [blob id, written, bar]}}; `written` only orders them.
 MAX_ENTRIES = 20000
 RECORD_FIELDS = 3  # blob id, written, bar
 
@@ -57,7 +57,7 @@ def staged_blobs(repo: Path, files: List[Path]) -> Dict[str, str]:
 
 def unpassed(repo: Path, files: List[Path], blobs: Dict[str, str]) -> List[Path]:
     """The files whose content, given as `blobs` (on disk or as staged), hasn't passed yet."""
-    seen = load_json(PASSED, {}).get(str(repo), {})
+    seen = load_json(repodata.at(repo) / repodata.PASSED, {}).get(str(repo), {})
     deciding = bar(repo)
     return [f for f, rel in zip(files, rel_paths(repo, files)) if not passed(seen.get(rel), blobs.get(rel), deciding)]
 
@@ -80,11 +80,11 @@ def record(repo: Path, files: List[Path]) -> None:
         rows.update({rel: [blob, now, deciding] for rel, blob in blobs.items()})
         drop_oldest(data)
 
-    update_json(PASSED, {}, add)
+    update_json(repodata.made_at(repo) / repodata.PASSED, {}, add)
 
 
 def drop_oldest(data: dict) -> None:
-    """Keep the newest MAX_ENTRIES records of all repos in `data`, in place; a repo left with none goes."""
+    """Keep the newest MAX_ENTRIES records of the worktrees in `data`, in place; a worktree left with none goes."""
     rows = sorted(((v[1], repo, rel) for repo, files in data.items() for rel, v in files.items()), reverse=True)
     for _, repo, rel in rows[MAX_ENTRIES:]:
         del data[repo][rel]

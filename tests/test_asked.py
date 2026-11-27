@@ -26,7 +26,7 @@ def six(*names: str) -> str:
 
 def rows(event: str) -> list:
     """The ledger lines of one event."""
-    return [r for r in ledger.read(ledger.LEDGER) if r["event"] == event]
+    return [r for r in ledger.every_row() if r["event"] == event]
 
 
 class AskedCase(NoWaveCase):

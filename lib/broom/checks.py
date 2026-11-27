@@ -8,18 +8,17 @@ from functools import partial
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
-from . import ledger
+from . import ledger, repodata
 from .findings import Findings, Issue
 from .gitutil import git
 from .langlint import check_go, check_python, check_rust, check_swift_build, check_swiftlint
-from .state import DATA_ROOT, load_json, update_json
+from .state import load_json, update_json
 from .toolchain import boundary, css_linters, find_up, js_linters, lang_of, py_root, swift_linter
 from .weblint import check_biome, check_eslint, check_oxlint, check_stylelint, check_tsc, ts_projects
 
 
 Check = Tuple[str, Callable[[], Findings]]  # (key, check); the key lets a check that timed out be skipped later
 SLOW_SECONDS = 10  # how long a check that timed out must have run to count as slow
-SLOW_PATH = DATA_ROOT / "slow.json"
 
 
 class Plan:
@@ -126,20 +125,38 @@ def head_of(key: str) -> Optional[str]:
     return out.strip() if out and out.strip() else None
 
 
-def slow_checks(path: Path) -> Dict[str, str]:
-    """The checks that ran out of time and whose repo's HEAD hasn't moved since, by the HEAD they ran out of time at."""
-    raw = load_json(path, {})
-    kept = {k: head for k, head in raw.items() if isinstance(head, str)} if isinstance(raw, dict) else {}
+def where_of(key: str) -> Path:
+    """The folder a check's key (`tool:directory`) runs in."""
+    return Path(key.partition(":")[2] or "/")
+
+
+def slow_checks(keys: List[str]) -> Dict[str, str]:
+    """The checks of `keys` that ran out of time and whose repo's HEAD hasn't moved since, by the HEAD they ran out of
+    time at, from the records of their repos."""
+    raw: dict = {}
+    for folder in {repodata.at(where_of(k)) for k in keys}:
+        data = load_json(folder / repodata.SLOW, {})
+        raw.update(data if isinstance(data, dict) else {})
+    kept = {k: head for k, head in raw.items() if k in keys and isinstance(head, str)}
     return {k: head for k, head in kept.items() if head_of(k) == head}
 
 
-def run_checks(files: List[Path], slow_path: Optional[Path] = None, *, whole: bool = False) -> Findings:
-    """Run every check in parallel. One that timed out after running for SLOW_SECONDS is recorded in `slow_path`,
-    for every session and agent, and skipped with a note while its repo's HEAD is the commit it ran out of time at,
-    so each one doesn't wait for it again and a new commit gives it another go. One cut short because the hook's time
-    ran out before it got far is only late, and runs again."""
-    slow = slow_checks(slow_path) if slow_path else {}
+def note_slow(ran_out: Dict[str, str]) -> None:
+    """Record the checks that ran out of time, each in its repo's record."""
+    groups: Dict[Path, Dict[str, str]] = {}
+    for k, head in ran_out.items():
+        groups.setdefault(repodata.made_at(where_of(k)), {})[k] = head
+    for folder, part in groups.items():
+        update_json(folder / repodata.SLOW, {}, lambda data, part=part: data.update(part))
+
+
+def run_checks(files: List[Path], *, remember: bool = False, whole: bool = False) -> Findings:
+    """Run every check in parallel. For a hook (`remember`), one that timed out after running for SLOW_SECONDS is
+    recorded in its repo's record, for every session and agent, and skipped with a note while its repo's HEAD is the
+    commit it ran out of time at, so each one doesn't wait for it again and a new commit gives it another go. One cut
+    short because the hook's time ran out before it got far is only late, and runs again."""
     every = plan(files, whole=whole)
+    slow = slow_checks([k for k, _ in every]) if remember else {}
     todo = [(k, fn) for k, fn in every if k not in slow]
     notes: List[str] = [f"timeout:{k} skipped until the next commit: it ran out of time at {slow[k][:8]}"
                         for k, _ in every if k in slow]
@@ -155,8 +172,8 @@ def run_checks(files: List[Path], slow_path: Optional[Path] = None, *, whole: bo
                 head = head_of(key)
                 if head:
                     ran_out[key] = head
-    if slow_path and ran_out:
-        update_json(slow_path, {}, lambda data: data.update(ran_out))
-    if slow_path:  # for a hook: the ledger notes how long each check took
+    if remember and ran_out:
+        note_slow(ran_out)
+    if remember:  # for a hook: the ledger notes how long each check took
         ledger.timed(took)
     return issues, notes

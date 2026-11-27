@@ -20,7 +20,6 @@ tool) ends nothing: its findings are told. The `tests` finding of a turn (F2.13)
 
 from __future__ import annotations
 
-import json
 import shlex
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
@@ -45,7 +44,7 @@ def standing(repo: str) -> Dict[str, dict]:
     line of each, with `asked` when the user was asked about it. A `tests` finding is left out: it is its turn's."""
     last: Dict[str, dict] = {}
     asked_keys: Set[str] = set()
-    for r in ledger.read(ledger.LEDGER, json.dumps(repo)[1:-1]):
+    for r in ledger.rows_of(repo):
         if r.get("repo") != repo or not r.get("key"):
             continue
         if r.get("event") == "ask":
@@ -78,10 +77,10 @@ def covered(file: Path) -> bool:
 def found_now(root: Path, files: List[Path]) -> Tuple[list, List[str]]:
     """What the checks of the day find anywhere in `files` (lint, types, and the smells that stop), with the tool
     notes. The heavy modules load only here."""
-    from .checks import SLOW_PATH, run_checks
+    from .checks import run_checks
     from .gate import select
 
-    issues, notes = run_checks(files, SLOW_PATH)
+    issues, notes = run_checks(files, remember=True)
     now = select(issues, set(files), set(), whole=True)
     if setting("smells", root) != "off":
         from .smells import find_smells

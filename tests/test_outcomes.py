@@ -9,7 +9,6 @@ from support import py_function
 from test_ledger import LedgerCase, lines
 
 from broom import gate
-from broom.state import load_json
 
 SMALL = py_function("small", 20)
 
@@ -44,7 +43,7 @@ class OutcomeTest(LedgerCase):
 
     def kept(self, r: Path) -> dict:
         """The findings commits.json keeps for `r` besides the last block's."""
-        return (load_json(gate.COMMITS, {}).get(str(r)) or {}).get("earlier") or {}
+        return (gate.load_commits([r]).get(str(r)) or {}).get("earlier") or {}
 
     def fixed_once_each(self) -> None:
         keys = sorted(x["key"] for x in lines("fix"))

@@ -76,7 +76,8 @@ def window(since: Optional[str], repos: Optional[Set[str]], narrow: Dict[str, Li
     by that broom version or a later one. A row with no `v` is older than any version; one without a numeric time is
     skipped."""
     floor = version_key(since)
-    rows = [r for r in ledger.read(ledger.LEDGER) if isinstance(r.get("t"), (int, float))]
+    every = ledger.every_row() if repos is None else (r for repo in sorted(repos) for r in ledger.rows_of(repo))
+    rows = [r for r in every if isinstance(r.get("t"), (int, float))]
     if floor is not None:
         rows = [r for r in rows if (v := version_key(r.get("v"))) is not None and v >= floor]
     return sorted((r for r in rows if wanted(r, repos, narrow)), key=lambda r: r["t"])

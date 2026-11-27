@@ -54,7 +54,7 @@ class TestRunCase(NoWaveCase):
         self.hook("prompt", {"session_id": "s1", "cwd": str(r)})
 
     def ledger_rows(self, event: str) -> list:
-        return [x for x in ledger.read(ledger.LEDGER) if x["event"] == event]
+        return [x for x in ledger.every_row() if x["event"] == event]
 
 
 class NotedTest(TestRunCase):

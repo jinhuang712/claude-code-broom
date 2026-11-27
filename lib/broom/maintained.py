@@ -21,6 +21,7 @@ DEPENDENCY_DIRS = {
     "DerivedData", "dist", ".bundle", ".next", "coverage", "test-results",
 }
 # Generated code and fixtures: their smells don't count, but what they use isn't dead code.
+BROOM_DIRS = {".broom"}  # broom's own records in a repo (repodata), which git ignores and nothing scans
 GENERATED_DIRS = {"testdata", "Generated", "generated"}
 # Build output in some projects, source in others: left out only where git doesn't track the files.
 OUTPUT_DIRS = {"build", "out", "release", "target"}
@@ -98,7 +99,7 @@ class Maintained:
         An output-like name stays in where git tracks files under it, and generated code stays in: what it uses is
         used."""
         in_use = {part for rel in self.tracked for part in rel.split("/")[:-1]} & OUTPUT_DIRS
-        return sorted(DEPENDENCY_DIRS | (OUTPUT_DIRS - in_use))
+        return sorted(DEPENDENCY_DIRS | BROOM_DIRS | (OUTPUT_DIRS - in_use))
 
     def clone_skips(self) -> List[str]:
         """Directory names jscpd leaves out when it looks for duplicates: generated code too, as nobody edits it."""

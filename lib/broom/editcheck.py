@@ -116,7 +116,7 @@ def light_check(path: Path, sd: Path, changed: ChangedLines) -> Optional[str]:
     if found:
         from .gate import baseline_keys, select
 
-        found = select(found, {path}, baseline_keys(), changed)
+        found = select(found, {path}, baseline_keys([path]), changed)
     fresh = fresh_findings(sd, path, found)
     return message(path, fresh) if fresh else None
 

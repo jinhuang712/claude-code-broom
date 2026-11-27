@@ -11,14 +11,14 @@ from unittest import mock
 
 from support import BROOM, HAS_PY, BroomCase, py_function
 
-from broom import __version__, checks, ledger
+from broom import __version__, checks, ledger, repodata
 
 DAY = 86400
 QUIET = '{"smells_off": ["dead_code"]}'  # a function nothing calls is dead code too: not what these tests are about
 
 
 def lines(event: str = "") -> list:
-    return [r for r in ledger.read(ledger.LEDGER) if not event or r["event"] == event]
+    return [r for r in ledger.every_row() if not event or r["event"] == event]
 
 
 class LedgerCase(BroomCase):
@@ -225,7 +225,7 @@ class RecordTest(LedgerCase):
         with mock.patch.object(checks, "plan", return_value=[tool]):
             checks.run_checks([Path("a.py")])
             self.assertEqual(lines("time"), [])
-            checks.run_checks([Path("a.py")], self.tmp / "slow.json")
+            checks.run_checks([Path("a.py")], remember=True)
         (took,) = lines("time")
         self.assertEqual((took["check"], took["repo"]), ("ruff", "/x"))
         self.assertEqual(took["seconds"], round(took["seconds"], 2))
@@ -264,19 +264,20 @@ class RecordTest(LedgerCase):
     def test_the_ledger_stays_bounded_by_size_alone_and_every_new_line_holds_the_version(self) -> None:
         now, pad = time.time(), "k" * 40
         old = [{"t": now - 1000 * DAY, "repo": "/a", "event": "block", "key": pad}]  # age decides nothing
-        ledger.LEDGER.parent.mkdir(parents=True, exist_ok=True)
-        ledger.LEDGER.write_text("".join(json.dumps(x) + "\n" for x in old))
+        path = ledger.ledger_of("/a")  # no repo: the folder outside any keeps it
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("".join(json.dumps(x) + "\n" for x in old))
         ledger.write([{"t": now, "repo": "/a", "event": "fix", "key": pad}])
         self.assertEqual([x["event"] for x in lines()], ["block", "fix"], "the line of 1000 days ago stays")
         self.assertEqual([x.get("v") for x in lines()], [None, __version__], "an old line has no version")
         self.assertEqual(lines("fix")[0]["v"], __version__)
         with mock.patch.object(ledger, "MAX_BYTES", 1000):
             ledger.write([{"t": now, "repo": "/a", "event": "pass", "key": str(n)} for n in range(50)])
-        self.assertLess(ledger.LEDGER.stat().st_size, 1000, "recent lines go too, the oldest first, when it is over")
+        self.assertLess(path.stat().st_size, 1000, "recent lines go too, the oldest first, when it is over")
         self.assertEqual(lines()[-1]["key"], "49")
         blocker = self.tmp / "file"
         blocker.write_text("")
-        with mock.patch.object(ledger, "LEDGER", blocker / "ledger.jsonl"):
+        with mock.patch.object(repodata, "OUTSIDE", blocker / "outside"):
             ledger.write([{"t": now, "repo": "/a", "event": "fix"}])  # its directory is a file: no error
 
 

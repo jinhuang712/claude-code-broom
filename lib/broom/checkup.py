@@ -14,15 +14,14 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-from . import __version__, coverage
+from . import __version__, coverage, repodata
 from .config import CHECKUP, DEAD_CODE, repo_config, setting
 from .gitutil import CLOCK, main_worktree
-from .state import DATA_ROOT, load_json, short_hash, update_json
+from .state import load_json, update_json
 from .stats import collect
 from .statscan import Facts
 from .testrot import DUPLICATE_TESTS
 
-RECORDS = DATA_ROOT / "checkup"
 UNCOVERED = "uncovered_lines"
 UNSAFE = "unsafe_code"
 BROKEN_LINKS = "broken_links"
@@ -44,9 +43,11 @@ Counted = Dict[str, Optional[Counts]]  # per counter; None for one that couldn't
 Row = Tuple[str, int, int, List[str]]  # a counter that grew: its name, the value before and now, the files that added
 
 
-def record_path(repo: Path) -> Path:
-    """Where the numbers of the last check-up are kept: one record for the repo, whichever of its worktrees asks."""
-    return RECORDS / f"{short_hash(str(main_worktree(repo)))}.json"
+def record_path(repo: Path, *, write: bool = False) -> Path:
+    """Where the numbers of the last check-up are kept: one record in the repo's folder, whichever of its worktrees
+    asks; the folder is made to `write`."""
+    main = main_worktree(repo)
+    return (repodata.made(main) if write else repodata.folder(main)) / repodata.CHECKUP
 
 
 def is_off(repo: Path) -> bool:
@@ -125,7 +126,7 @@ def check_up(repo: Path, from_smells: Optional[Counted]) -> Optional[str]:
         counted = {name: counts for name, counts in now.items() if counts is not None}
         return {"at": time.strftime("%Y-%m-%d"), "version": __version__, "counters": {**(before or {}), **counted}}
 
-    update_json(record_path(repo), {}, keep)
+    update_json(record_path(repo, write=True), {}, keep)
     return told[0] if told else None
 
 

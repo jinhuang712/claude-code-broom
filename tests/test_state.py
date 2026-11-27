@@ -13,7 +13,7 @@ from unittest import mock
 
 from support import ROOT, BroomCase
 
-from broom import commitgate, gate, state
+from broom import commitgate, repodata, state
 from broom.gate import save_commits
 from broom.state import keep_newest, load_json, update_json
 
@@ -71,7 +71,7 @@ class StateTests(BroomCase):
         self.assertEqual(load_json(path, None), ["a", "x"])
 
     def test_saving_one_repos_commit_state_leaves_the_others_as_they_are(self) -> None:
-        path = gate.COMMITS
+        path = repodata.OUTSIDE / repodata.COMMITS  # no repo: the folder outside any keeps them
         path.parent.mkdir(parents=True)
         # Another hook wrote /c after this run read the file; this run knows of /a and /b, and /b is settled.
         path.write_text(json.dumps({"/a": {"pending": {"k": 1}}, "/b": {"pending": {"j": 1}},

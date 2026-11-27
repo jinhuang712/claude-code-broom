@@ -8,10 +8,11 @@ from __future__ import annotations
 import json
 import time
 import unittest
+from pathlib import Path
 
 from support import HAS_PY, BroomCase, py_function
 
-from broom import gate, hotspots
+from broom import gate, hotspots, repodata
 
 WHY = "a day in seconds"
 TWO = "def f(x):\n    if x > 86400:\n        return 1\n    if x > 3600:\n        return 2\n    return x\n"
@@ -53,7 +54,7 @@ class StandingTest(BroomCase):
                 self.assertIn(says, out.stdout + out.stderr)
         out = self.cli(r, "known", "--smell", "function_lines", "a.py")
         self.assertIn("--smell goes with --accept", out.stderr)
-        self.assertEqual((self.smells(r)["total"], gate.baseline_load()), (1, {}))
+        self.assertEqual((self.smells(r)["total"], gate.baseline_load([r])), (1, {}))
 
     @unittest.skipUnless(HAS_PY, "ruff missing")
     def test_one_occurrence_is_accepted_and_the_others_in_its_file_still_count(self) -> None:
@@ -84,8 +85,9 @@ class StandingTest(BroomCase):
                       hotspots.session_note(self.tmp, data))
         self.assertIn("in all; 3 accepted as known, collapsed). Don't raise a cleanup",
                       hotspots.session_note(self.tmp, {**data, "open_severe": 0}), "every severe one is accepted")
-        hotspots.DISMISSED.parent.mkdir(parents=True, exist_ok=True)
-        hotspots.DISMISSED.write_text(json.dumps({str(self.tmp): 4}))
+        dismissed = repodata.at(self.tmp) / repodata.DISMISSED  # no repo: the folder outside any
+        dismissed.parent.mkdir(parents=True, exist_ok=True)
+        dismissed.write_text(json.dumps({str(self.tmp): 4}))
         self.assertEqual(hotspots.session_note(self.tmp, data),
                          "broom: 4 code smell(s) past the hard limit in this repo (9 in all; 3 accepted as known, "
                          "collapsed). Don't raise a cleanup for them.")
@@ -126,4 +128,4 @@ class StandingTest(BroomCase):
         old = {"t": time.time() - 400 * 86400, "file": "/gone/a.py", "line": 1, "tool": "ruff", "rule": "X", "msg": "m"}
         gate.baseline_add_entries({"old": old})
         gate.baseline_add_entries({"new": {**old, "t": time.time()}})
-        self.assertEqual(set(gate.baseline_load()), {"old", "new"})
+        self.assertEqual(set(gate.baseline_load([Path("/gone/a.py")])), {"old", "new"})

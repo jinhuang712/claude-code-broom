@@ -12,6 +12,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Dict, List, NamedTuple, Optional, Set, Tuple
 
+from . import repodata
 from .config import DEAD_CODE, SMELL_PRESENCE, drop_excluded, repo_config, setting
 from .findings import Issue
 from .gate import baseline_keys, display, issue_key, note_text
@@ -19,12 +20,10 @@ from .gitutil import changed_since, git
 from .sizes import SIZED, find_sizes
 from .smell import DESCRIBE, LABELS
 from .smells import Smell, find_smells
-from .state import DATA_ROOT, load_json, save_json, short_hash, update_json
+from .state import load_json, save_json, short_hash, update_json
 from .statsgit import CHURN_COMMITS, commits_per_file
 from .testrot import DUPLICATE_TESTS, duplicate_counter
 
-CACHE = DATA_ROOT / "hotspots"
-DISMISSED = DATA_ROOT / "smells-dismissed.json"
 FILES_IN_NOTE = 3
 NOTE_MAX_FILES = 5000  # past this, a session start doesn't scan: `broom smells` still does
 SCAN_SECONDS = 20  # what the tools that run in the real tree have between them in that scan
@@ -122,7 +121,7 @@ def drop_known(found: List[Smell], known: Optional[Set[str]] = None) -> Tuple[Li
     """`found` split by the known-issue store (`known`, read from disk when None): the open smells, and the known ones,
     collapsed but still counted. An occurrence smell loses its known lines, and goes when none is left; each known
     line is a known smell of its own, as each was accepted on its own."""
-    known = baseline_keys() if known is None else known
+    known = baseline_keys(s.file for s in found) if known is None else known
     if not known:
         return list(found), []
     kept: List[Smell] = []
@@ -260,7 +259,7 @@ def cached_summary(repo: Path) -> Optional[dict]:
     """The repo's smell counts at HEAD if a scan already counted them, else None: what a session start can read
     without waiting for a scan."""
     head = head_of(repo)
-    cached = load_json(CACHE / f"{short_hash(str(repo))}.json", {})
+    cached = load_json(repodata.at(repo) / repodata.HOTSPOTS / f"{short_hash(str(repo))}.json", {})
     return cached if head and cached.get("head") == head else None
 
 
@@ -284,7 +283,7 @@ def summary(repo: Path) -> Optional[dict]:
             "open_severe": sum(s.level == "block" for s in kept), "hotspots": [f["file"] for f in hot[:FILES_IN_NOTE]],
             "partial": any(n.startswith("timeout:") for n in notes),  # the time ran out: the counts are a floor
             "counts": smell_counts(repo, found, notes)}
-    save_json(CACHE / f"{short_hash(str(repo))}.json", data)
+    save_json(repodata.made_at(repo) / repodata.HOTSPOTS / f"{short_hash(str(repo))}.json", data)
     return data
 
 
@@ -296,7 +295,7 @@ def session_note(repo: Path, data: Optional[dict]) -> Optional[str]:
         return None
     floor = "at least " if data.get("partial") else ""  # a scan that ran out of time counted only what it reached
     known = known_part(data.get("known") or 0)
-    dismissed = data["severe"] <= load_json(DISMISSED, {}).get(str(repo), -1)
+    dismissed = data["severe"] <= load_json(repodata.at(repo) / repodata.DISMISSED, {}).get(str(repo), -1)
     if dismissed or not data.get("open_severe", data["severe"]):
         return (f"broom: {floor}{data['severe']} code smell(s) past the hard limit in this repo "
                 f"({data['total']} in all{known}). Don't raise a cleanup for them.")
@@ -311,6 +310,6 @@ def dismiss(repo: Path) -> str:
     """Stop the session note asking for a cleanup in this repo until it has more severe smells than now; it still
     gives the count. Returns the message to show."""
     data = summary(repo) or {"severe": 0}
-    update_json(DISMISSED, {}, lambda seen: seen.update({str(repo): data["severe"]}))
+    update_json(repodata.made_at(repo) / repodata.DISMISSED, {}, lambda seen: seen.update({str(repo): data["severe"]}))
     return (f"broom: the session note only gives the count, and asks for no cleanup, until this repo has more than "
             f"{data['severe']} severe smell(s)")
