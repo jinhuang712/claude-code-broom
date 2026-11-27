@@ -149,12 +149,44 @@ def baseline_add_entries(entries: Dict[str, dict]) -> None:
         baseline_change(main, lambda data, part=part: data.update(part))
 
 
+FINDING_PARTS = ("pending", "earlier")  # the parts of a last-blocked record that hold findings by key
+
+
+def files_in(record: dict, change) -> dict:
+    """The last-blocked `record` with `change(file)` applied to the file of each finding it holds."""
+    out = dict(record)
+    for part in FINDING_PARTS:
+        if isinstance(record.get(part), dict):
+            out[part] = {k: {**e, "file": change(str(e["file"]))} if e.get("file") else e
+                         for k, e in record[part].items()}
+    return out
+
+
+def kept_form(record: dict, root: Path) -> dict:
+    """A last-blocked record as the repo's folder keeps it: each file relative to the worktree's `root` (absolute
+    only outside it), so a moved repo keeps it."""
+    def inward(file: str) -> str:
+        try:
+            return Path(file).relative_to(root).as_posix()
+        except ValueError:
+            return file
+
+    return files_in(record, inward)
+
+
+def whole_form(record: dict, root: Path) -> dict:
+    """A last-blocked record as the folder keeps it, each file made whole again under the worktree's `root`."""
+    return files_in(record, lambda file: file if Path(file).is_absolute() else str(root / file))
+
+
 def load_commits(roots: Iterable[Path]) -> dict:
-    """The last-blocked records of the worktree roots of the repos that hold `roots`, by worktree root."""
+    """The last-blocked records of the worktrees of the repos that hold `roots`, by worktree root as it is now."""
     state: dict = {}
     for main in mains(roots):
         raw = load_json(store(main, repodata.COMMITS), {})
-        state.update(raw if isinstance(raw, dict) else {})
+        for key, record in (raw if isinstance(raw, dict) else {}).items():
+            root = repodata.tree_root(key, main) if main else Path(key)
+            state[str(root)] = whole_form(record, root) if main and isinstance(record, dict) else record
     return state
 
 
@@ -166,12 +198,13 @@ def save_commits(state: dict, repos: Iterable[Path]) -> None:
         groups.setdefault(repodata.main_of(Path(r)), set()).add(str(r))
 
     for main, keys in groups.items():
-        def put(data: dict, keys: Set[str] = keys) -> None:
+        def put(data: dict, keys: Set[str] = keys, main: Optional[Path] = main) -> None:
             for key in keys:
+                kept = repodata.tree_key(Path(key), main) if main else key
                 if key in state:
-                    data[key] = state[key]
+                    data[kept] = kept_form(state[key], Path(key)) if main else state[key]
                 else:
-                    data.pop(key, None)
+                    data.pop(kept, None)
 
         update_json(store(main, repodata.COMMITS, write=True), {}, put)
 

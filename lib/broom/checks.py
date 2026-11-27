@@ -130,6 +130,12 @@ def where_of(key: str) -> Path:
     return Path(key.partition(":")[2] or "/")
 
 
+def kept_key(key: str) -> str:
+    """A check's key as its repo's record keeps it: the folder it runs in named relative to the main checkout."""
+    tool, _, where = key.partition(":")
+    return f"{tool}:{repodata.tree_name(Path(where))}" if where else key
+
+
 def slow_checks(keys: List[str]) -> Dict[str, str]:
     """The checks of `keys` that ran out of time and whose repo's HEAD hasn't moved since, by the HEAD they ran out of
     time at, from the records of their repos."""
@@ -137,7 +143,7 @@ def slow_checks(keys: List[str]) -> Dict[str, str]:
     for folder in {repodata.at(where_of(k)) for k in keys}:
         data = load_json(folder / repodata.SLOW, {})
         raw.update(data if isinstance(data, dict) else {})
-    kept = {k: head for k, head in raw.items() if k in keys and isinstance(head, str)}
+    kept = {k: raw[kept_key(k)] for k in keys if isinstance(raw.get(kept_key(k)), str)}
     return {k: head for k, head in kept.items() if head_of(k) == head}
 
 
@@ -145,7 +151,7 @@ def note_slow(ran_out: Dict[str, str]) -> None:
     """Record the checks that ran out of time, each in its repo's record."""
     groups: Dict[Path, Dict[str, str]] = {}
     for k, head in ran_out.items():
-        groups.setdefault(repodata.made_at(where_of(k)), {})[k] = head
+        groups.setdefault(repodata.made_at(where_of(k)), {})[kept_key(k)] = head
     for folder, part in groups.items():
         update_json(folder / repodata.SLOW, {}, lambda data, part=part: data.update(part))
 

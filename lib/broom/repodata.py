@@ -60,6 +60,30 @@ def key_path(file: Path) -> str:
     return str(file)
 
 
+def tree_key(root: Path, main: Path) -> str:
+    """How the folder of `main` names one of its worktrees, so a moved repo keeps the name: "." for the main checkout,
+    its path relative to it for a worktree inside it, its absolute path only for a linked worktree outside it."""
+    if root == main:
+        return "."
+    try:
+        return root.relative_to(main).as_posix()
+    except ValueError:
+        return str(root)
+
+
+def tree_root(key: str, main: Path) -> Path:
+    """The worktree root that `tree_key` named `key` in the folder of `main`."""
+    if key == ".":
+        return main
+    return Path(key) if Path(key).is_absolute() else main / key
+
+
+def tree_name(root: Path) -> str:
+    """`tree_key` of the worktree root `root` in its own repo's folder; the path itself outside any repo."""
+    main = main_of(root)
+    return tree_key(root, main) if main else str(root)
+
+
 def spare(main: Path) -> Path:
     """The folder under the data directory that stands in for the repo's own."""
     return SPARES / short_hash(str(main))
@@ -155,6 +179,12 @@ def note(place: Path) -> Optional[str]:
     reason = ("git tracks files in this repo's .broom/, so they came with the repo and broom never reads them"
               if why == TRACKED else "this repo's root can't be written")
     return f"broom: {reason}; it keeps this repo's records in its own data directory instead."
+
+
+def tracked(main: Path) -> bool:
+    """Whether git tracks a file in the repo's own `.broom/`: then it came with the repo and is never read. One git
+    call: for a command, never for a hook."""
+    return (main / NAME).is_dir() and bool((git(["ls-files", "--", NAME], main) or "").strip())
 
 
 def every() -> List[Path]:

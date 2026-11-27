@@ -255,11 +255,16 @@ def head_of(repo: Path) -> str:
     return (git(["rev-parse", "HEAD"], repo) or "").strip()
 
 
+def scan_cache(repo: Path, folder: Path) -> Path:
+    """Where the repo's `folder` keeps the scan summary of the worktree `repo`, named for it as the folder names it."""
+    return folder / repodata.HOTSPOTS / f"{short_hash(repodata.tree_name(repo))}.json"
+
+
 def cached_summary(repo: Path) -> Optional[dict]:
     """The repo's smell counts at HEAD if a scan already counted them, else None: what a session start can read
     without waiting for a scan."""
     head = head_of(repo)
-    cached = load_json(repodata.at(repo) / repodata.HOTSPOTS / f"{short_hash(str(repo))}.json", {})
+    cached = load_json(scan_cache(repo, repodata.at(repo)), {})
     return cached if head and cached.get("head") == head else None
 
 
@@ -283,7 +288,7 @@ def summary(repo: Path) -> Optional[dict]:
             "open_severe": sum(s.level == "block" for s in kept), "hotspots": [f["file"] for f in hot[:FILES_IN_NOTE]],
             "partial": any(n.startswith("timeout:") for n in notes),  # the time ran out: the counts are a floor
             "counts": smell_counts(repo, found, notes)}
-    save_json(repodata.made_at(repo) / repodata.HOTSPOTS / f"{short_hash(str(repo))}.json", data)
+    save_json(scan_cache(repo, repodata.made_at(repo)), data)
     return data
 
 
@@ -295,7 +300,7 @@ def session_note(repo: Path, data: Optional[dict]) -> Optional[str]:
         return None
     floor = "at least " if data.get("partial") else ""  # a scan that ran out of time counted only what it reached
     known = known_part(data.get("known") or 0)
-    dismissed = data["severe"] <= load_json(repodata.at(repo) / repodata.DISMISSED, {}).get(str(repo), -1)
+    dismissed = data["severe"] <= load_json(repodata.at(repo) / repodata.DISMISSED, {}).get(repodata.tree_name(repo), -1)
     if dismissed or not data.get("open_severe", data["severe"]):
         return (f"broom: {floor}{data['severe']} code smell(s) past the hard limit in this repo "
                 f"({data['total']} in all{known}). Don't raise a cleanup for them.")
@@ -310,6 +315,6 @@ def dismiss(repo: Path) -> str:
     """Stop the session note asking for a cleanup in this repo until it has more severe smells than now; it still
     gives the count. Returns the message to show."""
     data = summary(repo) or {"severe": 0}
-    update_json(repodata.made_at(repo) / repodata.DISMISSED, {}, lambda seen: seen.update({str(repo): data["severe"]}))
+    update_json(repodata.made_at(repo) / repodata.DISMISSED, {}, lambda seen: seen.update({repodata.tree_name(repo): data["severe"]}))
     return (f"broom: the session note only gives the count, and asks for no cleanup, until this repo has more than "
             f"{data['severe']} severe smell(s)")

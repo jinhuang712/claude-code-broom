@@ -35,12 +35,18 @@ class RepoDataTest(RepoDataCase):
         r = self.repo({"b.py": "x = 1\n"})
         self.huge(r)
         self.assertTrue(self.blocked(r))
-        self.assertEqual(self.cli(r, "known", "--accept", "legacy code").returncode, 0)
         self.assertEqual(self.sh(r, "git", "status", "--porcelain"), "A  a.py\n", "git ignores the folder")
-        before = self.numbers(r)
         moved = self.tmp / "elsewhere" / "repo"
         moved.parent.mkdir()
         shutil.move(str(r), str(moved))
+        accepted = self.cli(moved, "known", "--accept", "legacy code")
+        self.assertRegex(accepted.stdout, r"accepted [1-9]\d* issue", "what was blocked before the move is found after it")
+        self.assertNotIn(str(r), (moved / ".broom" / "commits.json").read_text() + (moved / ".broom" / "baseline.json")
+                         .read_text(), "nothing in the folder names the old place")
+        before = self.numbers(moved)
+        back = self.tmp / "back"
+        shutil.move(str(moved), str(back))
+        moved = back
         self.assertEqual(self.blocked(moved), "", "the known issue is known where the repo went")
         self.assertEqual(self.numbers(moved), before)
         self.assertTrue(before[0] and before[0] == before[2], "what was blocked was let through")

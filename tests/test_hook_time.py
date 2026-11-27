@@ -90,7 +90,7 @@ class HookTimeTests(BroomCase):
             self.assertFalse(slow_path.exists(), "cut short after a moment: late, not slow")
             with mock.patch.object(checks, "SLOW_SECONDS", 0):
                 checks.run_checks([Path("a.py")], remember=True)
-        self.assertEqual(list(json.loads(slow_path.read_text())), [f"late:{repo}"])
+        self.assertEqual(list(json.loads(slow_path.read_text())), ["late:."], "by its folder in the repo")
 
     def test_a_slow_check_is_skipped_in_every_session_until_head_moves_and_says_so(self) -> None:
         repo = self.repo({"a.py": "x = 1\n"})
@@ -106,7 +106,7 @@ class HookTimeTests(BroomCase):
             self.sh(repo, "git", "commit", "-qam", "next")
             checks.run_checks([Path("a.py")], remember=True)
         self.assertEqual(len(calls), 2, "a new commit gives it another go")
-        self.assertEqual(json.loads(slow_path.read_text())[f"late:{repo}"], self.sh(repo, "git", "rev-parse", "HEAD").strip())
+        self.assertEqual(json.loads(slow_path.read_text())["late:."], self.sh(repo, "git", "rev-parse", "HEAD").strip())
 
     def test_a_slow_check_in_no_repo_is_not_recorded(self) -> None:
         slow_path = self.tmp / "data" / "outside" / "slow.json"

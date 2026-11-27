@@ -31,6 +31,7 @@ class MigrationTest(RepoDataCase):
         self.assertEqual(json.loads((mine / ".broom" / "baseline.json").read_text())["km"]["file"], "a.py")
         self.assertEqual(list(json.loads((data / "baseline.json").read_text())), ["ko"])
         self.assertEqual(list(json.loads((data / "commits.json").read_text())), [str(other)])
+        self.assertEqual(list(json.loads((mine / ".broom" / "commits.json").read_text())), ["."], "by its worktree")
         self.assertTrue(migrate.waiting(), "the other repo's records wait for it")
         self.assertEqual(self.cli(other, "known").returncode, 0)
         self.assertFalse(migrate.waiting(), "nothing is left once both moved")

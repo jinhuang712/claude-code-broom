@@ -69,7 +69,7 @@ class PassedTests(BroomCase):
     def test_content_that_passed_stays_passed_however_old_the_record_is(self) -> None:
         self.check()
         data = load_json(self.repo_dir / ".broom" / "passed.json", {})
-        for record in data[str(self.repo_dir)].values():
+        for record in data["."].values():
             record[1] = 0  # written at the dawn of time
         (self.repo_dir / ".broom" / "passed.json").write_text(json.dumps(data))
         self.assertEqual(self.check(), [], "the record's stamp only orders records: it expires nothing")
@@ -97,7 +97,7 @@ class PassedTests(BroomCase):
         with mock.patch.object(passed, "MAX_ENTRIES", 2):
             for name in ("a.py", "b.py", "c.py"):
                 passed.record(self.repo_dir, [(self.repo_dir / name).resolve()])
-        kept = load_json(self.repo_dir / ".broom" / "passed.json", {})[str(self.repo_dir)]
+        kept = load_json(self.repo_dir / ".broom" / "passed.json", {})["."]
         self.assertEqual(sorted(kept), ["b.py", "c.py"], "a.py was recorded first")
 
 

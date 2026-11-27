@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 from . import repodata
+from .gate import kept_form
 from .gitutil import git_root, main_worktree
 from .state import DATA_ROOT, load_json, locked, save_json, short_hash, update_json
 
@@ -140,7 +141,8 @@ def baseline_split(main: Path, keys: Dict[str, str]) -> Split:
 
 
 def commits_split(main: Path, keys: Dict[str, str]) -> Split:
-    """The repo's last-blocked records, their findings under their new keys."""
+    """The repo's last-blocked records, by each worktree as the folder names it, their findings under their new keys
+and each file relative to its worktree."""
     def renamed(record: dict) -> dict:
         out = dict(record)
         for part in ("pending", "earlier"):
@@ -150,7 +152,7 @@ def commits_split(main: Path, keys: Dict[str, str]) -> Split:
 
     def split(data: dict) -> Tuple[dict, dict]:
         took, rest = parted(data, lambda root, v: isinstance(v, dict) and of_repo(root, main))
-        return {root: renamed(v) for root, v in took.items()}, rest
+        return {repodata.tree_key(Path(root), main): kept_form(renamed(v), Path(root)) for root, v in took.items()}, rest
 
     return split
 
@@ -252,9 +254,22 @@ def migrate(main: Path, folder: Path) -> None:
     def mine(root: str, _v: object) -> bool:
         return of_repo(root, main)
 
-    move_json(OLD_PASSED, folder / repodata.PASSED, lambda data: parted(data, mine))
-    move_json(OLD_DISMISSED, folder / repodata.DISMISSED, lambda data: parted(data, mine))
-    move_json(OLD_SLOW, folder / repodata.SLOW,
-              lambda data: parted(data, lambda k, _v: under(k.partition(":")[2], main)))
+    def by_tree(data: dict) -> Tuple[dict, dict]:
+        took, rest = parted(data, mine)
+        return {repodata.tree_key(Path(root), main): v for root, v in took.items()}, rest
+
+    def slow(data: dict) -> Tuple[dict, dict]:
+        took, rest = parted(data, lambda k, _v: under(k.partition(":")[2], main))
+        return {slow_key(k, main): v for k, v in took.items()}, rest
+
+    move_json(OLD_PASSED, folder / repodata.PASSED, by_tree)
+    move_json(OLD_DISMISSED, folder / repodata.DISMISSED, by_tree)
+    move_json(OLD_SLOW, folder / repodata.SLOW, slow)
     move_file(OLD_CHECKUP / f"{short_hash(str(main))}.json", folder / repodata.CHECKUP)
-    move_file(OLD_HOTSPOTS / f"{short_hash(str(main))}.json", folder / repodata.HOTSPOTS / f"{short_hash(str(main))}.json")
+    move_file(OLD_HOTSPOTS / f"{short_hash(str(main))}.json", folder / repodata.HOTSPOTS / f"{short_hash('.')}.json")
+
+
+def slow_key(key: str, main: Path) -> str:
+    """An old slow check's key (`tool:directory`) as the folder keeps it: the directory relative to `main`."""
+    tool, _, where = key.partition(":")
+    return f"{tool}:{repodata.tree_key(Path(where), main)}"

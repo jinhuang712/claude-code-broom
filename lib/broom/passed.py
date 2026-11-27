@@ -19,7 +19,7 @@ from .config import repo_file
 from .gitutil import git
 from .state import load_json, update_json
 
-# In the repo's folder, repodata.PASSED: {worktree root: {path: [blob id, written, bar]}}; `written` only orders them.
+# In the repo's folder, repodata.PASSED: {repodata.tree_name of the worktree: {path: [blob id, written, bar]}}; `written` only orders them.
 MAX_ENTRIES = 20000
 RECORD_FIELDS = 3  # blob id, written, bar
 
@@ -57,7 +57,7 @@ def staged_blobs(repo: Path, files: List[Path]) -> Dict[str, str]:
 
 def unpassed(repo: Path, files: List[Path], blobs: Dict[str, str]) -> List[Path]:
     """The files whose content, given as `blobs` (on disk or as staged), hasn't passed yet."""
-    seen = load_json(repodata.at(repo) / repodata.PASSED, {}).get(str(repo), {})
+    seen = load_json(repodata.at(repo) / repodata.PASSED, {}).get(repodata.tree_name(repo), {})
     deciding = bar(repo)
     return [f for f, rel in zip(files, rel_paths(repo, files)) if not passed(seen.get(rel), blobs.get(rel), deciding)]
 
@@ -76,7 +76,7 @@ def record(repo: Path, files: List[Path]) -> None:
     now, deciding = time.time(), bar(repo)
 
     def add(data: dict) -> None:
-        rows = data.setdefault(str(repo), {})
+        rows = data.setdefault(repodata.tree_name(repo), {})
         rows.update({rel: [blob, now, deciding] for rel, blob in blobs.items()})
         drop_oldest(data)
 
