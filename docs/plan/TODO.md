@@ -47,15 +47,6 @@
 
 ---
 
-### [P2][IDEA] The doctor offers ast-grep in a CSS repo
-
-- description: CSS's comments are read by ast-grep, for its file length and its counters. `broom doctor` offers ast-grep only in a repo with Go, Rust or TS/JS, so a repo of CSS alone gets the note that it is missing and no offer.
-- created: 2026-11-24
-- found: the change to code lines
-- related: [F1.1: Doctor](../features/F1-setup.md#f11-doctor)
-
----
-
 ### [P2][IDEA] INSTALL says what to do when an install fails
 
 - description:
@@ -64,25 +55,6 @@
 - created: 2026-11-20
 - found: the docs pass of 2026-11-20
 - related: [What it takes for a second user to install broom and stay](#p1discussion-what-it-takes-for-a-second-user-to-install-broom-and-stay)
-
----
-
-### [P2][IDEA] A hint at the edit for a signal that is cheap and certain
-
-- description:
-  - A file that just passed 1,000 lines could be told at the edit, before more is written into it.
-  - The check after an edit tells what a fast linter finds, and a size is not among it.
-  - A line count is cheap and certain, so it fits that moment.
-- created: 2026-11-17
-- next: decide with the ledger's numbers
-
----
-
-### [P2][IDEA] Declared layers per project
-
-- description: Tools such as import-linter and dependency-cruiser hold imports to layers a project wrote down. broom reports cycles, which need no rules. Layers would need the user to write them.
-- created: 2026-11-17
-- related: [014: No layering rules without a project's own](../specs/decisions/014-no-layering-rules.md)
 
 ---
 
@@ -97,14 +69,6 @@
 
 ---
 
-### [P2][IDEA] Tests that assert nothing
-
-- description: A test with no assertion passes whatever the code does. Finding one needs each language's test forms, and a helper that asserts for the test would read as a miss.
-- created: 2026-11-17
-- found: the look for missed rot at the end of CP5
-
----
-
 ### [P2][IDEA] Rules turned off in the project's lint config
 
 - description: A lint config loses rules one at a time, and no change is at fault. A counter of the rules a config turns off would tell when it grew. Each linter writes that differently.
@@ -114,32 +78,12 @@
 
 ---
 
-### [P2][IDEA] Doc comments that say nothing
-
-- description: A doc comment copied onto many functions meets the rule and tells the reader nothing. A fresh session found one sentence on six functions of a test repo, where broom counted no missing comment. The same text on several functions of a repo could be counted.
-- created: 2026-11-17
-- found: the look for missed rot at the end of CP4
-- related: [F11.5: Missing comments](../features/F11-checkup.md#f115-missing-comments)
-
----
-
 ### [P2][IDEA] A Python type check in the sweep
 
 - description: Python has no type check at a commit or a turn's end, so a type error reaches Claude only through pyright as it edits. A project that configures mypy or pyright already says which checker it wants. Either would add seconds to each check.
 - created: 2026-11-18
 - found: a fresh session's commit on a public Python project that configures both, where the commit check ran ruff alone
 - related: [F8.4: Python](../features/F8-languages.md#f84-python)
-
----
-
-### [P2][IDEA] broom says which smells a repo's languages lack
-
-- description:
-  - The user asked on 2026-11-19 how many smells each language measures, and the answer came from reading the code.
-  - `broom doctor --checks` lists the checks that run. It could list, per language of the repo, the smells that language doesn't measure.
-- created: 2026-11-19
-- found: the user's question
-- related: [F1.5: Protection list](../features/F1-setup.md#f15-protection-list)
 
 ---
 
