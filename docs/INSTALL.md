@@ -43,7 +43,7 @@ A user who would rather install the tools themselves needs these:
 | CSS · SCSS · Less | `npm i -D stylelint` in the project · `stylelint-config-recommended-scss` for SCSS · `stylelint-config-recommended-less` for Less · `npm i -g vscode-langservers-extracted` |
 | Swift | Xcode 16+ or a Swift 6+ toolchain · `brew install swiftlint` |
 | Duplicate and dead code | `npm i -g jscpd` at version 5 or later |
-| Smells read from a syntax tree in Go, Rust and TS/JS | `brew install ast-grep` |
+| Smells read from a syntax tree in Go, Rust and TS/JS, and CSS's comments | `brew install ast-grep` |
 
 Tools install machine-wide once. A gap the user leaves alone isn't raised again in any repo.
 

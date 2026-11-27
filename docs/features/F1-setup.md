@@ -27,7 +27,7 @@ It checks 12 things:
 - Swift files get the same, in SwiftPM packages and Xcode projects alike.
 - A repo with TS/JS has oxlint at its root, which the smells need whichever linter the projects use.
 - A repo with TS/JS has a dependency-cruiser that can read its files, and broom's own copy is the fix.
-- A repo with Go, Rust or TS/JS has ast-grep, which reads the smells no linter covers from the syntax tree.
+- A repo with Go, Rust, TS/JS, CSS, SCSS or Less has ast-grep, which reads the smells no linter covers from the syntax tree, and the comments of CSS.
 - No other enabled plugin starts a language server for files broom's servers serve, whatever languages the repo has.
 - A repo with code has git's pre-commit hook.
 - `.broom.json` is valid.
