@@ -7,6 +7,7 @@ import unittest
 
 from support import BroomCase
 
+from broom.clones import find_clones
 from broom.smells import find_smells
 
 
@@ -26,6 +27,14 @@ class CloneLinesTest(BroomCase):
         self.assertEqual([(s.level, s.value) for s in found if s.metric == "duplicate_lines"], [("hint", 14)],
                          "14 code lines in 64 lines")
 
+    @unittest.skipUnless(shutil.which("jscpd"), "jscpd missing")
+    def test_a_worktree_inside_the_repo_is_no_copy_of_it(self) -> None:
+        body = "".join(f"    x += {i}\n" for i in range(40))
+        r = self.repo({"a.py": f"def one(x):\n{body}    return x\n"})
+        self.sh(r, "git", "worktree", "add", "-q", "wt-inside", "-b", "wt-inside")
+        (r / "b.py").write_text(f"def two(x):\n{body}    return x\n")
+        pairs = {tuple(sorted((c.rel, c.other))) for c in find_clones(r, None, 10, [], [])}
+        self.assertEqual(pairs, {("a.py", "b.py")}, "the worktree's a.py is a.py, not a copy of it")
 
 if __name__ == "__main__":
     unittest.main()

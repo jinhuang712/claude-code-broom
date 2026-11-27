@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
 from .codelines import Lines, code_lines
-from .gitutil import git, run
+from .gitutil import git, run, worktrees
 
 SIDES = ("firstFile", "secondFile")  # the two copies in one of jscpd's clones
 FORMATS = "javascript,typescript,jsx,tsx,python,go,swift,rust,css,scss,less"
@@ -48,9 +48,9 @@ def run_jscpd(repo: Path, args: List[str], report: str, skip_dirs: List[str], no
     if not exe:
         notes.append("missing:jscpd (npm i -g jscpd), so duplicate and dead code aren't measured")
         return None
+    skipped = [f"**/{d}/**" for d in skip_dirs] + [f"{w}/**" for w in nested_worktrees(repo)]
     with tempfile.TemporaryDirectory(prefix="broom-jscpd-") as out:
-        cmd = [exe, *args, "-r", "json", "-o", out, "--no-tips", "-s",
-               "-i", ",".join(f"**/{d}/**" for d in skip_dirs), "."]
+        cmd = [exe, *args, "-r", "json", "-o", out, "--no-tips", "-s", "-i", ",".join(skipped), "."]
         rc, _, err = run(cmd, repo, timeout=TIMEOUT)
         if rc is None:
             notes.append("timeout:jscpd")
@@ -60,6 +60,21 @@ def run_jscpd(repo: Path, args: List[str], report: str, skip_dirs: List[str], no
         except (OSError, ValueError):
             notes.append(failure_note(err))
             return None
+
+
+def nested_worktrees(repo: Path) -> List[str]:
+    """The linked worktrees of the repo that sit inside `repo`, as paths relative to it. jscpd reads the folder and
+    not git, so each would read as a copy of the whole repo."""
+    here = repo.resolve()
+    out = []
+    for w in worktrees(here):
+        try:
+            rel = w.relative_to(here)
+        except ValueError:
+            continue
+        if rel.parts:
+            out.append(rel.as_posix())
+    return out
 
 
 def failure_note(err: str) -> str:
