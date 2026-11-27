@@ -16,6 +16,7 @@ import importlib
 import os
 import pkgutil
 import shutil
+import subprocess
 import sys
 import tempfile
 import traceback
@@ -26,8 +27,18 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parent.parent
 BROOM = ROOT / "bin" / "broom"
 DEFAULT_DATA = Path.home() / ".claude" / "plugins" / "data" / "broom-claude-code-broom"
-# What no test may write: the directory broom falls back to, and the one the person's environment names.
-REAL_ROOTS = tuple({str(p) for d in (DEFAULT_DATA, os.environ.get("CLAUDE_PLUGIN_DATA")) if d
+
+
+def own_records() -> list:
+    """The folders where broom keeps this repo's own records (repodata): in this checkout and in its main checkout."""
+    common = subprocess.run(["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=ROOT,
+                            capture_output=True, text=True).stdout.strip()
+    return [ROOT / ".broom"] + ([Path(common).parent / ".broom"] if common else [])
+
+
+# What no test may write: the directory broom falls back to, the one the person's environment names, and this repo's
+# own records.
+REAL_ROOTS = tuple({str(p) for d in (DEFAULT_DATA, os.environ.get("CLAUDE_PLUGIN_DATA"), *own_records()) if d
                     for p in (Path(d), Path(d).resolve())})
 OPEN_FOR_WRITING = os.O_WRONLY | os.O_RDWR | os.O_APPEND | os.O_CREAT | os.O_TRUNC
 # The audit events that change a path, and which of their arguments are the paths.
@@ -59,7 +70,11 @@ def writes(event: str, args: tuple) -> list:
     """The paths an audit event writes."""
     if event == "open":
         return args[:1] if isinstance(args[2], int) and args[2] & OPEN_FOR_WRITING else []
-    return [args[i] for i in CHANGES.get(event, ())]
+    paths = [args[i] for i in CHANGES.get(event, ())]
+    if event != "shutil.rmtree" and isinstance(args[-1], int) and args[-1] >= 0:
+        # Relative to a folder's descriptor, as rmtree removes what it walks: not relative to where the test runs.
+        return [p for p in paths if isinstance(p, (str, bytes)) and os.path.isabs(os.fsdecode(p))]
+    return paths
 
 
 def audit(event: str, args: tuple) -> None:
