@@ -58,15 +58,15 @@ def severity(s: Smell) -> Tuple[bool, float]:
 
 
 def score(severe: int, hints: int, changes: int) -> int:
-    """A file's cost: its smells (one past the hard limit weighs `SEVERE_WEIGHT` hints) times one more than the
-    commits that touched it, so a bad file that changes every week comes before one nobody touches."""
+    """A file's cost: its smells (one past the hard limit weighs `SEVERE_WEIGHT` hints, a nit weighs 0) times one more
+    than the commits that touched it, so a bad file that changes every week comes before one nobody touches."""
     return (SEVERE_WEIGHT * severe + hints) * (1 + changes)
 
 
 def order_text(by: str, last: int = CHURN_COMMITS) -> str:
     """How hotspots are ordered, in words: `by` is "churn" or "smells"."""
     if by == "churn":
-        return f"by score = ({SEVERE_WEIGHT} x severe + hints) x (1 + changes in the last {last} commits)"
+        return f"by score = ({SEVERE_WEIGHT} x severe + hints) x (1 + changes in the last {last} commits); nits weigh 0"
     return "most severe first"
 
 
@@ -91,8 +91,11 @@ def rank(smells: List[Smell], churn: Dict[str, int], by: str = "churn") -> Tuple
         rel = str(f.relative_to(rows[0].repo))
         severe, hints, nits = (sum(s.level == level for s in rows) for level in ("block", "hint", "nit"))
         changes = churn.get(rel, 0)
+        if not severe and not hints:
+            continue  # only nits: a smell of the file, but no hotspot
+        worst = next(s for s in rows if s.level != "nit")
         files.append({"file": rel, "severe": severe, "hints": hints, "nits": nits, "changes": changes,
-                      "score": score(severe, hints, changes), "worst": rows[0].text()})
+                      "score": score(severe, hints, changes), "worst": worst.text()})
     return ordered, sorted(files, key=ORDERS[by], reverse=True)
 
 
@@ -189,10 +192,12 @@ def hotspot_line(f: dict) -> str:
 
 
 def worst_rows(data: dict) -> List[str]:
-    """The hotspots and the worst smells of the text report; nothing when there are no smells."""
-    if not data["hotspots"]:
+    """The hotspots and the worst smells of the text report; nothing when there are no smells. A file of nits alone is
+    no hotspot, so its smells can come without a hotspots list."""
+    if not data["smells"]:
         return []
-    rows = ["", f"Hotspots, {order_text(data['by'])}:"] + [hotspot_line(f) for f in data["hotspots"]]
+    hot = data["hotspots"]
+    rows = ["", f"Hotspots, {order_text(data['by'])}:", *map(hotspot_line, hot)] if hot else []
     rows += ["", "Worst smells:"] + [f"  {s['file']}:{s['line']}  {s['smell']}  {s['text']}" for s in data["smells"]]
     listed = data.get("open", data["total"])
     if listed > len(data["smells"]):
