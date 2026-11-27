@@ -269,6 +269,7 @@ def known_paths(files: List[str]) -> Set[str]:
     return known
 
 
-def broken(rel: str, text: str, known: Set[str]) -> List[int]:
-    """The line of each link of the Markdown file `rel` (its `text`) that points at a relative path not in `known`."""
-    return [line for line, dest in links(text) if (path := target(dest, rel)) is not None and path not in known]
+def broken(rel: str, text: str, known: Set[str]) -> List[Link]:
+    """The (line, destination as written) of each link of the Markdown file `rel` (its `text`) that points at a
+    relative path not in `known`."""
+    return [(line, dest) for line, dest in links(text) if (path := target(dest, rel)) is not None and path not in known]

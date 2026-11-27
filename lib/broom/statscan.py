@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import List, Optional, Pattern, Set
+from typing import List, Optional, Pattern, Set, Tuple
 
 from .codelines import code_lines
 from .mdlinks import broken
@@ -32,8 +32,8 @@ OTHER_LANGS = (*MARKUP_LANGS, MD_LANG)  # files that are no code: only their sup
 class Facts:
     """What `scan` found in one file: `rel` is its path from the repo root, `lines` its code lines, `test` whether
     it is a test file, `suppressions` the kind of each lint suppression, `todos` the line number of each TODO comment,
-    `unsafe` how many unsafe constructs it holds, `broken_links` the line of each Markdown link to a path that isn't
-    there. A file of `OTHER_LANGS` is no code: no lines, no tests, no TODOs."""
+    `unsafe` how many unsafe constructs it holds, `broken_links` the line and destination of each Markdown link to a
+    path that isn't there. A file of `OTHER_LANGS` is no code: no lines, no tests, no TODOs."""
 
     rel: str
     lang: str
@@ -44,7 +44,7 @@ class Facts:
     suppressions: List[str] = field(default_factory=list)
     todos: List[int] = field(default_factory=list)
     unsafe: int = 0
-    broken_links: List[int] = field(default_factory=list)
+    broken_links: List[Tuple[int, str]] = field(default_factory=list)
     read: bool = True  # False when its tree couldn't be read (no ast-grep): its counts are then unknown, not zero
 
     @property

@@ -57,7 +57,7 @@ The list grows: each checkpoint's end looks for kinds broom still misses.
 - Type escapes.
 - Duplicate test blocks.
 - Unsafe code: Rust's `unsafe` blocks, functions and impls, Go files that import `unsafe`, Swift's `withUnsafe…` calls and `Unsafe…Pointer` types.
-- Broken Markdown links: a link in a tracked `.md` file to a relative path the repo doesn't hold.
+- Broken Markdown links: a link in a tracked `.md` file to a relative path the repo doesn't hold. `broom stats` and `broom diagnose` name each with its line and the path it points at.
 - Lines no test reaches, by the project's own coverage report.
 
 - **Why**: [050: More rot is counted, each from what parses it](../specs/decisions/050-rot-read-from-trees.md)

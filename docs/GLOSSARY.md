@@ -28,6 +28,7 @@ Each term has its meaning, the words that lost to it and its name in the code wh
 | Collapsed | hidden by Claude's choice: left out of the lists and still counted in every total | hidden · folded | `known` |
 | Standing smell | a smell in code no change touches, which no block shows | old smell | `standing` |
 | Accept | to record a blocked result as known with a reason | — | `broom known --accept` |
+| Prune | to drop the known issues whose code changed, which hide nothing | — | `broom known --prune` |
 | Test run | a Bash command broom takes for a run of the project's tests, by its words | — | `testcmd` |
 | Ask | to end a turn with a question to the user about a blocked finding, which passes nothing | — | `broom known --ask` |
 | Base | the revision a change is measured against | — | `base` |

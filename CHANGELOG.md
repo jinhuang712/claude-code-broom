@@ -6,6 +6,24 @@
 
 ---
 
+## 0.32.2 — 2026-11-27
+
+---
+
+### Known issues that hide nothing
+
+- `broom known --prune` drops the known issues whose code changed: no line of their file gives them any more, so they hide nothing, and no total moves. Those of a worktree since deleted go with them.
+- `broom known` ends with a line that says how many of its entries `--prune` would drop.
+- Nothing drops an entry by itself, as decision 046 holds.
+
+---
+
+### Fixed
+
+- `broom stats` and `broom diagnose` name each broken Markdown link with its line and the path it points at, where they named only the files, so a reader can find each one.
+
+---
+
 ## 0.32.1 — 2026-11-27
 
 ---

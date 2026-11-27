@@ -215,6 +215,24 @@ class GateTest(BroomCase):
         self.assertIn("no longer matches", again)
         self.assertIn("1 known issue(s)", again, "nothing was dropped")
 
+    def test_prune_drops_only_the_issues_whose_code_changed(self) -> None:
+        r = self.accepted_repo()
+        self.sh(r, "git", "commit", "-qam", "land")
+        (r / "b.py").write_text(py_function("big", 120))
+        self.sh(r, "git", "add", "b.py")
+        self.assertTrue(self.denied(self.commit(r, "git commit -m y")))
+        self.assertEqual(self.cli(r, "known", "--accept", "legacy too").returncode, 0)
+        (r / "a.py").write_text("x = 1\n")
+        listed = self.cli(r, "known").stdout
+        self.assertIn("broom: the 1 whose code changed hide nothing; `broom known --prune` drops them", listed)
+        kept = listed.count("\n  ") - 1
+        self.assertIn(f"pruned 1 known issue(s) whose code changed; {kept} left", self.cli(r, "known", "--prune").stdout)
+        after = self.cli(r, "known").stdout
+        self.assertIn(f"{kept} known issue(s), not raised again:", after)
+        self.assertNotIn("huge is", after, "the issue whose code changed is gone")
+        self.assertIn("b.py", after, "the issues whose code is there stay")
+        self.assertNotIn("--prune", after, "nothing is left to prune")
+
     def test_known_looks_for_the_line_in_a_linked_worktree_too(self) -> None:
         r = self.accepted_repo()
         self.sh(r, "git", "commit", "-qam", "land")

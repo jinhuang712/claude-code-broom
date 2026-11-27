@@ -8,7 +8,7 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from . import __version__
 from .asked import ask_blocked
@@ -239,7 +239,7 @@ def known_ask(args: argparse.Namespace, roots: List[Path]) -> int:
 
 def cmd_known(args: argparse.Namespace) -> int:
     """Run `broom known`: list the known issues here, accept the last blocked ones with a reason, ask the user about
-    them, or clear them."""
+    them, prune those whose code changed, or clear them."""
     roots = [Path(p).resolve() for p in args.paths] or [repo_or_exit()]
     if args.agreed and args.accept is None:
         raise SystemExit("broom: --agreed goes with --accept, to say the user agreed to leave the issues")
@@ -265,6 +265,16 @@ def cmd_known(args: argparse.Namespace) -> int:
 
     entries = recover(entries)  # an entry of a deleted worktree names the main checkout's file once proven
     spent = changed_code(entries)
+    if args.prune:
+        baseline_remove(sorted(spent), roots)
+        say(f"broom: pruned {len(spent)} known issue(s) whose code changed; {len(entries) - len(spent)} left")
+        return 0
+    known_list(entries, spent)
+    return 0
+
+
+def known_list(entries: Dict[str, dict], spent: Set[str]) -> None:
+    """Print the known issues `entries`, marking those whose code changed (`spent`) and how to drop them."""
     shown = f", {len(spent)} of them with their code changed" if spent else ""
     say(f"broom: {len(entries)} known issue(s){shown}, not raised again:")
     for k, e in sorted(entries.items(), key=lambda kv: (str(kv[1].get("file")), kv[1].get("line", 0))):
@@ -274,7 +284,8 @@ def cmd_known(args: argparse.Namespace) -> int:
         msg = e.get("msg", "(recorded by broom 0.2)")
         changed = "  (its code changed: no longer matches)" if k in spent else ""
         say(f"  {where}  {e.get('tool', '?')} {e.get('rule', '')}  {msg}  [{when}]{why}{changed}")
-    return 0
+    if spent:
+        say(f"broom: the {len(spent)} whose code changed hide nothing; `broom known --prune` drops them")
 
 
 # ---------------------------------------------------------------- hooks
@@ -359,13 +370,15 @@ def add_setup_parsers(sub: argparse._SubParsersAction) -> None:
 
 def add_issue_parsers(sub: argparse._SubParsersAction) -> None:
     """Add the `known` and `smells` subcommands and their flags to the subparsers `sub`, each with its handler."""
-    k = sub.add_parser("known", help="list, --accept, --ask about or --clear issues accepted as known")
+    k = sub.add_parser("known", help="list, --accept, --ask about, --prune or --clear issues accepted as known")
     way = k.add_mutually_exclusive_group()
     way.add_argument("--accept", metavar="WHY",
                      help="accept the issues of the last blocked commit or turn end here, with the reason")
     way.add_argument("--ask", metavar="QUESTION",
                      help="put a question to the user about those issues: they stay blocked and unaccepted, and "
                           "the turn's end tells the user instead of blocking; then stop")
+    way.add_argument("--prune", action="store_true",
+                     help="drop the known issues whose code changed: no line gives them any more, so they hide nothing")
     k.add_argument("--agreed", action="store_true", help="with --accept: the user agreed to leave them")
     k.add_argument("--smell", metavar="KIND", choices=sorted([*SMELL_LIMITS, *SMELL_PRESENCE, DEAD_CODE]),
                    help="with --accept and --agreed: accept the smells of this kind that stand at the paths, each "

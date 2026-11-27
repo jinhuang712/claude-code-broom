@@ -201,7 +201,7 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 **Status**: ✅
 
-`broom known [paths...] [--accept WHY [--agreed [--smell KIND]] | --ask QUESTION] [--clear]` lists, accepts or clears known issues, or puts a question to the user.
+`broom known [paths...] [--accept WHY [--agreed [--smell KIND]] | --ask QUESTION | --prune] [--clear]` lists, accepts, prunes or clears known issues, or puts a question to the user.
 
 | Flag | Means | Default |
 |---|---|---|
@@ -210,13 +210,14 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 | `--agreed` | with `--accept`, record that the user agreed | off |
 | `--smell KIND` | with `--accept` and `--agreed`, accept the smells of that kind standing at `paths`, each a file, a folder or `FILE:LINE` | off |
 | `--ask QUESTION` | mark what the last block showed as waiting for the user, and pass nothing | off |
+| `--prune` | remove the known issues under `paths` whose code changed, which hide nothing | off |
 | `--clear` | remove the known issues under `paths` | off |
 
 **Called by**: a person, the `/broom:status` skill, Claude when a block message offers `--accept`, and the clean skill once the user agreed that a smell stays.
 
-**Prints**: stdout gets one line per known issue with its location, tool, rule, message, date and reason. An entry of a worktree since deleted is first moved to the main checkout's file where a line of that file proves it. Accept prints `broom: accepted N issue(s) as known (WHY); commit again`, or `stop again` after a turn-end block. With `--smell` it prints `broom: accepted N standing KIND smell(s) in <repo> as known (WHY)`. An accept the user agreed to is listed with `the user agreed` beside its reason, and an entry no line of its file matches any more with `(its code changed: no longer matches)`, counted in the first line. Ask prints `broom: N issue(s) wait for the user's answer (QUESTION)` and that nothing is accepted. stderr gets the refusals.
+**Prints**: stdout gets one line per known issue with its location, tool, rule, message, date and reason. An entry of a worktree since deleted is first moved to the main checkout's file where a line of that file proves it. Accept prints `broom: accepted N issue(s) as known (WHY); commit again`, or `stop again` after a turn-end block. With `--smell` it prints `broom: accepted N standing KIND smell(s) in <repo> as known (WHY)`. An accept the user agreed to is listed with `the user agreed` beside its reason, and an entry no line of its file matches any more with `(its code changed: no longer matches)`, counted in the first line. When there are such entries, a last line says that `--prune` drops them. Prune prints `broom: pruned N known issue(s) whose code changed; M left`. Ask prints `broom: N issue(s) wait for the user's answer (QUESTION)` and that nothing is accepted. stderr gets the refusals.
 
-**Fails**: exit 1 when there is no blocked commit or turn end to accept or to ask about, when every finding is one that can't be accepted, when WHY or QUESTION is empty, when `BROOM_NO_ACCEPT` is set for an accept and outside a repo. Exit 1 for `--agreed` without `--accept`, and for `--smell` without `--accept`, without `--agreed`, without paths, or with no smell of KIND there that isn't known already. Exit 2 for `--accept` with `--ask`, and for an unknown KIND.
+**Fails**: exit 1 when there is no blocked commit or turn end to accept or to ask about, when every finding is one that can't be accepted, when WHY or QUESTION is empty, when `BROOM_NO_ACCEPT` is set for an accept and outside a repo. Exit 1 for `--agreed` without `--accept`, and for `--smell` without `--accept`, without `--agreed`, without paths, or with no smell of KIND there that isn't known already. Exit 2 for two of `--accept`, `--ask` and `--prune`, and for an unknown KIND.
 
 **Example**: `broom known --accept "predates this change"` prints `broom: accepted 2 issue(s) as known (predates this change); commit again`. `broom known --accept "rounds up to whole seconds" --agreed --smell magic_numbers src/clock.go:41` accepts one magic number the user decided to keep.
 
@@ -260,7 +261,7 @@ With `--only function_lines` or `--only type_lines` alone, the list goes on unde
 
 **Called by**: a person and Claude.
 
-**Prints**: stdout gets four sections of aligned tables: `Size`, with the longest code files and the largest files of any kind, `Tests`, `Rot`, with the unsafe code and the broken Markdown links, and `History`. `Tests` ends with the coverage by the project's own report, or with the command that writes one. stderr gets `broom: not inside a git repository`.
+**Prints**: stdout gets four sections of aligned tables: `Size`, with the longest code files and the largest files of any kind, `Tests`, `Rot`, with the unsafe code and each broken Markdown link beside the path it points at, and `History`. `Tests` ends with the coverage by the project's own report, or with the command that writes one. stderr gets `broom: not inside a git repository`.
 
 **Fails**: exit 1 outside a repo.
 

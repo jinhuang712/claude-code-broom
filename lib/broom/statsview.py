@@ -107,6 +107,15 @@ def counted_lines(part: dict, what: str) -> List[str]:
             *table(["files with most", "count"], [[r["file"], r["count"]] for r in part["files"]])]
 
 
+def links_lines(part: dict) -> List[str]:
+    """The broken Markdown links as the rot section shows them: the count, then each link with where it points."""
+    shown = len(part["links"])
+    more = [f"  the first {shown}; --top shows more"] if shown < part["total"] else []
+    rows = [[f"{r['file']}:{r['line']}", r["target"]] for r in part["links"]]
+    return [f"  {part['total']} Markdown links to paths that don't exist",
+            *table(["link", "points at"], rows, left=(0, 1)), *more]
+
+
 def rot_lines(d: dict) -> List[str]:
     """The rot section: lint suppressions, TODO comments, skipped tests, unsafe code, broken Markdown links."""
     s, t = d["suppressions"], d["todos"]
@@ -116,7 +125,7 @@ def rot_lines(d: dict) -> List[str]:
     todos = [todo_text(t), *table(["files with most", "count"], [[r["file"], r["count"]] for r in t["files"]])]
     return section("Rot", d["note"], [suppressed, todos, [f"  {d['skipped_tests']} skipped tests"],
                                        counted_lines(d["unsafe_code"], "unsafe constructs"),
-                                       counted_lines(d["broken_links"], "Markdown links to paths that don't exist")])
+                                       links_lines(d["broken_links"])])
 
 
 def history_lines(d: dict) -> List[str]:

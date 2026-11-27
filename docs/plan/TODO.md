@@ -132,3 +132,15 @@
 - created: 2026-11-27
 - found: a real Go repo's report on 0.30.1
 - related: [F10.1: Whole-repo diagnosis](../features/F10-diagnosis.md#f101-whole-repo-diagnosis)
+
+---
+
+### [P2][IDEA] A known issue whose tool no longer reports it
+
+- description:
+  - `broom known` marks an entry whose line is gone, and `--prune` drops it.
+  - An entry whose line is still there while its tool no longer reports it, such as a number a rule of a later version ignores, is neither marked nor dropped. It hides nothing and stays in the list.
+  - Telling it needs a run of the tool on the entry's file. A check that covers the file and doesn't find the entry's finding could mark it.
+- created: 2026-11-27
+- found: a real Go repo's report on 0.32.1
+- related: [046: A known issue never expires](../specs/decisions/046-known-issues-never-expire.md)

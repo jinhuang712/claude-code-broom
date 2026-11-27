@@ -52,7 +52,8 @@ class TargetTest(BroomCase):
         known = mdlinks.known_paths(["README.md", "docs/a.md", "docs/img/x.png"])
         body = text("[ok](docs/a.md) [folder](docs/img/) [root](.) [anchor](#a) [url](https://x.org/y.md)",
                     "[gone](docs/gone.md) [case](DOCS/a.md) ![pic](docs/img/y.png)", "[ref]: nowhere/at/all.md")
-        self.assertEqual(mdlinks.broken("README.md", body, known), [2, 2, 2, 3])
+        self.assertEqual(mdlinks.broken("README.md", body, known),
+                         [(2, "docs/gone.md"), (2, "DOCS/a.md"), (2, "docs/img/y.png"), (3, "nowhere/at/all.md")])
 
 
 if __name__ == "__main__":

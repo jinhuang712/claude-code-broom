@@ -177,16 +177,26 @@ def counted_part(counts: Dict[str, int], top: int) -> dict:
     return {"total": sum(counts.values()), "files": ranked(counts, top)}
 
 
+def links_part(facts: List[Facts], top: int) -> dict:
+    """The Markdown links to paths that don't exist: the total, the `top` files holding most, and the first `top` links
+    of those files, each with its line and its destination as written, so a reader can find it."""
+    part = counted_part({f.rel: len(f.broken_links) for f in facts if f.broken_links}, top)
+    by_file = {f.rel: f.broken_links for f in facts}
+    rows = [{"file": r["file"], "line": line, "target": dest}
+            for r in part["files"] for line, dest in by_file[r["file"]]]
+    return {**part, "links": rows[:top]}
+
+
 def rot_section(facts: List[Facts], top: int, note: Optional[str]) -> dict:
     """Lint suppressions by kind, with the `top` files holding most; the TODO comments; skipped tests as one number;
-    unsafe code and Markdown links to paths that don't exist, each with the files holding most."""
+    unsafe code with the files holding most; Markdown links to paths that don't exist, each named (`links_part`)."""
     kinds = Counter(k for f in facts for k in f.suppressions)
     suppressed = {f.rel: len(f.suppressions) for f in facts if f.suppressions}
     return {"suppressions": {"total": sum(kinds.values()), "kinds": dict(kinds.most_common()),
                              "files": ranked(suppressed, top)},
             "todos": todo_part(facts, top), "skipped_tests": sum(f.skipped for f in facts),
             "unsafe_code": counted_part({f.rel: f.unsafe for f in facts if f.unsafe}, top),
-            "broken_links": counted_part({f.rel: len(f.broken_links) for f in facts if f.broken_links}, top),
+            "broken_links": links_part(facts, top),
             "note": note or unread_note(facts)}
 
 

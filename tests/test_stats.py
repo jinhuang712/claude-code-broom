@@ -278,15 +278,27 @@ class LinksTest(StatsCase):
     def test_a_link_to_a_relative_path_that_is_not_in_the_repo_is_broken(self) -> None:
         d = self.report(self.make())
         facts = {f.rel: f.broken_links for f in stats.collect(self.make(), []) if f.broken_links}
-        self.assertEqual(facts, {"README.md": [1, 5], "docs/a.md": [1, 1]}, "the fence, the URL and the anchor are none")
-        self.assertEqual(d["rot"]["broken_links"], {"total": 4, "files": [{"file": "README.md", "count": 2},
-                                                                          {"file": "docs/a.md", "count": 2}]})
-        self.assertIn("\n  4 Markdown links to paths that don't exist\n", statsview.render(d))
+        self.assertEqual(facts, {"README.md": [(1, "docs/gone.md"), (5, "built/out.md")],
+                                 "docs/a.md": [(1, "missing.md#x"), (1, "img/none.png")]},
+                         "the fence, the URL and the anchor are none")
+        self.assertEqual(d["rot"]["broken_links"]["files"], [{"file": "README.md", "count": 2},
+                                                             {"file": "docs/a.md", "count": 2}])
+        self.assertEqual(d["rot"]["broken_links"]["total"], 4)
+        self.assertEqual(d["rot"]["broken_links"]["links"][2], {"file": "docs/a.md", "line": 1, "target": "missing.md#x"})
+        text_ = statsview.render(d)
+        self.assertIn("\n  4 Markdown links to paths that don't exist\n", text_)
+        self.assertIn("\n  README.md:1  docs/gone.md\n", text_, "each link is named with where it points")
+        self.assertNotIn("--top shows more", text_, "all four are shown")
+
+    def test_a_long_list_of_broken_links_says_it_is_cut(self) -> None:
+        d = self.report(self.make(), top=1)
+        self.assertEqual(d["rot"]["broken_links"]["links"], [{"file": "README.md", "line": 1, "target": "docs/gone.md"}])
+        self.assertIn("\n  the first 1; --top shows more", statsview.render(d))
 
     def test_a_path_narrows_the_files_but_not_what_a_link_may_point_at(self) -> None:
         d = self.report(self.make(), "docs")
-        self.assertEqual(d["rot"]["broken_links"], {"total": 2, "files": [{"file": "docs/a.md", "count": 2}]},
-                         "../README.md is outside the path and is there")
+        self.assertEqual((d["rot"]["broken_links"]["total"], d["rot"]["broken_links"]["files"]),
+                         (2, [{"file": "docs/a.md", "count": 2}]), "../README.md is outside the path and is there")
         self.assertEqual(d["files"], 0, "no code file")
 
 

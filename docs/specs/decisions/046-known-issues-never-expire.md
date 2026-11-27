@@ -31,8 +31,8 @@ Its key already holds the text of its line, the tool, the rule and the message. 
 
 ## Consequences
 
-An entry whose code changed hides nothing and stays in the store, listed by `broom known`, until `broom known --clear` removes it.
+An entry whose code changed hides nothing and stays in the store, listed by `broom known`, until `broom known --prune` or `broom known --clear` removes it.
 
-The store grows with every accept and shrinks only by `--clear`.
+The store grows with every accept and shrinks only by `--prune` and `--clear`, each run on request.
 
-Since 2026-11-27 `broom known` marks an entry that no line of its file gives any more, in the main checkout or in a linked worktree, and still drops none.
+Since 2026-11-27 `broom known` marks an entry that no line of its file gives any more, in the main checkout or in a linked worktree, and still drops none by itself. Since 0.32.2 it says that `broom known --prune` drops those. A prune that drops an entry of a worktree deleted before its work landed costs one more accept when the work lands.
