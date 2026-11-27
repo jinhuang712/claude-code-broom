@@ -32,10 +32,10 @@ from .imports import import_lines
 from .measure import SMELL_EXTS, Limits, Raw
 from .realtree import Budget, Found, find_in_real_tree
 from .rowcache import RowCache
-from .smell import Scan, Smell, level, made_worse
+from .smell import ASSERTS_NOTHING, Scan, Smell, kind_of, level, made_worse
 from .testrot import TEST_FILE, UNTESTED_FILE, skip_rows, test_clones, untested_smells
 from .touched import old_smells, touched, touches
-from .toolchain import GO_EXTS, JS_EXTS, RS_EXTS, SWIFT_EXTS
+from .toolchain import GO_EXTS, JS_EXTS, PY_EXTS, RS_EXTS, SWIFT_EXTS
 
 GIT_TIMEOUT = 60
 
@@ -109,18 +109,34 @@ def one_per_line(rows: List[Raw]) -> List[Raw]:
 
 
 # Where a smell is found by a guess, not a parse, it is only a nit even when the same smell blocks in another
-# language. In Rust `let _ = f();` drops a Result by design as often as by mistake, and clippy can't tell which.
-GUESSED = {"commented_code": JS_EXTS | GO_EXTS | RS_EXTS | SWIFT_EXTS, "swallowed_error": RS_EXTS}
+# language. In Rust `let _ = f();` drops a Result by design as often as by mistake, and clippy can't tell which. A
+# test that asserts nothing is sure in TS/JS and Go, where nothing but a crash can fail it; elsewhere a helper of the
+# test's own may assert. The keys are kinds (`kind_of`).
+GUESSED = {"commented_code": JS_EXTS | GO_EXTS | RS_EXTS | SWIFT_EXTS, "swallowed_error": RS_EXTS,
+           ASSERTS_NOTHING: PY_EXTS | RS_EXTS | SWIFT_EXTS}
 
 
-def presence_level(metric: str, rel: str) -> str:
-    """The level of a presence smell in file `rel`: a nit for a kind guessed by text, else its normal level."""
-    return NIT if Path(rel).suffix in GUESSED.get(metric, ()) else SMELL_PRESENCE[metric]
+def presence_level(metric: str, rel: str, key: str = "") -> str:
+    """The level of a presence smell of the row key `key` in file `rel`: a nit for a kind guessed, else its normal
+    level."""
+    return NIT if Path(rel).suffix in GUESSED.get(kind_of(metric, key), ()) else SMELL_PRESENCE[metric]
 
 
 def example(metric: str, rows: list) -> str:
-    """The key of an occurrence smell: its metric, or for a NOTED smell what its first finding says."""
-    return rows[0].key if metric in NOTED else metric
+    """The key of an occurrence smell: its metric, for a NOTED smell what its first finding says, and for another kind
+    of the metric (`kind_of`) that kind."""
+    if metric in NOTED:
+        return rows[0].key
+    return kind_of(metric, rows[0].key)
+
+
+def occurrence_smell(repo: Path, where: Tuple[str, str], rows: list, value: int, was: Optional[int]) -> Smell:
+    """The finding of the occurrence rows `rows` of one kind of a metric in a file, `where` (the file, the metric),
+    `value` of them in the file and `was` at the base (None for none to compare with)."""
+    rel, metric = where
+    key = example(metric, rows)
+    return Smell(repo, repo / rel, rows[0].line, metric, key, value, was, rows[0].tool, presence_level(metric, rel, key),
+                 0, [r.line for r in rows])
 
 
 def compare_occurrences(now: List[Raw], before: Optional[List[Raw]], repo: Path) -> List[Smell]:
@@ -129,19 +145,22 @@ def compare_occurrences(now: List[Raw], before: Optional[List[Raw]], repo: Path)
     now = one_per_line(now)
     before = None if before is None else one_per_line(before)
     old = Counter((r.rel, r.metric, r.key) for r in before or [])
-    added: Dict[Tuple[str, str], List[Raw]] = {}
+    added: Dict[Tuple[str, str, str], List[Raw]] = {}
     for r in now:
         if old[(r.rel, r.metric, r.key)] > 0:
             old[(r.rel, r.metric, r.key)] -= 1
         else:
-            added.setdefault((r.rel, r.metric), []).append(r)
-    total = Counter((r.rel, r.metric) for r in now)
-    was = Counter((r.rel, r.metric) for r in before or [])
+            added.setdefault(kind_key(r), []).append(r)
+    total = Counter(kind_key(r) for r in now)
+    was = Counter(kind_key(r) for r in before or [])
     # An edited line that keeps its occurrence is new by text but adds nothing: only a higher count counts.
-    return [Smell(repo, repo / rel, rows[0].line, metric, example(metric, rows), total[(rel, metric)],
-                  None if before is None else was[(rel, metric)], rows[0].tool, presence_level(metric, rel), 0,
-                  [r.line for r in rows])
-            for (rel, metric), rows in added.items() if before is None or total[(rel, metric)] > was[(rel, metric)]]
+    return [occurrence_smell(repo, k[:2], rows, total[k], None if before is None else was[k])
+            for k, rows in added.items() if before is None or total[k] > was[k]]
+
+
+def kind_key(r: Raw) -> Tuple[str, str, str]:
+    """What the occurrences of a row are counted under: its file, its metric and its kind (`kind_of`)."""
+    return r.rel, r.metric, kind_of(r.metric, r.key)
 
 
 def counted(now: List[Raw], off: Tuple[str, ...]) -> List[Raw]:
@@ -255,7 +274,7 @@ def real_tree_smells(found: List[Found], change: Change, lim: RepoLimits, off: T
     change only edited the inside of is the old smell of a function it touched. An occurrence on a line the change
     only moved is an old one."""
     repo = change.repo
-    added: Dict[Tuple[str, str], List[Found]] = {}
+    added: Dict[Tuple[str, str, str], List[Found]] = {}
     out = []
     for f in found:
         lines = change.lines(f.rel)
@@ -267,7 +286,7 @@ def real_tree_smells(found: List[Found], change: Change, lim: RepoLimits, off: T
         if f.metric in SMELL_PRESENCE and change.only_moved(f.rel, f.line):
             continue
         if f.metric in SMELL_PRESENCE:
-            added.setdefault((f.rel, f.metric), []).append(f)
+            added.setdefault((f.rel, f.metric, kind_of(f.metric, f.key)), []).append(f)
         elif f.metric == DEAD_CODE:
             out.append(Smell(repo, repo / f.rel, f.line, DEAD_CODE, f.key, 1, None, f.tool, NIT, 0))
         else:
@@ -276,9 +295,8 @@ def real_tree_smells(found: List[Found], change: Change, lim: RepoLimits, off: T
             if at:
                 out.append(Smell(repo, repo / f.rel, f.line, f.metric, f.key, f.value, None, f.tool, at,
                                  pair[1] if at == "block" else pair[0]))
-    for (rel, metric), rows in added.items():
-        out.append(Smell(repo, repo / rel, rows[0].line, metric, example(metric, rows), len(rows), None, rows[0].tool,
-                         presence_level(metric, rel), 0, [r.line for r in rows]))
+    for (rel, metric, _), rows in added.items():
+        out.append(occurrence_smell(repo, (rel, metric), rows, len(rows), None))
     return out
 
 

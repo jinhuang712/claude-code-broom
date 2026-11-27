@@ -20,7 +20,7 @@
   "suppression": "Give the suppression its rule and a reason.",
   "swallowed_error": "Handle or log the error.",
   "todo": "Do it, or write it down as an issue and drop the comment.",
-  "broad_test_asserts": "Assert on the message or the exact error.",
+  "broad_test_asserts": "Assert the specific outcome the test is for: the exact error, message or value.",
   "broad_catch": "Catch only the errors you expect and let the rest through; where one handler must take all, log the error or re-raise it.",
   "skipped_test": "Unskip it and fix the test, or delete it. A test that must wait says what it waits on in the skip's reason, and is accepted with that as the reason.",
   "untested_file": "Write the tests beside it: a test file named for it (test_name.py, name_test.go, name.test.ts, NameTests.swift) that checks what it does.",

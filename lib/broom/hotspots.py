@@ -18,7 +18,7 @@ from .findings import Issue
 from .gate import baseline_keys, display, issue_key, note_text
 from .gitutil import changed_since, git
 from .sizes import SIZED, find_sizes
-from .smell import DESCRIBE, LABELS
+from .smell import DESCRIBE
 from .smells import Smell, find_smells
 from .state import load_json, save_json, short_hash, update_json
 from .statsgit import CHURN_COMMITS, commits_per_file
@@ -113,7 +113,7 @@ def lines_of(s: Smell) -> List[int]:
 def standing_issue(s: Smell, line: int) -> Issue:
     """The smell `s` at `line` as the known-issue store keys it: an occurrence by its kind alone, so the key follows
     the text of its line; a sized smell by its message as a whole-repo scan words it, so the key follows its size."""
-    msg = LABELS[s.metric] if s.metric in SMELL_PRESENCE else replace(s, compared=False, touched=False).text()
+    msg = s.label() if s.metric in SMELL_PRESENCE else replace(s, compared=False, touched=False).text()
     return Issue("smells", s.repo, s.file, line, 0, s.metric, msg)
 
 

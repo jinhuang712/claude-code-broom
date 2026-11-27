@@ -43,6 +43,21 @@ LABELS = {
     "untested_file": "new code file(s) with no test file beside it by name",
     "deprecated_api": "call(s) to a deprecated API",
 }
+# The extreme of a broad assertion is none at all: a test that asserts nothing passes whatever the code does. It is the
+# same smell, `broad_test_asserts`, told apart by its key: a row's starts `ASSERTS_NOTHING`, and its finding's is it.
+ASSERTS_NOTHING = "asserts nothing"
+LABELS[ASSERTS_NOTHING] = "test(s) that assert nothing"
+
+
+def nothing_key(name: str) -> str:
+    """The key of a row of a test that asserts nothing, named `name`: it matches the test across versions."""
+    return f"{ASSERTS_NOTHING}: {name}"
+
+
+def kind_of(metric: str, key: str) -> str:
+    """The kind of an occurrence row of `metric` keyed `key`: `ASSERTS_NOTHING` for a test that asserts nothing, else
+    the metric. Each kind is a finding of its own, with its own words and level."""
+    return ASSERTS_NOTHING if metric == "broad_test_asserts" and key.startswith(ASSERTS_NOTHING) else metric
 LINES_SHOWN = 5
 NOTE_CHARS = 240  # how much of a finding's own words a NOTED smell's text keeps
 
@@ -84,8 +99,8 @@ class Smell:
             where = ", ".join(map(str, self.added[:LINES_SHOWN])) + (" ..." if len(self.added) > LINES_SHOWN else "")
             where += self.note()
             if self.was is None:
-                return f"{self.value} {LABELS[self.metric]} at line(s) {where}"
-            return (f"{self.value - self.was} more {LABELS[self.metric]} ({self.value} in the file, was {self.was}); "
+                return f"{self.value} {self.label()} at line(s) {where}"
+            return (f"{self.value - self.was} more {self.label()} ({self.value} in the file, was {self.was}); "
                     f"new or changed at line(s) {where}")
         what = DESCRIBE[self.metric].format(key=self.key, value=self.value)
         bar = f"hard limit {self.limit}" if self.level == "block" else f"over {self.limit}"
@@ -95,6 +110,10 @@ class Smell:
         if self.touched:
             how += ": you touched it, clean it up in this change"
         return f"{what} ({bar}; {how})"
+
+    def label(self) -> str:
+        """What an occurrence smell's finding calls what it counts, by its kind (`kind_of`)."""
+        return LABELS[kind_of(self.metric, self.key)]
 
     def note(self) -> str:
         """What the tool said of a NOTED smell's first finding, in brackets and cut at NOTE_CHARS; else nothing."""
