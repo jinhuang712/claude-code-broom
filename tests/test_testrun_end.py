@@ -122,6 +122,22 @@ class TurnEndTest(TestRunCase):
         self.bash(r, "just check --all")
         self.assertEqual(self.stop(r), {})
 
+    def test_the_fix_says_a_runner_of_the_projects_own_is_seen_only_when_test_commands_names_it(self) -> None:
+        said = "A test runner of the project's own, such as a script, is seen only once `test_commands` in .broom.json"
+        bare = self.code_repo()
+        self.change(bare)
+        self.assertIn(f"  tests_not_run: Run the project's tests, then stop again. {said} names it.\n",
+                      self.stop(bare)["reason"])
+
+    def test_the_fix_stays_as_it_was_when_the_repo_names_test_commands(self) -> None:
+        said = "A test runner of the project's own"
+        named = self.code_repo(**{".broom.json": '{"smells_off": ["dead_code", "missing_docs"], '
+                                                 '"test_commands": ["just check"]}'})
+        self.change(named)
+        reason = self.stop(named)["reason"]
+        self.assertIn("  tests_not_run: Run the project's tests, then stop again.\n", reason)
+        self.assertNotIn(said, reason)
+
     def test_a_subagents_end_never_raises_it(self) -> None:
         r = self.code_repo()
         agent = {"session_id": "s1", "cwd": str(r), "agent_id": "ag1"}

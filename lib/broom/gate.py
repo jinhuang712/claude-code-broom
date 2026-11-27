@@ -16,7 +16,7 @@ from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from . import ledger
 from .findings import Issue
-from .config import OPTIONAL_NOTE, TESTS_TOOL, excluded
+from .config import OPTIONAL_NOTE, TESTS_NOT_RUN, TESTS_TOOL, excluded, repo_config
 from .fixes import how_to_fix
 from .gitutil import ChangedLines, git_root, main_worktree, worktrees
 from .state import DATA_ROOT, load_json, say, short_hash, update_json
@@ -350,7 +350,8 @@ def guidance(entries: List[Tuple[Issue, List[str]]], way_out: Optional[str]) -> 
     report that isn't a block."""
     if way_out is None:
         return []
-    fix = how_to_fix(i.rule for i, _ in entries if i.tool in ("smells", TESTS_TOOL))
+    bare = any(i.rule == TESTS_NOT_RUN and not repo_config(i.root).get("test_commands") for i, _ in entries)
+    fix = how_to_fix((i.rule for i, _ in entries if i.tool in ("smells", TESTS_TOOL)), own_runner=bare)
     return (["\n" + "\n".join(fix)] if fix else []) + ["\n" + way_out]
 
 
