@@ -13,14 +13,14 @@ F4: Smells
 │   ├── F4.5.1: Import cycle
 │   └── F4.5.2: Folder cycle
 ├── F4.6: What is skipped — dependencies, build output and generated code
-├── F4.7: Tests — measured by rules of their own
+├── F4.7: Tests — only what lets a test lie stops a change
 ├── F4.8: Limits told before the work — Claude knows the bar when it starts
 └── F4.9: Old smells in touched code — whoever is in the code cleans it
 ```
 
 A smell is code that works and is hard to change. broom measures smells against its own limits in every repo. What a change made worse counts, and so does an old smell in the code it touches. Code a change doesn't touch never comes up.
 
-A smell has 1 of 3 levels. A hint and a block both stop a commit and a turn's end, and pass only fixed or accepted with a reason. A block is past the hard limit, and one that was there and grew can't be accepted. A nit is a slight smell, or one a detector guesses: it is told and stops nothing. The `smells` setting turns them all off, and `smells_off` in `.broom.json` turns single ones off.
+A smell has 1 of 3 levels. A hint and a block both stop a commit and a turn's end, and pass only fixed or accepted with a reason. A block is past the hard limit, and one that was there and grew can't be accepted. A nit is a slight smell, one a detector guesses, or a test's shape: it is told and stops nothing. The `smells` setting turns them all off, and `smells_off` in `.broom.json` turns single ones off.
 
 - **Stance**: [One bar for smells](../PHILOSOPHY.md#whose-bar-measures-a-code-smell)
 - **Design**: [4. A finding counts only where the change made things worse](../DESIGNS.md#4-a-finding-counts-only-where-the-change-made-things-worse)
@@ -256,11 +256,20 @@ Tracked directories skipped by name are listed in a note.
 
 ## F4.7: Tests
 
-In tests, complexity and magic numbers don't count. Neither do the length or complexity of `describe`, `it` and `test` callbacks. Long test functions still count.
+A test is judged by what it proves, not by how it reads. In a test file only 4 smells keep their level, since each lets a test pass while the code is wrong:
 
-A test file may be twice as long as a code file: its `file_lines` limits are 800 and 2000. It is long by the cases it lists, and the code it tests can be within its own limit. A file of helper code among the tests gets the same limits, since a test file is told by its path.
+| Smell | Level | How it lets a test lie |
+|---|---|---|
+| `skipped_test` | hint | the test never runs |
+| `broad_test_asserts` | hint | any error passes it |
+| `swallowed_error` | block | the failure is caught and dropped |
+| `suppression` | block | a rule the project set is silenced |
 
-`test_limits` in `.broom.json` moves the limits for test files.
+Every other smell in a test file is a nit: told, and it stops nothing. That holds past the hard limit too, and for an old smell in a test the change touches. The project's own linter and type checker judge tests as they judge code.
+
+In tests, complexity and magic numbers don't count at all. Neither do the length or complexity of `describe`, `it` and `test` callbacks.
+
+A test file may be twice as long as a code file before its length is told: its `file_lines` limits are 800 and 2000. `test_limits` in `.broom.json` moves the limits for test files.
 
 A test file is told by its path. Besides the names a test runner collects, the helpers a runner names are test code:
 
@@ -272,7 +281,9 @@ A test file is told by its path. Besides the names a test runner collects, the h
 
 - A Go folder named `latest`, `attest` or `contest` reads as test code.
 
+- **Stance**: [Whether it can lie, not how it reads](../PHILOSOPHY.md#what-does-broom-judge-in-a-test)
 - **Why**:
+  - [051: A test is judged by what it proves, not by how it reads](../specs/decisions/051-tests-judged-by-what-they-prove.md)
   - [012: Tests take limits of their own](../specs/decisions/012-test-limits.md)
   - [040: A test file may be twice as long as a code file](../specs/decisions/040-test-file-length.md)
   - [045: A Go test-helper package is test code](../specs/decisions/045-test-helper-packages.md)

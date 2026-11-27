@@ -37,7 +37,8 @@ Goals
     ├── ✅ R5: Nothing is waved through
     ├── ✅ R6: No check reads code by a text pattern
     ├── ✅ R7: No rule turns on the clock
-    └── ✅ R8: What is hidden still counts
+    ├── ✅ R8: What is hidden still counts
+    └── ⬜ R9: A test's shape never stops Claude
 ```
 
 ---
@@ -472,3 +473,17 @@ An edit must not be felt, since Claude makes many in a row.
 **How**: `tests/test_standing.py` accepts smells and issues and reads the totals of `broom smells`, `broom diagnose`, `broom sweep`, the session note, the commit check and the turn's end.
 
 **Status**: ✅ 2026-11-27, by `tests/test_standing.py`.
+
+---
+
+#### R9: A test's shape never stops Claude
+
+**Want**: clean work without asking.
+
+**Checks**: [F4.7: Tests](../features/F4-smells.md#f47-tests)
+
+**Condition**: In a test file only a skipped test, a broad test assertion, a swallowed error and a suppression stop a commit or a turn's end. Every other smell there is a nit, past the hard limit too.
+
+**How**: A test commits a test file with a function past the hard limit, too many parameters and a skipped test, and expects the commit to stop on the skip alone, with the rest told as nits.
+
+**Status**: ⬜

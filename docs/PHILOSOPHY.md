@@ -43,6 +43,14 @@ Code smells are the exception to the project's tools. Long functions, big files,
 
 ---
 
+## What does broom judge in a test?
+
+**Whether it can lie, not how it reads.**
+
+A test is worth what it proves. A skip, an assertion that any error passes, an error caught and dropped, or a rule silenced lets it pass while the code is wrong, and those stop a change as they do in code. How long a test is, how many parameters it takes and how it is shaped change nothing it proves, so they are told and stop nothing. The project's own tools still judge tests as they judge code.
+
+---
+
 ## How much of the code does a check judge?
 
 **Only what changed.**

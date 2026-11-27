@@ -44,3 +44,5 @@ A repo that set `file_lines` in `test_limits` keeps what it set. `"test_limits":
 A `test_limits` entry is a self-waiver when it lifts a test file past twice the code's limits, and none at or below them.
 
 The factor rests on one repo's test files. broom's own test files all stay within the code's limit.
+
+Since [051: A test is judged by what it proves, not by how it reads](051-tests-judged-by-what-they-prove.md) a test file past these limits is a nit and stops nothing, so the factor decides only when its length is told.

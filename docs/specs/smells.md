@@ -162,6 +162,9 @@ A new code file counts as untested when no test file anywhere in the repo is nam
 
 A test file is told by its path: a name a test runner collects, such as `test_a.py`, `a_test.go`, `a.test.ts` or a file under `tests/`, a Go file directly in a folder whose name ends in `test`, such as `httptest`, pytest's `conftest.py`, and Jest's and Vitest's helpers: a file under `__mocks__/` and the setup files `setupTests.*`, `jest.setup.*` and `vitest.setup.*`. Go names a package after its folder, so the folder's name is the package's. A test file's limits are the code's with `file_lines` doubled, and then what `test_limits` sets. The tools measure against the lower soft limit of the two sets, and each row takes its level from the limits of its own file.
 
+A row in a test file then keeps its level only for `skipped_test`, `broad_test_asserts`, `swallowed_error` and `suppression`. Every other row there becomes a nit, a touched one and one past the hard limit among them. The level is set once, where the row is made, so the commit check, the turn's end, the scans and the hotspots all read the same level.
+
+- [051: A test is judged by what it proves, not by how it reads](decisions/051-tests-judged-by-what-they-prove.md)
 - [009: An occurrence counts when the change raises the count](decisions/009-occurrence-by-count.md)
 - [012: Tests take limits of their own](decisions/012-test-limits.md)
 - [040: A test file may be twice as long as a code file](decisions/040-test-file-length.md)

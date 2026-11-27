@@ -53,7 +53,7 @@ Features
 │   │   ├── ✅ F4.5.1: Import cycle
 │   │   └── ✅ F4.5.2: Folder cycle
 │   ├── ✅ F4.6: What is skipped — dependencies, build output and generated code
-│   ├── ✅ F4.7: Tests — measured by rules of their own
+│   ├── ✅ F4.7: Tests — only what lets a test lie stops a change
 │   ├── ✅ F4.8: Limits told before the work — Claude knows the bar when it starts
 │   └── 🚧 F4.9: Old smells in touched code — outside Python only lengths are told
 ├── ✅ F5: Cleanup — the smells already in a repo
