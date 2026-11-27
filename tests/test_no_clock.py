@@ -28,7 +28,7 @@ ALLOWED: Dict[Tuple[str, str], Tuple[str, str]] = {
     ("asks", "cmd_report"): (ORDER, "report's --since takes a broom version, not a day"),
     ("checks", "timed"): (RUNTIME, "how long a check ran, to tell one that timed out"),
     ("checkup", "check_up.keep"): (STAMP, "the day of the last check-up, as it is shown"),
-    ("cli", "cmd_known"): (STAMP, "the day an issue was accepted, as broom known shows it"),
+    ("cli", "known_list"): (STAMP, "the day an issue was accepted, as broom known shows it"),
     ("commitgate", "checked"): (RUNTIME, "a whole check's seconds, for the record"),
     ("compare", "compare"): (RUNTIME, "how long a compare took, as it is shown"),
     ("coverage", "behind"): (ORDER, "a covered file written after the report"),
