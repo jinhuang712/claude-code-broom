@@ -209,6 +209,14 @@ class GlobalsTest(GoTextCase):
             with self.subTest(rows=rows):
                 self.assertEqual(self.assigned(rows, head=head), [])
 
+    def test_another_packages_variable_is_program_setup_in_main_and_init_and_counts_in_any_other_function(self) -> None:
+        head = ("package a", "", 'import "flag"', "")
+        for name in ("main", "init"):
+            with self.subTest(name=name):
+                self.assertEqual(self.assigned((f"func {name}() {{", "\tflag.Usage = func() {}", "}"), head=head), [])
+        self.assertEqual(self.assigned(("func Run() {", "\tflag.Usage = func() {}", "}"), head=head), [[6]])
+        self.assertEqual(self.assigned(("func main() {", "\tcount++", "}")), [[6]], "the package's own variable")
+
     def test_an_old_assignment_stays_quiet_when_the_change_is_elsewhere(self) -> None:
         old = text(*STATE, "func Bump() {", "\tcount++", "}")
         self.assertEqual(self.changed("a.go", old, old + "\nvar y = 1\n"), [])

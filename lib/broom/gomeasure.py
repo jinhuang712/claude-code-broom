@@ -121,7 +121,8 @@ def assigned_name(m: Match, names: Set[str], imported: Set[str]) -> str:
 def first_assignments(ms: List[Match], names: Set[str]) -> List[Tuple[int, str]]:
     """The (line, variable) of one file's matches `ms` where a function first assigns one of the package variables
     `names`, or a variable of a package the file imports. `init` sets the package up, so what it assigns doesn't
-    count; neither does a name the function declares, which hides a package variable or an imported package."""
+    count, and `main` sets the program up, so what it assigns of another package, as `flag.Usage = usage`, doesn't
+    either; neither does a name the function declares, which hides a package variable or an imported package."""
     units = [m for m in ms if m.rule == "go-state-func"]
     local = {(unit_of(m, units), m.caught.get("NAME")) for m in ms if m.rule == "go-state-local"}
     imported = {import_name(m) for m in ms if m.smell == "imported"} - {""}
@@ -132,7 +133,8 @@ def first_assignments(ms: List[Match], names: Set[str]) -> List[Tuple[int, str]]
         if unit is None or not name or (unit, name.split(".")[0]) in local or (unit, name) in seen:
             continue
         seen.add((unit, name))
-        if units[unit].caught.get("NAME") != "init":
+        setup = ("init", "main") if "." in name else ("init",)
+        if units[unit].caught.get("NAME") not in setup:
             out.append((m.line, name))
     return out
 
