@@ -18,7 +18,9 @@ ledger.jsonl ◀─────────────────────�
 
 ## The ledger
 
-The ledger is `ledger.jsonl` in the data directory, one JSON object per line. Every line holds the time, the repo, the event and the hook it came from. The repo is the main worktree's root, so a repo and its linked worktrees share one record. A file is given relative to its own worktree's root.
+Each repo's ledger is `ledger.jsonl` in its `.broom/`, one JSON object per line. A record of no repo goes to a folder of the data directory, and `broom report --all` reads every repo the data directory's index names. Every line holds the time, the repo, the event and the hook it came from. The repo is the main worktree's root, so a repo and its linked worktrees share one record. A file is given relative to its own worktree's root.
+
+- [053: What broom finds in a repo lives in the repo's `.broom/`](decisions/053-findings-live-in-the-repo.md)
 
 10 events:
 
@@ -48,7 +50,7 @@ A waiver has one of 3 kinds:
 
 The same waiver seen again in one turn is written once. An edit of `.broom.json` is noted at once, since a `check_on` set to off would keep every later check from seeing it. The turn's snapshot holds the file too, so the turn's end notes one that a command changed or committed.
 
-Writing is one append under a lock. It never raises into a hook. Over 2 MB the oldest lines are dropped down to 1.5 MB. From 0.29.0 every line holds the version of broom that wrote it, which `broom report --since` reads.
+Writing is one append under a lock. It never raises into a hook. Over 2 MB a repo's oldest lines are dropped down to 1.5 MB. From 0.29.0 every line holds the version of broom that wrote it, which `broom report --since` reads.
 
 ---
 

@@ -7,7 +7,7 @@ session start ─▶ the smell scan of HEAD (async, cached) ─┐
                  one pass over the files' trees ─────────┼─▶ the counters ─▶ compare with the last check-up
                  the coverage report, if there is one ───┤                        │
                                                           │        grew ──────────┴─▶ one line to Claude, once
-                                                          └─▶ the record of this repo, in the data directory
+                                                          └─▶ the record of this repo, in its .broom/
 ```
 
 ---
@@ -38,7 +38,7 @@ A counter whose tool is missing, failed or timed out is left out of that check-u
 
 ## When it speaks
 
-The check-up runs in the async session scan, after the smell scan, also when the scan of HEAD was cached. The first numbers of a repo are taken silently as its baseline, and so are the first after an update of broom, since another version may count other things. A repo and its linked worktrees share one record.
+The check-up runs in the async session scan, after the smell scan, also when the scan of HEAD was cached. The first numbers of a repo are taken silently as its baseline, and so are the first after an update of broom, since another version may count other things. A repo and its linked worktrees share one record, in the main checkout's `.broom/`.
 
 When a counter is higher than at the last check-up, Claude is told once, in one line, with the old and the new value, up to three files that added to it and the command that shows where each number sits. The new numbers then become the record, so the same growth is told once. A counter that fell is recorded silently.
 

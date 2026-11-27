@@ -10,7 +10,8 @@ hooks/hooks.json ──▶ hooks/*.sh ──────▶ bin/broom ──▶ 
                                             ▲              │
 git pre-commit hook ────────────────────────┘              ├──▶ the project's tools (formatters, linters, type checkers)
 skills/ (setup · status · scan · clean) ───▶ bin/broom    ├──▶ defaults/ (configs where a project has none)
-.lsp.json ──▶ language servers                             └──▶ the data directory (state shared by every hook)
+.lsp.json ──▶ language servers                             ├──▶ <repo>/.broom/ (what broom found in that repo)
+                                                           └──▶ the data directory (state shared by every repo)
 ```
 
 ---
@@ -80,9 +81,13 @@ They live in `skills/`.
 
 ---
 
-## The data directory
+## Where state lives
 
-State lives in `~/.claude/plugins/data/broom-claude-code-broom/`: known issues, passed content, the last blocked commit, the ledger, per-session records and the tools' caches.
+What broom finds in a repo lives in `.broom/` at the root of the repo's main checkout, which git ignores and every linked worktree shares: known issues, the repo's ledger, the last blocked result, the check-up's counters, the session scan, passed content and a check that ran out of time. A file there names a file of the repo by its path from the root, so a moved repo keeps it.
+
+The rest lives in `~/.claude/plugins/data/broom-claude-code-broom/`: the tools' caches, sessions and claims, setup answers, the doctor's cache, the hook trace and an index of the repos that have a `.broom/`. A repo whose `.broom/` git tracks, or whose root broom can't write, keeps its records in a folder there.
+
+- [053: What broom finds in a repo lives in the repo's `.broom/`](decisions/053-findings-live-in-the-repo.md)
 
 - [Hook limits](hook-limits.md)
 - [Record](record.md)
