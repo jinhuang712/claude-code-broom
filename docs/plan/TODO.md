@@ -20,18 +20,6 @@
 
 ---
 
-### [P2][IDEA] The report split by repo and by version
-
-- description:
-  - `broom report --all` sums every repo over the whole period.
-  - The look at the ledger on 2026-11-26 needed a script to split it by repo and by day, which found the one turn behind most of the questions put to the user.
-  - The report could list each repo's counts and each version's, since every line of the ledger holds its repo and, from 0.29.0, broom's version.
-- created: 2026-11-26
-- found: the look at the ledger on 2026-11-26
-- related: [F9.3: Report](../features/F9-record.md#f93-report)
-
----
-
 ### [P2][DISCUSSION] Whether the limits come down now that a length counts code lines
 
 - description:
