@@ -96,6 +96,23 @@ class AssertsNothingTest(BroomCase):
         self.assertIn("too broad test assertion(s)", found[0].text())
         self.assertIn("test(s) that assert nothing", found[1].text())
 
+    def test_a_helper_of_the_same_file_that_asserts_counts_as_asserting(self) -> None:
+        text = rows("class T:", "    def test_a(self):", "        self.prove(1)", "", "    def prove(self, x):",
+                    "        self.check(x)", "", "    def check(self, x):", "        assert x", "", "",
+                    "def test_b():", "    log(1)", "", "", "def log(x):", "    print(x)")
+        self.assertEqual([s.added for s in self.found("tests/test_a.py", text)], [[12]])
+
+    @unittest.skipUnless(shutil.which("swiftc"), "swiftc missing")
+    def test_a_swift_helper_of_the_same_file_that_asserts_counts_as_asserting(self) -> None:
+        text = rows("import XCTest", "", "final class ATests: XCTestCase {", "    func testA() {", "        prove(1)",
+                    "    }", "    func testB() {", "        log(1)", "    }", "    func prove(_ x: Int) {",
+                    "        XCTAssertEqual(x, 1)", "    }", "    func log(_ x: Int) {}", "}")
+        self.assertEqual([s.added for s in self.found("Tests/ATests.swift", text)], [[7]])
+
+    def test_a_python_function_that_returns_a_value_is_no_test(self) -> None:
+        text = rows("def test_with_body(name):", "    return f'def test_{name}(): pass'")
+        self.assertEqual(self.found("tests/test_a.py", text), [])
+
     def test_a_code_file_has_no_test_to_judge(self) -> None:
         self.assertEqual(self.found("lib/a.py", rows("def test_a():", "    x = 1")), [])
 
