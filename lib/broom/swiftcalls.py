@@ -1,12 +1,13 @@
 """Swift smells read from SourceKit's structure and tokens (swiftkit): a debug print, an unlabeled Bool parameter, a
-test that any error at all is thrown, a test that asserts nothing, a skipped test, a test case, unsafe code, and a private name nothing in its file
-uses. Each is a node of the parser's structure, a call, a parameter or a declaration, and a token's text is only ever
-compared whole or by its ends (or, for a macro, by the `#` before it), so a string or a comment that looks like one is never taken for it.
+test that any error at all is thrown, a test that asserts nothing, a skipped test, a test case, unsafe code, and a
+private name nothing in its file uses. Each is a node of the parser's structure, a call, a parameter or a declaration,
+and a token's text is only ever compared whole or by its ends (or, for a macro, by the `#` before it), so a string or a
+comment that looks like one is never taken for it.
 """
 
 from __future__ import annotations
 
-from typing import Iterator, List, Optional, Tuple
+from typing import Iterator, List, Optional, Set, Tuple
 
 from .setters import camel_setter
 from .swiftkit import Node, SwiftFile
@@ -118,25 +119,41 @@ CHECKS = {"XCTFail", "XCTUnwrap"}  # besides the `XCTAssert…` calls
 MACRO_CHECKS = {"expect", "require"}  # swift-testing's `#expect` and `#require`
 
 
-def can_fail(f: SwiftFile, n: Node) -> bool:
-    """Whether the test `n` holds anything that can fail it: an `XCTAssert…`, `XCTFail` or `XCTUnwrap` call, an
-    `#expect` or a `#require`, or a `try`. A macro is the identifier token right after a `#`."""
-    if any(c.kind == "expr.call" and (c.name.startswith("XCTAssert") or c.name in CHECKS) for c in n.walk()):
-        return True
+def can_fail(f: SwiftFile, n: Node, helpers: Set[str]) -> bool:
+    """Whether `n` holds anything that can fail a test: an `XCTAssert…`, `XCTFail` or `XCTUnwrap` call, a call of one
+    of the file's asserting `helpers`, an `#expect` or a `#require`, or a `try`. A macro is the identifier token right
+    after a `#`."""
+    for c in n.walk():
+        name = c.name.rpartition(".")[2]
+        if c.kind == "expr.call" and (name.startswith("XCTAssert") or name in CHECKS or name in helpers):
+            return True
     return any((t.kind == "keyword" and t.text == "try")
                or (t.kind == "identifier" and t.text in MACRO_CHECKS and f.data[t.offset - 1:t.offset] == b"#")
                for t in f.within(n))
 
 
+def asserting_helpers(f: SwiftFile) -> Set[str]:
+    """The base names of the file's functions that assert, directly or through another one of them."""
+    defs = [(n.name.partition("(")[0], n) for n in f.root.walk() if n.kind.startswith("decl.function")]
+    found: Set[str] = set()
+    grew = True
+    while grew:
+        new = {name for name, n in defs if name not in found and can_fail(f, n, found)}
+        found |= new
+        grew = bool(new)
+    return found
+
+
 def empty_tests(f: SwiftFile) -> Iterator[Tuple[int, str]]:
     """The (line, name) of each test that asserts nothing (`can_fail`): an XCTest method `test…()` of a class, and a
     function marked `@Test`."""
+    helpers = asserting_helpers(f)
     for n, parents in walk_with_parents(f.root):
         if not n.kind.startswith("decl.function"):
             continue
         xctest = (n.name.startswith("test") and n.name.endswith("()") and bool(parents)
                   and parents[-1].kind == "decl.class")
-        if (xctest or marked_test(f, n)) and not can_fail(f, n):
+        if (xctest or marked_test(f, n)) and not can_fail(f, n, helpers):
             yield f.line(n.offset), n.name.partition("(")[0]
 
 
