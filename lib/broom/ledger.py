@@ -44,9 +44,11 @@ MAX_BYTES = 2_000_000  # over this at an append, the oldest lines go, down to th
 THROUGH = "through.jsonl"  # in a turn's directory: what the turn let through, for its summary
 WAIVED = "waivers.jsonl"  # in a turn's directory: the self-waivers it saw, for its summary and so each counts once
 ASKED = "asked.jsonl"  # in a turn's directory: the findings Claude asked the user about, which don't block this turn
-RUNS = "test-runs.jsonl"  # in a turn's directory: the test commands the session started, and those that failed
+RUNS = "test-runs.jsonl"  # in a session's directory: the test commands it started and those that failed, kept across
+# its turns, since a file counts as tested by its content whenever that was (decision 034): a run in a worktree counts
+# for the same content landed on the main checkout at a later turn
 ACCEPTED_HERE = "accepted-here.jsonl"  # in a turn's directory: findings accepted for this turn only, never as known
-TURN_NOTES = (THROUGH, WAIVED, ASKED, RUNS, ACCEPTED_HERE)
+TURN_NOTES = (THROUGH, WAIVED, ASKED, ACCEPTED_HERE)
 SHOWN_GROUPS = 5
 LOUD_ACCEPTS = 3  # findings a turn accepts on its own before the user's line opens loudly
 SKIP_PREFIXES = ("timeout:", "missing:")

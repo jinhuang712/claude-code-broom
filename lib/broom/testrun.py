@@ -3,9 +3,9 @@
 How the trace is found. Claude Code tells a hook what happened to a Bash command by which event fires, and broom
 already sees every Bash call before it runs (the PreToolUse hook, hooks/commit.sh). So:
 
-- started: the PreToolUse hook notes a command that is a test run (testcmd) for the session's turn: a line with the time,
-  the command and what content it tests (testtree) in the turn's `test-runs.jsonl`, as edits and asks are noted. No hook
-  runs after every Bash call.
+- started: the PreToolUse hook notes a command that is a test run (testcmd) for the session: a line with the time, the
+  command and what content it tests (testtree) in the session's `test-runs.jsonl`, kept across its turns (the newest
+  MAX_RUNS), since content tested at an earlier turn is tested. No hook runs after every Bash call.
 - failed: PostToolUseFailure fires after a command that exited non-zero, and notes the same command with its error's first
   line (`Exit code 1`). A test command that started and has no such note after it counts as passed.
 
@@ -29,13 +29,14 @@ from .config import TESTS_FAILED, TESTS_NOT_RUN, TESTS_TOOL, repo_config, settin
 from .findings import Issue
 from .gitutil import git, git_root, main_worktree
 from .passed import rel_paths, worktree_blobs
-from .state import append_line, session_dir
+from .state import append_line, read_lines, session_dir
 from .testcmd import test_dirs
 
 MAX_COMMAND = 500  # characters of a command a note keeps
 MAX_SHOWN = 100  # characters of a command a finding shows
 MAX_ERROR = 80  # characters of an error's first line a note keeps
 MAX_NAMED = 3  # files a finding names before "and N more"
+MAX_RUNS = 200  # the test-run notes a session keeps, the newest: they outlive the turn
 NOT_RUN = "no test ran after the last change to code"
 
 
@@ -55,11 +56,15 @@ def run_dirs(data: dict, command: str) -> List[Path]:
 
 
 def note_run(data: dict, command: str, **more: object) -> None:
-    """Note a test command in the session's turn: the time, the command and what `more` says (the content a start tests,
+    """Note a test command in the session, for its turns to come: the time, the command and what `more` says (the content a start tests,
     the `exit` of a failure). It goes in the session's directory, not a subagent's own, so that the main session's end sees
     what a subagent ran."""
     row = {"t": time.time(), "cmd": command[:MAX_COMMAND], **more}
-    append_line(session_dir(data.get("session_id") or "cli") / ledger.RUNS, json.dumps(row))
+    path = session_dir(data.get("session_id") or "cli") / ledger.RUNS
+    append_line(path, json.dumps(row))
+    rows = read_lines(path)
+    if len(rows) > MAX_RUNS:
+        path.write_text("".join(f"{r}\n" for r in rows[-MAX_RUNS:]))
 
 
 def note_start(data: dict, command: str, dirs: List[Path]) -> None:
@@ -97,7 +102,7 @@ def hook_failed(data: dict) -> None:
 
 
 def runs_of(d: Path) -> List[dict]:
-    """The test runs noted in the turn in `d`: a row with `t`, `cmd` and `repos` for each that started, and one with `exit`
+    """The test runs noted in the session of the turn in `d`, its earlier turns' too: a row with `t`, `cmd` and `repos` for each that started, and one with `exit`
     besides for each that failed, in the order they were noted."""
     return [r for r in ledger.read(d / ledger.RUNS) if isinstance(r.get("t"), (int, float)) and "cmd" in r]
 
@@ -113,7 +118,7 @@ def accepted_here(d: Path) -> Set[str]:
 
 
 def test_runs(rows: List[dict], root: Path) -> List[dict]:
-    """The test runs of the repo whose work tree is at `root` that the `rows` of a turn tell, oldest first: each with its
+    """The test runs of the repo whose work tree is at `root` that the `rows` of a session tell, oldest first: each with its
     `exit` (None for one that didn't fail), its `cmd`, and the `head` and `dirty` blobs it tested there. A failure note
     belongs to the last run of its command that started before it. A run in another repo, or in none, is left out. The
     worktrees of one repo are one repo."""

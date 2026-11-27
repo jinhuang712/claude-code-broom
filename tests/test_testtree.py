@@ -31,6 +31,22 @@ class ContentTest(TestRunCase):
         self.assertGreater((main / "a.py").stat().st_mtime, self.runs()[-1]["t"], "the merge is newer than the run")
         self.assertEqual(self.stop(main), {})
 
+    def test_work_tested_in_a_linked_worktree_and_merged_in_a_later_turn_is_tested(self) -> None:
+        main = self.code_repo()
+        self.new_turn(main)
+        work = self.tmp / "linked"
+        self.sh(main, "git", "worktree", "add", "-q", str(work), "-b", "feature")
+        self.change(work, "x = 2\n")
+        self.bash(work, "python3 -m pytest -q")
+        self.sh(work, "git", "commit", "-qam", "feature")
+        self.assertEqual(self.stop(work), {}, "the turn that tested it ends")
+        self.new_turn(main)  # the next prompt: land it
+        self.sh(main, "git", "merge", "-q", "--ff-only", "feature")
+        self.assertEqual(self.stop(main), {}, "the content the earlier turn tested")
+        self.new_turn(main)
+        self.change(main, "x = 3\n")
+        self.assertIn(self.not_run("a.py"), self.stop(main)["reason"], "new content is untested")
+
     def test_a_change_merged_into_the_main_checkout_that_was_never_tested_is_blocked_naming_the_file(self) -> None:
         main = self.code_repo()
         self.new_turn(main)
