@@ -261,6 +261,9 @@ def cmd_known(args: argparse.Namespace) -> int:
     if not entries:
         say("broom: no known issues here")
         return 0
+    from .moved import recover
+
+    entries = recover(entries)  # an entry of a deleted worktree names the main checkout's file once proven
     spent = changed_code(entries)
     shown = f", {len(spent)} of them with their code changed" if spent else ""
     say(f"broom: {len(entries)} known issue(s){shown}, not raised again:")
